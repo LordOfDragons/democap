@@ -1,0 +1,138 @@
+namespace Democap
+
+pin Dragengine.CameraDirectors
+pin Dragengine.Commands
+pin Dragengine.Scenery
+
+
+/**
+ * VR camera director. PlayerControlledActorCameraDirector is used as base class to
+ * get the player tracking for free.
+ */
+class VRCameraDirector extends PlayerControlledActorCameraDirector
+	/** Device changes listener. */
+	class DeviceChangeListener extends DefaultBindingManagerListener
+		private var VRCameraDirector pDirector
+		
+		public func new(VRCameraDirector director)
+			pDirector = director
+		end
+		
+		public func void devicesReloaded(BindingManager manager)
+			pDirector.findHMD()
+		end
+	end
+	
+	private var InputDevice pHMD
+	private var DeviceChangeListener pDeviceChangeListener
+	
+	/** Create director. */
+	public func new()
+	end
+	
+	/** Camera director has been activated. */
+	public func void activate()
+		super.activate()
+		
+		pDeviceChangeListener = DeviceChangeListener.new(this)
+		BaseGameApp.getApp().getBindingManager().addListener(pDeviceChangeListener)
+		
+		findHMD()
+		
+		VRSystem.setCamera(getCamera())
+	end
+	
+	/** Camera director has been deactivated. */
+	public func void deactivate()
+		VRSystem.setCamera(null)
+		
+		if pDeviceChangeListener != null
+			BaseGameApp.getApp().getBindingManager().removeListener(pDeviceChangeListener)
+			pDeviceChangeListener = null
+		end
+		
+		super.deactivate()
+	end
+	
+	/** Set camera. */
+	public func void setCamera(Camera camera)
+		super.setCamera(camera)
+		VRSystem.setCamera(camera)
+	end
+	
+	/** Update camera. */
+	public func void updateCamera(float elapsed)
+		//getCamera().setEnableGI(false)
+		if pHMD == null
+			return
+		end
+		
+		var DMatrix matrix = getCameraMatrix()
+		var Quaternion orientation = matrix.toQuaternion()
+		
+		var Vector angles = orientation.getEulerAngles()
+		setAzimuth(angles.getY())
+		setElevation(angles.getX())
+		
+		var Camera camera = getCamera()
+		camera.setPosition(matrix.getPosition())
+		camera.setOrientation(orientation)
+	end
+	
+	/** Overrides ElementCameraDirector.getCameraMatrix() */
+	public func DMatrix getCameraMatrix()
+		if pHMD == null
+			return DMatrix.newWorld(getCamera().getPosition(), getCamera().getOrientation())
+		end
+		
+		var DMatrix matrix = pHMD.getDevicePoseMatrix().toDMatrix()
+		
+		var ECBehaviorPlayerControllable.Instance actor = this.getActor()
+		if actor != null
+			var ECBehaviorVRPlayspace.Instance playspace = ECBehaviorVRPlayspace.getInstanceIn( actor.getElement() )
+			if playspace != null
+				matrix = matrix * playspace.getMatrix()
+			end
+		end
+		
+		return matrix
+	end
+	
+	/** Find HMD. */
+	public func void findHMD()
+		var String idOld = ""
+		if pHMD != null
+			idOld = pHMD.getID()
+		end
+		
+		pHMD = null
+		
+		pHMD = BaseGameApp.getApp().getBindingManager().findDevice(block InputDevice each
+			return each.getType() == InputDeviceType.vrHMD
+		end)
+		
+		var String idNew = ""
+		if pHMD != null
+			idNew = pHMD.getID()
+		end
+		
+		if idNew.equals(idOld)
+			return
+		end
+		
+		if not idOld.empty()
+			onHMDDetached()
+		end
+		if not idNew.empty()
+			onHMDAttached()
+		end
+	end
+	
+	/** Attached to HMD. */
+	public func void onHMDAttached()
+	end
+	
+	/** Detached from HMD. */
+	public func void onHMDDetached()
+	end
+end

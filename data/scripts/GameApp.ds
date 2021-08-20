@@ -1,0 +1,95 @@
+namespace Democap
+
+pin Dragengine.Commands
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * Game Application.
+ */
+class GameApp extends BaseGameApp
+	/**
+	 * Create Game Application.
+	 */
+	public func new()
+		pathDesktopGuiTheme = "/content/gui/main.guitheme.xml"
+	end
+	
+	/**
+	 * Initialize game.
+	 */
+	public func void initGame()
+		super.initGame()
+		
+		// do not capture input. this allows the window to be used like regular windows
+		InputSystem.setCaptureInputDevices(false)
+		
+		// show Drag[en]gine logo then launch the application
+		WindowLogo.showDragengineLogo(this.getDesktop(), BlockActionListener.new(\
+			block ActionEvent event
+				launchApplication()
+			end))
+	end
+	
+	/**
+	 * Launch example application.
+	 */
+	public func void launchApplication()
+		getWindowGameWorld().addWidget(ShoutConsole.new(getConsole()))
+		
+		// start VR runtime. this can fail hence capture exceptions
+		getConsole().addMessage("Start VR Runtime...")
+		try
+			VRSystem.startRuntime()
+			
+		catch Exception e
+			WindowDialog.message(getWindowGameWorld(), "Start VR Runtime Failed", \
+			e.toString(), null, null, WindowDialog.BlockResultListener.new(block Object result
+				quitGame()
+			end))
+			return
+		end
+		
+		// load game world
+		getConsole().addMessage("Loading world...")
+		startLoadGameWorld(StartGame.new(getWindowGameWorld(), "/content/worlds/default.deworld"))
+	end
+	
+	/**
+	 * Create element classes and add them to element class list.
+	 */
+	protected func void createAndAddElementClasses()
+		super.createAndAddElementClasses()
+		
+		var ElementClassList eclist = getElementClassList()
+		//eclist.add(MyElementClass.new())
+		
+		getLoaders().getElementClass().addXmlElementClasses(eclist, "/content/models", true)
+	end
+	
+	/**
+	 * Create helper containing default bindings.
+	 */
+	public func DefaultBindingHelper defaultBindings()
+		var DefaultBindingHelper helper = super.defaultBindings()
+		
+		// remove mouse bindings. we redirect them to the operator window anyway
+		if helper.getMouse() != null
+			helper.removeAllDeviceBindings( helper.getMouse() )
+		end
+		
+		return helper
+	end
+	
+	/**
+	 * Cleaning up.
+	 */
+	public func void cleanUp()
+		
+		super.cleanUp()
+	end
+end
