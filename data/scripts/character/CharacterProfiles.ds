@@ -1,0 +1,163 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Characters
+
+pin Dragengine.Utils
+
+
+/**
+ * List of character profiles.
+ * 
+ * Profiles are stored under "/characters" directory in the user game configure directory
+ * as files of type "*.dmccp" .
+ */
+class CharacterProfiles
+	private var String pDirectory
+	private var Dictionary pProfiles
+	
+	
+	
+	/** Create character list. */
+	public func new(String directory)
+		if directory == null
+			throw ENullPointer.new("directory")
+		end
+		
+		pDirectory = directory
+		pProfiles = Dictionary.new()
+	end
+	
+	
+	
+	/** Directory to save character profiles to. */
+	public func String getDirectory()
+		return pDirectory
+	end
+	
+	
+	
+	/** Count of profiles. */
+	public func int getCount()
+		return pProfiles.getCount()
+	end
+	
+	/** Named profile is present. */
+	public func bool has(String name)
+		return pProfiles.has(name)
+	end
+	
+	/** Named profile or null if absent. */
+	public func CharacterProfile getAt(String name)
+		return pProfiles.getAt(name, null) cast CharacterProfile
+	end
+	
+	/** Add profile. Throws exception if named profile is present. */
+	public func void add(CharacterProfile profile)
+		if pProfiles.has(profile.getName())
+			throw EInvalidParam.new("named profile is present: " + profile.getName())
+		end
+		pProfiles.setAt(profile.getName(), profile)
+	end
+	
+	/** Remove profile. Throws exception if named profile is absent. */
+	public func void remove(CharacterProfile profile)
+		pProfiles.remove(profile.getName())
+	end
+	
+	/** Remove all profiles. */
+	public func void removeAll()
+		pProfiles.removeAll()
+	end
+	
+	/**
+	 * Visit profiles with block. Block receives as only argument CharacterProfile.
+	 */
+	public func void forEach(Block ablock)
+		pProfiles.forEachValue(ablock)
+	end
+	
+	/**
+	 * Collect profiles with block. Block receives as only argument CharacterProfile and
+	 * has to return true to include or false to exclude profile.
+	 * Returns Array of CharacterProfile.
+	 */
+	public func Array collect(Block ablock)
+		var Array list = Array.new()
+		pProfiles.forEachValue(block CharacterProfile each
+			if ablock.run(each) cast bool
+				list.add(each)
+			end
+		end)
+		return list
+	end
+	
+	
+	
+	/** Load characters from directory (*.dmcc). */
+	public func void loadAll()
+		var LoadCharacterProfile loader = GameApp.getGameApp().getLoadCharacterProfile()
+		var Console console = GameApp.getGameApp().getConsole()
+		
+		console.addMessage("Load character profiles from '" + pDirectory + "'")
+		
+		FileSystem.searchFiles(pDirectory, true, block String each, FileType type
+			var String filename = File.new(each).getName()
+			if type == FileType.file and FileSystem.pathMatchesPattern(filename, "*.dmccp")
+				console.addMessage("Load character profile '" + filename + "'")
+				var CharacterProfile profile
+				try
+					profile = loader.load(each)
+				catch Exception e
+					console.addError("Failed loading character profile from file '" + each + "'", e)
+					return true
+				end
+				try
+					add(profile)
+				catch Exception e
+					console.addError("Failed adding character profile '" + profile.getName() + "'", e)
+				end
+			end
+			return true
+		end)
+	end
+	
+	/** Save characters to directory (*.dmcc). */
+	public func void saveAll()
+		var LoadCharacterProfile loader = GameApp.getGameApp().getLoadCharacterProfile()
+		var Console console = GameApp.getGameApp().getConsole()
+		var File basePath = File.new(pDirectory)
+		
+		console.addMessage("Save character profiles to '" + pDirectory + "'")
+		
+		pProfiles.forEachValue(block CharacterProfile each
+			var String filename = each.getName() + ".dmccp"
+			console.addMessage("Save character profile '" + filename + "'")
+			
+			filename = (basePath + filename).getPath()
+			try
+				loader.save(filename, each)
+			catch Exception e
+				console.addError("Failed saving character profile to file '" + filename + "'", e)
+			end
+		end)
+	end
+end

@@ -1,0 +1,136 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Democap.Characters
+
+pin Dragengine.Animators
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+
+/**
+ * Load/Save character profile from/to XML file.
+ */
+class LoadCharacterProfile extends BaseXmlLoader
+	/** Create loader. */
+	public func new(Console console) this(console, "LoadCharacterProfile")
+	end
+	
+	/** Create loader. */
+	public func new(Console console, String name) super(console, name)
+	end
+	
+	
+	
+	/** Load character profile from file. */
+	public func CharacterProfile load(String filename)
+		logLoadingFromFile(filename)
+		
+		var EasyXML document = EasyXML.new(filename)
+		if document.hasParseFailed()
+			logParsingFailed(document.getParseLog())
+			throw EInvalidParam.new("parsing document failed")
+		end
+		
+		var EasyXMLElement root = document.getRootElement()
+		if not root.getTagName().equals("characterProfile")
+			logUnknownTag(root)
+			throw EInvalidParam.new("root tag name mismatch")
+		end
+		
+		// name of profile is the file name without extension
+		var CharacterProfile profile = CharacterProfile.new(File.new(filename).getName().substring(0, -6))
+		
+		readCharacterProfile(root, profile)
+		return profile
+	end
+	
+	/** Save character profile to file. */
+	public func void save(String filename, CharacterProfile profile)
+		if profile == null
+			throw ENullPointer.new("profile")
+		end
+		
+		logSavingFromFile(filename)
+		
+		var EasyXML document = EasyXML.new()
+		var EasyXMLElement root = document.getRootElement()
+		
+		root.setTagName("characterProfile")
+		
+		writeCharacterProfile(root, profile)
+		
+		document.writeToFile(FileWriter.new(filename), false)
+	end
+	
+	
+	
+	/** Read character profile tag. */
+	public func void readCharacterProfile(EasyXMLElement root, CharacterProfile profile)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("appearance")
+				readAppearance(element, profile.getAppearance())
+				
+			else
+				logUnknownTag(element)
+			end
+		end)
+	end
+	
+	/** Read appearance tag. */
+	public func void readAppearance(EasyXMLElement root, CharacterAppearance appearance)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("model")
+				appearance.setPathModel(element.getFirstCData())
+				
+			elif tagName.equals("skin")
+				appearance.setPathSkin(element.getFirstCData())
+				
+			elif tagName.equals("rig")
+				appearance.setPathRig(element.getFirstCData())
+				
+			else
+				logUnknownTag(element)
+			end
+		end)
+	end
+	
+	
+	
+	
+	/** Write character profile. */
+	public func void writeCharacterProfile(EasyXMLElement root, CharacterProfile profile)
+		writeAppearance(root, profile.getAppearance())
+	end
+	
+	/** Write appearance. */
+	public func void writeAppearance(EasyXMLElement root, CharacterAppearance appearance)
+		var EasyXMLElement tag = root.addTag("appearance")
+		tag.addDataTag("model", appearance.getPathModel())
+		tag.addDataTag("skin", appearance.getPathSkin())
+		tag.addDataTag("rig", appearance.getPathRig())
+	end
+end

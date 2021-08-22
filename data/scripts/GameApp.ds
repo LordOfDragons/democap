@@ -1,4 +1,27 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 namespace Democap
+
+pin Democap.Characters
 
 pin Dragengine.Commands
 pin Dragengine.Gui.Layouts
@@ -12,6 +35,13 @@ pin Dragengine.Utils
  * Game Application.
  */
 class GameApp extends BaseGameApp
+	private var CharacterProfiles pCharacterProfiles
+	private var CharacterProfile pActiveCharacterProfile
+	
+	private var LoadCharacterProfile pLoadCharacterProfile
+	
+	
+	
 	/**
 	 * Create Game Application.
 	 */
@@ -35,6 +65,13 @@ class GameApp extends BaseGameApp
 			end))
 	end
 	
+	class TestListResLoad implements CharacterAppearance.ListenerResourcesLoaded
+		public func new(): end
+		public func void loadingFinished()
+			GameApp.getGameApp().getConsole().addMessage("Loading resources finished")
+		end
+	end
+	
 	/**
 	 * Launch example application.
 	 */
@@ -54,9 +91,20 @@ class GameApp extends BaseGameApp
 			return
 		end
 		
+		// create other stuff
+		pLoadCharacterProfile = LoadCharacterProfile.new(getConsole())
+		
+		pCharacterProfiles = CharacterProfiles.new("/characters")
+		pCharacterProfiles.loadAll()
+		
+		setActiveCharacterProfile(pCharacterProfiles.getAt("Georgo"))
+		
+		pActiveCharacterProfile.getAppearance().loadResources(TestListResLoad.new())
+		
 		// load game world
 		getConsole().addMessage("Loading world...")
-		startLoadGameWorld(StartGame.new(getWindowGameWorld(), "/content/worlds/default.deworld"))
+		startLoadGameWorld(StartGame.new(getWindowGameWorld(), "/content/test/scene1/scene1.deworld"))
+// 		startLoadGameWorld(StartGame.new(getWindowGameWorld(), "/content/worlds/default.deworld"))
 	end
 	
 	/**
@@ -89,7 +137,39 @@ class GameApp extends BaseGameApp
 	 * Cleaning up.
 	 */
 	public func void cleanUp()
-		
 		super.cleanUp()
+	end
+	
+	
+	
+	/** Get app instance for convenience. */
+	static public func GameApp getGameApp()
+		return getApp() cast GameApp
+	end
+	
+	/** Character profiles. */
+	public func CharacterProfiles getCharacterProfiles()
+		return pCharacterProfiles
+	end
+	
+	/** Active character profile or null. */
+	public func CharacterProfile getActiveCharacterProfile()
+		return pActiveCharacterProfile
+	end
+	
+	/** Set active character profile or null. */
+	public func void setActiveCharacterProfile(CharacterProfile profile)
+		if profile == pActiveCharacterProfile
+			return
+		end
+		pActiveCharacterProfile = profile
+		// TODO notification
+	end
+	
+	
+	
+	/** Load/save Character profile. */
+	public func LoadCharacterProfile getLoadCharacterProfile()
+		return pLoadCharacterProfile
 	end
 end
