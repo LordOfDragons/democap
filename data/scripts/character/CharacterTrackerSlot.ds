@@ -1,0 +1,157 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Characters
+
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Character configuration tracker slot.
+ */
+class CharacterTrackerSlot
+	private var String pName
+	private var Vector pPosition
+	private var Vector pRotation
+	private var String pInputDeviceID
+	private var Vector pOffsetPosition
+	private var Vector pOffsetRotation
+	
+	
+	
+	/** Create character configuration tracker slot. */
+	public func new(String name)
+		setName(name)
+		pPosition = Vector.new()
+		pRotation = Vector.new()
+		pInputDeviceID = ""
+		pOffsetPosition = Vector.new()
+		pOffsetRotation = Vector.new()
+	end
+	
+	/** Create copy of character configuration tracker slot. */
+	public func new(String name, CharacterTrackerSlot slot)
+		setName(name)
+		pPosition = slot.pPosition
+		pRotation = slot.pRotation
+		pInputDeviceID = slot.pInputDeviceID
+		pOffsetPosition = slot.pOffsetPosition
+		pOffsetRotation = slot.pOffsetRotation
+	end
+	
+	
+	
+	/** Name of character configuration tracker slot. */
+	public func String getName()
+		return pName
+	end
+	
+	/** Set name of character configuration tracker slot. */
+	public func void setName(String name)
+		if name == null
+			throw ENullPointer.new("name")
+		end
+		if name.empty()
+			throw EInvalidParam.new("name is empty string")
+		end
+		
+		pName = name
+	end
+	
+	/** Static position. */
+	public func Vector getPosition()
+		return pPosition
+	end
+	
+	/** Set static position. */
+	public func void setPosition(Vector position)
+		if position == null
+			throw ENullPointer.new("position")
+		end
+		pPosition = position
+	end
+	
+	/** Static rotation. */
+	public func Vector getRotation()
+		return pRotation
+	end
+	
+	/** Set static rotation. */
+	public func void setRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pRotation = rotation
+	end
+	
+	/** ID of input device attached to this slot or empty string. */
+	public func String getInputDeviceID()
+		return pInputDeviceID
+	end
+	
+	/** Set ID of input device attached to this slot or empty string. */
+	public func void setInputDeviceID(String id)
+		pInputDeviceID = id
+	end
+	
+	/** Input device attached to this slot. Resolved using input device id. */
+	public func InputDevice getInputDevice()
+		if pInputDeviceID.empty()
+			return null
+		end
+		return GameApp.getGameApp().getBindingManager().findDevice(block InputDevice each
+			return each.getID().equals(pInputDeviceID)
+		end)
+	end
+	
+	/** Position offset. */
+	public func Vector getOffsetPosition()
+		return pOffsetPosition
+	end
+	
+	/** Set position offset. */
+	public func void setOffsetPosition(Vector position)
+		if position == null
+			throw ENullPointer.new("position")
+		end
+		pOffsetPosition = position
+	end
+	
+	/** Rotation offset. */
+	public func Vector getOffsetRotation()
+		return pOffsetRotation
+	end
+	
+	/** Set rotationn offset. */
+	public func void setOffsetRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pOffsetRotation = rotation
+	end
+	
+	
+	
+	/** Init element class. */
+	public func void initElementClass(BaseVRActorClass eclass)
+	end
+end

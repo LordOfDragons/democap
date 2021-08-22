@@ -34,14 +34,14 @@ pin Dragengine.XML
  * The target bone is required to be indirect child of the root bone. The length of
  * the bone chain can be 2 or more bones.
  * 
- * Optionally a direction bone name can be defined which is used to guide the orientation
- * of the root bone before applying inverse kinematics. This is used for example to guide
- * the elbow on an arm while shoulder and hand remain at equal position and orientation.
- * 
  * Defines the tracker slot to be used to set the target bone position before applying
  * inverse kinematic. During calibration the coordinate system of the tracker slot
  * relative to the target bone coordinate system is stored. Custom position and rotation
  * offsets can be applied to fine tune the result if slightly off.
+ * 
+ * Optionally a guide tracker slot can be defined which is used to guide the orientation
+ * of the root bone before applying inverse kinematics. This is used for example to guide
+ * the elbow on an arm while shoulder and hand remain at equal position and orientation.
  */
 class MotionTransferIK extends DefaultMotionTransfer
 	/** Factory. */
@@ -62,13 +62,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	private var String pRootBone
 	private var String pTargetBone
-	private var String pGuideBone
-	private var String pTrackerSlot
-	private var Vector pOffsetPosition
-	private var Vector pOffsetRotation
-	
-	private var Vector pCalibratePosition
-	private var Vector pCalibrateRotation
+	private var MotionTransferTracker pTargetTracker
+	private var MotionTransferTracker pGuideTracker
 	
 	
 	
@@ -76,24 +71,16 @@ class MotionTransferIK extends DefaultMotionTransfer
 	public func new(String factoryID) super(factoryID)
 		pRootBone = ""
 		pTargetBone = ""
-		pGuideBone = ""
-		pTrackerSlot = ""
-		pOffsetPosition = Vector.new()
-		pOffsetRotation = Vector.new()
-		pCalibratePosition = Vector.new()
-		pCalibrateRotation = Vector.new()
+		pTargetTracker = MotionTransferTracker.new()
+		pGuideTracker = MotionTransferTracker.new()
 	end
 	
 	/** Create copy of motion transfer. */
 	public func new(MotionTransferIK transfer) super(transfer.factoryID())
 		pRootBone = transfer.pRootBone
 		pTargetBone = transfer.pTargetBone
-		pGuideBone = transfer.pGuideBone
-		pTrackerSlot = transfer.pTrackerSlot
-		pOffsetPosition = transfer.pOffsetPosition
-		pOffsetRotation = transfer.pOffsetRotation
-		pCalibratePosition = transfer.pCalibratePosition
-		pCalibrateRotation = transfer.pCalibrateRotation
+		pTargetTracker = MotionTransferTracker.new(transfer.pTargetTracker)
+		pGuideTracker = MotionTransferTracker.new(transfer.pGuideTracker)
 	end
 	
 	
@@ -124,84 +111,14 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTargetBone = bone
 	end
 	
-	/** Guide bone name. */
-	public func String getGuideBone()
-		return pGuideBone
+	/** Target tracker. */
+	public func MotionTransferTracker getTargetTracker()
+		return pTargetTracker
 	end
 	
-	/** Set guide bone name. */
-	public func void setGuideBone(String bone)
-		if bone == null
-			throw ENullPointer.new("bone")
-		end
-		pGuideBone = bone
-	end
-	
-	/** Tracker slot name. */
-	public func String getTrackerSlot()
-		return pTrackerSlot
-	end
-	
-	/** Set tracker slot name. */
-	public func void setTrackerSlot(String slot)
-		if slot == null
-			throw ENullPointer.new("slot")
-		end
-		pTrackerSlot = slot
-	end
-	
-	/** Position offset. */
-	public func Vector getOffsetPosition()
-		return pOffsetPosition
-	end
-	
-	/** Set position offset. */
-	public func void setOffsetPosition(Vector position)
-		if position == null
-			throw ENullPointer.new("position")
-		end
-		pOffsetPosition = position
-	end
-	
-	/** Rotation offset. */
-	public func Vector getOffsetRotation()
-		return pOffsetRotation
-	end
-	
-	/** Set rotationn offset. */
-	public func void setOffsetRotation(Vector rotation)
-		if rotation == null
-			throw ENullPointer.new("rotation")
-		end
-		pOffsetRotation = rotation
-	end
-	
-	
-	
-	/** Calibrate position relative to target bone. */
-	public func Vector getCalibratePosition()
-		return pCalibratePosition
-	end
-	
-	/** Set calibrate position relative to target bone. */
-	public func void setCalibratePosition(Vector position)
-		if position == null
-			throw ENullPointer.new("position")
-		end
-		pCalibratePosition = position
-	end
-	
-	/** Calibrate rotation relative to target bone. */
-	public func Vector getCalibrateRotation()
-		return pCalibrateRotation
-	end
-	
-	/** Set calibrate rotation relative to target bone. */
-	public func void setCalibrateRotation(Vector rotation)
-		if rotation == null
-			throw ENullPointer.new("rotation")
-		end
-		pCalibrateRotation = rotation
+	/** Guide tracker. */
+	public func MotionTransferTracker getGuideTracker()
+		return pGuideTracker
 	end
 	
 	
@@ -229,17 +146,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("targetBone")
 				setTargetBone(element.getFirstCData())
 				
-			elif tagName.equals("guideBone")
-				setGuideBone(element.getFirstCData())
+			elif tagName.equals("targetTracker")
+				pTargetTracker.load(loader, element)
 				
-			elif tagName.equals("trackerSlot")
-				setTrackerSlot(element.getFirstCData())
-				
-			elif tagName.equals("offsetPosition")
-				setOffsetPosition(loader.readVector(element))
-				
-			elif tagName.equals("offsetRotation")
-				setOffsetRotation(loader.readVector(element))
+			elif tagName.equals("guideTracker")
+				pGuideTracker.load(loader, element)
 			end
 		end)
 	end
@@ -250,21 +161,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("rootBone", pRootBone)
 		tag.addDataTag("targetBone", pTargetBone)
-		tag.addDataTag("guideBone", pGuideBone)
-		tag.addDataTag("trackerSlot", pTrackerSlot)
-		
-		if not pOffsetPosition.isZero()
-			var EasyXMLElement child = tag.addTag("offsetPosition")
-			child.setAttribute("x", pOffsetPosition.getX())
-			child.setAttribute("y", pOffsetPosition.getY())
-			child.setAttribute("z", pOffsetPosition.getZ())
-		end
-		
-		if not pOffsetRotation.isZero()
-			var EasyXMLElement child = tag.addTag("offsetRotation")
-			child.setAttribute("x", pOffsetRotation.getX())
-			child.setAttribute("y", pOffsetRotation.getY())
-			child.setAttribute("z", pOffsetRotation.getZ())
-		end
+		pTargetTracker.save(loader, tag.addTag("targetTracker"))
+		pGuideTracker.save(loader, tag.addTag("guideTracker"))
 	end
 end

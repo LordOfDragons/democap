@@ -97,9 +97,6 @@ class LoadCharacterProfile extends BaseXmlLoader
 				
 			elif tagName.equals("configuration")
 				readConfiguration(element, profile)
-				
-			else
-				logUnknownTag(element)
 			end
 		end)
 	end
@@ -115,9 +112,6 @@ class LoadCharacterProfile extends BaseXmlLoader
 				
 			elif tagName.equals("rig")
 				appearance.setPathRig(element.getFirstCData())
-				
-			else
-				logUnknownTag(element)
 			end
 		end)
 	end
@@ -129,7 +123,10 @@ class LoadCharacterProfile extends BaseXmlLoader
 		profile.getConfigurations().add(configuration)
 		
 		root.forEachTag(block EasyXMLElement element, String tagName
-			if tagName.equals("motionTransfer")
+			if tagName.equals("trackerSlot")
+				readTrackerSlot(element, configuration)
+				
+			elif tagName.equals("motionTransfer")
 				var String type = element.getAttributeNamed("type")
 				var MotionTransferFactory factory = motionTransferFactories.getAt(type)
 				if factory == null
@@ -141,9 +138,30 @@ class LoadCharacterProfile extends BaseXmlLoader
 				transfer.load(this, element)
 				
 				configuration.getMotionTransfers().add(transfer)
+			end
+		end)
+	end
+	
+	/** Read tracker slot tag. */
+	public func void readTrackerSlot(EasyXMLElement root, CharacterConfiguration configuration)
+		var CharacterTrackerSlot slot = CharacterTrackerSlot.new(root.getAttributeNamed("name"))
+		configuration.getTrackerSlots().add(slot)
+		
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("position")
+				slot.setPosition(readVector(element))
 				
-			else
-				logUnknownTag(element)
+			elif tagName.equals("rotation")
+				slot.setRotation( readVector(element))
+				
+			elif tagName.equals("inputDevice")
+				slot.setInputDeviceID(element.getFirstCData())
+				
+			elif tagName.equals("offsetPosition")
+				slot.setOffsetPosition(readVector(element))
+				
+			elif tagName.equals("offsetRotation")
+				slot.setOffsetRotation(readVector(element))
 			end
 		end)
 	end
@@ -172,10 +190,24 @@ class LoadCharacterProfile extends BaseXmlLoader
 	public func void writeConfiguration(EasyXMLElement root, CharacterConfiguration configuration)
 		var EasyXMLElement tag = root.addTag("configuration")
 		
+		configuration.getTrackerSlots().forEach(block CharacterTrackerSlot each
+			writeTrackerSlot(tag, each)
+		end)
+		
 		configuration.getMotionTransfers().forEach(block MotionTransfer each
 			var EasyXMLElement childTag = tag.addTag("motionTransfer")
 			childTag.setAttribute("type", each.factoryID())
 			each.save(this, childTag)
 		end)
+	end
+	
+	/** Write tracker slot. */
+	public func void writeTrackerSlot(EasyXMLElement root, CharacterTrackerSlot slot)
+		var EasyXMLElement tag = root.addTag("trackerSlot")
+		writeVector(tag, "position", slot.getPosition())
+		writeVector(tag, "rotation", slot.getRotation())
+		tag.addDataTag("inputDevice", slot.getInputDeviceID())
+		writeVector(tag, "offsetPosition", slot.getOffsetPosition())
+		writeVector(tag, "offsetRotation", slot.getOffsetRotation())
 	end
 end

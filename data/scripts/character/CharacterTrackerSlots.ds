@@ -1,0 +1,101 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Characters
+
+pin Dragengine.Utils
+
+
+/**
+ * List of character tracker slots.
+ */
+class CharacterTrackerSlots
+	private var Dictionary pSlots
+	
+	
+	
+	/** Create tracker slot list. */
+	public func new()
+		pSlots = Dictionary.new()
+	end
+	
+	/** Dispose of list. */
+	public func void dispose()
+		removeAll()
+	end
+	
+	
+	
+	/** Count of tracker slots. */
+	public func int getCount()
+		return pSlots.getCount()
+	end
+	
+	/** Named tracker slot is present. */
+	public func bool has(String name)
+		return pSlots.has(name)
+	end
+	
+	/** Named tracker slot or null if absent. */
+	public func CharacterTrackerSlot getAt(String name)
+		return pSlots.getAt(name, null) cast CharacterTrackerSlot
+	end
+	
+	/** Add tracker slot. Throws exception if named tracker slot is present. */
+	public func void add(CharacterTrackerSlot slot)
+		if pSlots.has(slot.getName())
+			throw EInvalidParam.new("named tracker slot is present: " + slot.getName())
+		end
+		pSlots.setAt(slot.getName(), slot)
+	end
+	
+	/** Remove tracker slot. Throws exception if named tracker slot is absent. */
+	public func void remove(CharacterTrackerSlot slot)
+		pSlots.remove(slot.getName())
+	end
+	
+	/** Remove all tracker slots. */
+	public func void removeAll()
+		pSlots.removeAll()
+	end
+	
+	/**
+	 * Visit tracker slots with block. Block receives as only argument CharacterTrackerSlot.
+	 */
+	public func void forEach(Block ablock)
+		pSlots.forEachValue(ablock)
+	end
+	
+	/**
+	 * Collect tracker slots with block. Block receives as only argument CharacterTrackerSlot and
+	 * has to return true to include or false to exclude tracker slot.
+	 * Returns Array of CharacterTrackerSlot.
+	 */
+	public func Array collect(Block ablock)
+		var Array list = Array.new()
+		pSlots.forEachValue(block CharacterTrackerSlot each
+			if ablock.run(each) cast bool
+				list.add(each)
+			end
+		end)
+		return list
+	end
+end
