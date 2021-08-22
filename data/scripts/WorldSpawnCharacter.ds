@@ -1,0 +1,191 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Democap.Characters
+
+pin Dragengine.CameraDirectors
+pin Dragengine.Gui
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Utils
+
+
+
+/**
+ * Task ensuring active character is present in game world.
+ */
+class WorldSpawnCharacter
+	/** Frame updater. */
+	protected class UpdateCheck extends FrameUpdateListener
+		private var WorldSpawnCharacter pOwner
+		
+		public func new(WorldSpawnCharacter owner)
+			pOwner = owner
+		end
+		
+		public func void frameUpdate(float elapsed)
+			pOwner.updateCheck()
+		end
+	end
+	
+	
+	
+	private var GameWorld pGameWorld
+	private var SpawnPoint pSpawnPoint
+	private var CharacterConfiguration pCharacter
+	private var BaseVRActor pActor
+	private var UpdateCheck pUpdateCheck
+	
+	
+	
+	/** Create. */
+	public func new()
+	end
+	
+	/** Dispose. */
+	public func void dispose()
+		stopUpdateCheck()
+		disposeActor()
+	end
+	
+	
+	
+	/** Game world or null. */
+	public func GameWorld getGameWorld()
+		return pGameWorld
+	end
+	
+	/** Set game world or null. */
+	public func void setGameWorld(GameWorld gameWorld)
+		if gameWorld == pGameWorld
+			return
+		end
+		
+		disposeActor()
+		pSpawnPoint = null
+		
+		pGameWorld = gameWorld
+		
+		if gameWorld != null
+			pSpawnPoint = gameWorld.getSpawnPoints().getNamed("player")
+		end
+		
+		startUpdateCheck()
+	end
+	
+	/** Spawn point or null. */
+	public func SpawnPoint getSpawnPoint()
+		return pSpawnPoint
+	end
+	
+	/** Character or null. */
+	public func CharacterConfiguration getCharacter()
+		return pCharacter
+	end
+	
+	/** Set character or null. */
+	public func void setCharacter(CharacterConfiguration character)
+		if character == pCharacter
+			return
+		end
+		
+		if character != null
+			GameApp.getGameApp().getConsole().addMessage("Activate character: profile='" \
+				+ character.getProfile().getName() + "' configuration='" + character.getName() + "'")
+			
+		else
+			GameApp.getGameApp().getConsole().addMessage("Activate null character")
+		end
+		
+		disposeActor()
+		pCharacter = character
+		startUpdateCheck()
+	end
+	
+	/** Character changed requiring recreating actor. */
+	public func void characterChanged()
+		disposeActor()
+		startUpdateCheck()
+	end
+	
+	
+	
+	/** Start update check if not running. */
+	protected func void startUpdateCheck()
+		if pUpdateCheck == null
+			pUpdateCheck = UpdateCheck.new(this)
+		end
+	end
+	
+	/** Stop update check if running. */
+	protected func void stopUpdateCheck()
+		if pUpdateCheck != null
+			pUpdateCheck.giveUp()
+			pUpdateCheck = null
+		end
+	end
+	
+	/** Update check. */
+	public func void updateCheck()
+		if pGameWorld == null or pCharacter == null or pActor != null
+			stopUpdateCheck()
+			return
+		end
+		
+		if pCharacter.getElementClass() == null or pCharacter.isElementClassPreloading()
+			return
+		end
+		
+		stopUpdateCheck()
+		
+		try
+			createActor()
+		catch Exception e
+			GameApp.getGameApp().getConsole().addError("creating actor failed", e)
+			disposeActor()
+		end
+	end
+	
+	/** Dispose actor if present. */
+	protected func void disposeActor()
+		if pActor != null
+			pActor.safeDispose()
+			pActor = null
+		end
+	end
+	
+	/** Create actor. */
+	protected func void createActor()
+		// ensure spawn point is present
+		if pSpawnPoint == null
+			throw EInvalidParam.new("Spawn point 'player' not found in game world")
+		end
+		
+		// spawn player actor
+		pActor = pCharacter.createStubElement().createElement() cast BaseVRActor
+		pSpawnPoint.spawn(pGameWorld, pActor)
+		
+		// take control of actor
+		pActor.getPlayerControllable().takeControl()
+	end
+end

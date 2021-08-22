@@ -1,0 +1,93 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Dragengine.Utils
+
+
+/**
+ * List of motion transfers to apply in the order they are defined.
+ */
+class MotionTransfers
+	private var Array pTransfers
+	
+	
+	
+	/** Create motion transfer list. */
+	public func new()
+		pTransfers = Array.new()
+	end
+	
+	
+	
+	/** Count of motion transfers. */
+	public func int getCount()
+		return pTransfers.getCount()
+	end
+	
+	/** Motion transfer is present. */
+	public func bool has(MotionTransfer transfer)
+		return pTransfers.has(transfer)
+	end
+	
+	/** Motion transfer at index. */
+	public func MotionTransfer getAt(int index)
+		return pTransfers.getAt(index) cast MotionTransfer
+	end
+	
+	/** Add motion transfer. */
+	public func void add(MotionTransfer transfer)
+		if transfer == null
+			throw ENullPointer.new("transfer")
+		end
+		if pTransfers.has(transfer)
+			throw EInvalidParam.new("transfer is present")
+		end
+		pTransfers.add(transfer)
+	end
+	
+	/** Remove motion transfer. */
+	public func void remove(MotionTransfer transfer)
+		pTransfers.remove(transfer)
+	end
+	
+	/** Remove all motion transfers. */
+	public func void removeAll()
+		pTransfers.removeAll()
+	end
+	
+	/**
+	 * Visit motion transfers with block. Block receives as only argument MotionTransfer.
+	 */
+	public func void forEach(Block ablock)
+		pTransfers.forEach(ablock)
+	end
+	
+	/**
+	 * Collect motion transfers with block. Block receives as only argument MotionTransfer
+	 * and has to return true to include or false to exclude motion transfer.
+	 * Returns Array of MotionTransfer.
+	 */
+	public func Array collect(Block ablock)
+		return pTransfers.collect(ablock)
+	end
+end

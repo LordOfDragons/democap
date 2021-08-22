@@ -22,6 +22,7 @@
 namespace Democap
 
 pin Democap.Characters
+pin Democap.MotionTransferSystem
 
 pin Dragengine.Commands
 pin Dragengine.Gui.Layouts
@@ -37,6 +38,7 @@ pin Dragengine.Utils
 class GameApp extends BaseGameApp
 	private var CharacterProfiles pCharacterProfiles
 	
+	private var MotionTransferFactories pMotionTransferFactories
 	private var LoadCharacterProfile pLoadCharacterProfile
 	private var MutableID pNextElementClassID
 	
@@ -56,6 +58,9 @@ class GameApp extends BaseGameApp
 	 */
 	public func void initGame()
 		super.initGame()
+		
+		pMotionTransferFactories = MotionTransferFactories.new()
+		addMotionTransferFactories()
 		
 		// do not capture input. this allows the window to be used like regular windows
 		InputSystem.setCaptureInputDevices(false)
@@ -128,6 +133,13 @@ class GameApp extends BaseGameApp
 	end
 	
 	/**
+	 * Create motion transfer factories.
+	 */
+	protected func void addMotionTransferFactories()
+		pMotionTransferFactories.add(MotionTransferIK.Factory.new())
+	end
+	
+	/**
 	 * Cleaning up.
 	 */
 	public func void cleanUp()
@@ -169,6 +181,11 @@ class GameApp extends BaseGameApp
 	/** Next unique element class ID generator. */
 	public func MutableID getNextElementClassID()
 		return pNextElementClassID
+	end
+	
+	/** Motion transfer factories. */
+	public func MotionTransferFactories getMotionTransferFactories()
+		return pMotionTransferFactories
 	end
 	
 	/** Load/save Character profile. */

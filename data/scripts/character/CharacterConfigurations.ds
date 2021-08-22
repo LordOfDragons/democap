@@ -1,0 +1,105 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Characters
+
+pin Dragengine.Utils
+
+
+/**
+ * List of character configurations.
+ */
+class CharacterConfigurations
+	private var Dictionary pConfigurations
+	
+	
+	
+	/** Create configuration list. */
+	public func new()
+		pConfigurations = Dictionary.new()
+	end
+	
+	/** Dispose of list. */
+	public func void dispose()
+		removeAll()
+	end
+	
+	
+	
+	/** Count of configurations. */
+	public func int getCount()
+		return pConfigurations.getCount()
+	end
+	
+	/** Named configuration is present. */
+	public func bool has(String name)
+		return pConfigurations.has(name)
+	end
+	
+	/** Named configuration or null if absent. */
+	public func CharacterConfiguration getAt(String name)
+		return pConfigurations.getAt(name, null) cast CharacterConfiguration
+	end
+	
+	/** Add configuration. Throws exception if named configuration is present. */
+	public func void add(CharacterConfiguration configuration)
+		if pConfigurations.has(configuration.getName())
+			throw EInvalidParam.new("named configuration is present: " + configuration.getName())
+		end
+		pConfigurations.setAt(configuration.getName(), configuration)
+	end
+	
+	/** Remove configuration. Throws exception if named configuration is absent. */
+	public func void remove(CharacterConfiguration configuration)
+		pConfigurations.remove(configuration.getName())
+		configuration.dispose()
+	end
+	
+	/** Remove all configurations. */
+	public func void removeAll()
+		pConfigurations.forEachValue(block CharacterConfiguration each
+			each.dispose()
+		end)
+		pConfigurations.removeAll()
+	end
+	
+	/**
+	 * Visit configurations with block. Block receives as only argument CharacterConfiguration.
+	 */
+	public func void forEach(Block ablock)
+		pConfigurations.forEachValue(ablock)
+	end
+	
+	/**
+	 * Collect configurations with block. Block receives as only argument CharacterConfiguration and
+	 * has to return true to include or false to exclude configuration.
+	 * Returns Array of CharacterConfiguration.
+	 */
+	public func Array collect(Block ablock)
+		var Array list = Array.new()
+		pConfigurations.forEachValue(block CharacterConfiguration each
+			if ablock.run(each) cast bool
+				list.add(each)
+			end
+		end)
+		return list
+	end
+end

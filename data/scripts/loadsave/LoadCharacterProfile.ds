@@ -22,6 +22,7 @@
 namespace Democap
 
 pin Democap.Characters
+pin Democap.MotionTransferSystem
 
 pin Dragengine.Animators
 pin Dragengine.LoadSave
@@ -124,10 +125,22 @@ class LoadCharacterProfile extends BaseXmlLoader
 	/** Read configuration tag. */
 	public func void readConfiguration(EasyXMLElement root, CharacterProfile profile)
 		var CharacterConfiguration configuration = CharacterConfiguration.new(profile, root.getAttributeNamed("name"))
+		var MotionTransferFactories motionTransferFactories = GameApp.getGameApp().getMotionTransferFactories()
 		profile.getConfigurations().add(configuration)
 		
 		root.forEachTag(block EasyXMLElement element, String tagName
-			if tagName.equals("dummy")
+			if tagName.equals("motionTransfer")
+				var String type = element.getAttributeNamed("type")
+				var MotionTransferFactory factory = motionTransferFactories.getAt(type)
+				if factory == null
+					logInvalidAttributeValue(element, "type", type)
+					throw EInvalidParam.new("Invalid motion transfer type '" + type + "'")
+				end
+				
+				var MotionTransfer transfer = factory.createMotionTransfer()
+				transfer.load(this, element)
+				
+				configuration.getMotionTransfers().add(transfer)
 				
 			else
 				logUnknownTag(element)
@@ -159,5 +172,10 @@ class LoadCharacterProfile extends BaseXmlLoader
 	public func void writeConfiguration(EasyXMLElement root, CharacterConfiguration configuration)
 		var EasyXMLElement tag = root.addTag("configuration")
 		
+		configuration.getMotionTransfers().forEach(block MotionTransfer each
+			var EasyXMLElement childTag = tag.addTag("motionTransfer")
+			childTag.setAttribute("type", each.factoryID())
+			each.save(this, childTag)
+		end)
 	end
 end
