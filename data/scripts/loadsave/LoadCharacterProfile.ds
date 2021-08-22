@@ -94,6 +94,9 @@ class LoadCharacterProfile extends BaseXmlLoader
 			if tagName.equals("appearance")
 				readAppearance(element, profile.getAppearance())
 				
+			elif tagName.equals("configuration")
+				readConfiguration(element, profile)
+				
 			else
 				logUnknownTag(element)
 			end
@@ -118,12 +121,30 @@ class LoadCharacterProfile extends BaseXmlLoader
 		end)
 	end
 	
+	/** Read configuration tag. */
+	public func void readConfiguration(EasyXMLElement root, CharacterProfile profile)
+		var CharacterConfiguration configuration = CharacterConfiguration.new(profile, root.getAttributeNamed("name"))
+		profile.getConfigurations().add(configuration)
+		
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("dummy")
+				
+			else
+				logUnknownTag(element)
+			end
+		end)
+	end
+	
 	
 	
 	
 	/** Write character profile. */
 	public func void writeCharacterProfile(EasyXMLElement root, CharacterProfile profile)
 		writeAppearance(root, profile.getAppearance())
+		
+		profile.getConfigurations().forEach(block CharacterConfiguration each
+			writeConfiguration(root, each)
+		end)
 	end
 	
 	/** Write appearance. */
@@ -132,5 +153,11 @@ class LoadCharacterProfile extends BaseXmlLoader
 		tag.addDataTag("model", appearance.getPathModel())
 		tag.addDataTag("skin", appearance.getPathSkin())
 		tag.addDataTag("rig", appearance.getPathRig())
+	end
+	
+	/** Write configuration. */
+	public func void writeConfiguration(EasyXMLElement root, CharacterConfiguration configuration)
+		var EasyXMLElement tag = root.addTag("configuration")
+		
 	end
 end
