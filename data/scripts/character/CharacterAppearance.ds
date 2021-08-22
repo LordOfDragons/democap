@@ -29,76 +29,9 @@ pin Dragengine.Utils
  * Appearance of character.
  */
 class CharacterAppearance
-	/** Listener loading resources. */
-	interface ListenerResourcesLoaded
-		/** Loading finished. Check resources for null to see if some loading failed. */
-		func void loadingFinished()
-	end
-	
-	/** Resource loader listener. */
-	protected class ResourceLoading implements ResourceListener
-		var CharacterAppearance pAppearance
-		var int pCount
-		var ListenerResourcesLoaded pListener
-		
-		public func new(CharacterAppearance appearance, int count, ListenerResourcesLoaded listener)
-			pAppearance = appearance
-			pCount = count
-			pListener = listener
-		end
-		
-		public func void finishedLoading(String filename, ResourceLoaderType resourceType, Object resource)
-			if filename.equals(pAppearance.getPathModel())
-				pCount--
-				pAppearance.setModel(resource cast Model)
-			end
-			if filename.equals(pAppearance.getPathSkin())
-				pCount--
-				pAppearance.setSkin(resource cast Skin)
-			end
-			if filename.equals(pAppearance.getPathRig())
-				pCount--
-				pAppearance.setRig(resource cast Rig)
-			end
-			checkFinished()
-		end
-		
-		public func void failedLoading(String filename, ResourceLoaderType resourceType)
-			if filename.equals(pAppearance.getPathModel())
-				pCount--
-				pAppearance.setModel(null)
-			end
-			if filename.equals(pAppearance.getPathSkin())
-				pCount--
-				pAppearance.setSkin(null)
-			end
-			if filename.equals(pAppearance.getPathRig())
-				pCount--
-				pAppearance.setRig(null)
-			end
-			checkFinished()
-		end
-		
-		protected func void checkFinished()
-			if pCount <= 0
-				pAppearance.setResourcesLoaded(true)
-				pListener.loadingFinished()
-			end
-		end
-	end
-	
-	
-	
 	private var String pPathModel
-	private var Model pModel
-	
 	private var String pPathSkin
-	private var Skin pSkin
-	
 	private var String pPathRig
-	private var Rig pRig
-	
-	private var bool pResourcesLoaded
 	
 	
 	/** Create character appearance. */
@@ -118,21 +51,7 @@ class CharacterAppearance
 	/** Set path of model resource to use. */
 	public func void setPathModel(String path)
 		pPathModel = path
-		pModel = null
-		pResourcesLoaded = false
 	end
-	
-	/** Model or null. */
-	public func Model getModel()
-		return pModel
-	end
-	
-	/** Set model or null. */
-	public func void setModel(Model model)
-		pModel = model
-	end
-	
-	
 	
 	/** Path to skin resource to use. */
 	public func String getPathSkin()
@@ -142,21 +61,7 @@ class CharacterAppearance
 	/** Set path of skin resource to use. */
 	public func void setPathSkin(String path)
 		pPathSkin = path
-		pSkin = null
-		pResourcesLoaded = false
 	end
-	
-	/** Skin or null. */
-	public func Skin getSkin()
-		return pSkin
-	end
-	
-	/** Set skin or null. */
-	public func void setSkin(Skin skin)
-		pSkin = skin
-	end
-	
-	
 	
 	/** Path to rig resource to use. */
 	public func String getPathRig()
@@ -166,64 +71,22 @@ class CharacterAppearance
 	/** Set path of rig resource to use. */
 	public func void setPathRig(String path)
 		pPathRig = path
-		pRig = null
-		pResourcesLoaded = false
-	end
-	
-	/** Rig or null. */
-	public func Rig getRig()
-		return pRig
-	end
-	
-	/** Set rig or null. */
-	public func void setRig(Rig rig)
-		pRig = rig
 	end
 	
 	
 	
-	/** Resources have been loaded. */
-	public func bool getResourcesLoaded()
-		return pResourcesLoaded
-	end
-	
-	/** Load resources if not loaded yet. */
-	public func void loadResources(ListenerResourcesLoaded listener)
-		if pResourcesLoaded
-			return
-		end
-		
-		var int count = 0
-		if not pPathModel.empty()
-			count++
-		end
-		if not pPathSkin.empty()
-			count++
-		end
-		if not pPathRig.empty()
-			count++
-		end
-		
-		if count == 0
-			listener.loadingFinished()
-			return
-		end
-		
-		var ResourceLoading loading = ResourceLoading.new(this, count, listener)
+	/** Init stub element. */
+	public func void initElementClass(BaseVRActorClass eclass)
+		var ECComposeComponent component = eclass.getComponent().getComponent()
 		
 		if not pPathModel.empty()
-			Model.loadAsynchron(pPathModel, loading)
+			component.getModel().setPath(pPathModel)
 		end
 		if not pPathSkin.empty()
-			Skin.loadAsynchron(pPathSkin, loading)
+			component.getSkin().setPath(pPathSkin)
 		end
 		if not pPathRig.empty()
-			Rig.loadAsynchron(pPathRig, loading)
+			component.getRig().setPath(pPathRig)
 		end
-	end
-	
-	/** Set resources have been loaded. */
-	public func void setResourcesLoaded(bool loaded)
-		pResourcesLoaded = loaded
 	end
 end

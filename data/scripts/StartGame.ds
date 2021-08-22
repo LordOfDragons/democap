@@ -24,8 +24,6 @@ namespace Democap
 pin Dragengine.CameraDirectors
 pin Dragengine.Gui
 pin Dragengine.Scenery
-pin Dragengine.Preloading
-pin Dragengine.Utils
 
 
 
@@ -45,18 +43,6 @@ class StartGame extends WindowGameWorld.Loader
 	 */
 	public func void onLoadWorldFinished()
 		var GameApp app = BaseGameApp.getApp() cast GameApp
-		var GameWorld gameWorld = getStubWorld().getGameWorld()
-		var ElementClass eclass
-		var UniqueID id
-		
-		// spawn player actor
-		eclass = app.getElementClassList().getNamed("VRActor")
-		id = app.getIDGenerator().nextID()
-		var BaseVRActor player = StubElement.new(eclass, id).createElement() cast BaseVRActor
-		
-		gameWorld.getSpawnPoints().getNamed("player").spawn(gameWorld, player)
-		
-		player.getPlayerControllable().takeControl()
 		
 		// assign camera director attaching the camera to the player controlled actor
 		var VRCameraDirector director = VRCameraDirector.new()
@@ -65,6 +51,9 @@ class StartGame extends WindowGameWorld.Loader
 		director.setHighestIntensity(20)
 		director.setAdaptionTime(30)
 		getWindow().setCameraDirector(director)
+		
+		// testing: activate character and add it to the world
+		app.setActiveCharacterProfile(app.getCharacterProfiles().getAt("Georgo"))
 		
 		// finish loading
 		super.onLoadWorldFinished()
@@ -78,9 +67,6 @@ class StartGame extends WindowGameWorld.Loader
 	 */
 	public func void onLoadWorldFailed()
 		super.onLoadWorldFailed()
-		
 		BaseGameApp.getApp().cancelLoadGameWorld()
-		
-		Engine.quit()
 	end
 end

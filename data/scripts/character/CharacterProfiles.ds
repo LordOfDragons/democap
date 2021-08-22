@@ -28,7 +28,7 @@ pin Dragengine.Utils
  * List of character profiles.
  * 
  * Profiles are stored under "/characters" directory in the user game configure directory
- * as files of type "*.dmccp" .
+ * as files of type "*.demccp" .
  */
 class CharacterProfiles
 	private var String pDirectory
@@ -44,6 +44,11 @@ class CharacterProfiles
 		
 		pDirectory = directory
 		pProfiles = Dictionary.new()
+	end
+	
+	/** Dispose of list. */
+	public func void dispose()
+		removeAll()
 	end
 	
 	
@@ -81,10 +86,14 @@ class CharacterProfiles
 	/** Remove profile. Throws exception if named profile is absent. */
 	public func void remove(CharacterProfile profile)
 		pProfiles.remove(profile.getName())
+		profile.dispose()
 	end
 	
 	/** Remove all profiles. */
 	public func void removeAll()
+	pProfiles.forEachValue(block CharacterProfile each
+			each.dispose()
+		end)
 		pProfiles.removeAll()
 	end
 	
@@ -121,7 +130,7 @@ class CharacterProfiles
 		
 		FileSystem.searchFiles(pDirectory, true, block String each, FileType type
 			var String filename = File.new(each).getName()
-			if type == FileType.file and FileSystem.pathMatchesPattern(filename, "*.dmccp")
+			if type == FileType.file and FileSystem.pathMatchesPattern(filename, "*.demccp")
 				console.addMessage("Load character profile '" + filename + "'")
 				var CharacterProfile profile
 				try
@@ -149,7 +158,7 @@ class CharacterProfiles
 		console.addMessage("Save character profiles to '" + pDirectory + "'")
 		
 		pProfiles.forEachValue(block CharacterProfile each
-			var String filename = each.getName() + ".dmccp"
+			var String filename = each.getName() + ".demccp"
 			console.addMessage("Save character profile '" + filename + "'")
 			
 			filename = (basePath + filename).getPath()

@@ -21,6 +21,7 @@
 
 namespace Democap.Characters
 
+pin Dragengine.Preloading
 pin Dragengine.Scenery
 pin Dragengine.Utils
 
@@ -31,11 +32,14 @@ pin Dragengine.Utils
  * how the trackers affect the rig.
  * 
  * Profiles are stored under "/characters" directory in the user game configure directory
- * as files of type "*.dmccp" .
+ * as files of type "*.demccp" .
  */
 class CharacterProfile
 	private var String pName
 	private var CharacterAppearance pAppearance
+	private var BaseVRActorClass pElementClass
+	private var BaseVRActorClass pOldElementClass
+	private var PreloadCounter pPreloadCounter
 	
 	
 	
@@ -43,6 +47,12 @@ class CharacterProfile
 	public func new(String name)
 		setName(name)
 		pAppearance = CharacterAppearance.new()
+	end
+	
+	/** Dispose of character profile. */
+	public func void dispose()
+		dropElementClass()
+		disposeOldElementClass()
 	end
 	
 	
@@ -67,5 +77,84 @@ class CharacterProfile
 	/** Appearance. */
 	public func CharacterAppearance getAppearance()
 		return pAppearance
+	end
+	
+	
+	
+	/**
+	 * Element class creating and preloading it if required. Returned element class can be
+	 * still preloading so check isElementClassPreloading() to check if it is ready to be used.
+	 */
+	public func BaseVRActorClass getElementClass()
+		if pElementClass == null
+			pElementClass = createElementClass()
+			pPreloadCounter = PreloadCounter.new()
+			pElementClass.preloadResources(pPreloadCounter)
+		end
+		return pElementClass
+	end
+	
+	/** Element class is preloading. Always false until getElementClass() is called. */
+	public func bool isElementClassPreloading()
+		if pPreloadCounter != null and pPreloadCounter.isNotZero()
+			return true
+		end
+		pPreloadCounter = null
+		return false
+	end
+	
+	/** Drop element class. */
+	public func void dropElementClass()
+		if pElementClass == null
+			return
+		end
+		
+		disposeOldElementClass()
+		pOldElementClass = pElementClass
+		pElementClass = null
+		pPreloadCounter = null
+	end
+	
+	
+	
+	/** Create element class. Caller has to start preloading to use it. */
+	public func BaseVRActorClass createElementClass()
+		var BaseVRActorClass eclass = BaseVRActorClass.new(\
+			"Character" + GameApp.getGameApp().getNextElementClassID().nextID())
+		
+		try
+			pAppearance.initElementClass(eclass)
+			
+			// add motion capture behaviors
+			
+		catch Exception e
+			eclass.dispose()
+			throw
+		end
+		
+		return eclass
+	end
+	
+	/**
+	 * Create stub element. If no element class is present or it is still preloading
+	 * null is returned.
+	 */
+	public func StubElement createStubElement()
+		var StubElement stub
+		if pElementClass != null and not isElementClassPreloading()
+			stub = StubElement.new(getElementClass(), GameApp.getGameApp().getIDGenerator().nextID())
+			// sometimes it can be required to set stub properties
+		end
+		return stub
+	end
+	
+	
+	
+	/** Dispose old element class kept to avoid reloading resources. */
+	protected func void disposeOldElementClass()
+		if pOldElementClass != null
+			pOldElementClass.dispose()
+			pOldElementClass = null
+		end
 	end
 end

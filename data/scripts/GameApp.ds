@@ -39,6 +39,9 @@ class GameApp extends BaseGameApp
 	private var CharacterProfile pActiveCharacterProfile
 	
 	private var LoadCharacterProfile pLoadCharacterProfile
+	private var MutableID pNextElementClassID
+	
+	private var WorldSpawnCharacter pWorldSpawnCharacter
 	
 	
 	
@@ -65,13 +68,6 @@ class GameApp extends BaseGameApp
 			end))
 	end
 	
-	class TestListResLoad implements CharacterAppearance.ListenerResourcesLoaded
-		public func new(): end
-		public func void loadingFinished()
-			GameApp.getGameApp().getConsole().addMessage("Loading resources finished")
-		end
-	end
-	
 	/**
 	 * Launch example application.
 	 */
@@ -92,14 +88,13 @@ class GameApp extends BaseGameApp
 		end
 		
 		// create other stuff
+		pNextElementClassID = MutableID.new(1)
 		pLoadCharacterProfile = LoadCharacterProfile.new(getConsole())
 		
 		pCharacterProfiles = CharacterProfiles.new("/characters")
 		pCharacterProfiles.loadAll()
 		
-		setActiveCharacterProfile(pCharacterProfiles.getAt("Georgo"))
-		
-		pActiveCharacterProfile.getAppearance().loadResources(TestListResLoad.new())
+		pWorldSpawnCharacter = WorldSpawnCharacter.new()
 		
 		// load game world
 		getConsole().addMessage("Loading world...")
@@ -137,7 +132,27 @@ class GameApp extends BaseGameApp
 	 * Cleaning up.
 	 */
 	public func void cleanUp()
+		if pWorldSpawnCharacter != null
+			pWorldSpawnCharacter.dispose()
+			pWorldSpawnCharacter = null
+		end
+		
+		pActiveCharacterProfile = null
+		
+		if pCharacterProfiles != null
+			pCharacterProfiles.dispose()
+			pCharacterProfiles = null
+		end
+		
+		pLoadCharacterProfile = null
+		
 		super.cleanUp()
+	end
+	
+	/** Finished loading game world. */
+	public func void finishLoadGameWorld()
+		super.finishLoadGameWorld()
+		pWorldSpawnCharacter.setGameWorld(getWindowGameWorld().getGameWorld())
 	end
 	
 	
@@ -162,14 +177,29 @@ class GameApp extends BaseGameApp
 		if profile == pActiveCharacterProfile
 			return
 		end
+		
+		getConsole().addMessage("Activate character profile: " + (profile != null if profile.getName() else "-"))
 		pActiveCharacterProfile = profile
+		
+		pWorldSpawnCharacter.setCharacterProfile(profile)
+		
 		// TODO notification
 	end
 	
 	
 	
+	/** Next unique element class ID generator. */
+	public func MutableID getNextElementClassID()
+		return pNextElementClassID
+	end
+	
 	/** Load/save Character profile. */
 	public func LoadCharacterProfile getLoadCharacterProfile()
 		return pLoadCharacterProfile
+	end
+	
+	/** World spawn character. */
+	public func WorldSpawnCharacter getWorldSpawnCharacter()
+		return pWorldSpawnCharacter
 	end
 end
