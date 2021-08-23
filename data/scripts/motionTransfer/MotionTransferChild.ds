@@ -1,0 +1,135 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Democap.Behaviors
+
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+/**
+ * Motion transfer using Child Coordinate System.
+ * 
+ * Defines name of bone to manipulate. Defines tracker to used as coordinate system.
+ * During calibration the coordinate system of the tracker slot relative to the bone
+ * coordinate system is stored. Custom position and rotation offsets can be applied
+ * to fine tune the result if slightly off.
+ * 
+ * The bone is transformed as being statically attached to the tracker coordinate
+ * system. Basically this applies the tracker position and rotation to the bone using
+ * the calibrated position and rotation.
+ * 
+ * This is the most simple motion transfer.
+ */
+class MotionTransferChild extends DefaultMotionTransfer
+	/** Factory. */
+	class Factory implements MotionTransferFactory
+		public func new()
+		end
+		
+		public func String factoryID()
+			return "child"
+		end
+		
+		public func MotionTransfer createMotionTransfer()
+			return MotionTransferChild.new(factoryID())
+		end
+	end
+	
+	
+	
+	private var String pBone
+	private var MotionTransferTracker pTracker
+	
+	
+	
+	/** Create motion transfer. */
+	public func new(String factoryID) super(factoryID)
+		pBone = ""
+		pTracker = MotionTransferTracker.new()
+	end
+	
+	/** Create copy of motion transfer. */
+	public func new(MotionTransferChild transfer) super(transfer.factoryID())
+		pBone = transfer.pBone
+		pTracker = MotionTransferTracker.new(transfer.pTracker)
+	end
+	
+	
+	
+	/** Bone name. */
+	public func String getBone()
+		return pBone
+	end
+	
+	/** Set bone name. */
+	public func void setBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pBone = bone
+	end
+	
+	/** Tracker. */
+	public func MotionTransferTracker getTracker()
+		return pTracker
+	end
+	
+	
+	
+	/**
+	 * Init element clas.
+	 */
+	public func void initElementClass(BaseVRActorClass eclass)
+		
+	end
+	
+	/** Create copy of motion transfer. */
+	public func MotionTransfer createCopy()
+		return MotionTransferChild.new(this)
+	end
+	
+	/**
+	 * Load from XML.
+	 */
+	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("bone")
+				setBone(element.getFirstCData())
+				
+			elif tagName.equals("tracker")
+				pTracker.load(loader, element)
+			end
+		end)
+	end
+	
+	/**
+	 * Save to XML.
+	 */
+	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+		tag.addDataTag("bone", pBone)
+		pTracker.save(loader, tag.addTag("tracker"))
+	end
+end

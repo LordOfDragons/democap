@@ -1,0 +1,98 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior connecting to CharacterConfiguration used for owner element.
+ */
+class ECBCharacterConfiguration extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		protected var ECBCharacterConfiguration pECBehavior
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBCharacterConfiguration ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+		end
+		
+		
+		
+		/** Character configuration assigned to this element class. */
+		public func CharacterConfiguration getCharacter()
+			return pECBehavior.getCharacter()
+		end
+	end
+	
+	
+	protected var CharacterConfiguration pCharacter
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, CharacterConfiguration character) super(eclass)
+		if character == null
+			throw ENullPointer.new("character")
+		end
+		
+		pCharacter = character
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pCharacter = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Character configuration assigned to this element class. */
+	public func CharacterConfiguration getCharacter()
+		return pCharacter
+	end
+	
+	
+	
+	/** Get instance for element or null. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block ECBehaviorInstance each
+			return each castable Instance
+		end) cast Instance
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

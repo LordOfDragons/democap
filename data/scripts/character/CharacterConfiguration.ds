@@ -21,8 +21,10 @@
 
 namespace Democap.Characters
 
+pin Democap.Behaviors
 pin Democap.MotionTransferSystem
 
+pin Dragengine.Animators
 pin Dragengine.Scenery
 pin Dragengine.Utils
 pin Dragengine.Preloading
@@ -142,10 +144,36 @@ class CharacterConfiguration
 		var BaseVRActorClass eclass = BaseVRActorClass.new(\
 			"Character" + GameApp.getGameApp().getNextElementClassID().nextID())
 		
+		var AnimatorDefinition adef = AnimatorDefinition.new("")
+		
 		try
+			ECBCharacterConfiguration.new(eclass, this)
+			var ECBMoCapAnimator mocapAnimator = ECBMoCapAnimator.new(eclass)
+			
 			pProfile.getAppearance().initElementClass(eclass)
 			
+			// add tracker slots. each slot adds two controllers (position, rotation)
+			pTrackerSlots.forEach(block CharacterTrackerSlot each
+				var ECBTrackerSlot behavior = ECBTrackerSlot.new(eclass, each)
+				
+				var ADController adcontroller = ADController.new()
+				adcontroller.setName(behavior.getControllerNamePosition())
+				adef.addController(adcontroller)
+				
+				adcontroller = ADController.new()
+				adcontroller.setName(behavior.getControllerNameRotation())
+				adef.addController(adcontroller)
+			end)
+			
 			// add motion capture behaviors
+			pMotionTransfers.forEach(block MotionTransfer each
+				each.initElementClass(eclass)
+			end)
+			
+			// finalize motion capture animator
+			var Animator animator = Animator.new()
+			adef.buildAnimator(animator)
+			mocapAnimator.setAnimator(animator)
 			
 		catch Exception e
 			eclass.dispose()
