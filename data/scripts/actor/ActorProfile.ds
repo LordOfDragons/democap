@@ -1,0 +1,91 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Actors
+
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Profile of an actor performing motion capture.
+ * 
+ * Profiles are stored under "/actors" directory in the user game configure directory
+ * as files of type "*.demcap" .
+ */
+class ActorProfile
+	private var String pName
+	private var float pArmUpperLength
+	private var float pArmLowerLength
+	
+	
+	
+	/** Create actor. */
+	public func new(String name)
+		setName(name)
+		pArmUpperLength = 0.3
+		pArmLowerLength = 0.25
+	end
+	
+	/** Dispose of actor profile. */
+	public func void dispose()
+	end
+	
+	
+	
+	/** Name of actor profile. */
+	public func String getName()
+		return pName
+	end
+	
+	/** Set name of actor profile. */
+	public func void setName(String name)
+		if name == null
+			throw ENullPointer.new("name")
+		end
+		if name.empty()
+			throw EInvalidParam.new("name is empty string")
+		end
+		
+		pName = name
+	end
+	
+	/** Length in meters of upper arm. */
+	public func float getArmUpperLength()
+		return pArmUpperLength
+	end
+	
+	/** Set length in meters of upper arm. */
+	public func void setArmUpperLength(float length)
+		pArmUpperLength = DEMath.max(length, 0.2)
+	end
+	
+	/** Length in meters of lower arm. */
+	public func float getArmLowerLength()
+		return pArmLowerLength
+	end
+	
+	/** Set length in meters of lower arm. */
+	public func void setArmLowerLength(float length)
+		pArmLowerLength = DEMath.max(length, 0.15)
+	end
+end

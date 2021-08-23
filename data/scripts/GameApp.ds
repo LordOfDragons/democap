@@ -21,7 +21,9 @@
 
 namespace Democap
 
+pin Democap.Actors
 pin Democap.Characters
+pin Democap.Commands
 pin Democap.MotionTransferSystem
 
 pin Dragengine.Commands
@@ -36,9 +38,12 @@ pin Dragengine.Utils
  * Game Application.
  */
 class GameApp extends BaseGameApp
+	private var ActorProfiles pActorProfiles
+	private var ActorProfile pActiveActorProfile
 	private var CharacterProfiles pCharacterProfiles
 	
 	private var MotionTransferFactories pMotionTransferFactories
+	private var LoadActorProfile pLoadActorProfile
 	private var LoadCharacterProfile pLoadCharacterProfile
 	private var MutableID pNextElementClassID
 	
@@ -93,7 +98,19 @@ class GameApp extends BaseGameApp
 		
 		// create other stuff
 		pNextElementClassID = MutableID.new(1)
+		pLoadActorProfile = LoadActorProfile.new(getConsole())
 		pLoadCharacterProfile = LoadCharacterProfile.new(getConsole())
+		
+		pActorProfiles = ActorProfiles.new("/actors")
+		pActorProfiles.loadAll()
+		
+		if pActorProfiles.getCount() > 0
+			var Array names = Array.new()
+			pActorProfiles.forEach(block ActorProfile each
+				names.add(each.getName())
+			end)
+			setActiveActorProfile(pActorProfiles.getAt(names.sorted().getAt(0) cast String))
+		end
 		
 		pCharacterProfiles = CharacterProfiles.new("/characters")
 		pCharacterProfiles.loadAll()
@@ -118,15 +135,26 @@ class GameApp extends BaseGameApp
 		getLoaders().getElementClass().addXmlElementClasses(eclist, "/content/models", true)
 	end
 	
+	/** Add commands. */
+	protected func void createAndAddCommands()
+		super.createAndAddCommands()
+		
+		var CommandManager commands = getCommandManager()
+		
+		CommandsAAControllerInput.addCommands(commands, getPlayerControlledActor())
+	end
+	
 	/**
 	 * Create helper containing default bindings.
 	 */
 	public func DefaultBindingHelper defaultBindings()
 		var DefaultBindingHelper helper = super.defaultBindings()
 		
+		CommandsAAControllerInput.addDefaultBindings(helper)
+		
 		// remove mouse bindings. we redirect them to the operator window anyway
 		if helper.getMouse() != null
-			helper.removeAllDeviceBindings( helper.getMouse() )
+			helper.removeAllDeviceBindings(helper.getMouse())
 		end
 		
 		return helper
@@ -154,7 +182,14 @@ class GameApp extends BaseGameApp
 			pCharacterProfiles = null
 		end
 		
+		pActiveActorProfile = null
+		if pActorProfiles != null
+			pActorProfiles.dispose()
+			pActorProfiles = null
+		end
+		
 		pLoadCharacterProfile = null
+		pLoadActorProfile = null
 		
 		super.cleanUp()
 	end
@@ -170,6 +205,21 @@ class GameApp extends BaseGameApp
 	/** Get app instance for convenience. */
 	static public func GameApp getGameApp()
 		return getApp() cast GameApp
+	end
+	
+	/** Actor profiles. */
+	public func ActorProfiles getActorProfiles()
+		return pActorProfiles
+	end
+	
+	/** Active actor profile or null. */
+	public func ActorProfile getActiveActorProfile()
+		return pActiveActorProfile
+	end
+	
+	/** Set active actor profile or null. */
+	public func void setActiveActorProfile(ActorProfile profile)
+		pActiveActorProfile = profile
 	end
 	
 	/** Character profiles. */
@@ -189,7 +239,12 @@ class GameApp extends BaseGameApp
 		return pMotionTransferFactories
 	end
 	
-	/** Load/save Character profile. */
+	/** Load/save actor profile. */
+	public func LoadActorProfile getLoadActorProfile()
+		return pLoadActorProfile
+	end
+	
+	/** Load/save character profile. */
 	public func LoadCharacterProfile getLoadCharacterProfile()
 		return pLoadCharacterProfile
 	end

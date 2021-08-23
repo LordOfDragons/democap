@@ -1,0 +1,172 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Actors
+
+pin Dragengine.Utils
+
+
+/**
+ * List of actor profiles.
+ * 
+ * Profiles are stored under "/actors" directory in the user game configure directory
+ * as files of type "*.demcap" .
+ */
+class ActorProfiles
+	private var String pDirectory
+	private var Dictionary pProfiles
+	
+	
+	
+	/** Create actor list. */
+	public func new(String directory)
+		if directory == null
+			throw ENullPointer.new("directory")
+		end
+		
+		pDirectory = directory
+		pProfiles = Dictionary.new()
+	end
+	
+	/** Dispose of list. */
+	public func void dispose()
+		removeAll()
+	end
+	
+	
+	
+	/** Directory to save actor profiles to. */
+	public func String getDirectory()
+		return pDirectory
+	end
+	
+	
+	
+	/** Count of profiles. */
+	public func int getCount()
+		return pProfiles.getCount()
+	end
+	
+	/** Named profile is present. */
+	public func bool has(String name)
+		return pProfiles.has(name)
+	end
+	
+	/** Named profile or null if absent. */
+	public func ActorProfile getAt(String name)
+		return pProfiles.getAt(name, null) cast ActorProfile
+	end
+	
+	/** Add profile. Throws exception if named profile is present. */
+	public func void add(ActorProfile profile)
+		if pProfiles.has(profile.getName())
+			throw EInvalidParam.new("named profile is present: " + profile.getName())
+		end
+		pProfiles.setAt(profile.getName(), profile)
+	end
+	
+	/** Remove profile. Throws exception if named profile is absent. */
+	public func void remove(ActorProfile profile)
+		pProfiles.remove(profile.getName())
+		profile.dispose()
+	end
+	
+	/** Remove all profiles. */
+	public func void removeAll()
+	pProfiles.forEachValue(block ActorProfile each
+			each.dispose()
+		end)
+		pProfiles.removeAll()
+	end
+	
+	/**
+	 * Visit profiles with block. Block receives as only argument ActorProfile.
+	 */
+	public func void forEach(Block ablock)
+		pProfiles.forEachValue(ablock)
+	end
+	
+	/**
+	 * Collect profiles with block. Block receives as only argument ActorProfile and
+	 * has to return true to include or false to exclude profile.
+	 * Returns Array of ActorProfile.
+	 */
+	public func Array collect(Block ablock)
+		var Array list = Array.new()
+		pProfiles.forEachValue(block ActorProfile each
+			if ablock.run(each) cast bool
+				list.add(each)
+			end
+		end)
+		return list
+	end
+	
+	
+	
+	/** Load actors from directory (*.dmcc). */
+	public func void loadAll()
+		var LoadActorProfile loader = GameApp.getGameApp().getLoadActorProfile()
+		var Console console = GameApp.getGameApp().getConsole()
+		
+		console.addMessage("Load actor profiles from '" + pDirectory + "'")
+		
+		FileSystem.searchFiles(pDirectory, true, block String each, FileType type
+			var String filename = File.new(each).getName()
+			if type == FileType.file and FileSystem.pathMatchesPattern(filename, "*.demcap")
+				console.addMessage("Load actor profile '" + filename + "'")
+				var ActorProfile profile
+				try
+					profile = loader.load(each)
+				catch Exception e
+					console.addError("Failed loading actor profile from file '" + each + "'", e)
+					return true
+				end
+				try
+					add(profile)
+				catch Exception e
+					console.addError("Failed adding actor profile '" + profile.getName() + "'", e)
+				end
+			end
+			return true
+		end)
+	end
+	
+	/** Save actors to directory (*.dmcc). */
+	public func void saveAll()
+		var LoadActorProfile loader = GameApp.getGameApp().getLoadActorProfile()
+		var Console console = GameApp.getGameApp().getConsole()
+		var File basePath = File.new(pDirectory)
+		
+		console.addMessage("Save actor profiles to '" + pDirectory + "'")
+		
+		pProfiles.forEachValue(block ActorProfile each
+			var String filename = each.getName() + ".demcap"
+			console.addMessage("Save actor profile '" + filename + "'")
+			
+			filename = (basePath + filename).getPath()
+			try
+				loader.save(filename, each)
+			catch Exception e
+				console.addError("Failed saving actor profile to file '" + filename + "'", e)
+			end
+		end)
+	end
+end

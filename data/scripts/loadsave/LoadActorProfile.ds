@@ -1,0 +1,110 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Democap.Actors
+
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+
+/**
+ * Load/Save actor profile from/to XML file.
+ */
+class LoadActorProfile extends BaseXmlLoader
+	/** Create loader. */
+	public func new(Console console) this(console, "LoadActorProfile")
+	end
+	
+	/** Create loader. */
+	public func new(Console console, String name) super(console, name)
+	end
+	
+	
+	
+	/** Load actor profile from file. */
+	public func ActorProfile load(String filename)
+		logLoadingFromFile(filename)
+		
+		var EasyXML document = EasyXML.new(filename)
+		if document.hasParseFailed()
+			logParsingFailed(document.getParseLog())
+			throw EInvalidParam.new("parsing document failed")
+		end
+		
+		var EasyXMLElement root = document.getRootElement()
+		if not root.getTagName().equals("actorProfile")
+			logUnknownTag(root)
+			throw EInvalidParam.new("root tag name mismatch")
+		end
+		
+		// name of profile is the file name without extension
+		var ActorProfile profile = ActorProfile.new(File.new(filename).getName().substring(0, -7))
+		
+		readActorProfile(root, profile)
+		return profile
+	end
+	
+	/** Save actor profile to file. */
+	public func void save(String filename, ActorProfile profile)
+		if profile == null
+			throw ENullPointer.new("profile")
+		end
+		
+		logSavingFromFile(filename)
+		
+		var EasyXML document = EasyXML.new()
+		var EasyXMLElement root = document.getRootElement()
+		
+		root.setTagName("actorProfile")
+		
+		writeActorProfile(root, profile)
+		
+		document.writeToFile(FileWriter.new(filename), false)
+	end
+	
+	
+	
+	/** Read actor profile tag. */
+	public func void readActorProfile(EasyXMLElement root, ActorProfile profile)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("armUpperLength")
+				profile.setArmUpperLength(element.getFirstCDataFloat())
+				
+			elif tagName.equals("armLowerLength")
+				profile.setArmLowerLength(element.getFirstCDataFloat())
+			end
+		end)
+	end
+	
+	
+	
+	
+	/** Write actor profile. */
+	public func void writeActorProfile(EasyXMLElement root, ActorProfile profile)
+		root.addDataTag("armUpperLength", profile.getArmUpperLength())
+		root.addDataTag("armLowerLength", profile.getArmLowerLength())
+	end
+end

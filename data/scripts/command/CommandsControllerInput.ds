@@ -1,0 +1,197 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Commands
+
+pin Democap.Actions
+
+pin Dragengine.Commands
+pin Dragengine.Scenery
+
+
+/**
+ * Commands for actor actions with AAControllerInput support.
+ * 
+ * Contains various commands as sub classes. A static helper method adds instances of each
+ * command to the command manager of a BaseGameApp.
+ */
+class CommandsAAControllerInput
+	/** Base class operating only on actors with AAControllerInput action. */
+	public class Base extends Command
+		protected var ECBehaviorPlayerControllable.Tracker pTracker
+		protected var bool pRightHand
+		
+		public func new(ECBehaviorPlayerControllable.Tracker tracker, String name, \
+		String description, bool rightHand) super(name, description)
+			if tracker == null
+				throw ENullPointer.new("tracker")
+			end
+			pTracker = tracker
+			pRightHand = rightHand
+		end
+		
+		protected func ECBehaviorPlayerControllable.Tracker getTracker()
+			return pTracker
+		end
+		
+		protected func AAControllerInput getControllerInput()
+			var ECBehaviorPlayerControllable.Instance actor = pTracker.getActor()
+			if actor == null
+				return null
+			end
+			
+			var ECBehaviorActorAIAction.Instance aiAction = \
+				ECBehaviorActorAIAction.getInstanceIn(actor.getElement())
+			if aiAction != null and aiAction.getAction() castable AAControllerInput
+				return aiAction.getAction() cast AAControllerInput
+				
+			else
+				return null
+			end
+		end
+		
+		public func void touch()
+			var AAControllerInput cinput = getControllerInput()
+			if cinput != null
+				touch(cinput)
+			end
+		end
+		
+		public func void untouch()
+			var AAControllerInput cinput = getControllerInput()
+			if cinput != null
+				untouch(cinput)
+			end
+		end
+		
+		public func void start()
+			var AAControllerInput cinput = getControllerInput()
+			if cinput != null
+				press(cinput)
+			end
+		end
+		
+		public func void stop()
+			var AAControllerInput cinput = getControllerInput()
+			if cinput != null
+				release(cinput)
+			end
+		end
+		
+		
+		
+		/** Touched. */
+		public func void touch(AAControllerInput action)
+		end
+		
+		/** Untouched. */
+		public func void untouch(AAControllerInput action)
+		end
+		
+		/** Pressed. */
+		public func void press(AAControllerInput action)
+		end
+		
+		/** Released. */
+		public func void release(AAControllerInput action)
+		end
+	end
+	
+	
+	
+	/** Trigger action. */
+	public class TriggerAction extends Base
+		public func new(ECBehaviorPlayerControllable.Tracker tracker, String name, \
+		String description, bool rightHand) super(tracker, name, description, rightHand)
+		end
+		
+		public func void touch(AAControllerInput action)
+			action.triggerTouch(pRightHand)
+		end
+		
+		public func void untouch(AAControllerInput action)
+			action.triggerUntouch(pRightHand)
+		end
+		
+		public func void press(AAControllerInput action)
+			action.triggerPull(pRightHand)
+		end
+		
+		public func void release(AAControllerInput action)
+			action.triggerRelease(pRightHand)
+		end
+	end
+	
+	/** Menu button. */
+	public class MenuAction extends Base
+		public func new(ECBehaviorPlayerControllable.Tracker tracker, String name, \
+		String description, bool rightHand) super(tracker, name, description, rightHand)
+		end
+		
+		public func void touch(AAControllerInput action)
+			action.menuTouch(pRightHand)
+		end
+		
+		public func void untouch(AAControllerInput action)
+			action.menuUntouch(pRightHand)
+		end
+		
+		public func void press(AAControllerInput action)
+			action.menuPress(pRightHand)
+		end
+		
+		public func void release(AAControllerInput action)
+			action.menuRelease(pRightHand)
+		end
+	end
+	
+	
+	
+	/** Add commands to command manager. */
+	public static func void addCommands(CommandManager commands, ECBehaviorPlayerControllable.Tracker tracker)
+		commands.add(TriggerAction.new(tracker, "triggerRight", "Trigger Right Hand", true))
+		commands.add(MenuAction.new(tracker, "menuRight", "Menu Right Hand", true))
+		
+		commands.add(TriggerAction.new(tracker, "triggerLeft", "Trigger Left Hand", false))
+		commands.add(MenuAction.new(tracker, "menuLeft", "Menu Left Hand", false))
+	end
+	
+	
+	
+	/**
+	 * Add default bindings for commands.
+	 * 
+	 * Adds bindings for these commands:
+	 * - "trigger"
+	 * - "menu"
+	 */
+	public static func void addDefaultBindings(DefaultBindingHelper helper)
+		if helper.hasVRHand(true)
+			helper.vrHandBindButton(true, 0, "triggerRight")
+			helper.vrHandBindButton(true, 1, "menuRight")
+		end
+		
+		if helper.hasVRHand(false)
+			helper.vrHandBindButton(false, 0, "triggerLeft")
+			helper.vrHandBindButton(false, 1, "menuLeft")
+		end
+	end
+end
