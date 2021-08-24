@@ -39,6 +39,8 @@ class CharacterProfile
 	private var CharacterAppearance pAppearance
 	private var CharacterConfigurations pConfigurations
 	
+	private var Array pListeners
+	
 	
 	
 	/** Create character. */
@@ -46,10 +48,12 @@ class CharacterProfile
 		setName(name)
 		pAppearance = CharacterAppearance.new()
 		pConfigurations = CharacterConfigurations.new()
+		pListeners = Array.new()
 	end
 	
 	/** Dispose of character profile. */
 	public func void dispose()
+		pListeners.removeAll()
 		if pConfigurations != null
 			pConfigurations.dispose()
 		end
@@ -82,5 +86,27 @@ class CharacterProfile
 	/** Configurations. */
 	public func CharacterConfigurations getConfigurations()
 		return pConfigurations
+	end
+	
+	
+	
+	/** Add listener. */
+	public func void addListener(CharacterListener listener)
+		if listener == null
+			throw ENullPointer.new("listener")
+		end
+		pListeners.add(listener)
+	end
+	
+	/** Remove listener. */
+	public func void removeListener(CharacterListener listener)
+		pListeners.remove(listener)
+	end
+	
+	/** Notify listeners character has been calibrated. */
+	public func void notifyCalibrated(CharacterConfiguration config)
+		pListeners.forEach(block CharacterListener each
+			each.calibrated(this, config)
+		end)
 	end
 end

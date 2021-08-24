@@ -23,6 +23,7 @@ namespace Democap.Characters
 
 pin Democap.Behaviors
 
+pin Dragengine.Animators
 pin Dragengine.Scenery
 pin Dragengine.Utils
 
@@ -41,6 +42,12 @@ class CharacterTrackerSlot
 	private var Vector pCalibratePosition
 	private var Vector pCalibrateRotation
 	private var Matrix pCalibrateMatrix
+	private var Matrix pCalibrateMatrixInverse
+	
+	private var ADController pADControllerPosition
+	private var ADController pADControllerRotation
+	private var ADLink pADLinkPosition
+	private var ADLink pADLinkRotation
 	
 	
 	
@@ -161,6 +168,51 @@ class CharacterTrackerSlot
 	
 	
 	
+	/** Animator definition controller for position or null. */
+	public func ADController getADControllerPosition()
+		return pADControllerPosition
+	end
+	
+	/** Animator definition controller for rotation or null. */
+	public func ADController getADControllerRotation()
+		return pADControllerRotation
+	end
+	
+	/** Animator definition link for position or null. */
+	public func ADLink getADLinkPosition()
+		return pADLinkPosition
+	end
+	
+	/** Animator definition link for position or null. */
+	public func ADLink getADLinkRotation()
+		return pADLinkRotation
+	end
+	
+	
+	
+	/** Init element class. */
+	public func void initElementClass(BaseVRActorClass eclass, AnimatorDefinition adef)
+		var ECBTrackerSlot behavior = ECBTrackerSlot.new(eclass, this)
+		
+		pADControllerPosition = ADController.new()
+		pADControllerPosition.setName(behavior.getControllerNamePosition())
+		adef.addController(pADControllerPosition)
+		
+		pADLinkPosition = ADLink.new()
+		pADLinkPosition.setController(pADControllerPosition)
+		adef.addLink(pADLinkPosition)
+		
+		pADControllerRotation = ADController.new()
+		pADControllerRotation.setName(behavior.getControllerNameRotation())
+		adef.addController(pADControllerRotation)
+		
+		pADLinkRotation = ADLink.new()
+		pADLinkRotation.setController(pADControllerRotation)
+		adef.addLink(pADLinkRotation)
+	end
+	
+	
+	
 	/** Calibrate position. */
 	public func Vector getCalibratePosition()
 		return pCalibratePosition
@@ -192,12 +244,18 @@ class CharacterTrackerSlot
 		return pCalibrateMatrix
 	end
 	
+	/** Inverse calibrate matrix. */
+	public func Matrix getCalibrateMatrixInverse()
+		return pCalibrateMatrixInverse
+	end
+	
 	/** Set calibrate matrix. */
 	public func void setCalibrateMatrix(Matrix matrix)
 		if matrix == null
 			throw ENullPointer.new("matrix")
 		end
 		pCalibrateMatrix = matrix
+		pCalibrateMatrixInverse = matrix.getInverse()
 	end
 	
 	
@@ -207,6 +265,7 @@ class CharacterTrackerSlot
 		pCalibratePosition = pPosition
 		pCalibrateRotation = pRotation
 		pCalibrateMatrix = Matrix.newRT(pRotation, pPosition)
+		pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
 	end
 	
 	/** Calibrate character. */
@@ -223,6 +282,7 @@ class CharacterTrackerSlot
 		end
 		
 		pCalibrateMatrix = behavior.getMatrixPlayspace() * matrix
+		pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
 		pCalibratePosition = pCalibrateMatrix.getPosition()
 		pCalibrateRotation = pCalibrateMatrix.getEulerAngles()
 		

@@ -69,6 +69,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var MotionTransferTracker pTargetTracker
 	private var MotionTransferTracker pGuideTracker
 	
+	private var ADRuleInverseKinematic pADRuleIK
+	
 	
 	
 	/** Create motion transfer. */
@@ -127,9 +129,46 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	
 	
+	/** Animator definition rule or null. */
+	public func ADRuleInverseKinematic getADRuleIK()
+		return pADRuleIK
+	end
+	
+	
+	
 	/** Init element clas. */
-	public func void initElementClass(BaseVRActorClass eclass, AnimatorDefinition adef)
-		// TODO add animator definition rule. behavior is not required
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
+		// no behavior required
+		
+		// add rules. requires a valid slot and bone names
+		pADRuleIK = null
+		
+		var CharacterTrackerSlot slotTarget, slotGuide
+		if not pTargetTracker.getSlot().empty()
+			slotTarget = config.getTrackerSlots().getAt(pTargetTracker.getSlot())
+		end
+		if not pGuideTracker.getSlot().empty()
+			slotGuide = config.getTrackerSlots().getAt(pGuideTracker.getSlot())
+		end
+		
+		if slotTarget == null or pRootBone.empty() or pTargetBone.empty()
+			return
+		end
+		
+		if slotGuide != null
+			// TODO guide rule orienting root bone to guide
+		end
+		
+		pADRuleIK = ADRuleInverseKinematic.new()
+		pADRuleIK.setName(getName())
+		//pADRuleIK.setAdjustOrientation(true)
+		pADRuleIK.setLocalPosition(pTargetTracker.getTransformPosition())
+		pADRuleIK.setLocalOrientation(pTargetTracker.getTransformRotation())
+		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, slotTarget.getADLinkPosition()))
+		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, slotTarget.getADLinkRotation()))
+		pADRuleIK.addBone(pRootBone)
+		pADRuleIK.addBone(pTargetBone)
+		config.getAnimatorDefinition().addRule(pADRuleIK)
 	end
 	
 	/** Reset calibration. */

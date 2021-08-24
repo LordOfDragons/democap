@@ -47,6 +47,7 @@ class CharacterConfiguration
 	private var BaseVRActorClass pElementClass
 	private var BaseVRActorClass pOldElementClass
 	private var PreloadCounter pPreloadCounter
+	private var AnimatorDefinition pAnimatorDefinition
 	
 	
 	
@@ -168,6 +169,11 @@ class CharacterConfiguration
 		pPreloadCounter = null
 	end
 	
+	/** Animator definition used while creating element class or null. */
+	public func AnimatorDefinition getAnimatorDefinition()
+		return pAnimatorDefinition
+	end
+	
 	
 	
 	/** Reset calibration. */
@@ -176,8 +182,11 @@ class CharacterConfiguration
 	
 	/** Calibrate character. */
 	public func void calibrate(BaseVRActor actor, ActorProfile actorProfile)
-		var Matrix rightHand, leftHand
+		// drop element class. we need to create a new one
+		dropElementClass()
 		
+		// get hand positions to align calibration space
+		var Matrix rightHand, leftHand
 		if actor.getVRRightHand().isAttached()
 			rightHand = actor.getVRRightHand().getMatrixPlayspace()
 		end
@@ -217,6 +226,12 @@ class CharacterConfiguration
 		end)
 		
 		// calibrate motion transfers using the calibrated trackers slots
+		pMotionTransfers.forEach(block MotionTransfer each
+			each.calibrate(this, actor)
+		end)
+		
+		// calibration finished
+		pProfile.notifyCalibrated(this)
 	end
 	
 	
@@ -228,35 +243,34 @@ class CharacterConfiguration
 		
 		eclass.getAIAction().setActionFactory(Actions.AADefault.Factory.new())
 		
-		var AnimatorDefinition adef = AnimatorDefinition.new("")
-		
 		try
 			ECBCharacterConfiguration.new(eclass, this)
 			var ECBMoCapAnimator mocapAnimator = ECBMoCapAnimator.new(eclass)
+			
+			pAnimatorDefinition = AnimatorDefinition.new("")
+			
+			var ADRuleStateManipulator ruleReset = ADRuleStateManipulator.new()
+			ruleReset.setName("Reset State")
+			ruleReset.setEnablePosition(true)
+			ruleReset.setEnableSize(true)
+			pAnimatorDefinition.addRule(ruleReset)
 			
 			pProfile.getAppearance().initElementClass(eclass)
 			
 			// add tracker slots. each slot adds two controllers (position, rotation)
 			pTrackerSlots.forEach(block CharacterTrackerSlot each
-				var ECBTrackerSlot behavior = ECBTrackerSlot.new(eclass, each)
-				
-				var ADController adcontroller = ADController.new()
-				adcontroller.setName(behavior.getControllerNamePosition())
-				adef.addController(adcontroller)
-				
-				adcontroller = ADController.new()
-				adcontroller.setName(behavior.getControllerNameRotation())
-				adef.addController(adcontroller)
+				each.initElementClass(eclass, pAnimatorDefinition)
 			end)
 			
 			// add motion capture behaviors
 			pMotionTransfers.forEach(block MotionTransfer each
-				each.initElementClass(eclass)
+				each.initElementClass(this, eclass)
 			end)
 			
 			// finalize motion capture animator
 			var Animator animator = Animator.new()
-			adef.buildAnimator(animator)
+// 			pAnimatorDefinition.debug(GameApp.getGameApp().getConsole())
+			pAnimatorDefinition.buildAnimator(animator)
 			mocapAnimator.setAnimator(animator)
 			
 		catch Exception e

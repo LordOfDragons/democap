@@ -48,6 +48,19 @@ class WorldSpawnCharacter
 		end
 	end
 	
+	/** Character listener. */
+	protected class UpdateCharacter extends DefaultCharacterListener
+		private var WorldSpawnCharacter pOwner
+		
+		public func new(WorldSpawnCharacter owner)
+			pOwner = owner
+		end
+		
+		public func void calibrated(CharacterProfile profile, CharacterConfiguration config)
+			pOwner.recreateActor()
+		end
+	end
+	
 	
 	
 	private var GameWorld pGameWorld
@@ -55,17 +68,20 @@ class WorldSpawnCharacter
 	private var CharacterConfiguration pCharacter
 	private var BaseVRActor pActor
 	private var UpdateCheck pUpdateCheck
+	private var UpdateCharacter pUpdateCharacter
 	
 	
 	
 	/** Create. */
 	public func new()
+		pUpdateCharacter = UpdateCharacter.new(this)
 	end
 	
 	/** Dispose. */
 	public func void dispose()
 		stopUpdateCheck()
 		disposeActor()
+		pUpdateCharacter = null
 	end
 	
 	
@@ -117,13 +133,22 @@ class WorldSpawnCharacter
 			GameApp.getGameApp().getConsole().addMessage("Activate null character")
 		end
 		
+		if pCharacter != null
+			pCharacter.getProfile().removeListener(pUpdateCharacter)
+		end
 		disposeActor()
+		
 		pCharacter = character
+		
+		if character != null
+			character.getProfile().addListener(pUpdateCharacter)
+		end
+		
 		startUpdateCheck()
 	end
 	
-	/** Character changed requiring recreating actor. */
-	public func void characterChanged()
+	/** Recreate actor. */
+	public func void recreateActor()
 		disposeActor()
 		startUpdateCheck()
 	end
