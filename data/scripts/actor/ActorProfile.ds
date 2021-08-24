@@ -34,16 +34,16 @@ pin Dragengine.Utils
  */
 class ActorProfile
 	private var String pName
-	private var float pArmUpperLength
-	private var float pArmLowerLength
+	private var float pArmLength
+	private var float pShoulderLevel
 	
 	
 	
 	/** Create actor. */
 	public func new(String name)
 		setName(name)
-		pArmUpperLength = 0.3
-		pArmLowerLength = 0.25
+		pArmLength = 0.65
+		resetCalibration()
 	end
 	
 	/** Dispose of actor profile. */
@@ -69,23 +69,50 @@ class ActorProfile
 		pName = name
 	end
 	
-	/** Length in meters of upper arm. */
-	public func float getArmUpperLength()
-		return pArmUpperLength
+	/** Arm length in meters. */
+	public func float getArmLength()
+		return pArmLength
 	end
 	
-	/** Set length in meters of upper arm. */
-	public func void setArmUpperLength(float length)
-		pArmUpperLength = DEMath.max(length, 0.2)
+	/** Set arm length in meters. */
+	public func void setArmLength(float length)
+		pArmLength = DEMath.max(length, 0.4)
 	end
 	
-	/** Length in meters of lower arm. */
-	public func float getArmLowerLength()
-		return pArmLowerLength
+	/** Shoulder level in meters. */
+	public func float getShoulderLevel()
+		return pShoulderLevel
 	end
 	
-	/** Set length in meters of lower arm. */
-	public func void setArmLowerLength(float length)
-		pArmLowerLength = DEMath.max(length, 0.15)
+	/** Set shoulder level in meters. */
+	public func void setShoulderLevel(float level)
+		pShoulderLevel = DEMath.max(level, 1.0)
+	end
+	
+	
+	
+	/** Reset calibration. */
+	public func void resetCalibration()
+		pShoulderLevel = 1.6
+	end
+	
+	/** Calibrate actor. */
+	public func void calibrate(BaseVRActor actor)
+		var Vector rightHand, leftHand
+		
+		if actor.getVRRightHand().isAttached()
+			rightHand = actor.getVRRightHand().getPositionPlayspace()
+		end
+		if actor.getVRLeftHand().isAttached()
+			leftHand = actor.getVRLeftHand().getPositionPlayspace()
+		end
+		
+		if rightHand == null or leftHand == null
+			resetCalibration()
+			return
+		end
+		
+		pShoulderLevel = (rightHand.getY() + leftHand.getY()) * 0.5
+		GameApp.getGameApp().getConsole().addMessage("ActorProfile.calibrate: shoulder level " + pShoulderLevel)
 	end
 end

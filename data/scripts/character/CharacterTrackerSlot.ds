@@ -21,6 +21,8 @@
 
 namespace Democap.Characters
 
+pin Democap.Behaviors
+
 pin Dragengine.Scenery
 pin Dragengine.Utils
 
@@ -36,6 +38,10 @@ class CharacterTrackerSlot
 	private var Vector pOffsetPosition
 	private var Vector pOffsetRotation
 	
+	private var Vector pCalibratePosition
+	private var Vector pCalibrateRotation
+	private var Matrix pCalibrateMatrix
+	
 	
 	
 	/** Create character configuration tracker slot. */
@@ -46,16 +52,20 @@ class CharacterTrackerSlot
 		pInputDeviceID = ""
 		pOffsetPosition = Vector.new()
 		pOffsetRotation = Vector.new()
+		
+		resetCalibration()
 	end
 	
 	/** Create copy of character configuration tracker slot. */
-	public func new(String name, CharacterTrackerSlot slot)
-		setName(name)
+	public func new(CharacterTrackerSlot slot)
+		pName = slot.pName
 		pPosition = slot.pPosition
 		pRotation = slot.pRotation
 		pInputDeviceID = slot.pInputDeviceID
 		pOffsetPosition = slot.pOffsetPosition
 		pOffsetRotation = slot.pOffsetRotation
+		
+		resetCalibration()
 	end
 	
 	
@@ -147,5 +157,76 @@ class CharacterTrackerSlot
 			throw ENullPointer.new("rotation")
 		end
 		pOffsetRotation = rotation
+	end
+	
+	
+	
+	/** Calibrate position. */
+	public func Vector getCalibratePosition()
+		return pCalibratePosition
+	end
+	
+	/** Set calibrate position. */
+	public func void setCalibratePosition(Vector position)
+		if position == null
+			throw ENullPointer.new("position")
+		end
+		pCalibratePosition = position
+	end
+	
+	/** Calibrate rotation. */
+	public func Vector getCalibrateRotation()
+		return pCalibrateRotation
+	end
+	
+	/** Set calibrate rotation. */
+	public func void setCalibrateRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pCalibrateRotation = rotation
+	end
+	
+	/** Calibrate matrix. */
+	public func Matrix getCalibrateMatrix()
+		return pCalibrateMatrix
+	end
+	
+	/** Set calibrate matrix. */
+	public func void setCalibrateMatrix(Matrix matrix)
+		if matrix == null
+			throw ENullPointer.new("matrix")
+		end
+		pCalibrateMatrix = matrix
+	end
+	
+	
+	
+	/** Reset calibration. */
+	public func void resetCalibration()
+		pCalibratePosition = pPosition
+		pCalibrateRotation = pRotation
+		pCalibrateMatrix = Matrix.newRT(pRotation, pPosition)
+	end
+	
+	/** Calibrate character. */
+	public func void calibrate(BaseVRActor actor, Matrix matrix)
+		if pInputDeviceID.empty()
+			resetCalibration()
+			return
+		end
+		
+		var ECBTrackerSlot.Instance behavior = ECBTrackerSlot.getInstanceIn(actor, pName)
+		if behavior == null or behavior.isDetached()
+			resetCalibration()
+			return
+		end
+		
+		pCalibrateMatrix = behavior.getMatrixPlayspace() * matrix
+		pCalibratePosition = pCalibrateMatrix.getPosition()
+		pCalibrateRotation = pCalibrateMatrix.getEulerAngles()
+		
+		GameApp.getGameApp().getConsole().addMessage("CharacterTrackerSlot.calibrate: slot=" \
+			+ pName + " pos=" + pCalibratePosition + " rot=" + pCalibrateRotation)
 	end
 end

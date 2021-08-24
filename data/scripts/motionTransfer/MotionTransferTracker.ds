@@ -21,6 +21,8 @@
 
 namespace Democap.MotionTransferSystem
 
+pin Democap.Characters
+
 pin Dragengine.LoadSave
 pin Dragengine.Scenery
 pin Dragengine.Utils
@@ -28,15 +30,18 @@ pin Dragengine.XML
 
 
 /**
- * Motion transfer tracker attached to a configuration tracker slot.
+ * Motion transfer tracker attached to a configuration tracker slot. The tracker slot stores
+ * the calibration position of the tracker. This class stores the transform position and
+ * rotation between the reference bone coordinate system and the tracker calibration pose.
  */
 class MotionTransferTracker
 	private var String pSlot
 	private var Vector pOffsetPosition
 	private var Vector pOffsetRotation
 	
-	private var Vector pCalibratePosition
-	private var Vector pCalibrateRotation
+	private var Vector pTransformPosition
+	private var Vector pTransformRotation
+	private var Matrix pTransformMatrix
 	
 	
 	
@@ -45,8 +50,9 @@ class MotionTransferTracker
 		pSlot = ""
 		pOffsetPosition = Vector.new()
 		pOffsetRotation = Vector.new()
-		pCalibratePosition = Vector.new()
-		pCalibrateRotation = Vector.new()
+		pTransformPosition = Vector.new()
+		pTransformRotation = Vector.new()
+		pTransformMatrix = Matrix.new()
 	end
 	
 	/** Create copy of motion transfer tracker. */
@@ -54,8 +60,9 @@ class MotionTransferTracker
 		pSlot = tracker.pSlot
 		pOffsetPosition = tracker.pOffsetPosition
 		pOffsetRotation = tracker.pOffsetRotation
-		pCalibratePosition = tracker.pCalibratePosition
-		pCalibrateRotation = tracker.pCalibrateRotation
+		pTransformPosition = tracker.pTransformPosition
+		pTransformRotation = tracker.pTransformRotation
+		pTransformMatrix = tracker.pTransformMatrix
 	end
 	
 	
@@ -101,30 +108,65 @@ class MotionTransferTracker
 	
 	
 	
-	/** Calibrate position. */
-	public func Vector getCalibratePosition()
-		return pCalibratePosition
+	/** Transform position. */
+	public func Vector getTransformPosition()
+		return pTransformPosition
 	end
 	
-	/** Set calibrate position. */
-	public func void setCalibratePosition(Vector position)
-		if position == null
-			throw ENullPointer.new("position")
+	/** Transform rotation. */
+	public func Vector getTransformRotation()
+		return pTransformRotation
+	end
+	
+	/** Transform matrix. */
+	public func Matrix getTransformMatrix()
+		return pTransformMatrix
+	end
+	
+	/** Reset transform. */
+	public func void resetTransform()
+		pTransformPosition = Vector.new()
+		pTransformRotation = Vector.new()
+		pTransformMatrix = Matrix.new()
+	end
+	
+	/** Set transform. */
+	public func void setTransform(Vector position, Vector rotation)
+		pTransformMatrix = Matrix.newRT(rotation, position)
+		pTransformPosition = position
+		pTransformRotation = rotation
+	end
+	
+	/** Set transform. */
+	public func void setTransform(Matrix matrix)
+		pTransformPosition = matrix.getPosition()
+		pTransformRotation = matrix.getEulerAngles()
+		pTransformMatrix = matrix
+	end
+	
+	/** Set transform. */
+	public func void setTransform(CharacterConfiguration config, BaseVRActor actor, String bone)
+		if pSlot.empty()
+			resetTransform()
+			return
 		end
-		pCalibratePosition = position
-	end
-	
-	/** Calibrate rotation. */
-	public func Vector getCalibrateRotation()
-		return pCalibrateRotation
-	end
-	
-	/** Set calibrate rotation. */
-	public func void setCalibrateRotation(Vector rotation)
-		if rotation == null
-			throw ENullPointer.new("rotation")
+		
+		var CharacterTrackerSlot slot = config.getTrackerSlots().getAt(pSlot)
+		if slot == null
+			resetTransform()
+			return
 		end
-		pCalibrateRotation = rotation
+		
+		var Rig rig = actor.getComponent().getComponent().getRig()
+		var int index = rig.indexOfBoneNamed(bone)
+		if index == -1
+			resetTransform()
+			return
+		end
+		
+		pTransformMatrix = rig.getBoneMatrix(index) * slot.getCalibrateMatrix()
+		pTransformPosition = pTransformMatrix.getPosition()
+		pTransformRotation = pTransformMatrix.getEulerAngles()
 	end
 	
 	
@@ -143,13 +185,15 @@ class MotionTransferTracker
 			elif tagName.equals("offsetRotation")
 				setOffsetRotation(loader.readVector(element))
 				
-			elif tagName.equals("calibratePosition")
-				setCalibratePosition(loader.readVector(element))
+			elif tagName.equals("transformPosition")
+				pTransformPosition = loader.readVector(element)
 				
-			elif tagName.equals("calibrateRotation")
-				setCalibrateRotation(loader.readVector(element))
+			elif tagName.equals("transformRotation")
+				pTransformRotation = loader.readVector(element)
 			end
 		end)
+		
+		pTransformMatrix = Matrix.newRT(pTransformRotation, pTransformPosition)
 	end
 	
 	/**
@@ -159,7 +203,7 @@ class MotionTransferTracker
 		tag.addDataTag("slot", pSlot)
 		loader.writeVector(tag, "offsetPosition", pOffsetPosition)
 		loader.writeVector(tag, "offsetRotation", pOffsetRotation)
-		loader.writeVector(tag, "calibratePosition", pCalibratePosition)
-		loader.writeVector(tag, "calibrateRotation", pCalibrateRotation)
+		loader.writeVector(tag, "transformPosition", pTransformPosition)
+		loader.writeVector(tag, "transformRotation", pTransformRotation)
 	end
 end

@@ -22,7 +22,9 @@
 namespace Democap.MotionTransferSystem
 
 pin Democap.Behaviors
+pin Democap.Characters
 
+pin Dragengine.Animators
 pin Dragengine.LoadSave
 pin Dragengine.Scenery
 pin Dragengine.Utils
@@ -125,11 +127,19 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	
 	
-	/**
-	 * Init element clas.
-	 */
-	public func void initElementClass(BaseVRActorClass eclass)
-		
+	/** Init element clas. */
+	public func void initElementClass(BaseVRActorClass eclass, AnimatorDefinition adef)
+		// TODO add animator definition rule. behavior is not required
+	end
+	
+	/** Reset calibration. */
+	public func void resetCalibration()
+		pTargetTracker.resetTransform()
+		pGuideTracker.resetTransform()
+	end
+	
+	/** Calibrate character. */
+	public func void calibrate(CharacterConfiguration config, BaseVRActor actor)
 	end
 	
 	/** Create copy of motion transfer. */
@@ -137,9 +147,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return MotionTransferIK.new(this)
 	end
 	
-	/**
-	 * Load from XML.
-	 */
+	/** Load from XML. */
 	public func void load(BaseXmlLoader loader, EasyXMLElement root)
 		root.forEachTag(block EasyXMLElement element, String tagName
 			if tagName.equals("rootBone")
@@ -157,9 +165,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end)
 	end
 	
-	/**
-	 * Save to XML.
-	 */
+	/** Save to XML. */
 	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("rootBone", pRootBone)
 		tag.addDataTag("targetBone", pTargetBone)

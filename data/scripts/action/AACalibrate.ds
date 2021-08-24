@@ -21,6 +21,9 @@
 
 namespace Democap.Actions
 
+pin Democap.Actors
+pin Democap.Characters
+
 pin Dragengine.LoadSave
 pin Dragengine.Preloading
 pin Dragengine.Scenery
@@ -28,19 +31,18 @@ pin Dragengine.Utils
 
 
 /**
- * Default BaseVRActor action. Used when the character is spawned in the world but no
- * particular action is running. This is the default action characters spawn with.
+ * BaseVRActor action running while actor calibrates trackers.
  */
-class AADefault extends AABase
+class AACalibrate extends AABase
 	/** Factory for loading actor actions. */
 	public class Factory implements PersistencyFactory, ECBehaviorActorAIAction.ActionFactory
-		public static fixed var String name = "AADefault"
+		public static fixed var String name = "AACalibrate"
 		
 		public func new()
 		end
 		
 		public func Persistable readObjectFromFile(PersistencyEnvironment env, FileReader reader)
-			return AADefault.new()
+			return AACalibrate.new()
 		end
 		
 		public static func void registerFactory(Persistency persistency)
@@ -48,7 +50,7 @@ class AADefault extends AABase
 		end
 		
 		public func BaseActorAction createAction(ECBehaviorActorAIAction.Instance instance)
-			return AADefault.new()
+			return AACalibrate.new()
 		end
 	end
 	
@@ -60,8 +62,29 @@ class AADefault extends AABase
 	
 	
 	
+	/** Action has been activated. */
+	public func void activate(BehaviorElement actor)
+		super.activate(actor)
+		log("Enter Calibration")
+	end
+	
+	
+	
 	/** Trigger pulled. */
 	public func void triggerPull(bool rightHand)
+		var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
+		var CharacterConfiguration character = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
+		if actor == null or character == null
+			return
+		end
+		
+		log("Calibrate")
+		var BaseVRActor vrActor = actor cast BaseVRActor
+		//actorProfile.calibrate(vrActor)
+		character.calibrate(vrActor, actorProfile)
+		
+		log("Done")
+		aiAction.setAction(AADefault.new())
 	end
 	
 	/** Trigger released. */
@@ -72,11 +95,8 @@ class AADefault extends AABase
 	
 	/** Menu button pressed. */
 	public func void menuPress(bool rightHand)
-		aiAction.setAction(AACalibrate.new())
-	end
-	
-	/** Menu button released. */
-	public func void menuRelease(bool rightHand)
+		log("Abort Calibration")
+		aiAction.setAction(AADefault.new())
 	end
 	
 	

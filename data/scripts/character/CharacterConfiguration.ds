@@ -21,6 +21,7 @@
 
 namespace Democap.Characters
 
+pin Democap.Actors
 pin Democap.Behaviors
 pin Democap.MotionTransferSystem
 
@@ -37,6 +38,8 @@ pin Dragengine.Preloading
 class CharacterConfiguration
 	private var CharacterProfile pProfile
 	private var String pName
+	
+	private var float pShoulderLevel
 	
 	private var CharacterTrackerSlots pTrackerSlots
 	private var MotionTransfers pMotionTransfers
@@ -56,8 +59,26 @@ class CharacterConfiguration
 		pProfile = profile
 		setName(name)
 		
+		pShoulderLevel = 1.6
+		
 		pTrackerSlots = CharacterTrackerSlots.new()
 		pMotionTransfers = MotionTransfers.new()
+	end
+	
+	/** Create copy of character configuration. */
+	public func new(CharacterConfiguration configuration)
+		pName = configuration.pName
+		pShoulderLevel = configuration.pShoulderLevel
+		
+		pTrackerSlots = CharacterTrackerSlots.new()
+		configuration.pTrackerSlots.forEach(block CharacterTrackerSlot each
+			pTrackerSlots.add(CharacterTrackerSlot.new(each))
+		end)
+		
+		pMotionTransfers = MotionTransfers.new()
+		configuration.pMotionTransfers.forEach(block MotionTransfer each
+			pMotionTransfers.add(each.createCopy())
+		end)
 	end
 	
 	/** Dispose of character profile. */
@@ -89,6 +110,16 @@ class CharacterConfiguration
 		end
 		
 		pName = name
+	end
+	
+	/** Shoulder level in meters. */
+	public func float getShoulderLevel()
+		return pShoulderLevel
+	end
+	
+	/** Set shoulder level in meters. */
+	public func void setShoulderLevel(float level)
+		this.pShoulderLevel = DEMath.max(level, 0.1)
 	end
 	
 	/** Tracker slots. */
@@ -135,6 +166,57 @@ class CharacterConfiguration
 		pOldElementClass = pElementClass
 		pElementClass = null
 		pPreloadCounter = null
+	end
+	
+	
+	
+	/** Reset calibration. */
+	public func void resetCalibration()
+	end
+	
+	/** Calibrate character. */
+	public func void calibrate(BaseVRActor actor, ActorProfile actorProfile)
+		var Matrix rightHand, leftHand
+		
+		if actor.getVRRightHand().isAttached()
+			rightHand = actor.getVRRightHand().getMatrixPlayspace()
+		end
+		if actor.getVRLeftHand().isAttached()
+			leftHand = actor.getVRLeftHand().getMatrixPlayspace()
+		end
+		
+		// for calibration we need these three for the time being
+		if rightHand == null or leftHand == null
+			resetCalibration()
+			return
+		end
+		
+		// calculate calibration matrix transforming tracked positions into calibration
+		// coordinate system. hmd looks forwards, hands are aligned along the X axis and
+		// body is centered along X and Z direction. also apply scaling from actor
+		// shoulder level to character shoulder level
+		var Vector posRightHand = rightHand.getPosition()
+		var Vector posLeftHand = leftHand.getPosition()
+		
+		var Vector centerHands = (posRightHand + posLeftHand) * 0.5
+		
+		var Vector dirHands = (posRightHand - posLeftHand).normalize()
+		var float rotHands = -DEMath.atan2(dirHands.getX(), dirHands.getZ())
+		
+		var float scale = pShoulderLevel / actorProfile.getShoulderLevel()
+		
+		var Matrix matrix = Matrix.newTranslation(-centerHands.compSelect(true, false, true)) \
+			* Matrix.newRotationY(-90.0 - rotHands) * Matrix.newScaling(scale, scale, scale)
+		
+		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: centerHands=" \
+			+ centerHands + " rotHands=" + rotHands + " scale=" + scale)
+		
+		// calibrate tracker slots using the calibration matrix
+		pTrackerSlots.forEach(block CharacterTrackerSlot each
+			each.calibrate(actor, matrix)
+		end)
+		
+		// calibrate motion transfers using the calibrated trackers slots
 	end
 	
 	

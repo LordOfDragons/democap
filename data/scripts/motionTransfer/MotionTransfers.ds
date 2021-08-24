@@ -49,18 +49,29 @@ class MotionTransfers
 		return pTransfers.has(transfer)
 	end
 	
+	/** Named motion transfer is present. */
+	public func bool hasNamed(String name)
+		return pTransfers.find(block MotionTransfer each
+			return each.getName().equals(name)
+		end) != null
+	end
+	
 	/** Motion transfer at index. */
 	public func MotionTransfer getAt(int index)
 		return pTransfers.getAt(index) cast MotionTransfer
 	end
 	
+	/** Named motion transfer or null if absent. */
+	public func MotionTransfer getNamed(String name)
+		return pTransfers.find(block MotionTransfer each
+			return each.getName().equals(name)
+		end) cast MotionTransfer
+	end
+	
 	/** Add motion transfer. */
 	public func void add(MotionTransfer transfer)
-		if transfer == null
-			throw ENullPointer.new("transfer")
-		end
-		if pTransfers.has(transfer)
-			throw EInvalidParam.new("transfer is present")
+		if pTransfers.has(transfer.getName())
+			throw EInvalidParam.new("named transfer is present")
 		end
 		pTransfers.add(transfer)
 	end
