@@ -40,6 +40,8 @@ class CharacterConfiguration
 	private var String pName
 	
 	private var float pShoulderLevel
+	private var String pCalibrateAnimation
+	private var float pCalibrateScale
 	
 	private var CharacterTrackerSlots pTrackerSlots
 	private var MotionTransfers pMotionTransfers
@@ -61,6 +63,8 @@ class CharacterConfiguration
 		setName(name)
 		
 		pShoulderLevel = 1.6
+		pCalibrateAnimation = ""
+		pCalibrateScale = 1
 		
 		pTrackerSlots = CharacterTrackerSlots.new()
 		pMotionTransfers = MotionTransfers.new()
@@ -70,6 +74,8 @@ class CharacterConfiguration
 	public func new(CharacterConfiguration configuration)
 		pName = configuration.pName
 		pShoulderLevel = configuration.pShoulderLevel
+		pCalibrateAnimation = configuration.pCalibrateAnimation
+		pCalibrateScale = configuration.pCalibrateScale
 		
 		pTrackerSlots = CharacterTrackerSlots.new()
 		configuration.pTrackerSlots.forEach(block CharacterTrackerSlot each
@@ -120,8 +126,34 @@ class CharacterConfiguration
 	
 	/** Set shoulder level in meters. */
 	public func void setShoulderLevel(float level)
-		this.pShoulderLevel = DEMath.max(level, 0.1)
+		pShoulderLevel = DEMath.max(level, 0.1)
 	end
+	
+	/** Name of animation move to use for calibration or empty string to use none. */
+	public func String getCalibrateAnimation()
+		return pCalibrateAnimation
+	end
+	
+	/** Set name of animation move to use for calibration or empty string to use none. */
+	public func void setCalibrateAnimation(String animation)
+		if animation == null
+			throw ENullPointer.new("animation")
+		end
+		
+		pCalibrateAnimation = animation
+	end
+	
+	/** Calibrated scale between actor and character. */
+	public func float getCalibrateScale()
+		return pCalibrateScale
+	end
+	
+	/** Set calibrated scale between actor and character. */
+	public func void setCalibrateScale(float scale)
+		pCalibrateScale = scale
+	end
+	
+	
 	
 	/** Tracker slots. */
 	public func CharacterTrackerSlots getTrackerSlots()
@@ -212,13 +244,14 @@ class CharacterConfiguration
 		var Vector dirHands = (posRightHand - posLeftHand).normalize()
 		var float rotHands = -DEMath.atan2(dirHands.getX(), dirHands.getZ())
 		
-		var float scale = pShoulderLevel / actorProfile.getShoulderLevel()
+		pCalibrateScale = pShoulderLevel / actorProfile.getShoulderLevel()
 		
 		var Matrix matrix = Matrix.newTranslation(-centerHands.compSelect(true, false, true)) \
-			* Matrix.newRotationY(-90.0 - rotHands) * Matrix.newScaling(scale, scale, scale)
+			* Matrix.newRotationY(-90.0 - rotHands)\
+			* Matrix.newScaling(pCalibrateScale, pCalibrateScale, pCalibrateScale)
 		
 		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: centerHands=" \
-			+ centerHands + " rotHands=" + rotHands + " scale=" + scale)
+			+ centerHands + " rotHands=" + rotHands + " scale=" + pCalibrateScale)
 		
 		// calibrate tracker slots using the calibration matrix
 		pTrackerSlots.forEach(block CharacterTrackerSlot each
@@ -226,8 +259,10 @@ class CharacterConfiguration
 		end)
 		
 		// calibrate motion transfers using the calibrated trackers slots
+		var Component component = createCalibrationComponent()
+		
 		pMotionTransfers.forEach(block MotionTransfer each
-			each.calibrate(this, actor)
+			each.calibrate(this, actorProfile, actor, component)
 		end)
 		
 		// calibration finished
@@ -244,8 +279,14 @@ class CharacterConfiguration
 		eclass.getAIAction().setActionFactory(Actions.AADefault.Factory.new())
 		
 		try
+// 			eclass.getVRRightHand().getShowHand().setValue(false)
+// 			eclass.getVRLeftHand().getShowHand().setValue(false)
+			
 			ECBCharacterConfiguration.new(eclass, this)
+			
 			var ECBMoCapAnimator mocapAnimator = ECBMoCapAnimator.new(eclass)
+			mocapAnimator.getAnimation().setPath(pProfile.getAppearance().getPathAnimation())
+			mocapAnimator.getAnimation().setAnimation(pProfile.getAppearance().getAnimation())
 			
 			pAnimatorDefinition = AnimatorDefinition.new("")
 			
@@ -269,7 +310,7 @@ class CharacterConfiguration
 			
 			// finalize motion capture animator
 			var Animator animator = Animator.new()
-// 			pAnimatorDefinition.debug(GameApp.getGameApp().getConsole())
+			pAnimatorDefinition.debug(GameApp.getGameApp().getConsole())
 			pAnimatorDefinition.buildAnimator(animator)
 			mocapAnimator.setAnimator(animator)
 			
@@ -302,5 +343,38 @@ class CharacterConfiguration
 			pOldElementClass.dispose()
 			pOldElementClass = null
 		end
+	end
+	
+	/** Create calibration component. */
+	protected func Component createCalibrationComponent()
+		var CharacterAppearance appearance = pProfile.getAppearance()
+		
+		var Animator animator = Animator.new()
+		animator.setRig(appearance.getRig())
+		animator.setAnimation(appearance.getAnimation())
+		
+		if pCalibrateAnimation.empty()
+			var ARStateManipulator rule = ARStateManipulator.new()
+			rule.setEnablePosition(true)
+			rule.setEnableSize(true)
+			animator.addRule(rule)
+			
+		else
+			var ARAnimation rule = ARAnimation.new()
+			rule.setMoveName(pCalibrateAnimation)
+			animator.addRule(rule)
+		end
+		
+		var AnimatorInstance ainst = AnimatorInstance.new()
+		ainst.setAnimator(animator)
+		
+		var Component component = Component.new(null, null)
+		component.setRig(appearance.getRig())
+		ainst.setComponent(component)
+		
+		ainst.applyDirect()
+		component.updateBones()
+		
+		return component
 	end
 end

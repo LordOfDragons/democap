@@ -42,6 +42,7 @@ class MotionTransferTracker
 	private var Vector pTransformPosition
 	private var Vector pTransformRotation
 	private var Matrix pTransformMatrix
+	private var CharacterTrackerSlot pRealSlot
 	
 	
 	
@@ -145,28 +146,37 @@ class MotionTransferTracker
 	end
 	
 	/** Set transform. */
-	public func void setTransform(CharacterConfiguration config, BaseVRActor actor, String bone)
+	public func void setTransform(CharacterConfiguration config, Component component, String bone)
 		if pSlot.empty()
 			resetTransform()
 			return
 		end
 		
-		var CharacterTrackerSlot slot = config.getTrackerSlots().getAt(pSlot)
-		if slot == null
+		pRealSlot = config.getTrackerSlots().getAt(pSlot)
+		if pRealSlot == null
 			resetTransform()
 			return
 		end
 		
-		var Rig rig = actor.getComponent().getComponent().getRig()
-		var int index = rig.indexOfBoneNamed(bone)
+		var int index = component.indexOfBoneNamed(bone)
 		if index == -1
 			resetTransform()
 			return
 		end
 		
-		pTransformMatrix = rig.getBoneMatrix(index) * slot.getCalibrateMatrixInverse()
+		pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) \
+			* component.boneGetMatrix(index) * pRealSlot.getCalibrateMatrixInverse()
+		
 		pTransformPosition = pTransformMatrix.getPosition()
 		pTransformRotation = pTransformMatrix.getEulerAngles()
+		
+		GameApp.getGameApp().getConsole().addMessage("setTransform " + pRealSlot.getName() + " " \
+			+ bone + " " + pTransformPosition + " " + pTransformRotation)
+	end
+	
+	/** Real slot or null. */
+	public func CharacterTrackerSlot getRealSlot()
+		return pRealSlot
 	end
 	
 	

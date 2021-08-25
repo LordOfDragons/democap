@@ -21,6 +21,7 @@
 
 namespace Democap.MotionTransferSystem
 
+pin Democap.Actors
 pin Democap.Behaviors
 pin Democap.Characters
 
@@ -71,6 +72,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	private var ADRuleInverseKinematic pADRuleIK
 	
+	private var float pCalibrateReach
+	private var float pReachScale
+	
 	
 	
 	/** Create motion transfer. */
@@ -79,6 +83,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTargetBone = ""
 		pTargetTracker = MotionTransferTracker.new()
 		pGuideTracker = MotionTransferTracker.new()
+		pCalibrateReach = 0.6
+		pReachScale  = 1
 	end
 	
 	/** Create copy of motion transfer. */
@@ -87,6 +93,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTargetBone = transfer.pTargetBone
 		pTargetTracker = MotionTransferTracker.new(transfer.pTargetTracker)
 		pGuideTracker = MotionTransferTracker.new(transfer.pGuideTracker)
+		pCalibrateReach = transfer.pCalibrateReach
+		pReachScale = transfer.pReachScale
 	end
 	
 	
@@ -134,6 +142,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pADRuleIK
 	end
 	
+	/** Calibrate reach. */
+	public func float getCalibrateReach()
+		return pCalibrateReach
+	end
+	
 	
 	
 	/** Init element clas. */
@@ -161,9 +174,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		pADRuleIK = ADRuleInverseKinematic.new()
 		pADRuleIK.setName(getName())
-		//pADRuleIK.setAdjustOrientation(true)
-		pADRuleIK.setLocalPosition(pTargetTracker.getTransformPosition())
+		pADRuleIK.setAdjustOrientation(true)
+		pADRuleIK.setLocalPosition(-pTargetTracker.getTransformPosition())
 		pADRuleIK.setLocalOrientation(pTargetTracker.getTransformRotation())
+		pADRuleIK.setReachBone(pRootBone)
+		pADRuleIK.setReachRange(pCalibrateReach)
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, slotTarget.getADLinkPosition()))
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, slotTarget.getADLinkRotation()))
 		pADRuleIK.addBone(pRootBone)
@@ -178,7 +193,41 @@ class MotionTransferIK extends DefaultMotionTransfer
 	end
 	
 	/** Calibrate character. */
-	public func void calibrate(CharacterConfiguration config, BaseVRActor actor)
+	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
+	BaseVRActor actor, Component component)
+		pTargetTracker.setTransform(config, component, pTargetBone)
+		pGuideTracker.setTransform(config, component, pRootBone)
+		
+		// calculate reach of IK chain to avoid over stretching
+		var int indexRoot = -1, indexTarget = -1
+		if not pRootBone.empty() and not pTargetBone.empty()
+			indexRoot = component.indexOfBoneNamed(pRootBone)
+			indexTarget = component.indexOfBoneNamed(pTargetBone)
+		end
+		
+		if indexRoot != -1 and indexTarget != -1
+			var Vector posRoot = component.boneGetMatrix(indexRoot).getPosition()
+			var Vector posTarget = component.boneGetMatrix(indexTarget) * -pTargetTracker.getTransformPosition()
+			pCalibrateReach = (posTarget - posRoot).getLength()
+			
+			var CharacterTrackerSlot slotTarget = pTargetTracker.getRealSlot()
+			if slotTarget != null
+				//pReachScale = pCalibrateReach / actorProfile.getArmLength()
+				var Vector slotPos = slotTarget.getCalibratePosition()
+				var float realReach = (slotPos - posRoot).getLength()
+				pReachScale = pCalibrateReach / realReach
+				
+			else
+				pReachScale = 1
+			end
+			
+		else
+			pCalibrateReach = 0.6
+			pReachScale = 1
+		end
+		
+		GameApp.getGameApp().getConsole().addMessage("MotionTransferIK.calibrate: name='" \
+			+ getName() + "' reach=" + pCalibrateReach + " reachScale=" + pReachScale)
 	end
 	
 	/** Create copy of motion transfer. */
@@ -189,7 +238,10 @@ class MotionTransferIK extends DefaultMotionTransfer
 	/** Load from XML. */
 	public func void load(BaseXmlLoader loader, EasyXMLElement root)
 		root.forEachTag(block EasyXMLElement element, String tagName
-			if tagName.equals("rootBone")
+			if tagName.equals("name")
+				setName(element.getFirstCData())
+				
+			elif tagName.equals("rootBone")
 				setRootBone(element.getFirstCData())
 				
 			elif tagName.equals("targetBone")
@@ -200,15 +252,24 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 			elif tagName.equals("guideTracker")
 				pGuideTracker.load(loader, element)
+				
+			elif tagName.equals("calibrateReach")
+				pCalibrateReach = element.getFirstCDataFloat()
+				
+			elif tagName.equals("reachScale")
+				pReachScale = element.getFirstCDataFloat()
 			end
 		end)
 	end
 	
 	/** Save to XML. */
 	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+		tag.addDataTag("name", getName())
 		tag.addDataTag("rootBone", pRootBone)
 		tag.addDataTag("targetBone", pTargetBone)
 		pTargetTracker.save(loader, tag.addTag("targetTracker"))
 		pGuideTracker.save(loader, tag.addTag("guideTracker"))
+		tag.addDataTag("calibrateReach", pCalibrateReach)
+		tag.addDataTag("reachScale", pReachScale)
 	end
 end

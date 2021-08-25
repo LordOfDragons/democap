@@ -268,20 +268,22 @@ class ECBTrackerSlot extends DefaultECBehavior
 		public func void updateMatrix()
 			var CharacterTrackerSlot slot = pECBehavior.getTrackerSlot()
 			
+			pMatrix = Matrix.newRT(slot.getOffsetRotation(), slot.getOffsetPosition())
+			
 			if pInputDevice != null
-				pPosition = pInputDevice.getDevicePosePosition()
-				pOrientation = pInputDevice.getDevicePoseOrientation()
+				pMatrix = pMatrix * pInputDevice.getDevicePoseMatrix()
 				
 			elif slot.getInputDeviceID().empty()
-				pPosition = slot.getPosition()
-				pOrientation = Quaternion.newFromEuler(slot.getRotation())
+				pMatrix = pMatrix * slot.getMatrix()
 			end
 			
-			pControllerPosition.setVector(pPosition)
-			pControllerRotation.setRotation(pOrientation.getEulerAngles())
+			pMatrix = pMatrix * slot.getCalibrationMatrix()
 			
-			pMatrix = Matrix.newRT(slot.getOffsetRotation(), slot.getOffsetPosition()) \
-				* Matrix.newWorld(pPosition, pOrientation)
+			pPosition = pMatrix.getPosition()
+			pOrientation = pMatrix.toQuaternion()
+			
+			pControllerPosition.setVector(pPosition)
+			pControllerRotation.setRotation(pMatrix.getEulerAngles())
 		end
 	end
 	

@@ -1,0 +1,96 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Characters
+
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Resource loader for character appearance.
+ */
+class CharacterAppearanceLoader implements ResourceListener
+	private var CharacterProfile pProfile
+	
+	
+	
+	/** Create resource loader. */
+	public func new(CharacterProfile profile)
+		if profile == null
+			throw ENullPointer.new("profile")
+		end
+		
+		pProfile = profile
+	end
+	
+	
+	
+	/** Start preloading resources. */
+	public func void preload()
+		var CharacterAppearance appearance = pProfile.getAppearance()
+		
+		if appearance.getModel() == null and not appearance.getPathModel().empty()
+			Model.loadAsynchron(appearance.getPathModel(), this)
+		end
+		
+		if appearance.getSkin() == null and not appearance.getPathSkin().empty()
+			Skin.loadAsynchron(appearance.getPathSkin(), this)
+		end
+		
+		if appearance.getRig() == null and not appearance.getPathRig().empty()
+			Rig.loadAsynchron(appearance.getPathRig(), this)
+		end
+		
+		if appearance.getAnimation() == null and not appearance.getPathAnimation().empty()
+			Animation.loadAsynchron(appearance.getPathAnimation(), this)
+		end
+	end
+	
+	
+	
+	/** Finished loading resource. */
+	public func void finishedLoading(String filename, ResourceLoaderType resourceType, Object resource)
+		var CharacterAppearance appearance = pProfile.getAppearance()
+		
+		if filename.equals(appearance.getPathModel())
+			appearance.setModel(resource cast Model)
+		end
+		
+		if filename.equals(appearance.getPathSkin())
+			appearance.setSkin(resource cast Skin)
+		end
+		
+		if filename.equals(appearance.getPathRig())
+			appearance.setRig(resource cast Rig)
+		end
+		
+		if filename.equals(appearance.getPathAnimation())
+			appearance.setAnimation(resource cast Animation)
+		end
+	end
+	
+	/** Loading resource failed. */
+	public func void failedLoading(String filename, ResourceLoaderType resourceType)
+		GameApp.getGameApp().getConsole().addMessage("CharacterAppearanceLoader: Failed loading "\
+			+ resourceType.name() + " '" + filename + "' for character '" + pProfile.getName() + "'")
+	end
+end

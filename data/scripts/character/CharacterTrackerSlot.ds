@@ -35,10 +35,12 @@ class CharacterTrackerSlot
 	private var String pName
 	private var Vector pPosition
 	private var Vector pRotation
+	private var Matrix pMatrix
 	private var String pInputDeviceID
 	private var Vector pOffsetPosition
 	private var Vector pOffsetRotation
 	
+	private var Matrix pCalibrationMatrix
 	private var Vector pCalibratePosition
 	private var Vector pCalibrateRotation
 	private var Matrix pCalibrateMatrix
@@ -56,6 +58,7 @@ class CharacterTrackerSlot
 		setName(name)
 		pPosition = Vector.new()
 		pRotation = Vector.new()
+		pMatrix = Matrix.new()
 		pInputDeviceID = ""
 		pOffsetPosition = Vector.new()
 		pOffsetRotation = Vector.new()
@@ -68,6 +71,7 @@ class CharacterTrackerSlot
 		pName = slot.pName
 		pPosition = slot.pPosition
 		pRotation = slot.pRotation
+		pMatrix = slot.pMatrix
 		pInputDeviceID = slot.pInputDeviceID
 		pOffsetPosition = slot.pOffsetPosition
 		pOffsetRotation = slot.pOffsetRotation
@@ -105,6 +109,7 @@ class CharacterTrackerSlot
 			throw ENullPointer.new("position")
 		end
 		pPosition = position
+		pMatrix = Matrix.newRT(pRotation, pPosition)
 	end
 	
 	/** Static rotation. */
@@ -118,6 +123,12 @@ class CharacterTrackerSlot
 			throw ENullPointer.new("rotation")
 		end
 		pRotation = rotation
+		pMatrix = Matrix.newRT(pRotation, pPosition)
+	end
+	
+	/** Static matrix. */
+	public func Matrix getMatrix()
+		return pMatrix
 	end
 	
 	/** ID of input device attached to this slot or empty string. */
@@ -213,6 +224,11 @@ class CharacterTrackerSlot
 	
 	
 	
+	/** Matrix used for calibration. */
+	public func Matrix getCalibrationMatrix()
+		return pCalibrationMatrix
+	end
+	
 	/** Calibrate position. */
 	public func Vector getCalibratePosition()
 		return pCalibratePosition
@@ -262,6 +278,7 @@ class CharacterTrackerSlot
 	
 	/** Reset calibration. */
 	public func void resetCalibration()
+		pCalibrationMatrix = Matrix.new()
 		pCalibratePosition = pPosition
 		pCalibrateRotation = pRotation
 		pCalibrateMatrix = Matrix.newRT(pRotation, pPosition)
@@ -280,6 +297,8 @@ class CharacterTrackerSlot
 			resetCalibration()
 			return
 		end
+		
+		pCalibrationMatrix = matrix
 		
 		pCalibrateMatrix = behavior.getMatrixPlayspace() * matrix
 		pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()

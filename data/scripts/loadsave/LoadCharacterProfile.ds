@@ -112,6 +112,9 @@ class LoadCharacterProfile extends BaseXmlLoader
 				
 			elif tagName.equals("rig")
 				appearance.setPathRig(element.getFirstCData())
+				
+			elif tagName.equals("animation")
+				appearance.setPathAnimation(element.getFirstCData())
 			end
 		end)
 	end
@@ -125,6 +128,12 @@ class LoadCharacterProfile extends BaseXmlLoader
 		root.forEachTag(block EasyXMLElement element, String tagName
 			if tagName.equals("shoulderLevel")
 				configuration.setShoulderLevel(element.getFirstCDataFloat())
+				
+			elif tagName.equals("calibrateAnimation")
+				configuration.setCalibrateAnimation(element.getFirstCData())
+				
+			elif tagName.equals("calibrateScale")
+				configuration.setCalibrateScale(element.getFirstCDataFloat())
 				
 			elif tagName.equals("trackerSlot")
 				readTrackerSlot(element, configuration)
@@ -187,6 +196,7 @@ class LoadCharacterProfile extends BaseXmlLoader
 		tag.addDataTag("model", appearance.getPathModel())
 		tag.addDataTag("skin", appearance.getPathSkin())
 		tag.addDataTag("rig", appearance.getPathRig())
+		tag.addDataTag("animation", appearance.getPathAnimation())
 	end
 	
 	/** Write configuration. */
@@ -195,6 +205,8 @@ class LoadCharacterProfile extends BaseXmlLoader
 		tag.setAttribute("name", configuration.getName())
 		
 		tag.addDataTag("shoulderLevel", configuration.getShoulderLevel())
+		tag.addDataTag("calibrateAnimation", configuration.getCalibrateAnimation())
+		tag.addDataTag("calibrateScale", configuration.getCalibrateScale())
 		
 		configuration.getTrackerSlots().forEach(block CharacterTrackerSlot each
 			writeTrackerSlot(tag, each)
