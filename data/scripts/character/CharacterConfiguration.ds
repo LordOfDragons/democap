@@ -218,7 +218,10 @@ class CharacterConfiguration
 		dropElementClass()
 		
 		// get hand positions to align calibration space
-		var Matrix rightHand, leftHand
+		var Matrix hmd, rightHand, leftHand
+		if actor.getVRHMD().isAttached()
+			hmd = actor.getVRHMD().getMatrixPlayspace()
+		end
 		if actor.getVRRightHand().isAttached()
 			rightHand = actor.getVRRightHand().getMatrixPlayspace()
 		end
@@ -227,7 +230,7 @@ class CharacterConfiguration
 		end
 		
 		// for calibration we need these three for the time being
-		if rightHand == null or leftHand == null
+		if hmd == null or rightHand == null or leftHand == null
 			resetCalibration()
 			return
 		end
@@ -244,14 +247,29 @@ class CharacterConfiguration
 		var Vector dirHands = (posRightHand - posLeftHand).normalize()
 		var float rotHands = -DEMath.atan2(dirHands.getX(), dirHands.getZ())
 		
+		var Vector posHMD = hmd.getPosition()
+		var float turnHMD = hmd.getEulerAngles().getY()
+		var Matrix hmdNorm = Matrix.newRT(Vector.new(0, turnHMD, 0), posHMD)
+		
+		var Vector posNeck = hmdNorm * Vector.new(0, -0.2, -0.1)
+		
+		//var Vector centerBody = centerHands.compSelect(true, false, true)
+		//var float turnBody = rotHands + 90
+		var Vector centerBody = posNeck.compSelect(true, false, true)
+		var float turnBody = turnHMD
+		
 		pCalibrateScale = pShoulderLevel / actorProfile.getShoulderLevel()
 		
-		var Matrix matrix = Matrix.newTranslation(-centerHands.compSelect(true, false, true)) \
-			* Matrix.newRotationY(-90.0 - rotHands)\
+		var Matrix matrix = Matrix.newTranslation(-centerBody) * Matrix.newRotationY(-turnBody)\
 			* Matrix.newScaling(pCalibrateScale, pCalibrateScale, pCalibrateScale)
 		
+		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: posHMD=" \
+			+ posHMD + " posRightHand=" + posRightHand + " posLeftHand=" + posLeftHand)
+		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: turnHMD=" \
+			+ turnHMD + " posNeck=" + posNeck)
 		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: centerHands=" \
-			+ centerHands + " rotHands=" + rotHands + " scale=" + pCalibrateScale)
+			+ centerHands + " rotHands=" + rotHands + " scale=" + pCalibrateScale \
+			+ " turnBody=" + turnBody + " centerBody=" + centerBody)
 		
 		// calibrate tracker slots using the calibration matrix
 		pTrackerSlots.forEach(block CharacterTrackerSlot each

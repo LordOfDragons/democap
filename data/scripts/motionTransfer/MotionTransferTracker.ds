@@ -42,6 +42,9 @@ class MotionTransferTracker
 	private var Vector pTransformPosition
 	private var Vector pTransformRotation
 	private var Matrix pTransformMatrix
+	private var Vector pReverseTransformPosition
+	private var Vector pReverseTransformRotation
+	private var Matrix pReverseTransformMatrix
 	private var CharacterTrackerSlot pRealSlot
 	
 	
@@ -54,6 +57,9 @@ class MotionTransferTracker
 		pTransformPosition = Vector.new()
 		pTransformRotation = Vector.new()
 		pTransformMatrix = Matrix.new()
+		pReverseTransformPosition = Vector.new()
+		pReverseTransformRotation = Vector.new()
+		pReverseTransformMatrix = Matrix.new()
 	end
 	
 	/** Create copy of motion transfer tracker. */
@@ -64,6 +70,9 @@ class MotionTransferTracker
 		pTransformPosition = tracker.pTransformPosition
 		pTransformRotation = tracker.pTransformRotation
 		pTransformMatrix = tracker.pTransformMatrix
+		pReverseTransformPosition = tracker.pReverseTransformPosition
+		pReverseTransformRotation = tracker.pReverseTransformRotation
+		pReverseTransformMatrix = tracker.pReverseTransformMatrix
 	end
 	
 	
@@ -109,19 +118,34 @@ class MotionTransferTracker
 	
 	
 	
-	/** Transform position. */
+	/** Transform position (tracking space to bone space). */
 	public func Vector getTransformPosition()
 		return pTransformPosition
 	end
 	
-	/** Transform rotation. */
+	/** Transform rotation (tracking space to bone space). */
 	public func Vector getTransformRotation()
 		return pTransformRotation
 	end
 	
-	/** Transform matrix. */
+	/** Transform matrix (tracking space to bone space). */
 	public func Matrix getTransformMatrix()
 		return pTransformMatrix
+	end
+	
+	/** Reverse transform position (bone space to tracking space). */
+	public func Vector getReverseTransformPosition()
+		return pReverseTransformPosition
+	end
+	
+	/** Reverse transform rotation (bone space to tracking space). */
+	public func Vector getReverseTransformRotation()
+		return pReverseTransformRotation
+	end
+	
+	/** Reverse transform matrix (bone space to tracking space). */
+	public func Matrix getReverseTransformMatrix()
+		return pReverseTransformMatrix
 	end
 	
 	/** Reset transform. */
@@ -129,20 +153,31 @@ class MotionTransferTracker
 		pTransformPosition = Vector.new()
 		pTransformRotation = Vector.new()
 		pTransformMatrix = Matrix.new()
+		pReverseTransformPosition = Vector.new()
+		pReverseTransformRotation = Vector.new()
+		pReverseTransformMatrix = Matrix.new()
 	end
 	
-	/** Set transform. */
+	/** Set transform (both directions). */
 	public func void setTransform(Vector position, Vector rotation)
 		pTransformMatrix = Matrix.newRT(rotation, position)
 		pTransformPosition = position
 		pTransformRotation = rotation
+		
+		pReverseTransformMatrix = pTransformMatrix.getInverse()
+		pReverseTransformPosition = pReverseTransformMatrix.getPosition()
+		pReverseTransformRotation = pReverseTransformMatrix.getEulerAngles()
 	end
 	
-	/** Set transform. */
+	/** Set transform (both directions). */
 	public func void setTransform(Matrix matrix)
 		pTransformPosition = matrix.getPosition()
 		pTransformRotation = matrix.getEulerAngles()
 		pTransformMatrix = matrix
+		
+		pReverseTransformMatrix = matrix.getInverse()
+		pReverseTransformPosition = pReverseTransformMatrix.getPosition()
+		pReverseTransformRotation = pReverseTransformMatrix.getEulerAngles()
 	end
 	
 	/** Set transform. */
@@ -166,12 +201,16 @@ class MotionTransferTracker
 		
 		pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) \
 			* component.boneGetMatrix(index) * pRealSlot.getCalibrateMatrixInverse()
-		
 		pTransformPosition = pTransformMatrix.getPosition()
 		pTransformRotation = pTransformMatrix.getEulerAngles()
 		
+		pReverseTransformMatrix = pTransformMatrix.getInverse()
+		pReverseTransformPosition = pReverseTransformMatrix.getPosition()
+		pReverseTransformRotation = pReverseTransformMatrix.getEulerAngles()
+		
 		GameApp.getGameApp().getConsole().addMessage("setTransform " + pRealSlot.getName() + " " \
-			+ bone + " " + pTransformPosition + " " + pTransformRotation)
+			+ bone + " " + pTransformPosition + " " + pTransformRotation + " , "\
+			+ pReverseTransformPosition + " " + pReverseTransformRotation)
 	end
 	
 	/** Real slot or null. */
@@ -203,7 +242,7 @@ class MotionTransferTracker
 			end
 		end)
 		
-		pTransformMatrix = Matrix.newRT(pTransformRotation, pTransformPosition)
+		setTransform(pTransformPosition, pTransformRotation)
 	end
 	
 	/**

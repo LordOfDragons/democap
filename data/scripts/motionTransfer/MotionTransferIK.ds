@@ -69,6 +69,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var String pTargetBone
 	private var MotionTransferTracker pTargetTracker
 	private var MotionTransferTracker pGuideTracker
+	private var float pReachLimit
 	
 	private var ADRuleInverseKinematic pADRuleIK
 	
@@ -83,6 +84,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTargetBone = ""
 		pTargetTracker = MotionTransferTracker.new()
 		pGuideTracker = MotionTransferTracker.new()
+		pReachLimit = 1
 		pCalibrateReach = 0.6
 		pReachScale  = 1
 	end
@@ -93,6 +95,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTargetBone = transfer.pTargetBone
 		pTargetTracker = MotionTransferTracker.new(transfer.pTargetTracker)
 		pGuideTracker = MotionTransferTracker.new(transfer.pGuideTracker)
+		pReachLimit = transfer.pReachLimit
 		pCalibrateReach = transfer.pCalibrateReach
 		pReachScale = transfer.pReachScale
 	end
@@ -135,6 +138,16 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pGuideTracker
 	end
 	
+	/** Limit reach to percentage of bone chain reach. */
+	public func float getReachLimit()
+		return pReachLimit
+	end
+	
+	/** Set limit reach to percentage of bone chain reach. */
+	public func void setReachLimit(float limit)
+		pReachLimit = DEMath.max(limit, 0.1)
+	end
+	
 	
 	
 	/** Animator definition rule or null. */
@@ -175,7 +188,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADRuleIK = ADRuleInverseKinematic.new()
 		pADRuleIK.setName(getName())
 		pADRuleIK.setAdjustOrientation(true)
-		pADRuleIK.setLocalPosition(-pTargetTracker.getTransformPosition())
+		pADRuleIK.setLocalPosition(pTargetTracker.getReverseTransformPosition())
 		pADRuleIK.setLocalOrientation(pTargetTracker.getTransformRotation())
 		pADRuleIK.setReachBone(pRootBone)
 		pADRuleIK.setReachRange(pCalibrateReach)
@@ -207,12 +220,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		if indexRoot != -1 and indexTarget != -1
 			var Vector posRoot = component.boneGetMatrix(indexRoot).getPosition()
-			var Vector posTarget = component.boneGetMatrix(indexTarget) * -pTargetTracker.getTransformPosition()
+			var Vector posTarget = component.boneGetMatrix(indexTarget) * pTargetTracker.getReverseTransformPosition()
 			pCalibrateReach = (posTarget - posRoot).getLength()
 			
 			var CharacterTrackerSlot slotTarget = pTargetTracker.getRealSlot()
 			if slotTarget != null
-				//pReachScale = pCalibrateReach / actorProfile.getArmLength()
 				var Vector slotPos = slotTarget.getCalibratePosition()
 				var float realReach = (slotPos - posRoot).getLength()
 				pReachScale = pCalibrateReach / realReach
@@ -253,6 +265,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("guideTracker")
 				pGuideTracker.load(loader, element)
 				
+			elif tagName.equals("reachLimit")
+				pReachLimit = element.getFirstCDataFloat()
+				
 			elif tagName.equals("calibrateReach")
 				pCalibrateReach = element.getFirstCDataFloat()
 				
@@ -269,6 +284,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		tag.addDataTag("targetBone", pTargetBone)
 		pTargetTracker.save(loader, tag.addTag("targetTracker"))
 		pGuideTracker.save(loader, tag.addTag("guideTracker"))
+		tag.addDataTag("reachLimit", pReachLimit)
 		tag.addDataTag("calibrateReach", pCalibrateReach)
 		tag.addDataTag("reachScale", pReachScale)
 	end

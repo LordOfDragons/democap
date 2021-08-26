@@ -76,11 +76,14 @@ class ECBTrackerSlot extends DefaultECBehavior
 		private var AnimatorController pControllerPosition
 		private var AnimatorController pControllerRotation
 		private var bool pShowTracker
+		private var bool pShowCoordSystem
 		private var InputDevice pInputDevice
 		private var Vector pPosition
 		private var Quaternion pOrientation
 		private var Matrix pMatrix
+		private var Matrix pComponentMatrix
 		private var AttachDetachListener pAttachDetachListener
+		private var DebugDrawer pDDCoordSystem
 		
 		
 		
@@ -88,9 +91,11 @@ class ECBTrackerSlot extends DefaultECBehavior
 		public func new(ECBTrackerSlot ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pShowTracker = true
+			pShowCoordSystem = true
 			pPosition = Vector.new()
 			pOrientation = Quaternion.new()
 			pMatrix = Matrix.new()
+			pComponentMatrix = Matrix.new()
 			pAttachDetachListener = AttachDetachListener.new(this)
 			
 			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
@@ -163,6 +168,21 @@ class ECBTrackerSlot extends DefaultECBehavior
 			stateChanged()
 		end
 		
+		/** Show coordinate system. */
+		public func bool getShowCoordSystem()
+			return pShowCoordSystem
+		end
+		
+		/** Set show coordinate system. */
+		protected func void setShowCoordSystem(bool show)
+			if show == pShowCoordSystem
+				return
+			end
+			
+			pShowCoordSystem = show
+			stateChanged()
+		end
+		
 		/** Input device or null if detached. */
 		public func InputDevice getInputDevice()
 			return pInputDevice
@@ -212,12 +232,15 @@ class ECBTrackerSlot extends DefaultECBehavior
 			setInputDevice(bindingManager.findDevice(block InputDevice each
 				return each.getID().equals(id)
 			end))
+			
+			createDDCoordSystem()
 		end
 		
 		/** Element has been removed from game world. Stop tracking device. */
 		public func void removeFromGameWorld()
 			GameApp.getGameApp().getBindingManager().removeListener(pAttachDetachListener)
 			setInputDevice(null)
+			destroyDDCoordSystem()
 		end
 		
 		/** Frame update. */
@@ -226,9 +249,15 @@ class ECBTrackerSlot extends DefaultECBehavior
 			
 			var Component component = pComponent.getComponent()
 			if component != null
-				var DMatrix matrix = getMatrix()
+				var DMatrix matrix = pComponentMatrix.toDMatrix() * pVRPlayspace.getMatrix()
 				component.setPosition(matrix.getPosition())
 				component.setOrientation(matrix.toQuaternion())
+			end
+			
+			if pDDCoordSystem != null
+				var DMatrix matrix = getMatrix()
+				pDDCoordSystem.setPosition(matrix.getPosition())
+				pDDCoordSystem.setOrientation(matrix.toQuaternion())
 			end
 		end
 		
@@ -262,28 +291,72 @@ class ECBTrackerSlot extends DefaultECBehavior
 			end
 			
 			component.setVisible(pShowTracker and getElement().getVisible())
+			createDDCoordSystem()
 		end
 		
 		/** Update matrix. */
 		public func void updateMatrix()
 			var CharacterTrackerSlot slot = pECBehavior.getTrackerSlot()
 			
-			pMatrix = Matrix.newRT(slot.getOffsetRotation(), slot.getOffsetPosition())
-			
 			if pInputDevice != null
-				pMatrix = pMatrix * pInputDevice.getDevicePoseMatrix()
+				pComponentMatrix = pInputDevice.getDevicePoseMatrix() * slot.getCalibrationMatrix()
+				pMatrix = slot.getOffsetMatrix() * pComponentMatrix
 				
-			elif slot.getInputDeviceID().empty()
-				pMatrix = pMatrix * slot.getMatrix()
+			else
+				pComponentMatrix = slot.getMatrix() * slot.getCalibrationMatrix()
+				pMatrix = pComponentMatrix
 			end
-			
-			pMatrix = pMatrix * slot.getCalibrationMatrix()
 			
 			pPosition = pMatrix.getPosition()
 			pOrientation = pMatrix.toQuaternion()
 			
 			pControllerPosition.setVector(pPosition)
 			pControllerRotation.setRotation(pMatrix.getEulerAngles())
+		end
+		
+		/** Create coordinate system debug drawer if required. */
+		protected func void createDDCoordSystem()
+			if pShowCoordSystem and pInputDevice != null and pInputDevice.getType() != InputDeviceType.vrHMD \
+			and getElement().getVisible() and getElement().getGameWorld() != null
+				if pDDCoordSystem != null
+					return
+				end
+				
+				pDDCoordSystem = DebugDrawer.new()
+				pDDCoordSystem.setVisible(true)
+				pDDCoordSystem.setXRay(true)
+				pDDCoordSystem.setShapeCount(3)
+				pDDCoordSystem.shapeSetFillColor(0, Color.red)
+				pDDCoordSystem.shapeSetFillColor(1, Color.green)
+				pDDCoordSystem.shapeSetFillColor(2, Color.blue)
+				
+				var ShapeList shapes = ShapeList.new()
+				shapes.addBox(Vector.new(0.05, 0, 0), Vector.new(0.05, 0.005, 0.005))
+				pDDCoordSystem.shapeSetShapes(0, shapes)
+				
+				shapes = ShapeList.new()
+				shapes.addBox(Vector.new(0, 0.05, 0), Vector.new(0.005, 0.05, 0.005))
+				pDDCoordSystem.shapeSetShapes(1, shapes)
+				
+				shapes = ShapeList.new()
+				shapes.addBox(Vector.new(0, 0, 0.05), Vector.new(0.005, 0.005, 0.05))
+				pDDCoordSystem.shapeSetShapes(2, shapes)
+				
+				getElement().getGameWorld().getWorld().addDebugDrawer(pDDCoordSystem)
+				
+			else
+				destroyDDCoordSystem()
+			end
+		end
+		
+		/** Destroy coordinate system debug drawer if present. */
+		protected func void destroyDDCoordSystem()
+			if pDDCoordSystem == null
+				return
+			end
+			
+			getElement().getGameWorld().getWorld().removeDebugDrawer(pDDCoordSystem)
+			pDDCoordSystem = null
 		end
 	end
 	

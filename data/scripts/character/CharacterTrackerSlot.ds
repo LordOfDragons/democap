@@ -39,6 +39,8 @@ class CharacterTrackerSlot
 	private var String pInputDeviceID
 	private var Vector pOffsetPosition
 	private var Vector pOffsetRotation
+	private var Matrix pOffsetMatrix
+	private var Matrix pOffsetMatrixInverse
 	
 	private var Matrix pCalibrationMatrix
 	private var Vector pCalibratePosition
@@ -62,6 +64,8 @@ class CharacterTrackerSlot
 		pInputDeviceID = ""
 		pOffsetPosition = Vector.new()
 		pOffsetRotation = Vector.new()
+		pOffsetMatrix = Matrix.new()
+		pOffsetMatrixInverse = Matrix.new()
 		
 		resetCalibration()
 	end
@@ -75,6 +79,8 @@ class CharacterTrackerSlot
 		pInputDeviceID = slot.pInputDeviceID
 		pOffsetPosition = slot.pOffsetPosition
 		pOffsetRotation = slot.pOffsetRotation
+		pOffsetMatrix = slot.pOffsetMatrix
+		pOffsetMatrixInverse = slot.pOffsetMatrixInverse
 		
 		resetCalibration()
 	end
@@ -162,6 +168,8 @@ class CharacterTrackerSlot
 			throw ENullPointer.new("position")
 		end
 		pOffsetPosition = position
+		pOffsetMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition)
+		pOffsetMatrixInverse = pOffsetMatrix.getInverse()
 	end
 	
 	/** Rotation offset. */
@@ -175,6 +183,18 @@ class CharacterTrackerSlot
 			throw ENullPointer.new("rotation")
 		end
 		pOffsetRotation = rotation
+		pOffsetMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition)
+		pOffsetMatrixInverse = pOffsetMatrix.getInverse()
+	end
+	
+	/** Offset matrix. */
+	public func Matrix getOffsetMatrix()
+		return pOffsetMatrix
+	end
+	
+	/** Inverse offset matrix. */
+	public func Matrix getOffsetMatrixInverse()
+		return pOffsetMatrixInverse
 	end
 	
 	
