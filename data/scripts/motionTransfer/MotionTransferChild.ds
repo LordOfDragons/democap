@@ -112,7 +112,8 @@ class MotionTransferChild extends DefaultMotionTransfer
 	
 	
 	/** Init element clas. */
-	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass,\
+	Component component)
 		// no behavior required
 		
 		// add rule. requires a valid slot and bone name
@@ -165,6 +166,17 @@ class MotionTransferChild extends DefaultMotionTransfer
 				
 			elif tagName.equals("tracker")
 				pTracker.load(loader, element)
+				
+			elif tagName.equals("calibrated")
+				loadCalibrated(loader, element)
+			end
+		end)
+	end
+	
+	protected func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("tracker")
+				pTracker.loadCalibrated(loader, element)
 			end
 		end)
 	end
@@ -174,5 +186,9 @@ class MotionTransferChild extends DefaultMotionTransfer
 		tag.addDataTag("name", getName())
 		tag.addDataTag("bone", pBone)
 		pTracker.save(loader, tag.addTag("tracker"))
+	end
+	
+	protected func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+		pTracker.saveCalibrated(loader, tag.addTag("tracker"))
 	end
 end

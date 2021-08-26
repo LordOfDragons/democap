@@ -1,0 +1,575 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Democap.Actors
+pin Democap.Behaviors
+pin Democap.Characters
+
+pin Dragengine.Animators
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+/**
+ * Motion transfer affecting fingers.
+ * 
+ * Supports different methods of motion transfer to fingers:
+ * - Fully articulated fingers (TODO)
+ * - Individual finger bending
+ * - Uniform finger bending (TODO)
+ * 
+ * This is the most simple motion transfer.
+ */
+class MotionTransferFingers extends DefaultMotionTransfer
+	/** Factory. */
+	class Factory implements MotionTransferFactory
+		public func new()
+		end
+		
+		public func String factoryID()
+			return "fingers"
+		end
+		
+		public func MotionTransfer createMotionTransfer()
+			return MotionTransferFingers.new(factoryID())
+		end
+	end
+	
+	
+	
+	private var String pThumbTipBone
+	private var int pThumbBoneCount
+	private var String pIndexTipBone
+	private var int pIndexBoneCount
+	private var String pMiddleTipBone
+	private var int pMiddleBoneCount
+	private var String pRingTipBone
+	private var int pRingBoneCount
+	private var String pPinkyTipBone
+	private var int pPinkyBoneCount
+	private var String pTracker
+	private var CharacterTrackerSlot pTrackerSlot
+	private var float pBendAngle
+	private var String pMoveHandsClosed
+	
+	private var ADController pADControllerThumb
+	private var ADController pADControllerIndex
+	private var ADController pADControllerMiddle
+	private var ADController pADControllerRing
+	private var ADController pADControllerPinky
+	
+	private var ADRule pADRuleThumb
+	private var ADRule pADRuleIndex
+	private var ADRule pADRuleMiddle
+	private var ADRule pADRuleRing
+	private var ADRule pADRulePinky
+	
+	private var Array pCalibrateBonesThumb
+	private var Array pCalibrateBonesIndex
+	private var Array pCalibrateBonesMiddle
+	private var Array pCalibrateBonesRing
+	private var Array pCalibrateBonesPinky
+	
+	
+	
+	/** Create motion transfer. */
+	public func new(String factoryID) super(factoryID)
+		pThumbTipBone = ""
+		pThumbBoneCount = 3
+		pIndexTipBone = ""
+		pIndexBoneCount = 3
+		pMiddleTipBone = ""
+		pMiddleBoneCount = 3
+		pRingTipBone = ""
+		pRingBoneCount = 3
+		pPinkyTipBone = ""
+		pPinkyBoneCount = 3
+		pTracker = ""
+		pBendAngle = 85
+		pMoveHandsClosed = ""
+		pCalibrateBonesThumb = Array.new()
+		pCalibrateBonesIndex = Array.new()
+		pCalibrateBonesMiddle = Array.new()
+		pCalibrateBonesRing = Array.new()
+		pCalibrateBonesPinky = Array.new()
+	end
+	
+	/** Create copy of motion transfer. */
+	public func new(MotionTransferFingers transfer) super(transfer.factoryID())
+		pThumbTipBone = transfer.pThumbTipBone
+		pThumbBoneCount = transfer.pThumbBoneCount
+		pIndexTipBone = transfer.pIndexTipBone
+		pIndexBoneCount = transfer.pIndexBoneCount
+		pMiddleTipBone = transfer.pMiddleTipBone
+		pMiddleBoneCount = transfer.pMiddleBoneCount
+		pRingTipBone = transfer.pRingTipBone
+		pRingBoneCount = transfer.pRingBoneCount
+		pPinkyTipBone = transfer.pPinkyTipBone
+		pPinkyBoneCount = transfer.pPinkyBoneCount
+		pTracker = transfer.pTracker
+		pBendAngle = transfer.pBendAngle
+		pMoveHandsClosed = transfer.pMoveHandsClosed
+		pCalibrateBonesThumb = Array.new(transfer.pCalibrateBonesThumb)
+		pCalibrateBonesIndex = Array.new(transfer.pCalibrateBonesIndex)
+		pCalibrateBonesMiddle = Array.new(transfer.pCalibrateBonesMiddle)
+		pCalibrateBonesRing = Array.new(transfer.pCalibrateBonesRing)
+		pCalibrateBonesPinky = Array.new(transfer.pCalibrateBonesPinky)
+	end
+	
+	
+	
+	/** Tip thumb bone name. */
+	public func String getThumbTipBone()
+		return pThumbTipBone
+	end
+	
+	/** Set tip thumb bone name. */
+	public func void setThumbTipBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pThumbTipBone = bone
+	end
+	
+	/** Count of bones in thumb bone chain up to root bone. */
+	public func int getThumbBoneCount()
+		return pThumbBoneCount
+	end
+	
+	/** Set count of bones in thumb bone chain up to root bone. */
+	public func void setThumbBoneCount(int count)
+		if count < 1
+			throw ENullPointer.new("count < 1")
+		end
+		pThumbBoneCount = count
+	end
+	
+	/** Tip index bone name. */
+	public func String getIndexTipBone()
+		return pIndexTipBone
+	end
+	
+	/** Set tip index bone name. */
+	public func void setIndexTipBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pIndexTipBone = bone
+	end
+	
+	/** Count of bones in index bone chain up to root bone. */
+	public func int getIndexBoneCount()
+		return pIndexBoneCount
+	end
+	
+	/** Set count of bones in index bone chain up to root bone. */
+	public func void setIndexBoneCount(int count)
+		if count < 1
+			throw ENullPointer.new("bone")
+		end
+		pIndexBoneCount = count
+	end
+	
+	/** Tip Middle bone name. */
+	public func String getMiddleTipBone()
+		return pMiddleTipBone
+	end
+	
+	/** Set tip middle bone name. */
+	public func void setMiddleTipBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pMiddleTipBone = bone
+	end
+	
+	/** Count of bones in middle bone chain up to root bone. */
+	public func int getMiddleBoneCount()
+		return pMiddleBoneCount
+	end
+	
+	/** Set count of bones in middle bone chain up to root bone. */
+	public func void setMiddleBoneCount(int count)
+		if count < 1
+			throw ENullPointer.new("bone")
+		end
+		pMiddleBoneCount = count
+	end
+	
+	/** Tip ring bone name. */
+	public func String getRingTipBone()
+		return pRingTipBone
+	end
+	
+	/** Set tip ring bone name. */
+	public func void setRingTipBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pRingTipBone = bone
+	end
+	
+	/** Count of bones in ring bone chain up to root bone. */
+	public func int getBoneRingCount()
+		return pRingBoneCount
+	end
+	
+	/** Set count of bones in ring bone chain up to root bone. */
+	public func void setRingBoneCount(int count)
+		if count < 1
+			throw ENullPointer.new("bone")
+		end
+		pRingBoneCount = count
+	end
+	
+	/** Tip pinky bone name. */
+	public func String getPinkyTipBone()
+		return pPinkyTipBone
+	end
+	
+	/** Set tip pinky bone name. */
+	public func void setPinkyTipBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pPinkyTipBone = bone
+	end
+	
+	/** Count of bones in pinky bone chain up to root bone. */
+	public func int getPinkyBoneCount()
+		return pPinkyBoneCount
+	end
+	
+	/** Set count of bones in pinky bone chain up to root bone. */
+	public func void setPinkyBoneCount(int count)
+		if count < 1
+			throw ENullPointer.new("bone")
+		end
+		pPinkyBoneCount = count
+	end
+	
+	/** Tracker slot name. */
+	public func String getTracker()
+		return pTracker
+	end
+	
+	/** Tracker slot or null. */
+	public func CharacterTrackerSlot getTrackerSlot()
+		return pTrackerSlot
+	end
+	
+	/** Finger bending angle. Applied to each individual finger segment. */
+	public func float getBendAngle()
+		return pBendAngle
+	end
+	
+	/** Set finger bending angle. Applied to each individual finger segment. */
+	public func void setpBendAngle(float angle)
+		pBendAngle = angle
+	end
+	
+	/** Hands closed animation move or empty string to use none. */
+	public func String getMoveHandsClosed()
+		return pMoveHandsClosed
+	end
+	
+	/** Set hands closed animation move or empty string to use none. */
+	public func void setMoveHandsClosed(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pMoveHandsClosed = move
+	end
+	
+	
+	
+	/** Thumb animator definition rule or null. Can be bone transformator or animation. */
+	public func ADRule getADRuleThumb()
+		return pADRuleThumb
+	end
+	
+	/** Index animator definition rule or null. Can be bone transformator or animation. */
+	public func ADRule getADRuleIndex()
+		return pADRuleIndex
+	end
+	
+	/** Middle animator definition rule or null. Can be bone transformator or animation. */
+	public func ADRule getADRuleMiddle()
+		return pADRuleMiddle
+	end
+	
+	/** Ring animator definition rule or null. Can be bone transformator or animation. */
+	public func ADRule getADRuleRing()
+		return pADRuleRing
+	end
+	
+	/** Pinky animator definition rule or null. Can be bone transformator or animation. */
+	public func ADRule getADRulePinky()
+		return pADRulePinky
+	end
+	
+	
+	
+	/** Init element clas. */
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
+		pADControllerThumb = null
+		pADControllerIndex = null
+		pADControllerMiddle = null
+		pADControllerRing = null
+		pADControllerPinky = null
+		
+		pADRuleThumb = null
+		pADRuleIndex = null
+		pADRuleMiddle = null
+		pADRuleRing = null
+		pADRulePinky = null
+		
+		if pTrackerSlot == null
+			return
+		end
+		
+		// add behavior
+		var ECBMotionTransferFingers behavior = ECBMotionTransferFingers.new(eclass, this)
+		
+		// add controller, link and rule for each defined finger
+		var AnimatorDefinition adef = config.getAnimatorDefinition()
+		
+		if pCalibrateBonesThumb.getCount() > 0
+			pADControllerThumb = addADController(adef, behavior.getControllerNameThumb())
+			pADRuleThumb = addADRule(adef, addADLink(adef, pADControllerThumb), pCalibrateBonesThumb)
+		end
+		if pCalibrateBonesIndex.getCount() > 0
+			pADControllerIndex = addADController(adef, behavior.getControllerNameIndex())
+			pADRuleIndex = addADRule(adef, addADLink(adef, pADControllerIndex), pCalibrateBonesIndex)
+		end
+		if pCalibrateBonesMiddle.getCount() > 0
+			pADControllerMiddle = addADController(adef, behavior.getControllerNameMiddle())
+			pADRuleMiddle = addADRule(adef, addADLink(adef, pADControllerMiddle), pCalibrateBonesMiddle)
+		end
+		if pCalibrateBonesRing.getCount() > 0
+			pADControllerRing = addADController(adef, behavior.getControllerNameRing())
+			pADRuleRing = addADRule(adef, addADLink(adef, pADControllerRing), pCalibrateBonesRing)
+		end
+		if pCalibrateBonesPinky.getCount() > 0
+			pADControllerPinky = addADController(adef, behavior.getControllerNamePinky())
+			pADRulePinky = addADRule(adef, addADLink(adef, pADControllerPinky), pCalibrateBonesPinky)
+		end
+	end
+	
+	/** Add animator definition controller. */
+	protected func ADController addADController(AnimatorDefinition adef, String name)
+		var ADController controller = ADController.new()
+		controller.setName(name)
+		controller.setMinimum(-1)
+		controller.setMaximum(1)
+		controller.setClamp(true)
+		adef.addController(controller)
+		return controller
+	end
+	
+	/** Add animator definition link. */
+	protected func ADLink addADLink(AnimatorDefinition adef, ADController controller)
+		var ADLink link = ADLink.new()
+		link.setController(controller)
+		link.setCurve(CurveBezier.newDefaultLinear()) // TODO set curve from calibrated finger bending
+		adef.addLink(link)
+		return link
+	end
+	
+	/** Add animator rule. */
+	protected func ADRule addADRule(AnimatorDefinition adef, ADLink link, Array bones)
+		var ADRule adrule
+		
+		if pMoveHandsClosed.empty()
+			var ADRuleBoneTransformator rule = ADRuleBoneTransformator.new()
+			rule.setName(link.getController().getName())
+			rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+			rule.setMinimumRotation(Vector.new(0, 0, 0))
+			rule.setMaximumRotation(Vector.new(-pBendAngle, 0, 0))
+			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+			adrule = rule
+			
+		else
+			var ADRuleAnimation rule = ADRuleAnimation.new()
+			rule.setName(link.getController().getName())
+			rule.setMoveName(pMoveHandsClosed)
+			rule.addTargetLink(ADRuleTargetLink.new(ARAnimationTarget.blendFactor, link))
+			adrule = rule
+		end
+		
+		bones.forEach(block String each
+			adrule.addBone(each)
+		end)
+		adef.addRule(adrule)
+		return adrule
+	end
+	
+	/** Reset calibration. */
+	public func void resetCalibration()
+		pCalibrateBonesThumb.removeAll()
+		pCalibrateBonesIndex.removeAll()
+		pCalibrateBonesMiddle.removeAll()
+		pCalibrateBonesRing.removeAll()
+		pCalibrateBonesPinky.removeAll()
+		pTrackerSlot = null
+	end
+	
+	/** Calibrate character. */
+	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
+	BaseVRActor actor, Component component)
+		var Rig rig = component.getRig()
+		findBoneChain(rig, pThumbTipBone, pThumbBoneCount, pCalibrateBonesThumb)
+		findBoneChain(rig, pIndexTipBone, pIndexBoneCount, pCalibrateBonesIndex)
+		findBoneChain(rig, pMiddleTipBone, pMiddleBoneCount, pCalibrateBonesMiddle)
+		findBoneChain(rig, pRingTipBone, pRingBoneCount, pCalibrateBonesRing)
+		findBoneChain(rig, pPinkyTipBone, pPinkyBoneCount, pCalibrateBonesPinky)
+		
+		pTrackerSlot = config.getTrackerSlots().getAt(pTracker)
+	end
+	
+	/** Find finger bone chain. */
+	protected func void findBoneChain(Rig rig, String tipBone, int boneCount, Array bones)
+		bones.removeAll()
+		
+		var int index = rig.indexOfBoneNamed(tipBone)
+		while index != -1 and boneCount-- > 0
+			bones.add(rig.boneGetName(index))
+			index = rig.boneGetParent(index)
+		end
+	end
+	
+	/** Create copy of motion transfer. */
+	public func MotionTransfer createCopy()
+		return MotionTransferFingers.new(this)
+	end
+	
+	/** Load from XML. */
+	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("name")
+				setName(element.getFirstCData())
+				
+			elif tagName.equals("thumbTipBone")
+				setThumbTipBone(element.getFirstCData())
+				
+			elif tagName.equals("thumbBoneCount")
+				setThumbBoneCount(element.getFirstCDataInt())
+				
+			elif tagName.equals("indexTipBone")
+				setIndexTipBone(element.getFirstCData())
+				
+			elif tagName.equals("indexBoneCount")
+				setIndexBoneCount(element.getFirstCDataInt())
+				
+			elif tagName.equals("middleTipBone")
+				setMiddleTipBone(element.getFirstCData())
+				
+			elif tagName.equals("middleBoneCount")
+				setMiddleBoneCount(element.getFirstCDataInt())
+				
+			elif tagName.equals("ringTipBone")
+				setRingTipBone(element.getFirstCData())
+				
+			elif tagName.equals("ringBoneCount")
+				setRingBoneCount(element.getFirstCDataInt())
+				
+			elif tagName.equals("pinkyTipBone")
+				setPinkyTipBone(element.getFirstCData())
+				
+			elif tagName.equals("pinkyBoneCount")
+				setPinkyBoneCount(element.getFirstCDataInt())
+				
+			elif tagName.equals("tracker")
+				pTracker = element.getFirstCData()
+				
+			elif tagName.equals("bendAngle")
+				pBendAngle = element.getFirstCDataFloat()
+				
+			elif tagName.equals("moveHandsClosed")
+				pMoveHandsClosed = element.getFirstCData()
+				
+			elif tagName.equals("calibrated")
+				loadCalibrated(loader, element)
+			end
+		end)
+	end
+	
+	protected func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("thumbBone")
+				pCalibrateBonesThumb.add(element.getFirstCData())
+				
+			elif tagName.equals("indexBone")
+				pCalibrateBonesIndex.add(element.getFirstCData())
+				
+			elif tagName.equals("middleBone")
+				pCalibrateBonesMiddle.add(element.getFirstCData())
+				
+			elif tagName.equals("ringBone")
+				pCalibrateBonesRing.add(element.getFirstCData())
+				
+			elif tagName.equals("pinkyBone")
+				pCalibrateBonesPinky.add(element.getFirstCData())
+			end
+		end)
+	end
+	
+	/** Save to XML. */
+	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+		tag.addDataTag("name", getName())
+		tag.addDataTag("thumbTipBone", pThumbTipBone)
+		tag.addDataTag("thumbBoneCount", pThumbBoneCount)
+		tag.addDataTag("indexTipBone", pIndexTipBone)
+		tag.addDataTag("indexBoneCount", pIndexBoneCount)
+		tag.addDataTag("middleTipBone", pMiddleTipBone)
+		tag.addDataTag("middleBoneCount", pMiddleBoneCount)
+		tag.addDataTag("ringTipBone", pRingTipBone)
+		tag.addDataTag("ringBoneCount", pRingBoneCount)
+		tag.addDataTag("pinkyTipBone", pPinkyTipBone)
+		tag.addDataTag("pinkyBoneCount", pPinkyBoneCount)
+		tag.addDataTag("tracker", pTracker)
+		tag.addDataTag("bendAngle", pBendAngle)
+		tag.addDataTag("moveHandsClosed", pMoveHandsClosed)
+		saveCalibrated(loader, tag.addTag("calibrated"))
+	end
+	
+	protected func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+		pCalibrateBonesThumb.forEach(block String each
+			tag.addDataTag("thumbBone", each)
+		end)
+		pCalibrateBonesIndex.forEach(block String each
+			tag.addDataTag("indexBone", each)
+		end)
+		pCalibrateBonesMiddle.forEach(block String each
+			tag.addDataTag("middleBone", each)
+		end)
+		pCalibrateBonesRing.forEach(block String each
+			tag.addDataTag("ringBone", each)
+		end)
+		pCalibrateBonesPinky.forEach(block String each
+			tag.addDataTag("pinkyBone", each)
+		end)
+	end
+end

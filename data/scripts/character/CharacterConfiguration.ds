@@ -40,7 +40,7 @@ class CharacterConfiguration
 	private var String pName
 	
 	private var float pShoulderLevel
-	private var String pCalibrateAnimation
+	private var String pMoveCalibrate
 	private var float pCalibrateScale
 	
 	private var CharacterTrackerSlots pTrackerSlots
@@ -63,7 +63,7 @@ class CharacterConfiguration
 		setName(name)
 		
 		pShoulderLevel = 1.6
-		pCalibrateAnimation = ""
+		pMoveCalibrate = ""
 		pCalibrateScale = 1
 		
 		pTrackerSlots = CharacterTrackerSlots.new()
@@ -74,7 +74,7 @@ class CharacterConfiguration
 	public func new(CharacterConfiguration configuration)
 		pName = configuration.pName
 		pShoulderLevel = configuration.pShoulderLevel
-		pCalibrateAnimation = configuration.pCalibrateAnimation
+		pMoveCalibrate = configuration.pMoveCalibrate
 		pCalibrateScale = configuration.pCalibrateScale
 		
 		pTrackerSlots = CharacterTrackerSlots.new()
@@ -130,17 +130,17 @@ class CharacterConfiguration
 	end
 	
 	/** Name of animation move to use for calibration or empty string to use none. */
-	public func String getCalibrateAnimation()
-		return pCalibrateAnimation
+	public func String getMoveCalibrate()
+		return pMoveCalibrate
 	end
 	
 	/** Set name of animation move to use for calibration or empty string to use none. */
-	public func void setCalibrateAnimation(String animation)
+	public func void setMoveCalibrate(String animation)
 		if animation == null
 			throw ENullPointer.new("animation")
 		end
 		
-		pCalibrateAnimation = animation
+		pMoveCalibrate = animation
 	end
 	
 	/** Calibrated scale between actor and character. */
@@ -253,10 +253,13 @@ class CharacterConfiguration
 		
 		var Vector posNeck = hmdNorm * Vector.new(0, -0.2, -0.1)
 		
-		//var Vector centerBody = centerHands.compSelect(true, false, true)
-		//var float turnBody = rotHands + 90
 		var Vector centerBody = posNeck.compSelect(true, false, true)
 		var float turnBody = turnHMD
+		
+		if true
+			centerBody = centerHands.compSelect(true, false, true)
+			turnBody = rotHands + 90
+		end
 		
 		pCalibrateScale = pShoulderLevel / actorProfile.getShoulderLevel()
 		
@@ -328,8 +331,8 @@ class CharacterConfiguration
 			
 			// finalize motion capture animator
 			var Animator animator = Animator.new()
-			pAnimatorDefinition.debug(GameApp.getGameApp().getConsole())
 			pAnimatorDefinition.buildAnimator(animator)
+			pAnimatorDefinition.debug(GameApp.getGameApp().getConsole())
 			mocapAnimator.setAnimator(animator)
 			
 		catch Exception e
@@ -371,7 +374,7 @@ class CharacterConfiguration
 		animator.setRig(appearance.getRig())
 		animator.setAnimation(appearance.getAnimation())
 		
-		if pCalibrateAnimation.empty()
+		if pMoveCalibrate.empty()
 			var ARStateManipulator rule = ARStateManipulator.new()
 			rule.setEnablePosition(true)
 			rule.setEnableSize(true)
@@ -379,7 +382,7 @@ class CharacterConfiguration
 			
 		else
 			var ARAnimation rule = ARAnimation.new()
-			rule.setMoveName(pCalibrateAnimation)
+			rule.setMoveName(pMoveCalibrate)
 			animator.addRule(rule)
 		end
 		

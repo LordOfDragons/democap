@@ -67,6 +67,19 @@ class ECBTrackerSlot extends DefaultECBehavior
 			end
 		end
 		
+		/** Update controllers. */
+		class UpdateControllers extends ECBehaviorActorAnimated.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void updateControllers(ECBehaviorActorAnimated.Instance instance, float elapsed)
+				pInstance.updateControllers()
+			end
+		end
+		
 		
 		
 		private var ECBTrackerSlot pECBehavior
@@ -101,8 +114,6 @@ class ECBTrackerSlot extends DefaultECBehavior
 			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
 			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
 			pComponent = ecbehavior.getComponent().instance(element)
-			
-			setRequiresThink(true)
 		end
 		
 		/** Dispose of instance. */
@@ -114,13 +125,14 @@ class ECBTrackerSlot extends DefaultECBehavior
 			super.dispose()
 		end
 		
-		
-		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
 			pControllerPosition = pActorAnimated.getControllerNamed(pECBehavior.getControllerNamePosition())
 			pControllerRotation = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameRotation())
+			
+			pActorAnimated.addListener(UpdateControllers.new(this))
 		end
+		
 		
 		
 		/** Behavior. */
@@ -243,8 +255,13 @@ class ECBTrackerSlot extends DefaultECBehavior
 			destroyDDCoordSystem()
 		end
 		
-		/** Frame update. */
-		public func void think(float elapsed)
+		/** Element state changed like visible. */
+		public func void stateChanged()
+			updateVisibile()
+		end
+		
+		/** Update controllers. */
+		public func void updateControllers()
 			updateMatrix()
 			
 			var Component component = pComponent.getComponent()
@@ -259,11 +276,6 @@ class ECBTrackerSlot extends DefaultECBehavior
 				pDDCoordSystem.setPosition(matrix.getPosition())
 				pDDCoordSystem.setOrientation(matrix.toQuaternion())
 			end
-		end
-		
-		/** Element state changed like visible. */
-		public func void stateChanged()
-			updateVisibile()
 		end
 		
 		

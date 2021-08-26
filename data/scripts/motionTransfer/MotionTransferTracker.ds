@@ -245,6 +245,19 @@ class MotionTransferTracker
 		setTransform(pTransformPosition, pTransformRotation)
 	end
 	
+	public func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("transformPosition")
+				pTransformPosition = loader.readVector(element)
+				
+			elif tagName.equals("transformRotation")
+				pTransformRotation = loader.readVector(element)
+			end
+		end)
+		
+		setTransform(pTransformPosition, pTransformRotation)
+	end
+	
 	/**
 	 * Save to XML.
 	 */
@@ -252,6 +265,11 @@ class MotionTransferTracker
 		tag.addDataTag("slot", pSlot)
 		loader.writeVector(tag, "offsetPosition", pOffsetPosition)
 		loader.writeVector(tag, "offsetRotation", pOffsetRotation)
+		loader.writeVector(tag, "transformPosition", pTransformPosition)
+		loader.writeVector(tag, "transformRotation", pTransformRotation)
+	end
+	
+	public func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
 		loader.writeVector(tag, "transformPosition", pTransformPosition)
 		loader.writeVector(tag, "transformRotation", pTransformRotation)
 	end

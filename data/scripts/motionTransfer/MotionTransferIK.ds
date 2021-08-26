@@ -65,8 +65,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	
 	
-	private var String pRootBone
 	private var String pTargetBone
+	private var int pBoneCount
 	private var MotionTransferTracker pTargetTracker
 	private var MotionTransferTracker pGuideTracker
 	private var float pReachLimit
@@ -74,46 +74,35 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var ADRuleInverseKinematic pADRuleIK
 	
 	private var float pCalibrateReach
-	private var float pReachScale
+	private var float pCalibrateReachScale
+	private var String pCalibrateRootBone
 	
 	
 	
 	/** Create motion transfer. */
 	public func new(String factoryID) super(factoryID)
-		pRootBone = ""
 		pTargetBone = ""
+		pBoneCount = 3
 		pTargetTracker = MotionTransferTracker.new()
 		pGuideTracker = MotionTransferTracker.new()
 		pReachLimit = 1
 		pCalibrateReach = 0.6
-		pReachScale  = 1
+		pCalibrateReachScale  = 1
+		pCalibrateRootBone = ""
 	end
 	
 	/** Create copy of motion transfer. */
 	public func new(MotionTransferIK transfer) super(transfer.factoryID())
-		pRootBone = transfer.pRootBone
 		pTargetBone = transfer.pTargetBone
+		pBoneCount = transfer.pBoneCount
 		pTargetTracker = MotionTransferTracker.new(transfer.pTargetTracker)
 		pGuideTracker = MotionTransferTracker.new(transfer.pGuideTracker)
 		pReachLimit = transfer.pReachLimit
 		pCalibrateReach = transfer.pCalibrateReach
-		pReachScale = transfer.pReachScale
+		pCalibrateReachScale = transfer.pCalibrateReachScale
 	end
 	
 	
-	
-	/** Root bone name. */
-	public func String getRootBone()
-		return pRootBone
-	end
-	
-	/** Set root bone name. */
-	public func void setRootBone(String bone)
-		if bone == null
-			throw ENullPointer.new("bone")
-		end
-		pRootBone = bone
-	end
 	
 	/** Target bone name. */
 	public func String getTargetBone()
@@ -126,6 +115,19 @@ class MotionTransferIK extends DefaultMotionTransfer
 			throw ENullPointer.new("bone")
 		end
 		pTargetBone = bone
+	end
+	
+	/** Count of bones in bone chain up to root bone. */
+	public func int getBoneCount()
+		return pBoneCount
+	end
+	
+	/** Set of bones in bone chain up to root bone. */
+	public func void setBoneCount(int count)
+		if count < 1
+			throw ENullPointer.new("count < 1")
+		end
+		pBoneCount = count
 	end
 	
 	/** Target tracker. */
@@ -177,7 +179,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			slotGuide = config.getTrackerSlots().getAt(pGuideTracker.getSlot())
 		end
 		
-		if slotTarget == null or pRootBone.empty() or pTargetBone.empty()
+		if slotTarget == null or pCalibrateRootBone.empty() or pTargetBone.empty()
 			return
 		end
 		
@@ -190,17 +192,18 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADRuleIK.setAdjustOrientation(true)
 		pADRuleIK.setLocalPosition(pTargetTracker.getReverseTransformPosition())
 		pADRuleIK.setLocalOrientation(pTargetTracker.getTransformRotation())
-		pADRuleIK.setReachBone(pRootBone)
+		pADRuleIK.setReachBone(pCalibrateRootBone)
 		pADRuleIK.setReachRange(pCalibrateReach)
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, slotTarget.getADLinkPosition()))
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, slotTarget.getADLinkRotation()))
-		pADRuleIK.addBone(pRootBone)
+		pADRuleIK.addBone(pCalibrateRootBone)
 		pADRuleIK.addBone(pTargetBone)
 		config.getAnimatorDefinition().addRule(pADRuleIK)
 	end
 	
 	/** Reset calibration. */
 	public func void resetCalibration()
+		pCalibrateRootBone = ""
 		pTargetTracker.resetTransform()
 		pGuideTracker.resetTransform()
 	end
@@ -208,13 +211,15 @@ class MotionTransferIK extends DefaultMotionTransfer
 	/** Calibrate character. */
 	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
 	BaseVRActor actor, Component component)
+		pCalibrateRootBone = findRootBone(component.getRig(), pTargetBone, pBoneCount)
+		
 		pTargetTracker.setTransform(config, component, pTargetBone)
-		pGuideTracker.setTransform(config, component, pRootBone)
+		pGuideTracker.setTransform(config, component, pCalibrateRootBone)
 		
 		// calculate reach of IK chain to avoid over stretching
 		var int indexRoot = -1, indexTarget = -1
-		if not pRootBone.empty() and not pTargetBone.empty()
-			indexRoot = component.indexOfBoneNamed(pRootBone)
+		if not pCalibrateRootBone.empty() and not pTargetBone.empty()
+			indexRoot = component.indexOfBoneNamed(pCalibrateRootBone)
 			indexTarget = component.indexOfBoneNamed(pTargetBone)
 		end
 		
@@ -227,19 +232,31 @@ class MotionTransferIK extends DefaultMotionTransfer
 			if slotTarget != null
 				var Vector slotPos = slotTarget.getCalibratePosition()
 				var float realReach = (slotPos - posRoot).getLength()
-				pReachScale = pCalibrateReach / realReach
+				pCalibrateReachScale = pCalibrateReach / realReach
 				
 			else
-				pReachScale = 1
+				pCalibrateReachScale = 1
 			end
 			
 		else
 			pCalibrateReach = 0.6
-			pReachScale = 1
+			pCalibrateReachScale = 1
 		end
 		
 		GameApp.getGameApp().getConsole().addMessage("MotionTransferIK.calibrate: name='" \
-			+ getName() + "' reach=" + pCalibrateReach + " reachScale=" + pReachScale)
+			+ getName() + "' reach=" + pCalibrateReach + " reachScale=" + pCalibrateReachScale)
+	end
+	
+	/** Find root bone name. */
+	protected func String findRootBone(Rig rig, String targetBone, int boneCount)
+		var int i, root, index = rig.indexOfBoneNamed(targetBone)
+		
+		while index != -1 and boneCount-- > 0
+			root = index
+			index = rig.boneGetParent(index)
+		end
+		
+		return boneCount < 1 if rig.boneGetName(root) else ""
 	end
 	
 	/** Create copy of motion transfer. */
@@ -253,11 +270,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 			if tagName.equals("name")
 				setName(element.getFirstCData())
 				
-			elif tagName.equals("rootBone")
-				setRootBone(element.getFirstCData())
-				
 			elif tagName.equals("targetBone")
 				setTargetBone(element.getFirstCData())
+				
+			elif tagName.equals("boneCount")
+				setBoneCount(element.getFirstCDataInt())
 				
 			elif tagName.equals("targetTracker")
 				pTargetTracker.load(loader, element)
@@ -268,11 +285,28 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("reachLimit")
 				pReachLimit = element.getFirstCDataFloat()
 				
-			elif tagName.equals("calibrateReach")
+			elif tagName.equals("calibrated")
+				loadCalibrated(loader, element)
+			end
+		end)
+	end
+	
+	protected func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("reach")
 				pCalibrateReach = element.getFirstCDataFloat()
 				
 			elif tagName.equals("reachScale")
-				pReachScale = element.getFirstCDataFloat()
+				pCalibrateReachScale = element.getFirstCDataFloat()
+				
+			elif tagName.equals("rootBone")
+				pCalibrateRootBone = element.getFirstCData()
+				
+			elif tagName.equals("targetTracker")
+				pTargetTracker.loadCalibrated(loader, element)
+				
+			elif tagName.equals("guideTracker")
+				pGuideTracker.loadCalibrated(loader, element)
 			end
 		end)
 	end
@@ -280,12 +314,22 @@ class MotionTransferIK extends DefaultMotionTransfer
 	/** Save to XML. */
 	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("name", getName())
-		tag.addDataTag("rootBone", pRootBone)
 		tag.addDataTag("targetBone", pTargetBone)
+		tag.addDataTag("boneCount", pBoneCount)
 		pTargetTracker.save(loader, tag.addTag("targetTracker"))
 		pGuideTracker.save(loader, tag.addTag("guideTracker"))
 		tag.addDataTag("reachLimit", pReachLimit)
 		tag.addDataTag("calibrateReach", pCalibrateReach)
-		tag.addDataTag("reachScale", pReachScale)
+		tag.addDataTag("reachScale", pCalibrateReachScale)
+		tag.addDataTag("calibrateRootBone", pCalibrateRootBone)
+		saveCalibrated(loader, tag.addTag("calibrated"))
+	end
+	
+	protected func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+		tag.addDataTag("reach", pCalibrateReach)
+		tag.addDataTag("reachScale", pCalibrateReachScale)
+		tag.addDataTag("rootBone", pCalibrateRootBone)
+		pTargetTracker.saveCalibrated(loader, tag.addTag("targetTracker"))
+		pGuideTracker.saveCalibrated(loader, tag.addTag("guideTracker"))
 	end
 end

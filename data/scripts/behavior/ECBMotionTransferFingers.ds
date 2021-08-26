@@ -1,0 +1,364 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Commands
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior for MotionTransferFingers.
+ */
+class ECBMotionTransferFingers extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Update controllers. */
+		class UpdateControllers extends ECBehaviorActorAnimated.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void updateControllers(ECBehaviorActorAnimated.Instance instance, float elapsed)
+				pInstance.updateControllers()
+			end
+		end
+		
+		
+		
+		private var ECBMotionTransferFingers pECBehavior
+		private var ECBehaviorVRPlayspace.Instance pVRPlayspace
+		private var ECBehaviorActorAnimated.Instance pActorAnimated
+		private var ECBTrackerSlot.Instance pSlotTracker
+		private var AnimatorController pControllerThumb
+		private var AnimatorController pControllerIndex
+		private var AnimatorController pControllerMiddle
+		private var AnimatorController pControllerRing
+		private var AnimatorController pControllerPinky
+		private var InputDevice pInputDevice
+		private var InputDeviceAxis pInputAxisThumb
+		private var InputDeviceAxis pInputAxisIndex
+		private var InputDeviceAxis pInputAxisMiddle
+		private var InputDeviceAxis pInputAxisRing
+		private var InputDeviceAxis pInputAxisPinky
+		
+		
+		
+		/** Create instance. */
+		public func new(ECBMotionTransferFingers ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			
+			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
+			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
+			if ecbehavior.getSlotTracker() != null
+				pSlotTracker = ecbehavior.getSlotTracker().instance(element)
+			end
+		end
+		
+		/** Dispose of instance. */
+		public func void dispose()
+			pSlotTracker = null
+			pVRPlayspace = null
+			pActorAnimated = null
+			super.dispose()
+		end
+		
+		
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			pControllerThumb = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameThumb())
+			pControllerIndex = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameIndex())
+			pControllerMiddle = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameMiddle())
+			pControllerRing = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameRing())
+			pControllerPinky = pActorAnimated.getControllerNamed(pECBehavior.getControllerNamePinky())
+			
+			pActorAnimated.addListener(UpdateControllers.new(this))
+		end
+		
+		
+		/** Behavior. */
+		public func ECBMotionTransferFingers getECBehavior()
+			return pECBehavior
+		end
+		
+		/** VR Playspace. */
+		public func ECBehaviorVRPlayspace.Instance getVRPlayspace()
+			return pVRPlayspace
+		end
+		
+		/** Actor animated. */
+		public func ECBehaviorActorAnimated.Instance getActorAnimated()
+			return pActorAnimated
+		end
+		
+		/** Tracker slot behavior instance or null. */
+		public func ECBTrackerSlot.Instance getSlotTracker()
+			return pSlotTracker
+		end
+		
+		/** Animator controller thumb. */
+		public func AnimatorController getControllerThumb()
+			return pControllerThumb
+		end
+		
+		/** Animator controller index. */
+		public func AnimatorController getControllerIndex()
+			return pControllerIndex
+		end
+		
+		/** Animator controller middle. */
+		public func AnimatorController getControllerMiddle()
+			return pControllerMiddle
+		end
+		
+		/** Animator controller ring. */
+		public func AnimatorController getControllerRing()
+			return pControllerRing
+		end
+		
+		/** Animator controller pinky. */
+		public func AnimatorController getControllerPinky()
+			return pControllerPinky
+		end
+		
+		
+		
+		/** Update controllers. */
+		public func void updateControllers()
+			if pSlotTracker == null
+				return
+			end
+			
+			var InputDevice inputDevice = pSlotTracker.getInputDevice()
+			if inputDevice == null
+				return
+			end
+			
+			if inputDevice != pInputDevice
+				initInputDeviceMapping(inputDevice)
+			end
+			
+			if pInputAxisThumb != null
+				pControllerThumb.setValue(pInputAxisThumb.getValue())
+			end
+			if pInputAxisIndex != null
+				pControllerIndex.setValue(pInputAxisIndex.getValue())
+			end
+			if pInputAxisMiddle != null
+				pControllerMiddle.setValue(pInputAxisMiddle.getValue())
+			end
+			if pInputAxisRing != null
+				pControllerRing.setValue(pInputAxisRing.getValue())
+			end
+			if pInputAxisPinky != null
+				pControllerPinky.setValue(pInputAxisPinky.getValue())
+			end
+		end
+		
+		/** Init input device mapping. */
+		protected func void initInputDeviceMapping(InputDevice inputDevice)
+			pInputDevice = inputDevice
+			pInputAxisThumb = null
+			pInputAxisIndex = null
+			pInputAxisMiddle = null
+			pInputAxisRing = null
+			pInputAxisPinky = null
+			
+			var int i, count = inputDevice.getAxisCount()
+			var Array axes = Array.new()
+			var InputDeviceAxis axis
+			
+			for i = 0 to count
+				axis = inputDevice.getAxisAt(i)
+				if axis.getType() == InputDeviceAxisType.fingerBend
+					axes.add(axis)
+				end
+			end
+			
+			if axes.getCount() < 5
+				return
+			end
+			
+			if pControllerThumb != null
+				pInputAxisThumb = axes.getAt(0) cast InputDeviceAxis
+			end
+			if pControllerIndex != null
+				pInputAxisIndex = axes.getAt(1) cast InputDeviceAxis
+			end
+			if pControllerMiddle != null
+				pInputAxisMiddle = axes.getAt(2) cast InputDeviceAxis
+			end
+			if pControllerRing != null
+				pInputAxisRing = axes.getAt(3) cast InputDeviceAxis
+			end
+			if pControllerPinky != null
+				pInputAxisPinky = axes.getAt(4) cast InputDeviceAxis
+			end
+		end
+	end
+	
+	
+	
+	private var MotionTransferFingers pTransfer
+	private var ECBehaviorVRPlayspace pVRPlayspace
+	private var ECBehaviorActorAnimated pActorAnimated
+	private var ECBTrackerSlot pSlotTracker
+	private var String pControllerNameThumb
+	private var String pControllerNameIndex
+	private var String pControllerNameMiddle
+	private var String pControllerNameRing
+	private var String pControllerNamePinky
+	
+	
+	
+	/** Create behavior element class. */
+	public func new(BaseVRActorClass eclass, MotionTransferFingers transfer) super(eclass, transfer.getName())
+		if transfer == null
+			throw ENullPointer.new("transfer")
+		end
+		
+		var String subId = "motionTransferFingers(" + transfer.getName() + ")"
+		var String prefix = subId + "."
+		
+		pTransfer = transfer
+		pVRPlayspace = eclass.getVRPlayspace()
+		pActorAnimated = eclass.getActorAnimated()
+		if transfer.getTrackerSlot() != null
+			pSlotTracker = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getTracker())
+		end
+		
+		pControllerNameThumb = transfer.getName() + ".thumb"
+		pControllerNameIndex = transfer.getName() + ".index"
+		pControllerNameMiddle = transfer.getName() + ".middle"
+		pControllerNameRing = transfer.getName() + ".ring"
+		pControllerNamePinky = transfer.getName() + ".pinky"
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pVRPlayspace = null
+		pTransfer = null
+		pSlotTracker = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Motion transfer. */
+	public func MotionTransferFingers getTransfer()
+		return pTransfer
+	end
+	
+	/** VR Playspace behavior. */
+	public func ECBehaviorVRPlayspace getVRPlayspace()
+		return pVRPlayspace
+	end
+	
+	/** Actor animated behavior. */
+	public func ECBehaviorActorAnimated getActorAnimated()
+		return pActorAnimated
+	end
+	
+	/** Tracker slot behavior or null. */
+	public func ECBTrackerSlot getSlotTracker()
+		return pSlotTracker
+	end
+	
+	/** Animator controller name thumb. */
+	public func String getControllerNameThumb()
+		return pControllerNameThumb
+	end
+	
+	/** Animator controller name index. */
+	public func String getControllerNameIndex()
+		return pControllerNameIndex
+	end
+	
+	/** Animator controller name middle. */
+	public func String getControllerNameMiddle()
+		return pControllerNameMiddle
+	end
+	
+	/** Animator controller name ring. */
+	public func String getControllerNameRing()
+		return pControllerNameRing
+	end
+	
+	/** Animator controller name pinky. */
+	public func String getControllerNamePinky()
+		return pControllerNamePinky
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
+	end
+	
+	
+	
+	/** Get behavior with slot name in element class or null if absent. */
+	static public func ECBMotionTransferFingers getBehaviorIn(BehaviorElementClass eclass, String slotName)
+		return eclass.findBehavior(block ECBMotionTransferFingers each
+			return each.getTransfer().getName().equals(slotName)
+		end) cast ECBMotionTransferFingers
+	end
+	
+	/** Get list of all behaviors in element. */
+	static public func Array getAllBehaviorsIn(BehaviorElementClass eclass)
+		return eclass.collectBehaviors(block ECBMotionTransferFingers each
+			return true
+		end)
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element, String slotName)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getTransfer().getName().equals(slotName)
+		end) cast Instance
+	end
+	
+	/** Get list of all instances in element. */
+	static public func Array getAllInstancesIn(BehaviorElement element)
+		return element.collectInstances(block Instance each
+			return true
+		end)
+	end
+	
+	
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
