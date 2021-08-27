@@ -244,7 +244,7 @@ class CharacterConfiguration
 		
 		var Vector centerHands = (posRightHand + posLeftHand) * 0.5
 		
-		var Vector dirHands = (posRightHand - posLeftHand).normalize()
+		var Vector dirHands = (posRightHand - posLeftHand).compSelect(true, false, true).normalize()
 		var float rotHands = -DEMath.atan2(dirHands.getX(), dirHands.getZ())
 		
 		var Vector posHMD = hmd.getPosition()
@@ -261,7 +261,8 @@ class CharacterConfiguration
 			turnBody = rotHands + 90
 		end
 		
-		pCalibrateScale = pShoulderLevel / actorProfile.getShoulderLevel()
+		//pCalibrateScale = pShoulderLevel / actorProfile.getShoulderLevel()
+		pCalibrateScale = pShoulderLevel / centerHands.getY()
 		
 		var Matrix matrix = Matrix.newTranslation(-centerBody) * Matrix.newRotationY(-turnBody)\
 			* Matrix.newScaling(pCalibrateScale, pCalibrateScale, pCalibrateScale)
@@ -311,11 +312,19 @@ class CharacterConfiguration
 			
 			pAnimatorDefinition = AnimatorDefinition.new("")
 			
-			var ADRuleStateManipulator ruleReset = ADRuleStateManipulator.new()
-			ruleReset.setName("Reset State")
-			ruleReset.setEnablePosition(true)
-			ruleReset.setEnableSize(true)
-			pAnimatorDefinition.addRule(ruleReset)
+			if pMoveCalibrate.empty()
+				var ADRuleStateManipulator rule = ADRuleStateManipulator.new()
+				rule.setName("Reset State")
+				rule.setEnablePosition(true)
+				rule.setEnableSize(true)
+				pAnimatorDefinition.addRule(rule)
+				
+			else
+				var ADRuleAnimation rule = ADRuleAnimation.new()
+				rule.setName("Reset State")
+				rule.setMoveName(pMoveCalibrate)
+				pAnimatorDefinition.addRule(rule)
+			end
 			
 			pProfile.getAppearance().initElementClass(eclass)
 			

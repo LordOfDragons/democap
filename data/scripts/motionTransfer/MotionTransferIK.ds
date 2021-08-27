@@ -63,25 +63,36 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end
 	end
 	
+	/** Actor reach type. */
+	enum ActorReach
+		none //<! No actor reach. Use unscaled reach
+		arm //<! Use actor arm length as reach
+		leg //<! Use actor leg length as reach
+	end
+	
 	
 	
 	private var String pTargetBone
 	private var int pBoneCount
 	private var MotionTransferTracker pTargetTracker
 	private var MotionTransferTracker pGuideTracker
+	private var ActorReach pActorReach
 	private var float pReachLimit
 	
+	private var ADController pADControllerTargetPosition
+	private var ADController pADControllerTargetOrientation
 	private var ADController pADControllerGuidePosition
 	private var ADController pADControllerGuideUp
 	
 	private var ADRuleTrackTo pADRuleGuide
 	private var ADRuleInverseKinematic pADRuleIK
 	
+	private var Array pCalibrateBones
 	private var float pCalibrateReach
 	private var float pCalibrateReachScale
-	private var String pCalibrateRootBone
 	private var ARTrackToAxis pCalibrateGuideTrackAxis
 	private var ARTrackToAxis pCalibrateGuideUpAxis
+	private var Vector pCalibrateTargetOffset
 	
 	
 	
@@ -91,12 +102,14 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBoneCount = 3
 		pTargetTracker = MotionTransferTracker.new()
 		pGuideTracker = MotionTransferTracker.new()
+		pActorReach = ActorReach.none
 		pReachLimit = 1
+		pCalibrateBones = Array.new()
 		pCalibrateReach = 0.6
 		pCalibrateReachScale  = 1
-		pCalibrateRootBone = ""
 		pCalibrateGuideTrackAxis = ARTrackToAxis.posZ
 		pCalibrateGuideUpAxis = ARTrackToAxis.posY
+		pCalibrateTargetOffset = Vector.new()
 	end
 	
 	/** Create copy of motion transfer. */
@@ -105,11 +118,14 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBoneCount = transfer.pBoneCount
 		pTargetTracker = MotionTransferTracker.new(transfer.pTargetTracker)
 		pGuideTracker = MotionTransferTracker.new(transfer.pGuideTracker)
+		pActorReach = transfer.pActorReach
 		pReachLimit = transfer.pReachLimit
+		pCalibrateBones = Array.new(transfer.pCalibrateBones)
 		pCalibrateReach = transfer.pCalibrateReach
 		pCalibrateReachScale = transfer.pCalibrateReachScale
 		pCalibrateGuideTrackAxis = transfer.pCalibrateGuideTrackAxis
 		pCalibrateGuideUpAxis = transfer.pCalibrateGuideUpAxis
+		pCalibrateTargetOffset = transfer.pCalibrateTargetOffset
 	end
 	
 	
@@ -150,6 +166,19 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pGuideTracker
 	end
 	
+	/** Actor reach to use to scale reach length. */
+	public func ActorReach getActorReach()
+		return pActorReach
+	end
+	
+	/** Set actor reach to use to scale reach length. */
+	public func void setActorReach(ActorReach actorReach)
+		if actorReach == null
+			throw ENullPointer.new("actorReach")
+		end
+		pActorReach = actorReach
+	end
+	
 	/** Limit reach to percentage of bone chain reach. */
 	public func float getReachLimit()
 		return pReachLimit
@@ -176,6 +205,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pCalibrateReach
 	end
 	
+	/** Calibrate target offset. */
+	public func Vector getCalibrateTargetOffset()
+		return pCalibrateTargetOffset
+	end
+	
 	/** Calibrate guide track axis. */
 	public func ARTrackToAxis getCalibrateGuideTrackAxis()
 		return pCalibrateGuideTrackAxis
@@ -190,6 +224,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	/** Init element clas. */
 	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
+		pADControllerTargetPosition = null
+		pADControllerTargetOrientation = null
 		pADControllerGuidePosition = null
 		pADControllerGuideUp = null
 		pADRuleIK = null
@@ -207,11 +243,12 @@ class MotionTransferIK extends DefaultMotionTransfer
 			slotGuide = config.getTrackerSlots().getAt(pGuideTracker.getSlot())
 		end
 		
-		if slotTarget == null or pCalibrateRootBone.empty() or pTargetBone.empty()
+		if slotTarget == null or pCalibrateBones.getCount() == 0 or pTargetBone.empty()
 			return
 		end
 		
 		var AnimatorDefinition adef = config.getAnimatorDefinition()
+		var String rootBone = pCalibrateBones.getAt(-1) cast String
 		
 		if slotGuide != null
 			pADControllerGuidePosition = ADController.new()
@@ -227,7 +264,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			pADRuleGuide.setTrackAxis(pCalibrateGuideTrackAxis)
 			pADRuleGuide.setUpAxis(pCalibrateGuideUpAxis)
 			pADRuleGuide.setUpTarget(ARTrackToUp.controller)
-			pADRuleGuide.addBone(pCalibrateRootBone)
+			pADRuleGuide.addBone(rootBone)
 			
 			var ADLink link = ADLink.new()
 			link.setController(pADControllerGuidePosition)
@@ -242,23 +279,42 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(pADRuleGuide)
 		end
 		
+		pADControllerTargetPosition = ADController.new()
+		pADControllerTargetPosition.setName(behavior.getControllerNameTargetPosition())
+		adef.addController(pADControllerTargetPosition)
+		
+		pADControllerTargetOrientation = ADController.new()
+		pADControllerTargetOrientation.setName(behavior.getControllerNameTargetOrientation())
+		adef.addController(pADControllerTargetOrientation)
+		
+		var ADLink linkTargetPosition = ADLink.new()
+		linkTargetPosition.setController(pADControllerTargetPosition)
+		adef.addLink(linkTargetPosition)
+		
+		var ADLink linkTargetOrientation = ADLink.new()
+		linkTargetOrientation.setController(pADControllerTargetOrientation)
+		adef.addLink(linkTargetOrientation)
+		
 		pADRuleIK = ADRuleInverseKinematic.new()
 		pADRuleIK.setName(getName())
 		pADRuleIK.setAdjustOrientation(true)
-		pADRuleIK.setLocalPosition(pTargetTracker.getReverseTransformPosition())
-		pADRuleIK.setLocalOrientation(pTargetTracker.getTransformRotation())
-		pADRuleIK.setReachBone(pCalibrateRootBone)
+		//pADRuleIK.setLocalPosition(pTargetTracker.getReverseTransformPosition())
+		//pADRuleIK.setLocalOrientation(pTargetTracker.getTransformRotation())
+		pADRuleIK.setReachBone(rootBone)
 		pADRuleIK.setReachRange(pCalibrateReach)
-		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, slotTarget.getADLinkPosition()))
-		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, slotTarget.getADLinkRotation()))
-		pADRuleIK.addBone(pCalibrateRootBone)
+		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, linkTargetPosition))
+		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkTargetOrientation))
+		pADRuleIK.addBone(rootBone)
 		pADRuleIK.addBone(pTargetBone)
 		adef.addRule(pADRuleIK)
 	end
 	
 	/** Reset calibration. */
 	public func void resetCalibration()
-		pCalibrateRootBone = ""
+		pCalibrateReachScale = 1
+		pCalibrateGuideTrackAxis = ARTrackToAxis.posZ
+		pCalibrateGuideUpAxis = ARTrackToAxis.posY
+		pCalibrateBones.removeAll()
 		pTargetTracker.resetTransform()
 		pGuideTracker.resetTransform()
 	end
@@ -266,18 +322,25 @@ class MotionTransferIK extends DefaultMotionTransfer
 	/** Calibrate character. */
 	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
 	BaseVRActor actor, Component component)
-		pCalibrateRootBone = findRootBone(component.getRig(), pTargetBone, pBoneCount)
+		findBoneChain(component.getRig(), pTargetBone, pBoneCount, pCalibrateBones)
+		var String rootBone = pCalibrateBones.getCount() > 0 if pCalibrateBones.getAt(-1) cast String else ""
+		
 		pCalibrateGuideTrackAxis = findGuideTrackAxis(component.getRig(), pTargetBone, pBoneCount)
 		pCalibrateGuideUpAxis = guideUpFromGuideTrack(pCalibrateGuideTrackAxis)
 		
-		pTargetTracker.setTransform(config, component, pTargetBone)
-		pGuideTracker.setTransformTrackTo(config, component, pCalibrateRootBone, \
-			trackToVectorFromAxis(pCalibrateGuideTrackAxis))
+		pTargetTracker.resolveRealSlot(config)
+		
+		if pTargetTracker.getAutoTransform()
+			pTargetTracker.setTransform(config, component, pTargetBone)
+			
+		else
+			pTargetTracker.resetTransform()
+		end
 		
 		// calculate reach of IK chain to avoid over stretching
 		var int indexRoot = -1, indexTarget = -1
-		if not pCalibrateRootBone.empty() and not pTargetBone.empty()
-			indexRoot = component.indexOfBoneNamed(pCalibrateRootBone)
+		if not rootBone.empty() and not pTargetBone.empty()
+			indexRoot = component.indexOfBoneNamed(rootBone)
 			indexTarget = component.indexOfBoneNamed(pTargetBone)
 		end
 		
@@ -286,38 +349,64 @@ class MotionTransferIK extends DefaultMotionTransfer
 			var Vector posTarget = component.boneGetMatrix(indexTarget) * pTargetTracker.getReverseTransformPosition()
 			pCalibrateReach = (posTarget - posRoot).getLength()
 			
-			var CharacterTrackerSlot slotTarget = pTargetTracker.getRealSlot()
-			if slotTarget != null
-				var Vector slotPos = slotTarget.getCalibratePosition()
-				var float realReach = (slotPos - posRoot).getLength()
-				pCalibrateReachScale = pCalibrateReach / realReach
+			select pActorReach
+			case ActorReach.arm
+				pCalibrateReachScale = pCalibrateReach / (actorProfile.getArmLength() * config.getCalibrateScale())
+				
+			case ActorReach.leg
+				pCalibrateReachScale = 1 // TODO
 				
 			else
 				pCalibrateReachScale = 1
-				pCalibrateGuideTrackAxis = ARTrackToAxis.posZ
-				pCalibrateGuideUpAxis = ARTrackToAxis.posY
+			end
+			
+			var CharacterTrackerSlot slotTarget = pTargetTracker.getRealSlot()
+			if slotTarget != null
+				pCalibrateTargetOffset = posTarget - slotTarget.getCalibratePosition()
+				//var Vector slotPos = slotTarget.getCalibratePosition()
+				//var float realReach = (slotPos - posRoot).getLength()
+				//pCalibrateReachScale = pCalibrateReach / realReach
+				
+			else
+				pCalibrateTargetOffset = Vector.new()
+				//pCalibrateReachScale = 1
+				//pCalibrateGuideTrackAxis = ARTrackToAxis.posZ
+				//pCalibrateGuideUpAxis = ARTrackToAxis.posY
 			end
 			
 		else
 			pCalibrateReach = 0.6
 			pCalibrateReachScale = 1
+			pCalibrateTargetOffset = Vector.new()
+		end
+		
+		// calibrate guide tracker. has to come after reach scaling since it uses this value
+		pGuideTracker.resolveRealSlot(config)
+		
+		if pGuideTracker.getAutoTransform()
+			pGuideTracker.setTransformTrackTo(config, component, rootBone, \
+				trackToVectorFromAxis(pCalibrateGuideTrackAxis), pCalibrateReachScale)
+			
+		else
+			pGuideTracker.resetTransform()
 		end
 		
 		GameApp.getGameApp().getConsole().addMessage("MotionTransferIK.calibrate: name='" \
 			+ getName() + "' reach=" + pCalibrateReach + " reachScale=" + pCalibrateReachScale \
-			+ " guideTrackAxis=" + pCalibrateGuideTrackAxis + " guideUpAxis=" + pCalibrateGuideUpAxis)
+			+ " guideTrackAxis=" + pCalibrateGuideTrackAxis + " guideUpAxis=" \
+			+ pCalibrateGuideUpAxis + " bones=" + pCalibrateBones + " targetOffset=" \
+			+ pCalibrateTargetOffset)
 	end
 	
-	/** Find root bone name. */
-	protected func String findRootBone(Rig rig, String targetBone, int boneCount)
-		var int i, root, index = rig.indexOfBoneNamed(targetBone)
+	/** Find bone chain. */
+	protected func void findBoneChain(Rig rig, String targetBone, int boneCount, Array bones)
+		bones.removeAll()
 		
+		var int index = rig.indexOfBoneNamed(targetBone)
 		while index != -1 and boneCount-- > 0
-			root = index
+			bones.add(rig.boneGetName(index))
 			index = rig.boneGetParent(index)
 		end
-		
-		return boneCount < 1 if rig.boneGetName(root) else ""
 	end
 	
 	/** Find guide track axis. */
@@ -411,6 +500,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("guideTracker")
 				pGuideTracker.load(loader, element)
 				
+			elif tagName.equals("actorReach")
+				pActorReach = ActorReach.named(element.getFirstCData())
+				
 			elif tagName.equals("reachLimit")
 				pReachLimit = element.getFirstCDataFloat()
 				
@@ -428,8 +520,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("reachScale")
 				pCalibrateReachScale = element.getFirstCDataFloat()
 				
-			elif tagName.equals("rootBone")
-				pCalibrateRootBone = element.getFirstCData()
+			elif tagName.equals("targetOffset")
+				pCalibrateTargetOffset = loader.readVector(element)
+				
+			elif tagName.equals("bone")
+				pCalibrateBones.add(element.getFirstCData())
 				
 			elif tagName.equals("targetTracker")
 				pTargetTracker.loadCalibrated(loader, element)
@@ -451,17 +546,18 @@ class MotionTransferIK extends DefaultMotionTransfer
 		tag.addDataTag("boneCount", pBoneCount)
 		pTargetTracker.save(loader, tag.addTag("targetTracker"))
 		pGuideTracker.save(loader, tag.addTag("guideTracker"))
+		tag.addDataTag("actorReach", pActorReach.name())
 		tag.addDataTag("reachLimit", pReachLimit)
-		tag.addDataTag("calibrateReach", pCalibrateReach)
-		tag.addDataTag("reachScale", pCalibrateReachScale)
-		tag.addDataTag("calibrateRootBone", pCalibrateRootBone)
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
 	protected func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("reach", pCalibrateReach)
 		tag.addDataTag("reachScale", pCalibrateReachScale)
-		tag.addDataTag("rootBone", pCalibrateRootBone)
+		loader.writeVector(tag, "targetOffset", pCalibrateTargetOffset)
+		pCalibrateBones.forEach(block String each
+			tag.addDataTag("bone", each)
+		end)
 		pTargetTracker.saveCalibrated(loader, tag.addTag("targetTracker"))
 		pGuideTracker.saveCalibrated(loader, tag.addTag("guideTracker"))
 		tag.addDataTag("guideTrackAxis", pCalibrateGuideTrackAxis.name())

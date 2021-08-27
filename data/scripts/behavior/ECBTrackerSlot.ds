@@ -232,6 +232,16 @@ class ECBTrackerSlot extends DefaultECBehavior
 			return pMatrix
 		end
 		
+		/** World position. */
+		public func DVector getPosition()
+			return pVRPlayspace.getMatrix() * DVector.new(pPosition)
+		end
+		
+		/** Playspace local position. */
+		public func Vector getPositionPlayspace()
+			return pPosition
+		end
+		
 		
 		
 		/** Element has been added to game world. Start tracking device. */
@@ -320,10 +330,10 @@ class ECBTrackerSlot extends DefaultECBehavior
 			end
 			
 			pPosition = pMatrix.getPosition()
-			pOrientation = pMatrix.toQuaternion()
+			pOrientation = pMatrix.normalize().toQuaternion()
 			
 			pControllerPosition.setVector(pPosition)
-			pControllerRotation.setRotation(pMatrix.getEulerAngles())
+			pControllerRotation.setRotation(pOrientation.getEulerAngles())
 		end
 		
 		/** Create coordinate system debug drawer if required. */

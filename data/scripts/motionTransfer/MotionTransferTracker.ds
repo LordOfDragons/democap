@@ -38,6 +38,7 @@ class MotionTransferTracker
 	private var String pSlot
 	private var Vector pOffsetPosition
 	private var Vector pOffsetRotation
+	private var bool pAutoTransform
 	
 	private var Vector pTransformPosition
 	private var Vector pTransformRotation
@@ -60,6 +61,7 @@ class MotionTransferTracker
 		pReverseTransformPosition = Vector.new()
 		pReverseTransformRotation = Vector.new()
 		pReverseTransformMatrix = Matrix.new()
+		pAutoTransform = true
 	end
 	
 	/** Create copy of motion transfer tracker. */
@@ -73,6 +75,7 @@ class MotionTransferTracker
 		pReverseTransformPosition = tracker.pReverseTransformPosition
 		pReverseTransformRotation = tracker.pReverseTransformRotation
 		pReverseTransformMatrix = tracker.pReverseTransformMatrix
+		pAutoTransform = tracker.pAutoTransform
 	end
 	
 	
@@ -116,6 +119,16 @@ class MotionTransferTracker
 		pOffsetRotation = rotation
 	end
 	
+	/** During calibration calculate transformation. If false 0-transformation is set. */
+	public func bool getAutoTransform()
+		return pAutoTransform
+	end
+	
+	/** Set if during calibration calculate transformation. If false 0-transformation is set. */
+	public func void setAutoTransform(bool autoTransform)
+		pAutoTransform = autoTransform
+	end
+	
 	
 	
 	/** Transform position (tracking space to bone space). */
@@ -150,12 +163,10 @@ class MotionTransferTracker
 	
 	/** Reset transform. */
 	public func void resetTransform()
-		pTransformPosition = Vector.new()
-		pTransformRotation = Vector.new()
-		pTransformMatrix = Matrix.new()
-		pReverseTransformPosition = Vector.new()
-		pReverseTransformRotation = Vector.new()
-		pReverseTransformMatrix = Matrix.new()
+		pTransformPosition = pOffsetPosition
+		pTransformRotation = pOffsetRotation
+		pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition)
+		setReverseFromTransform()
 	end
 	
 	/** Set transform (both directions). */
@@ -163,31 +174,19 @@ class MotionTransferTracker
 		pTransformMatrix = Matrix.newRT(rotation, position)
 		pTransformPosition = position
 		pTransformRotation = rotation
-		
-		pReverseTransformMatrix = pTransformMatrix.getInverse()
-		pReverseTransformPosition = pReverseTransformMatrix.getPosition()
-		pReverseTransformRotation = pReverseTransformMatrix.getEulerAngles()
+		setReverseFromTransform()
 	end
 	
 	/** Set transform (both directions). */
 	public func void setTransform(Matrix matrix)
 		pTransformPosition = matrix.getPosition()
-		pTransformRotation = matrix.getEulerAngles()
+		pTransformRotation = matrix.normalize().getEulerAngles()
 		pTransformMatrix = matrix
-		
-		pReverseTransformMatrix = matrix.getInverse()
-		pReverseTransformPosition = pReverseTransformMatrix.getPosition()
-		pReverseTransformRotation = pReverseTransformMatrix.getEulerAngles()
+		setReverseFromTransform()
 	end
 	
 	/** Set transform. */
 	public func void setTransform(CharacterConfiguration config, Component component, String bone)
-		if pSlot.empty()
-			resetTransform()
-			return
-		end
-		
-		pRealSlot = config.getTrackerSlots().getAt(pSlot)
 		if pRealSlot == null
 			resetTransform()
 			return
@@ -202,24 +201,17 @@ class MotionTransferTracker
 		pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) \
 			* component.boneGetMatrix(index) * pRealSlot.getCalibrateMatrixInverse()
 		pTransformPosition = pTransformMatrix.getPosition()
-		pTransformRotation = pTransformMatrix.getEulerAngles()
+		pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
 		
-		pReverseTransformMatrix = pTransformMatrix.getInverse()
-		pReverseTransformPosition = pReverseTransformMatrix.getPosition()
-		pReverseTransformRotation = pReverseTransformMatrix.getEulerAngles()
+		setReverseFromTransform()
 		
 		GameApp.getGameApp().getConsole().addMessage("setTransform " + pRealSlot.getName() + " " \
 			+ bone + " " + pTransformPosition + " " + pTransformRotation + " , "\
 			+ pReverseTransformPosition + " " + pReverseTransformRotation)
 	end
 	
-	public func void setTransformTrackTo(CharacterConfiguration config, Component component, String bone, Vector axis)
-		if pSlot.empty()
-			resetTransform()
-			return
-		end
-		
-		pRealSlot = config.getTrackerSlots().getAt(pSlot)
+	public func void setTransformTrackTo(CharacterConfiguration config, Component component, \
+	String bone, Vector axis, float axisScale)
 		if pRealSlot == null
 			resetTransform()
 			return
@@ -235,22 +227,37 @@ class MotionTransferTracker
 		var Vector taxis = matrix.transformNormal(axis).normalize()
 		
 		pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition ) * matrix \
-			* Matrix.newTranslation(taxis * -(taxis * matrix.getPosition()))
+			* Matrix.newTranslation(taxis * -(taxis * matrix.getPosition()) * axisScale)
 		pTransformPosition = pTransformMatrix.getPosition()
-		pTransformRotation = pTransformMatrix.getEulerAngles()
+		pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
 		
-		pReverseTransformMatrix = pTransformMatrix.getInverse()
-		pReverseTransformPosition = pReverseTransformMatrix.getPosition()
-		pReverseTransformRotation = pReverseTransformMatrix.getEulerAngles()
+		setReverseFromTransform()
 		
 		GameApp.getGameApp().getConsole().addMessage("setTransformTrackTo " + pRealSlot.getName() + " " \
 			+ bone + " " + pTransformPosition + " " + pTransformRotation + " , "\
 			+ pReverseTransformPosition + " " + pReverseTransformRotation)
 	end
 	
+	/** Set reverse transform matrix from transform matrix. */
+	protected func void setReverseFromTransform()
+		pReverseTransformMatrix = pTransformMatrix.getInverse()
+		pReverseTransformPosition = pReverseTransformMatrix.getPosition()
+		pReverseTransformRotation = pReverseTransformMatrix.normalize().getEulerAngles()
+	end
+	
 	/** Real slot or null. */
 	public func CharacterTrackerSlot getRealSlot()
 		return pRealSlot
+	end
+	
+	/** Resolve real slot. */
+	public func void resolveRealSlot(CharacterConfiguration config)
+		if pSlot.empty()
+			pRealSlot = null
+			
+		else
+			pRealSlot = config.getTrackerSlots().getAt(pSlot)
+		end
 	end
 	
 	
@@ -274,6 +281,9 @@ class MotionTransferTracker
 				
 			elif tagName.equals("transformRotation")
 				pTransformRotation = loader.readVector(element)
+				
+			elif tagName.equals("autoTransform")
+				pAutoTransform = element.getFirstCDataBool()
 			end
 		end)
 		
@@ -302,6 +312,7 @@ class MotionTransferTracker
 		loader.writeVector(tag, "offsetRotation", pOffsetRotation)
 		loader.writeVector(tag, "transformPosition", pTransformPosition)
 		loader.writeVector(tag, "transformRotation", pTransformRotation)
+		tag.addDataTag("autoTransform", pAutoTransform)
 	end
 	
 	public func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)

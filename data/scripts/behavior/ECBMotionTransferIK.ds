@@ -55,11 +55,16 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var ECBMotionTransferIK pECBehavior
 		private var ECBehaviorVRPlayspace.Instance pVRPlayspace
 		private var ECBehaviorActorAnimated.Instance pActorAnimated
+		private var ECBTrackerSlot.Instance pSlotTarget
 		private var ECBTrackerSlot.Instance pSlotGuide
+		private var AnimatorController pControllerTargetPosition
+		private var AnimatorController pControllerTargetOrientation
 		private var AnimatorController pControllerGuidePosition
 		private var AnimatorController pControllerGuideUp
+		private var Matrix pTransformTarget
 		private var Matrix pTransformGuide
 		private var Vector pGuideUp
+		private var Vector pTargetOffset
 		
 		
 		
@@ -70,9 +75,15 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
 			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
 			
+			pTargetOffset = ecbehavior.getTransfer().getCalibrateTargetOffset()
+			
+			if ecbehavior.getSlotTarget() != null
+				pSlotTarget = ecbehavior.getSlotTarget().instance(element)
+				pTransformTarget = ecbehavior.getTransfer().getTargetTracker().getTransformMatrix()
+			end
+			
 			if ecbehavior.getSlotGuide() != null
 				pSlotGuide = ecbehavior.getSlotGuide().instance(element)
-				
 				pTransformGuide = ecbehavior.getTransfer().getGuideTracker().getTransformMatrix()
 				pGuideUp = MotionTransferIK.trackToVectorFromAxis(ecbehavior.getTransfer().getCalibrateGuideUpAxis())
 			end
@@ -81,6 +92,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		/** Dispose of instance. */
 		public func void dispose()
 			pSlotGuide = null
+			pSlotTarget = null
 			pVRPlayspace = null
 			pActorAnimated = null
 			super.dispose()
@@ -90,6 +102,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
+			pControllerTargetPosition = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameTargetPosition())
+			pControllerTargetOrientation = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameTargetOrientation())
 			pControllerGuidePosition = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameGuidePosition())
 			pControllerGuideUp = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameGuideUp())
 			
@@ -112,9 +126,24 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			return pActorAnimated
 		end
 		
+		/** Target slot behavior instance or null. */
+		public func ECBTrackerSlot.Instance getSlotTarget()
+			return pSlotTarget
+		end
+		
 		/** Guide slot behavior instance or null. */
 		public func ECBTrackerSlot.Instance getSlotGuide()
 			return pSlotGuide
+		end
+		
+		/** Animator controller target position. */
+		public func AnimatorController getControllerTargetPosition()
+			return pControllerTargetPosition
+		end
+		
+		/** Animator controller target orientation. */
+		public func AnimatorController getControllerTargetOrientation()
+			return pControllerTargetOrientation
 		end
 		
 		/** Animator controller guide position. */
@@ -131,14 +160,25 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		
 		/** Update controllers. */
 		public func void updateControllers()
+			if pSlotTarget != null
+				var Matrix matrix = pTransformTarget * pSlotTarget.getMatrixPlayspace()
+				
+				if pControllerTargetPosition != null
+					pControllerTargetPosition.setVector(matrix.getPosition() + pTargetOffset)
+				end
+				if pControllerTargetOrientation != null
+					pControllerTargetOrientation.setRotation(matrix.normalize().getEulerAngles())
+				end
+			end
+			
 			if pSlotGuide != null
 				var Matrix matrix = pTransformGuide * pSlotGuide.getMatrixPlayspace()
 				
 				if pControllerGuidePosition != null
-					pControllerGuidePosition.setVector(matrix.getPosition())
+					pControllerGuidePosition.setVector(matrix.getPosition() + pTargetOffset)
 				end
 				if pControllerGuideUp != null
-					pControllerGuideUp.setVector(matrix * pGuideUp)
+					pControllerGuideUp.setVector(matrix.transformNormal(pGuideUp))
 				end
 			end
 		end
@@ -149,7 +189,10 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	private var MotionTransferIK pTransfer
 	private var ECBehaviorVRPlayspace pVRPlayspace
 	private var ECBehaviorActorAnimated pActorAnimated
+	private var ECBTrackerSlot pSlotTarget
 	private var ECBTrackerSlot pSlotGuide
+	private var String pControllerNameTargetPosition
+	private var String pControllerNameTargetOrientation
 	private var String pControllerNameGuidePosition
 	private var String pControllerNameGuideUp
 	
@@ -167,10 +210,15 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		pTransfer = transfer
 		pVRPlayspace = eclass.getVRPlayspace()
 		pActorAnimated = eclass.getActorAnimated()
+		if transfer.getTargetTracker() != null
+			pSlotTarget = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getTargetTracker().getSlot())
+		end
 		if transfer.getGuideTracker() != null
 			pSlotGuide = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getGuideTracker().getSlot())
 		end
 		
+		pControllerNameTargetPosition = transfer.getName() + ".targetPosition"
+		pControllerNameTargetOrientation = transfer.getName() + ".targetOrientation"
 		pControllerNameGuidePosition = transfer.getName() + ".guideTrack"
 		pControllerNameGuideUp = transfer.getName() + ".guideUp"
 		
@@ -182,6 +230,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		pVRPlayspace = null
 		pTransfer = null
 		pSlotGuide = null
+		pSlotTarget = null
 		super.dispose()
 	end
 	
@@ -202,9 +251,24 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		return pActorAnimated
 	end
 	
+	/** Target slot behavior or null. */
+	public func ECBTrackerSlot getSlotTarget()
+		return pSlotTarget
+	end
+	
 	/** Guide slot behavior or null. */
 	public func ECBTrackerSlot getSlotGuide()
 		return pSlotGuide
+	end
+	
+	/** Animator controller name target position. */
+	public func String getControllerNameTargetPosition()
+		return pControllerNameTargetPosition
+	end
+	
+	/** Animator controller name target orientation. */
+	public func String getControllerNameTargetOrientation()
+		return pControllerNameTargetOrientation
 	end
 	
 	/** Animator controller name guide position. */

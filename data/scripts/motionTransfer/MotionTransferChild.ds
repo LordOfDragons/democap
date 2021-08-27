@@ -118,11 +118,7 @@ class MotionTransferChild extends DefaultMotionTransfer
 		// add rule. requires a valid slot and bone name
 		pADRuleIK = null
 		
-		var CharacterTrackerSlot slot
-		if not pTracker.getSlot().empty()
-			slot = config.getTrackerSlots().getAt(pTracker.getSlot())
-		end
-		
+		var CharacterTrackerSlot slot = pTracker.getRealSlot()
 		if slot == null or pBone.empty()
 			return
 		end
@@ -146,7 +142,14 @@ class MotionTransferChild extends DefaultMotionTransfer
 	/** Calibrate character. */
 	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
 	BaseVRActor actor, Component component)
-		pTracker.setTransform(config, component, pBone)
+		pTracker.resolveRealSlot(config)
+		
+		if pTracker.getAutoTransform()
+			pTracker.setTransform(config, component, pBone)
+			
+		else
+			pTracker.resetTransform()
+		end
 	end
 	
 	/** Create copy of motion transfer. */
