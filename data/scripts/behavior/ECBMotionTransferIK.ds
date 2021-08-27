@@ -1,0 +1,263 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Commands
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior for MotionTransferIK.
+ */
+class ECBMotionTransferIK extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Update controllers. */
+		class UpdateControllers extends ECBehaviorActorAnimated.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void updateControllers(ECBehaviorActorAnimated.Instance instance, float elapsed)
+				pInstance.updateControllers()
+			end
+		end
+		
+		
+		
+		private var ECBMotionTransferIK pECBehavior
+		private var ECBehaviorVRPlayspace.Instance pVRPlayspace
+		private var ECBehaviorActorAnimated.Instance pActorAnimated
+		private var ECBTrackerSlot.Instance pSlotGuide
+		private var AnimatorController pControllerGuidePosition
+		private var AnimatorController pControllerGuideUp
+		private var Matrix pTransformGuide
+		private var Vector pGuideUp
+		
+		
+		
+		/** Create instance. */
+		public func new(ECBMotionTransferIK ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			
+			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
+			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
+			
+			if ecbehavior.getSlotGuide() != null
+				pSlotGuide = ecbehavior.getSlotGuide().instance(element)
+				
+				pTransformGuide = ecbehavior.getTransfer().getGuideTracker().getTransformMatrix()
+				pGuideUp = MotionTransferIK.trackToVectorFromAxis(ecbehavior.getTransfer().getCalibrateGuideUpAxis())
+			end
+		end
+		
+		/** Dispose of instance. */
+		public func void dispose()
+			pSlotGuide = null
+			pVRPlayspace = null
+			pActorAnimated = null
+			super.dispose()
+		end
+		
+		
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			pControllerGuidePosition = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameGuidePosition())
+			pControllerGuideUp = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameGuideUp())
+			
+			pActorAnimated.addListener(UpdateControllers.new(this))
+		end
+		
+		
+		/** Behavior. */
+		public func ECBMotionTransferIK getECBehavior()
+			return pECBehavior
+		end
+		
+		/** VR Playspace. */
+		public func ECBehaviorVRPlayspace.Instance getVRPlayspace()
+			return pVRPlayspace
+		end
+		
+		/** Actor animated. */
+		public func ECBehaviorActorAnimated.Instance getActorAnimated()
+			return pActorAnimated
+		end
+		
+		/** Guide slot behavior instance or null. */
+		public func ECBTrackerSlot.Instance getSlotGuide()
+			return pSlotGuide
+		end
+		
+		/** Animator controller guide position. */
+		public func AnimatorController getControllerGuidePosition()
+			return pControllerGuidePosition
+		end
+		
+		/** Animator controller guide up. */
+		public func AnimatorController getControllerGuideUp()
+			return pControllerGuideUp
+		end
+		
+		
+		
+		/** Update controllers. */
+		public func void updateControllers()
+			if pSlotGuide != null
+				var Matrix matrix = pTransformGuide * pSlotGuide.getMatrixPlayspace()
+				
+				if pControllerGuidePosition != null
+					pControllerGuidePosition.setVector(matrix.getPosition())
+				end
+				if pControllerGuideUp != null
+					pControllerGuideUp.setVector(matrix * pGuideUp)
+				end
+			end
+		end
+	end
+	
+	
+	
+	private var MotionTransferIK pTransfer
+	private var ECBehaviorVRPlayspace pVRPlayspace
+	private var ECBehaviorActorAnimated pActorAnimated
+	private var ECBTrackerSlot pSlotGuide
+	private var String pControllerNameGuidePosition
+	private var String pControllerNameGuideUp
+	
+	
+	
+	/** Create behavior element class. */
+	public func new(BaseVRActorClass eclass, MotionTransferIK transfer) super(eclass, transfer.getName())
+		if transfer == null
+			throw ENullPointer.new("transfer")
+		end
+		
+		var String subId = "motionTransferIK(" + transfer.getName() + ")"
+		var String prefix = subId + "."
+		
+		pTransfer = transfer
+		pVRPlayspace = eclass.getVRPlayspace()
+		pActorAnimated = eclass.getActorAnimated()
+		if transfer.getGuideTracker() != null
+			pSlotGuide = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getGuideTracker().getSlot())
+		end
+		
+		pControllerNameGuidePosition = transfer.getName() + ".guideTrack"
+		pControllerNameGuideUp = transfer.getName() + ".guideUp"
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pVRPlayspace = null
+		pTransfer = null
+		pSlotGuide = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Motion transfer. */
+	public func MotionTransferIK getTransfer()
+		return pTransfer
+	end
+	
+	/** VR Playspace behavior. */
+	public func ECBehaviorVRPlayspace getVRPlayspace()
+		return pVRPlayspace
+	end
+	
+	/** Actor animated behavior. */
+	public func ECBehaviorActorAnimated getActorAnimated()
+		return pActorAnimated
+	end
+	
+	/** Guide slot behavior or null. */
+	public func ECBTrackerSlot getSlotGuide()
+		return pSlotGuide
+	end
+	
+	/** Animator controller name guide position. */
+	public func String getControllerNameGuidePosition()
+		return pControllerNameGuidePosition
+	end
+	
+	/** Animator controller name guide up. */
+	public func String getControllerNameGuideUp()
+		return pControllerNameGuideUp
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
+	end
+	
+	
+	
+	/** Get behavior with slot name in element class or null if absent. */
+	static public func ECBMotionTransferIK getBehaviorIn(BehaviorElementClass eclass, String slotName)
+		return eclass.findBehavior(block ECBMotionTransferIK each
+			return each.getTransfer().getName().equals(slotName)
+		end) cast ECBMotionTransferIK
+	end
+	
+	/** Get list of all behaviors in element. */
+	static public func Array getAllBehaviorsIn(BehaviorElementClass eclass)
+		return eclass.collectBehaviors(block ECBMotionTransferIK each
+			return true
+		end)
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element, String slotName)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getTransfer().getName().equals(slotName)
+		end) cast Instance
+	end
+	
+	/** Get list of all instances in element. */
+	static public func Array getAllInstancesIn(BehaviorElement element)
+		return element.collectInstances(block Instance each
+			return true
+		end)
+	end
+	
+	
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

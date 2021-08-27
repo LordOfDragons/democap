@@ -213,6 +213,41 @@ class MotionTransferTracker
 			+ pReverseTransformPosition + " " + pReverseTransformRotation)
 	end
 	
+	public func void setTransformTrackTo(CharacterConfiguration config, Component component, String bone, Vector axis)
+		if pSlot.empty()
+			resetTransform()
+			return
+		end
+		
+		pRealSlot = config.getTrackerSlots().getAt(pSlot)
+		if pRealSlot == null
+			resetTransform()
+			return
+		end
+		
+		var int index = component.indexOfBoneNamed(bone)
+		if index == -1
+			resetTransform()
+			return
+		end
+		
+		var Matrix matrix = component.boneGetMatrix(index) * pRealSlot.getCalibrateMatrixInverse()
+		var Vector taxis = matrix.transformNormal(axis).normalize()
+		
+		pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition ) * matrix \
+			* Matrix.newTranslation(taxis * -(taxis * matrix.getPosition()))
+		pTransformPosition = pTransformMatrix.getPosition()
+		pTransformRotation = pTransformMatrix.getEulerAngles()
+		
+		pReverseTransformMatrix = pTransformMatrix.getInverse()
+		pReverseTransformPosition = pReverseTransformMatrix.getPosition()
+		pReverseTransformRotation = pReverseTransformMatrix.getEulerAngles()
+		
+		GameApp.getGameApp().getConsole().addMessage("setTransformTrackTo " + pRealSlot.getName() + " " \
+			+ bone + " " + pTransformPosition + " " + pTransformRotation + " , "\
+			+ pReverseTransformPosition + " " + pReverseTransformRotation)
+	end
+	
 	/** Real slot or null. */
 	public func CharacterTrackerSlot getRealSlot()
 		return pRealSlot
