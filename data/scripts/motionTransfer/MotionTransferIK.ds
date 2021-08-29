@@ -265,7 +265,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 			slotGuide = config.getTrackerSlots().getAt(pGuideTracker.getSlot())
 		end
 		
-		if slotTarget == null or pCalibrateBones.getCount() == 0 or pTargetBone.empty()
+		if slotTarget == null or slotTarget.isDeviceDetached() \
+		or pCalibrateBones.getCount() == 0 or pTargetBone.empty()
 			return
 		end
 		
@@ -287,7 +288,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(pADRuleBaseIK)
 		end
 		
-		if slotGuide != null
+		if slotGuide != null and slotGuide.isDeviceAttached()
 			pADControllerGuidePosition = ADController.new()
 			pADControllerGuidePosition.setName(behavior.getControllerNameGuidePosition())
 			adef.addController(pADControllerGuidePosition)
@@ -372,13 +373,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateGuideUpAxis = guideUpFromGuideTrack(pCalibrateGuideTrackAxis)
 		
 		pTargetTracker.resolveRealSlot(config)
-		
-		if pTargetTracker.getAutoTransform()
-			pTargetTracker.setTransform(config, component, pTargetBone)
-			
-		else
-			pTargetTracker.resetTransform()
-		end
+		pTargetTracker.setTransform(config, component, pTargetBone)
 		
 		// calculate reach of IK chain to avoid over stretching
 		var int indexRoot = -1, indexTarget = -1
@@ -427,13 +422,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		// calibrate guide tracker. has to come after reach scaling since it uses this value
 		pGuideTracker.resolveRealSlot(config)
 		
-		if pGuideTracker.getAutoTransform()
-			pGuideTracker.setTransformTrackTo(config, component, rootBone, \
-				trackToVectorFromAxis(pCalibrateGuideTrackAxis), pCalibrateReachScale)
-			
-		else
-			pGuideTracker.resetTransform()
-		end
+		pGuideTracker.setTransformTrackTo(config, component, rootBone, \
+			trackToVectorFromAxis(pCalibrateGuideTrackAxis), pCalibrateReachScale)
 		
 		GameApp.getGameApp().getConsole().addMessage("MotionTransferIK.calibrate: name='" \
 			+ getName() + "' reach=" + pCalibrateReach + " reachScale=" + pCalibrateReachScale \

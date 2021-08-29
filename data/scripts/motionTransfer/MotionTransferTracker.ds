@@ -35,10 +35,24 @@ pin Dragengine.XML
  * rotation between the reference bone coordinate system and the tracker calibration pose.
  */
 class MotionTransferTracker
+	/** Auto transform mode. */
+	enum AutoTransform
+		/** Position and orientation. */
+		full
+		
+		/** Orientation only. */
+		orientation
+		
+		/** None. */
+		none
+	end
+	
+	
+	
 	private var String pSlot
 	private var Vector pOffsetPosition
 	private var Vector pOffsetRotation
-	private var bool pAutoTransform
+	private var AutoTransform pAutoTransform
 	
 	private var Vector pTransformPosition
 	private var Vector pTransformRotation
@@ -61,7 +75,7 @@ class MotionTransferTracker
 		pReverseTransformPosition = Vector.new()
 		pReverseTransformRotation = Vector.new()
 		pReverseTransformMatrix = Matrix.new()
-		pAutoTransform = true
+		pAutoTransform = AutoTransform.full
 	end
 	
 	/** Create copy of motion transfer tracker. */
@@ -119,13 +133,13 @@ class MotionTransferTracker
 		pOffsetRotation = rotation
 	end
 	
-	/** During calibration calculate transformation. If false 0-transformation is set. */
-	public func bool getAutoTransform()
+	/** How to calculate transformation during calibration.. */
+	public func AutoTransform getAutoTransform()
 		return pAutoTransform
 	end
 	
-	/** Set if during calibration calculate transformation. If false 0-transformation is set. */
-	public func void setAutoTransform(bool autoTransform)
+	/** Set how to calculate transformation during calubration. */
+	public func void setAutoTransform(AutoTransform autoTransform)
 		pAutoTransform = autoTransform
 	end
 	
@@ -198,10 +212,27 @@ class MotionTransferTracker
 			return
 		end
 		
-		pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) \
-			* component.boneGetMatrix(index) * pRealSlot.getCalibrateMatrixInverse()
-		pTransformPosition = pTransformMatrix.getPosition()
-		pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
+		var Matrix boneMatrix = component.boneGetMatrix(index)
+		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
+		
+		select pAutoTransform
+		case AutoTransform.full
+			pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) * boneMatrix * slotInvMatrix
+			pTransformPosition = pTransformMatrix.getPosition()
+			pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
+			
+		case AutoTransform.orientation
+			var Matrix rotMat = boneMatrix.getRotation() * slotInvMatrix.getRotation()
+			pTransformMatrix = Matrix.newRotation(pOffsetRotation) * rotMat \
+				* Matrix.newTranslation(rotMat * -pOffsetPosition)
+			pTransformPosition = pTransformMatrix.getPosition()
+			pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
+			
+		case AutoTransform.none
+			pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition)
+			pTransformPosition = pOffsetPosition
+			pTransformRotation = pOffsetRotation
+		end
 		
 		setReverseFromTransform()
 		
@@ -223,13 +254,31 @@ class MotionTransferTracker
 			return
 		end
 		
-		var Matrix matrix = component.boneGetMatrix(index) * pRealSlot.getCalibrateMatrixInverse()
-		var Vector taxis = matrix.transformNormal(axis).normalize()
+		var Matrix boneMatrix = component.boneGetMatrix(index)
+		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
+		var Matrix rotMat = boneMatrix.getRotation() * slotInvMatrix.getRotation()
 		
-		pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition ) * matrix \
-			* Matrix.newTranslation(taxis * -(taxis * matrix.getPosition()) * axisScale)
-		pTransformPosition = pTransformMatrix.getPosition()
-		pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
+		var Vector taxis = rotMat.transformNormal(axis).normalize()
+		
+		select pAutoTransform
+		case AutoTransform.full
+			var Matrix matrix = component.boneGetMatrix(index) * pRealSlot.getCalibrateMatrixInverse()
+			pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition ) * matrix \
+				* Matrix.newTranslation(taxis * -(taxis * matrix.getPosition()) * axisScale)
+			pTransformPosition = pTransformMatrix.getPosition()
+			pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
+			
+		case AutoTransform.orientation
+			pTransformMatrix = Matrix.newRotation(pOffsetRotation) * rotMat \
+				* Matrix.newTranslation(taxis * -(taxis * (rotMat * -pOffsetPosition)) * axisScale)
+			pTransformPosition = pTransformMatrix.getPosition()
+			pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
+			
+		case AutoTransform.none
+			pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition)
+			pTransformPosition = pOffsetPosition
+			pTransformRotation = pOffsetRotation
+		end
 		
 		setReverseFromTransform()
 		
@@ -283,7 +332,7 @@ class MotionTransferTracker
 				pTransformRotation = loader.readVector(element)
 				
 			elif tagName.equals("autoTransform")
-				pAutoTransform = element.getFirstCDataBool()
+				pAutoTransform = AutoTransform.named(element.getFirstCData())
 			end
 		end)
 		
@@ -312,7 +361,7 @@ class MotionTransferTracker
 		loader.writeVector(tag, "offsetRotation", pOffsetRotation)
 		loader.writeVector(tag, "transformPosition", pTransformPosition)
 		loader.writeVector(tag, "transformRotation", pTransformRotation)
-		tag.addDataTag("autoTransform", pAutoTransform)
+		tag.addDataTag("autoTransform", pAutoTransform.name())
 	end
 	
 	public func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
