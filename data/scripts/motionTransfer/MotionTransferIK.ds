@@ -78,6 +78,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var MotionTransferTracker pGuideTracker
 	private var ActorReach pActorReach
 	private var float pReachLimit
+	private var String pMoveBaseIK
 	
 	private var ADController pADControllerTargetPosition
 	private var ADController pADControllerTargetOrientation
@@ -86,6 +87,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	private var ADRuleTrackTo pADRuleGuide
 	private var ADRuleInverseKinematic pADRuleIK
+	private var ADRuleAnimation pADRuleBaseIK
 	
 	private var Array pCalibrateBones
 	private var float pCalibrateReach
@@ -104,6 +106,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pGuideTracker = MotionTransferTracker.new()
 		pActorReach = ActorReach.none
 		pReachLimit = 1
+		pMoveBaseIK = ""
 		pCalibrateBones = Array.new()
 		pCalibrateReach = 0.6
 		pCalibrateReachScale  = 1
@@ -120,6 +123,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pGuideTracker = MotionTransferTracker.new(transfer.pGuideTracker)
 		pActorReach = transfer.pActorReach
 		pReachLimit = transfer.pReachLimit
+		pMoveBaseIK = transfer.pMoveBaseIK
 		pCalibrateBones = Array.new(transfer.pCalibrateBones)
 		pCalibrateReach = transfer.pCalibrateReach
 		pCalibrateReachScale = transfer.pCalibrateReachScale
@@ -189,6 +193,19 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pReachLimit = DEMath.max(limit, 0.1)
 	end
 	
+	/** Name of move to use to init base IK state for better results. */
+	public func String getMoveBaseIK()
+		return pMoveBaseIK
+	end
+	
+	/** Set name of move to use to init base IK state for better results. */
+	public func void setMoveBaseIK(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pMoveBaseIK = move
+	end
+	
 	
 	
 	/** Animator definition rule or null. */
@@ -198,6 +215,10 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	public func ADRuleTrackTo getADRuleGuide()
 		return pADRuleGuide
+	end
+	
+	public func ADRuleAnimation getADRuleBaseIK()
+		return pADRuleBaseIK
 	end
 	
 	/** Calibrate reach. */
@@ -230,6 +251,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADControllerGuideUp = null
 		pADRuleIK = null
 		pADRuleGuide = null
+		pADRuleBaseIK = null
 		
 		// add behavior
 		var ECBMotionTransferIK behavior = ECBMotionTransferIK.new(eclass, this)
@@ -249,6 +271,21 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		var AnimatorDefinition adef = config.getAnimatorDefinition()
 		var String rootBone = pCalibrateBones.getAt(-1) cast String
+		
+		if false
+// 			var ADRuleBoneTransformator rule = ADRuleBoneTransformator.new()
+// 			rule.setName(getName() + ".baseBend1")
+		end
+		
+		if not pMoveBaseIK.empty()
+			pADRuleBaseIK = ADRuleAnimation.new()
+			pADRuleBaseIK.setName(getName() + ".baseIK")
+			pADRuleBaseIK.setMoveName(pMoveBaseIK)
+			pCalibrateBones.forEach(block String each
+				pADRuleBaseIK.addBone(each)
+			end)
+			adef.addRule(pADRuleBaseIK)
+		end
 		
 		if slotGuide != null
 			pADControllerGuidePosition = ADController.new()
@@ -307,6 +344,12 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADRuleIK.addBone(rootBone)
 		pADRuleIK.addBone(pTargetBone)
 		adef.addRule(pADRuleIK)
+		
+		// register bones to record
+		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
+		if recordAnimation != null
+			recordAnimation.addBones(pCalibrateBones)
+		end
 	end
 	
 	/** Reset calibration. */
@@ -362,7 +405,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 			
 			var CharacterTrackerSlot slotTarget = pTargetTracker.getRealSlot()
 			if slotTarget != null
-				pCalibrateTargetOffset = posTarget - slotTarget.getCalibratePosition()
+// 				pCalibrateTargetOffset = posTarget - slotTarget.getCalibratePosition()
+				pCalibrateTargetOffset = Vector.new()
 				//var Vector slotPos = slotTarget.getCalibratePosition()
 				//var float realReach = (slotPos - posRoot).getLength()
 				//pCalibrateReachScale = pCalibrateReach / realReach
@@ -506,6 +550,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("reachLimit")
 				pReachLimit = element.getFirstCDataFloat()
 				
+			elif tagName.equals("moveBaseIK")
+				pMoveBaseIK = element.getFirstCData()
+				
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
 			end
@@ -548,6 +595,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pGuideTracker.save(loader, tag.addTag("guideTracker"))
 		tag.addDataTag("actorReach", pActorReach.name())
 		tag.addDataTag("reachLimit", pReachLimit)
+		tag.addDataTag("moveBaseIK", pMoveBaseIK)
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	

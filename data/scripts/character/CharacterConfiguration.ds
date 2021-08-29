@@ -235,6 +235,26 @@ class CharacterConfiguration
 			return
 		end
 		
+		// hand controller devices have their pose beyond the controller tip which is
+		// the wrong location to use for calibration. to fix this find the tracker slots
+		// matching the hand controllers. there the user stored the offset required to
+		// moved the calibration point to a sane location
+		var String deviceID = actor.getVRRightHand().getInputDevice().getID()
+		var CharacterTrackerSlot slot = pTrackerSlots.find(block CharacterTrackerSlot each
+			return each.getInputDeviceID().equals(deviceID)
+		end)
+		if slot != null
+			rightHand = slot.getOffsetMatrix() * rightHand
+		end
+		
+		deviceID = actor.getVRLeftHand().getInputDevice().getID()
+		slot = pTrackerSlots.find(block CharacterTrackerSlot each
+			return each.getInputDeviceID().equals(deviceID)
+		end)
+		if slot != null
+			leftHand = slot.getOffsetMatrix() * leftHand
+		end
+		
 		// calculate calibration matrix transforming tracked positions into calibration
 		// coordinate system. hmd looks forwards, hands are aligned along the X axis and
 		// body is centered along X and Z direction. also apply scaling from actor
@@ -309,6 +329,8 @@ class CharacterConfiguration
 			var ECBMoCapAnimator mocapAnimator = ECBMoCapAnimator.new(eclass)
 			mocapAnimator.getAnimation().setPath(pProfile.getAppearance().getPathAnimation())
 			mocapAnimator.getAnimation().setAnimation(pProfile.getAppearance().getAnimation())
+			
+			ECBRecordAnimation.new(eclass)
 			
 			pAnimatorDefinition = AnimatorDefinition.new("")
 			

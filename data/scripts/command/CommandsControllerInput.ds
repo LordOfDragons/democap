@@ -163,15 +163,40 @@ class CommandsAAControllerInput
 		end
 	end
 	
+	/** Secondary button. */
+	public class SecondaryAction extends Base
+		public func new(ECBehaviorPlayerControllable.Tracker tracker, String name, \
+		String description, bool rightHand) super(tracker, name, description, rightHand)
+		end
+		
+		public func void touch(AAControllerInput action)
+			action.secondaryTouch(pRightHand)
+		end
+		
+		public func void untouch(AAControllerInput action)
+			action.secondaryUntouch(pRightHand)
+		end
+		
+		public func void press(AAControllerInput action)
+			action.secondaryPress(pRightHand)
+		end
+		
+		public func void release(AAControllerInput action)
+			action.secondaryRelease(pRightHand)
+		end
+	end
+	
 	
 	
 	/** Add commands to command manager. */
 	public static func void addCommands(CommandManager commands, ECBehaviorPlayerControllable.Tracker tracker)
 		commands.add(TriggerAction.new(tracker, "triggerRight", "Trigger Right Hand", true))
 		commands.add(MenuAction.new(tracker, "menuRight", "Menu Right Hand", true))
+		commands.add(SecondaryAction.new(tracker, "secondaryRight", "Secondary Right Hand", true))
 		
 		commands.add(TriggerAction.new(tracker, "triggerLeft", "Trigger Left Hand", false))
 		commands.add(MenuAction.new(tracker, "menuLeft", "Menu Left Hand", false))
+		commands.add(SecondaryAction.new(tracker, "secondaryLeft", "Secondary Left Hand", false))
 	end
 	
 	
@@ -187,11 +212,13 @@ class CommandsAAControllerInput
 		if helper.hasVRHand(true)
 			helper.vrHandBindButton(true, 0, "triggerRight")
 			helper.vrHandBindButton(true, 1, "menuRight")
+			helper.vrHandBindButton(true, 2, "secondaryRight")
 		end
 		
 		if helper.hasVRHand(false)
 			helper.vrHandBindButton(false, 0, "triggerLeft")
 			helper.vrHandBindButton(false, 1, "menuLeft")
+			helper.vrHandBindButton(false, 2, "secondaryLeft")
 		end
 	end
 end

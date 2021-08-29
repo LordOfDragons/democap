@@ -1,0 +1,171 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Characters
+
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Character animation. Stores one large keyframe list containing the keyframes of all bones
+ * in a single move. The keyframe list contains the keyframes for each bone of a single
+ * time frame packed together.
+ */
+class CharacterAnimation
+	/** Animation builder. */
+	protected class CreateAnimation extends AnimationBuilder
+		private var Array pBones
+		private var Array pKeyframes
+		private var float pFPS
+		
+		public func new(Array bones, Array keyframes, float fps)
+			pBones = bones
+			pKeyframes = keyframes
+			pFPS = fps
+		end
+		
+		protected func void buildAnimation()
+			var int boneCount = pBones.getCount()
+			
+			if boneCount == 0 or pKeyframes.getCount() == 0
+				addMove("MoCap", 0, pFPS)
+				return
+			end
+			
+			pBones.forEach(block String each
+				addBone(each)
+			end)
+			
+			addMove("MoCap", (pKeyframes.getAt(-1) cast CharacterAnimationKeyframe).getTime(), pFPS)
+			setKeyframeListCount(0, boneCount)
+			
+			pKeyframes.forEach(block int index, CharacterAnimationKeyframe keyframe
+				addKeyframe(0, index % boneCount, keyframe.getTime(), keyframe.getPosition(), \
+					keyframe.getOrientation().getEulerAngles(), Vector.new(1, 1, 1))
+			end)
+		end
+	end
+	
+	
+	
+	private var Array pBones
+	private var Array pKeyframes
+	private var int pStride
+	private var Animation pAnimation
+	private var float pFPS
+	private var String pFilename
+	
+	
+	
+	/** Create character animation. */
+	public func new()
+		pBones = Array.new()
+		pKeyframes = Array.new()
+		pStride = 0
+		pFPS = 25
+	end
+	
+	
+	
+	/** Count of bones. */
+	public func int getBoneCount()
+		return pBones.getCount()
+	end
+	
+	/** Bone name at index. */
+	public func String getBoneAt(int index)
+		return pBones.getAt(index) cast String
+	end
+	
+	/** Add bone name. */
+	public func void addBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pBones.add(bone)
+		pStride++
+	end
+	
+	/** FPS. */
+	public func float getFPS()
+		return pFPS
+	end
+	
+	/** Set FPS. */
+	public func void setFPS(float fps)
+		pFPS = DEMath.max(fps, 1.0)
+	end
+	
+	
+	
+	/** Count of keyframes. */
+	public func int getKeyframeCount()
+		return pKeyframes.getCount()
+	end
+	
+	/** Keyframe at index. */
+	public func CharacterAnimationKeyframe getKeyframeAt(int index)
+		return pKeyframes.getAt(index) cast CharacterAnimationKeyframe
+	end
+	
+	/** Keyframe for bone. */
+	public func CharacterAnimationKeyframe getKeyframeFor(int frame, int bone)
+		return pKeyframes.getAt(pStride * frame + bone) cast CharacterAnimationKeyframe
+	end
+	
+	/** Add keyframe. */
+	public func void addKeyframe(float time, Vector position, Quaternion orientation)
+		pKeyframes.add(CharacterAnimationKeyframe.new(time, position, orientation))
+	end
+	
+	
+	
+	/** Playtime in seconds. */
+	public func float getPlaytime()
+		if pKeyframes.getCount() > 0
+			return (pKeyframes.getAt(-1) cast CharacterAnimationKeyframe).getTime()
+		end
+		return 0
+	end
+	
+	
+	
+	/** Animation or null if not created. */
+	public func Animation getAnimation()
+		return pAnimation
+	end
+	
+	/** Create animation. */
+	public func void createAnimation()
+		pAnimation = CreateAnimation.new(pBones, pKeyframes, pFPS).build("")
+	end
+	
+	/** Filename or null. */
+	public func String getFilename()
+		return pFilename
+	end
+	
+	/** Set filename or null. */
+	public func void setFilename(String filename)
+		pFilename = filename
+	end
+end

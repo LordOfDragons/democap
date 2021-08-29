@@ -21,7 +21,9 @@
 
 namespace Democap.Actions
 
+pin Democap.Actors
 pin Democap.Behaviors
+pin Democap.Characters
 
 pin Dragengine.LoadSave
 pin Dragengine.Preloading
@@ -30,19 +32,18 @@ pin Dragengine.Utils
 
 
 /**
- * Default BaseVRActor action. Used when the character is spawned in the world but no
- * particular action is running. This is the default action characters spawn with.
+ * BaseVRActor action running while animation is recorded.
  */
-class AADefault extends AABase
+class AARecordAnimation extends AABase
 	/** Factory for loading actor actions. */
 	public class Factory implements PersistencyFactory, ECBehaviorActorAIAction.ActionFactory
-		public static fixed var String name = "AADefault"
+		public static fixed var String name = "AARecordAnimation"
 		
 		public func new()
 		end
 		
 		public func Persistable readObjectFromFile(PersistencyEnvironment env, FileReader reader)
-			return AADefault.new()
+			return AARecordAnimation.new()
 		end
 		
 		public static func void registerFactory(Persistency persistency)
@@ -50,9 +51,13 @@ class AADefault extends AABase
 		end
 		
 		public func BaseActorAction createAction(ECBehaviorActorAIAction.Instance instance)
-			return AADefault.new()
+			return AARecordAnimation.new()
 		end
 	end
+	
+	
+	
+	protected var ECBRecordAnimation.Instance recordAnimation
 	
 	
 	
@@ -62,49 +67,30 @@ class AADefault extends AABase
 	
 	
 	
-	/** Trigger pulled. */
-	public func void triggerPull(bool rightHand)
+	/** Action has been activated. */
+	public func void activate(BehaviorElement actor)
+		super.activate(actor)
+		
+		log("Start recording animation")
+		recordAnimation.startRecording()
 	end
 	
-	/** Trigger released. */
-	public func void triggerRelease(bool rightHand)
+	/**
+	 * Init behaviors
+	 */
+	protected func void initBehaviors()
+		super.initBehaviors()
+		
+		recordAnimation = ECBRecordAnimation.getInstanceIn(actor)
 	end
-	
 	
 	
 	/** Menu button pressed. */
 	public func void menuPress(bool rightHand)
-		if rightHand
-			aiAction.setAction(AACalibrate.new())
-			
-		else
-			var ECBRecordAnimation.Instance behavior = ECBRecordAnimation.getInstanceIn(actor)
-			if behavior != null and not behavior.isRecording()
-				aiAction.setAction(AARecordAnimation.new())
-			end
-		end
-	end
-	
-	/** Menu button released. */
-	public func void menuRelease(bool rightHand)
-	end
-	
-	
-	
-	/** Secondary button pressed. */
-	public func void secondaryPress(bool rightHand)
-		if rightHand
-			var WorldSpawnCharacter spawner = GameApp.getGameApp().getWorldSpawnCharacter()
-			var Array profiles = GameApp.getGameApp().getCharacterProfiles().toArray()
-			var Characters.CharacterProfile profile = profiles.getAt((profiles.indexOf(\
-				spawner.getCharacter().getProfile()) + 1) % profiles.getCount()) cast Characters.CharacterProfile
-			var Array configs = profile.getConfigurations().toArray()
-			spawner.setCharacter(configs.getAt(0) cast Characters.CharacterConfiguration)
-		end
-	end
-	
-	/** Secondary button released. */
-	public func void secondaryRelease(bool rightHand)
+		recordAnimation.stopRecording()
+		log("Stop recording")
+		
+		aiAction.setAction(AADefault.new())
 	end
 	
 	

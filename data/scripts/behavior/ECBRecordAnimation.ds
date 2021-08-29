@@ -1,0 +1,228 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding support to record animations.
+ */
+class ECBRecordAnimation extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBRecordAnimation pECBehavior
+		private var ECBehaviorActorAnimated.Instance pActorAnimated
+		private var Array pBoneIndices
+		private var CharacterAnimation pCharacterAnimation
+		private var bool pIsRecording
+		private var float pRecordTime
+		private var bool pIncrementTime
+		private var Component pComponent
+		
+		
+		
+		/** Create instance. */
+		public func new(ECBRecordAnimation ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pIsRecording = false
+			pBoneIndices = Array.new()
+			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
+			setRequiresThink(true)
+		end
+		
+		/** Dispose of instance. */
+		public func void dispose()
+			pActorAnimated = null
+			super.dispose()
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+		end
+		
+		
+		
+		/** Behavior. */
+		public func ECBRecordAnimation getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Actor animated. */
+		public func ECBehaviorActorAnimated.Instance getActorAnimated()
+			return pActorAnimated
+		end
+		
+		
+		
+		/** Character animation or null if none has been recorded yet. */
+		public func CharacterAnimation getCharacterAnimation()
+			return pCharacterAnimation
+		end
+		
+		/** Set character animation or null if none has been recorded yet. */
+		public func void setCharacterAnimation(CharacterAnimation animation)
+			pCharacterAnimation = animation
+		end
+		
+		
+		
+		/** Is recording animation. */
+		public func bool isRecording()
+			return pIsRecording
+		end
+		
+		/** Start recording animation. */
+		public func void startRecording()
+			stopRecording()
+			
+			pCharacterAnimation = CharacterAnimation.new()
+			pCharacterAnimation.setFilename("/animations/" + TimeDate.new().format("%Y-%m-%d_%H-%M-%S") + ".deanim")
+			
+			pComponent = pActorAnimated.getComponent().getComponent()
+			var int index
+			
+			pBoneIndices.removeAll()
+			
+			pECBehavior.getBones().forEach(block String each
+				index = pComponent.indexOfBoneNamed(each)
+				if index != -1
+					pCharacterAnimation.addBone(each)
+					pBoneIndices.add(index)
+				end
+			end)
+			
+			pIsRecording = true
+			pRecordTime = 0
+			pIncrementTime = false
+		end
+		
+		/** Stop recording animation. */
+		public func void stopRecording()
+			if not pIsRecording
+				return
+			end
+			
+			pIsRecording = false
+			pComponent = null
+			
+			if pCharacterAnimation != null
+				pCharacterAnimation.createAnimation()
+				pCharacterAnimation.getAnimation().save(pCharacterAnimation.getFilename())
+			end
+		end
+		
+		
+		
+		/** Post think. Called after rendering and thus when animation frame is ready to record. */
+		public func void postThink(float elapsed)
+			if not pIsRecording
+				return
+			end
+			
+			if pIncrementTime
+				pRecordTime += elapsed
+			end
+			pIncrementTime = true
+			
+			var Vector position, rotation
+			
+			pComponent.updateBones()
+			
+			pBoneIndices.forEach(block int each
+				pCharacterAnimation.addKeyframe(pRecordTime, \
+					pComponent.boneGetPosition(each), \
+					pComponent.boneGetRotation(each))
+			end)
+		end
+	end
+	
+	
+	
+	private var ECBehaviorActorAnimated pActorAnimated
+	private var Set pBones
+	
+	
+	
+	/** Create behavior element class. */
+	public func new(BaseVRActorClass eclass) super(eclass)
+		pActorAnimated = eclass.getActorAnimated()
+		pBones = Set.new()
+		
+		eclass.addBehavior(this)
+	end
+	
+	
+	
+	/** Actor animated behavior. */
+	public func ECBehaviorActorAnimated getActorAnimated()
+		return pActorAnimated
+	end
+	
+	
+	
+	/** Bones to record. Set of String. */
+	public func Set getBones()
+		return pBones
+	end
+	
+	/** Add bone to record if not present. */
+	public func void addBone(String bone)
+		pBones.add(bone)
+	end
+	
+	/** Add bones to record if not present. Expects Array of String. */
+	public func void addBones(Array bones)
+		pBones.addAll(Set.newFrom(bones))
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
+	end
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBRecordAnimation getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBRecordAnimation each
+			return true
+		end) cast ECBRecordAnimation
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
