@@ -61,10 +61,14 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var AnimatorController pControllerTargetOrientation
 		private var AnimatorController pControllerGuidePosition
 		private var AnimatorController pControllerGuideUp
+		private var AnimatorController pControllerTwist
 		private var Matrix pTransformTarget
 		private var Matrix pTransformGuide
 		private var Vector pGuideUp
 		private var Vector pTargetOffset
+		private var AnimatorInstance pAnimatorInstance
+		private var Component pComponent
+		private var int pTargetBone
 		
 		
 		
@@ -108,6 +112,24 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pControllerGuideUp = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameGuideUp())
 			
 			pActorAnimated.addListener(UpdateControllers.new(this))
+			
+			// post animator if used
+			var Animator animator = pECBehavior.getAnimatorPost()
+			if animator != null
+				pComponent = pActorAnimated.getComponent().getComponent()
+				
+				animator.setRig(pComponent.getRig())
+				
+				pAnimatorInstance = AnimatorInstance.new()
+				pAnimatorInstance.setAnimator(animator)
+				pAnimatorInstance.setComponent(pComponent)
+				
+				pControllerTwist = pAnimatorInstance.getControllerNamed(pECBehavior.getControllerNameTwist())
+				
+				pTargetBone = pComponent.indexOfBoneNamed(pECBehavior.getTransfer().getTargetBone())
+				
+				setRequiresThink(true)
+			end
 		end
 		
 		
@@ -158,6 +180,30 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		
 		
 		
+		/** Frame update. */
+		public func void think(float elapsed)
+			if pAnimatorInstance == null
+				return
+			end
+			
+			// update bones. this causes the actor animator to be processed now instead of
+			// in parallel. this is not optimal for performance but required to run post
+			// animator since it needs to know certain states
+			pComponent.updateBones()
+			
+			if pControllerTwist != null
+				if pTargetBone != -1
+					pControllerTwist.setValue(pComponent.boneGetRotation(pTargetBone).getEulerAngles().getZ())
+					
+				else
+					pControllerTwist.setValue(0)
+				end
+			end
+			
+			pAnimatorInstance.apply()
+		end
+		
+		
 		/** Update controllers. */
 		public func void updateControllers()
 			if pSlotTarget != null
@@ -178,7 +224,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 					pControllerGuidePosition.setVector(matrix.getPosition() + pTargetOffset)
 				end
 				if pControllerGuideUp != null
-					pControllerGuideUp.setVector(matrix.transformNormal(pGuideUp))
+					pControllerGuideUp.setVector(matrix.normalize().transformNormal(pGuideUp))
 				end
 			end
 		end
@@ -195,6 +241,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	private var String pControllerNameTargetOrientation
 	private var String pControllerNameGuidePosition
 	private var String pControllerNameGuideUp
+	private var String pControllerNameTwist
+	private var Animator pAnimatorPost
 	
 	
 	
@@ -221,6 +269,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		pControllerNameTargetOrientation = transfer.getName() + ".targetOrientation"
 		pControllerNameGuidePosition = transfer.getName() + ".guideTrack"
 		pControllerNameGuideUp = transfer.getName() + ".guideUp"
+		pControllerNameTwist = transfer.getName() + ".twist"
 		
 		eclass.addBehavior(this)
 	end
@@ -279,6 +328,21 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	/** Animator controller name guide up. */
 	public func String getControllerNameGuideUp()
 		return pControllerNameGuideUp
+	end
+	
+	/** Animator controller name twist. */
+	public func String getControllerNameTwist()
+		return pControllerNameTwist
+	end
+	
+	/** Post animator. */
+	public func Animator getAnimatorPost()
+		return pAnimatorPost
+	end
+	
+	/** Set post animator. */
+	public func void setAnimatorPost(Animator animator)
+		pAnimatorPost = animator
 	end
 	
 	

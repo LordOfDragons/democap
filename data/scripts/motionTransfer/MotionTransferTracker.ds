@@ -258,11 +258,11 @@ class MotionTransferTracker
 		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
 		var Matrix rotMat = boneMatrix.getRotation() * slotInvMatrix.getRotation()
 		
-		var Vector taxis = rotMat.transformNormal(axis).normalize()
+		var Vector taxis = rotMat.normalize().transformNormal(axis)
 		
 		select pAutoTransform
 		case AutoTransform.full
-			var Matrix matrix = component.boneGetMatrix(index) * pRealSlot.getCalibrateMatrixInverse()
+			var Matrix matrix = boneMatrix * slotInvMatrix
 			pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition ) * matrix \
 				* Matrix.newTranslation(taxis * -(taxis * matrix.getPosition()) * axisScale)
 			pTransformPosition = pTransformMatrix.getPosition()

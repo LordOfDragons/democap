@@ -74,20 +74,25 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	private var String pTargetBone
 	private var int pBoneCount
+	private var int pGuideChainIndex
 	private var MotionTransferTracker pTargetTracker
 	private var MotionTransferTracker pGuideTracker
 	private var ActorReach pActorReach
 	private var float pReachLimit
 	private var String pMoveBaseIK
+	private var float pTwistPropagation
 	
 	private var ADController pADControllerTargetPosition
 	private var ADController pADControllerTargetOrientation
 	private var ADController pADControllerGuidePosition
 	private var ADController pADControllerGuideUp
+	private var ADController pADControllerTwist
 	
 	private var ADRuleTrackTo pADRuleGuide
 	private var ADRuleInverseKinematic pADRuleIK
 	private var ADRuleAnimation pADRuleBaseIK
+	
+	private var Animator pAnimatorPost
 	
 	private var Array pCalibrateBones
 	private var float pCalibrateReach
@@ -102,11 +107,13 @@ class MotionTransferIK extends DefaultMotionTransfer
 	public func new(String factoryID) super(factoryID)
 		pTargetBone = ""
 		pBoneCount = 3
+		pGuideChainIndex = 0
 		pTargetTracker = MotionTransferTracker.new()
 		pGuideTracker = MotionTransferTracker.new()
 		pActorReach = ActorReach.none
 		pReachLimit = 1
 		pMoveBaseIK = ""
+		pTwistPropagation = 0
 		pCalibrateBones = Array.new()
 		pCalibrateReach = 0.6
 		pCalibrateReachScale  = 1
@@ -119,11 +126,13 @@ class MotionTransferIK extends DefaultMotionTransfer
 	public func new(MotionTransferIK transfer) super(transfer.factoryID())
 		pTargetBone = transfer.pTargetBone
 		pBoneCount = transfer.pBoneCount
+		pGuideChainIndex = transfer.pGuideChainIndex
 		pTargetTracker = MotionTransferTracker.new(transfer.pTargetTracker)
 		pGuideTracker = MotionTransferTracker.new(transfer.pGuideTracker)
 		pActorReach = transfer.pActorReach
 		pReachLimit = transfer.pReachLimit
 		pMoveBaseIK = transfer.pMoveBaseIK
+		pTwistPropagation = transfer.pTwistPropagation
 		pCalibrateBones = Array.new(transfer.pCalibrateBones)
 		pCalibrateReach = transfer.pCalibrateReach
 		pCalibrateReachScale = transfer.pCalibrateReachScale
@@ -158,6 +167,19 @@ class MotionTransferIK extends DefaultMotionTransfer
 			throw ENullPointer.new("count < 1")
 		end
 		pBoneCount = count
+	end
+	
+	/** Index of bone counting from root bone to affect by guide tracker. */
+	public func int getGuideChainIndex()
+		return pGuideChainIndex
+	end
+	
+	/** Set index of bone counting from root bone to affect by guide tracker. */
+	public func void setGuideChainIndex(int index)
+		if index < 0
+			throw ENullPointer.new("index < 0")
+		end
+		pGuideChainIndex = index
 	end
 	
 	/** Target tracker. */
@@ -206,6 +228,16 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pMoveBaseIK = move
 	end
 	
+	/** Percentage amount of twist propagated from tip bone to first bone after root bone. */
+	public func float getTwistPropagation()
+		return pTwistPropagation
+	end
+	
+	/** Set percentage amount of twist propagated from tip bone to first bone after root bone. */
+	public func void setTwistPropagation(float amount)
+		pTwistPropagation = DEMath.clamp(amount, 0.0, 1.0)
+	end
+	
 	
 	
 	/** Animator definition rule or null. */
@@ -219,6 +251,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	public func ADRuleAnimation getADRuleBaseIK()
 		return pADRuleBaseIK
+	end
+	
+	/** Animator applied after main animator is applied. */
+	public func Animator getAnimatorPost()
+		return pAnimatorPost
 	end
 	
 	/** Calibrate reach. */
@@ -249,9 +286,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADControllerTargetOrientation = null
 		pADControllerGuidePosition = null
 		pADControllerGuideUp = null
+		pADControllerTwist = null
 		pADRuleIK = null
 		pADRuleGuide = null
 		pADRuleBaseIK = null
+		pAnimatorPost = null
 		
 		// add behavior
 		var ECBMotionTransferIK behavior = ECBMotionTransferIK.new(eclass, this)
@@ -302,7 +341,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			pADRuleGuide.setTrackAxis(pCalibrateGuideTrackAxis)
 			pADRuleGuide.setUpAxis(pCalibrateGuideUpAxis)
 			pADRuleGuide.setUpTarget(ARTrackToUp.controller)
-			pADRuleGuide.addBone(rootBone)
+			pADRuleGuide.addBone(pCalibrateBones.getAt(-(pGuideChainIndex + 1)) cast String)
 			
 			var ADLink link = ADLink.new()
 			link.setController(pADControllerGuidePosition)
@@ -343,6 +382,80 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADRuleIK.addBone(rootBone)
 		pADRuleIK.addBone(pTargetBone)
 		adef.addRule(pADRuleIK)
+		
+		// post animator
+		adef = AnimatorDefinition.new("")
+		
+		var ADRuleStateSnapshot ruleStaSnap = ADRuleStateSnapshot.new()
+		ruleStaSnap.setName(getName() + ".currentState")
+		ruleStaSnap.setUseLastState(true)
+		adef.addRule(ruleStaSnap)
+		
+		var Set addBones = Set.new()
+		
+		if pTwistPropagation > 0.01 and pCalibrateBones.getCount() >= pGuideChainIndex + 3
+			var int i, count = pCalibrateBones.getCount() - (pGuideChainIndex + 2)
+			var ADRuleBoneTransformator rule
+			var String name = getName() + ".twist"
+			var float maxAngle = 120
+			var Vector minRot = Vector.new(0, 0, pTwistPropagation * -maxAngle / count)
+			var Vector maxRot = Vector.new(0, 0, pTwistPropagation * maxAngle / count)
+			
+			pADControllerTwist = ADController.new()
+			pADControllerTwist.setName(behavior.getControllerNameTwist())
+			pADControllerTwist.setMinimum(-maxAngle)
+			pADControllerTwist.setMaximum(maxAngle)
+			adef.addController(pADControllerTwist)
+			
+			var ADLink link = ADLink.new()
+			link.setController(pADControllerTwist)
+			adef.addLink(link)
+			
+			var int baseIndex = pGuideChainIndex + 2
+			
+			for i = 0 to count
+				var String bone = pCalibrateBones.getAt(-(baseIndex + i)) cast String
+				var String boneNext = pCalibrateBones.getAt(-(baseIndex + i + 1)) cast String
+				
+				rule = ADRuleBoneTransformator.new()
+				rule.setName(name)
+				rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+				rule.setMinimumRotation(minRot)
+				rule.setMaximumRotation(maxRot)
+				rule.setTargetBone(bone)
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				rule.addBone(bone)
+				adef.addRule(rule)
+				
+				rule = ADRuleBoneTransformator.new()
+				rule.setName(name)
+				rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+				rule.setMinimumRotation(maxRot)
+				rule.setMaximumRotation(minRot)
+				rule.setTargetBone(bone)
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				rule.addBone(boneNext)
+				adef.addRule(rule)
+				
+				addBones.add(bone)
+				addBones.add(boneNext)
+			end
+		end
+		
+		if adef.getRuleCount() > 0 and addBones.getCount() > 0
+			addBones.forEach(block String each
+				adef.addBone(each)
+			end)
+			
+			var CharacterAppearance appearance = config.getProfile().getAppearance()
+			var Animator animator = Animator.new()
+			animator.setRig(appearance.getRig())
+			animator.setAnimation(appearance.getAnimation())
+			
+			adef.buildAnimator(animator)
+			adef.debug(GameApp.getGameApp().getConsole())
+			behavior.setAnimatorPost(animator)
+		end
 		
 		// register bones to record
 		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
@@ -526,6 +639,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("boneCount")
 				setBoneCount(element.getFirstCDataInt())
 				
+			elif tagName.equals("guideChainIndex")
+				setGuideChainIndex(element.getFirstCDataInt())
+				
 			elif tagName.equals("targetTracker")
 				pTargetTracker.load(loader, element)
 				
@@ -533,13 +649,16 @@ class MotionTransferIK extends DefaultMotionTransfer
 				pGuideTracker.load(loader, element)
 				
 			elif tagName.equals("actorReach")
-				pActorReach = ActorReach.named(element.getFirstCData())
+				setActorReach(ActorReach.named(element.getFirstCData()))
 				
 			elif tagName.equals("reachLimit")
-				pReachLimit = element.getFirstCDataFloat()
+				setReachLimit(element.getFirstCDataFloat())
 				
 			elif tagName.equals("moveBaseIK")
-				pMoveBaseIK = element.getFirstCData()
+				setMoveBaseIK(element.getFirstCData())
+				
+			elif tagName.equals("twistPropagation")
+				setTwistPropagation(element.getFirstCDataFloat())
 				
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
@@ -579,11 +698,13 @@ class MotionTransferIK extends DefaultMotionTransfer
 		tag.addDataTag("name", getName())
 		tag.addDataTag("targetBone", pTargetBone)
 		tag.addDataTag("boneCount", pBoneCount)
+		tag.addDataTag("guideChainIndex", pGuideChainIndex)
 		pTargetTracker.save(loader, tag.addTag("targetTracker"))
 		pGuideTracker.save(loader, tag.addTag("guideTracker"))
 		tag.addDataTag("actorReach", pActorReach.name())
 		tag.addDataTag("reachLimit", pReachLimit)
 		tag.addDataTag("moveBaseIK", pMoveBaseIK)
+		tag.addDataTag("twistPropagation", pTwistPropagation)
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
