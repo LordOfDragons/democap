@@ -1,0 +1,319 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Commands
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior for MotionTransferRotate.
+ */
+class ECBMotionTransferRotate extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Update controllers. */
+		class UpdateControllers extends ECBehaviorActorAnimated.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void updateControllers(ECBehaviorActorAnimated.Instance instance, float elapsed)
+				pInstance.updateControllers()
+			end
+		end
+		
+		
+		
+		private var ECBMotionTransferRotate pECBehavior
+		private var ECBehaviorVRPlayspace.Instance pVRPlayspace
+		private var ECBehaviorActorAnimated.Instance pActorAnimated
+		private var ECBTrackerSlot.Instance pSlotTarget
+		private var ECBTrackerSlot.Instance pSlotBase
+		private var AnimatorController pControllerRotateX
+		private var AnimatorController pControllerRotateY
+		private var AnimatorController pControllerRotateZ
+		private var Matrix pTransformTarget
+		private var Matrix pTransformBase
+		private var Matrix pTransformBaseReverse
+		private var float pZeroRotationX
+		private var float pZeroRotationY
+		
+		
+		
+		/** Create instance. */
+		public func new(ECBMotionTransferRotate ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			
+			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
+			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
+			
+			pZeroRotationX = ecbehavior.getTransfer().getCalibrateZeroRotation().getX()
+			pZeroRotationY = ecbehavior.getTransfer().getCalibrateZeroRotation().getY()
+			
+			if ecbehavior.getSlotTarget() != null
+				pSlotTarget = ecbehavior.getSlotTarget().instance(element)
+				pTransformTarget = ecbehavior.getTransfer().getTargetTracker().getTransformMatrix()
+			end
+			if ecbehavior.getSlotBase() != null
+				pSlotBase = ecbehavior.getSlotBase().instance(element)
+				pTransformBase = ecbehavior.getTransfer().getBaseTracker().getTransformMatrix()
+				pTransformBaseReverse = pTransformBase.getInverse()
+			end
+		end
+		
+		/** Dispose of instance. */
+		public func void dispose()
+			pSlotTarget = null
+			pSlotBase = null
+			pVRPlayspace = null
+			pActorAnimated = null
+			super.dispose()
+		end
+		
+		
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			pControllerRotateX = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateX())
+			pControllerRotateY = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateY())
+			pControllerRotateZ = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateZ())
+			
+			pActorAnimated.addListener(UpdateControllers.new(this))
+		end
+		
+		
+		
+		/** Behavior. */
+		public func ECBMotionTransferRotate getECBehavior()
+			return pECBehavior
+		end
+		
+		/** VR Playspace. */
+		public func ECBehaviorVRPlayspace.Instance getVRPlayspace()
+			return pVRPlayspace
+		end
+		
+		/** Actor animated. */
+		public func ECBehaviorActorAnimated.Instance getActorAnimated()
+			return pActorAnimated
+		end
+		
+		/** Target slot behavior instance or null. */
+		public func ECBTrackerSlot.Instance getSlotTarget()
+			return pSlotTarget
+		end
+		
+		/** Base slot behavior instance or null. */
+		public func ECBTrackerSlot.Instance getSlotBase()
+			return pSlotBase
+		end
+		
+		/** Animator controller rotate. */
+		public func AnimatorController getControllerRotateX()
+			return pControllerRotateX
+		end
+		
+		public func AnimatorController getControllerRotateY()
+			return pControllerRotateY
+		end
+		
+		public func AnimatorController getControllerRotateZ()
+			return pControllerRotateZ
+		end
+		
+		
+		
+		/** Update controllers. */
+		public func void updateControllers()
+			if pSlotTarget == null or pSlotBase == null
+				return
+			end
+			
+			var Matrix baseMatrix = pSlotBase.getMatrixPlayspace()
+			
+			var Matrix matrix = pTransformTarget * pSlotTarget.getMatrixPlayspace() \
+				* baseMatrix.getInverse() * pTransformBaseReverse
+			
+			var Vector position = matrix.getPosition()
+			
+			var float rotateX = DEMath.atan2(position.getY(), position.getZ()) - pZeroRotationX
+			var float rotateY = DEMath.atan2(position.getZ(), position.getX()) - pZeroRotationY
+			
+			matrix = pTransformBase * baseMatrix
+			matrix = Matrix.newRotationAxis(matrix.getRightVector(), rotateX) \
+				* Matrix.newRotationAxis(matrix.getUpVector(), rotateY)
+			var Vector rotation = matrix.getEulerAngles()
+			
+			if pControllerRotateX != null
+				pControllerRotateX.setValue(rotation.getX())
+			end
+			if pControllerRotateY != null
+				pControllerRotateY.setValue(rotation.getY())
+			end
+			if pControllerRotateZ != null
+				pControllerRotateZ.setValue(rotation.getZ())
+			end
+		end
+	end
+	
+	
+	
+	private var MotionTransferRotate pTransfer
+	private var ECBehaviorVRPlayspace pVRPlayspace
+	private var ECBehaviorActorAnimated pActorAnimated
+	private var ECBTrackerSlot pSlotTarget
+	private var ECBTrackerSlot pSlotBase
+	private var String pControllerNameRotateX
+	private var String pControllerNameRotateY
+	private var String pControllerNameRotateZ
+	
+	
+	
+	/** Create behavior element class. */
+	public func new(BaseVRActorClass eclass, MotionTransferRotate transfer) super(eclass, transfer.getName())
+		if transfer == null
+			throw ENullPointer.new("transfer")
+		end
+		
+		var String subId = "motionTransferRotate(" + transfer.getName() + ")"
+		var String prefix = subId + "."
+		
+		pTransfer = transfer
+		pVRPlayspace = eclass.getVRPlayspace()
+		pActorAnimated = eclass.getActorAnimated()
+		if transfer.getTargetTracker() != null
+			pSlotTarget = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getTargetTracker().getSlot())
+		end
+		if transfer.getBaseTracker() != null
+			pSlotBase = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getBaseTracker().getSlot())
+		end
+		
+		pControllerNameRotateX = transfer.getName() + ".rotateX"
+		pControllerNameRotateY = transfer.getName() + ".rotateY"
+		pControllerNameRotateZ = transfer.getName() + ".rotateZ"
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pVRPlayspace = null
+		pActorAnimated = null
+		pTransfer = null
+		pSlotTarget = null
+		pSlotBase = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Motion transfer. */
+	public func MotionTransferRotate getTransfer()
+		return pTransfer
+	end
+	
+	/** VR Playspace behavior. */
+	public func ECBehaviorVRPlayspace getVRPlayspace()
+		return pVRPlayspace
+	end
+	
+	/** Actor animated behavior. */
+	public func ECBehaviorActorAnimated getActorAnimated()
+		return pActorAnimated
+	end
+	
+	/** Target slot behavior or null. */
+	public func ECBTrackerSlot getSlotTarget()
+		return pSlotTarget
+	end
+	
+	/** Base slot behavior or null. */
+	public func ECBTrackerSlot getSlotBase()
+		return pSlotBase
+	end
+	
+	/** Animator controller name rotate. */
+	public func String getControllerNameRotateX()
+		return pControllerNameRotateX
+	end
+	
+	public func String getControllerNameRotateY()
+		return pControllerNameRotateY
+	end
+	
+	public func String getControllerNameRotateZ()
+		return pControllerNameRotateZ
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
+	end
+	
+	
+	
+	/** Get behavior with slot name in element class or null if absent. */
+	static public func ECBMotionTransferRotate getBehaviorIn(BehaviorElementClass eclass, String slotName)
+		return eclass.findBehavior(block ECBMotionTransferRotate each
+			return each.getTransfer().getName().equals(slotName)
+		end) cast ECBMotionTransferRotate
+	end
+	
+	/** Get list of all behaviors in element. */
+	static public func Array getAllBehaviorsIn(BehaviorElementClass eclass)
+		return eclass.collectBehaviors(block ECBMotionTransferRotate each
+			return true
+		end)
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element, String slotName)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getTransfer().getName().equals(slotName)
+		end) cast Instance
+	end
+	
+	/** Get list of all instances in element. */
+	static public func Array getAllInstancesIn(BehaviorElement element)
+		return element.collectInstances(block Instance each
+			return true
+		end)
+	end
+	
+	
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

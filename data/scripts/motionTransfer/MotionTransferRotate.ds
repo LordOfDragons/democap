@@ -1,0 +1,449 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Democap.Actors
+pin Democap.Behaviors
+pin Democap.Characters
+
+pin Dragengine.Animators
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+/**
+ * Motion transfer rotating bone chain.
+ * 
+ * Defines root bone and target bone name. This defines the bone chain to manipulate.
+ * The target bone is required to be indirect child of the root bone. The length of
+ * the bone chain can be 1 or more bones.
+ * 
+ * Defines two tracker slots to be used to get rotation from. The target tracker
+ * position is transformed into the base tracker. The base bone indicates the bone
+ * coordinate system to link to the base tracker. This defines the base coordinate
+ * system in which the position of the target tracker is converted to a rotation
+ * along each axis. This rotation is split across all bones in the chain. The amount
+ * of transfered rotation can be scaled.
+ */
+class MotionTransferRotate extends DefaultMotionTransfer
+	/** Factory. */
+	class Factory implements MotionTransferFactory
+		public func new()
+		end
+		
+		public func String factoryID()
+			return "rotate"
+		end
+		
+		public func MotionTransfer createMotionTransfer()
+			return MotionTransferRotate.new(factoryID())
+		end
+	end
+	
+	
+	
+	private var String pTargetBone
+	private var String pBaseBone
+	private var String pTipBone
+	private var int pBoneCount
+	private var MotionTransferTracker pTargetTracker
+	private var MotionTransferTracker pBaseTracker
+	private var Vector pScaleRotation
+	
+	private var ADController pADControllerRotationX
+	private var ADController pADControllerRotationY
+	private var ADController pADControllerRotationZ
+	
+	private var ADRuleBoneTransformator pADRuleRotateX
+	private var ADRuleBoneTransformator pADRuleRotateY
+	private var ADRuleBoneTransformator pADRuleRotateZ
+	
+	private var Array pCalibrateBones
+	private var Vector2 pCalibrateZeroRotation
+	
+	
+	
+	/** Create motion transfer. */
+	public func new(String factoryID) super(factoryID)
+		pTargetBone = ""
+		pBaseBone = ""
+		pTipBone = ""
+		pBoneCount = 1
+		pTargetTracker = MotionTransferTracker.new()
+		pBaseTracker = MotionTransferTracker.new()
+		pScaleRotation = Vector.new(1, 1, 1)
+		pCalibrateBones = Array.new()
+		pCalibrateZeroRotation = Vector2.new()
+	end
+	
+	/** Create copy of motion transfer. */
+	public func new(MotionTransferRotate transfer) super(transfer.factoryID())
+		pTargetBone = transfer.pTargetBone
+		pBaseBone = transfer.pBaseBone
+		pTipBone = transfer.pTipBone
+		pBoneCount = transfer.pBoneCount
+		pTargetTracker = MotionTransferTracker.new(transfer.pTargetTracker)
+		pBaseTracker = MotionTransferTracker.new(transfer.pBaseTracker)
+		pScaleRotation = transfer.pScaleRotation
+		pCalibrateZeroRotation = transfer.pCalibrateZeroRotation
+	end
+	
+	
+	
+	/** Target bone name. */
+	public func String getTargetBone()
+		return pTargetBone
+	end
+	
+	/** Set target bone name. */
+	public func void setTargetBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pTargetBone = bone
+	end
+	
+	/** Base bone name. */
+	public func String getBaseBone()
+		return pBaseBone
+	end
+	
+	/** Set base bone name. */
+	public func void setBaseBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pBaseBone = bone
+	end
+	
+	/** Tip bone name. */
+	public func String getTipBone()
+		return pTipBone
+	end
+	
+	/** Set tip bone name. */
+	public func void setTipBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pTipBone = bone
+	end
+	
+	/** Count of bones in bone chain up to root bone. */
+	public func int getBoneCount()
+		return pBoneCount
+	end
+	
+	/** Set of bones in bone chain up to root bone. */
+	public func void setBoneCount(int count)
+		if count < 1
+			throw ENullPointer.new("count < 1")
+		end
+		pBoneCount = count
+	end
+	
+	/** Target tracker. */
+	public func MotionTransferTracker getTargetTracker()
+		return pTargetTracker
+	end
+	
+	/** Base tracker. */
+	public func MotionTransferTracker getBaseTracker()
+		return pBaseTracker
+	end
+	
+	/** Scale rotation. */
+	public func Vector getScaleRotation()
+		return pScaleRotation
+	end
+	
+	/** Set scale rotation. */
+	public func void setScaleRotation(Vector scale)
+		if scale == null
+			throw ENullPointer.new("scale")
+		end
+		pScaleRotation = scale
+	end
+	
+	
+	
+	/** Animator definition rule or null. */
+	public func ADRuleBoneTransformator getADRuleRotateX()
+		return pADRuleRotateX
+	end
+	
+	public func ADRuleBoneTransformator getADRuleRotateY()
+		return pADRuleRotateY
+	end
+	
+	public func ADRuleBoneTransformator getADRuleRotateZ()
+		return pADRuleRotateZ
+	end
+	
+	
+	
+	/** Calibrate zero rotation. */
+	public func Vector2 getCalibrateZeroRotation()
+		return pCalibrateZeroRotation
+	end
+	
+	
+	
+	/** Init element clas. */
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
+		pADControllerRotationX = null
+		pADControllerRotationY = null
+		pADControllerRotationZ = null
+		pADRuleRotateX = null
+		pADRuleRotateY = null
+		pADRuleRotateZ = null
+		
+		// add behavior
+		var ECBMotionTransferRotate behavior = ECBMotionTransferRotate.new(eclass, this)
+		
+		// add rules
+		var CharacterTrackerSlot slotTarget, slotBase
+		if not pTargetTracker.getSlot().empty()
+			slotTarget = config.getTrackerSlots().getAt(pTargetTracker.getSlot())
+		end
+		if not pBaseTracker.getSlot().empty()
+			slotBase = config.getTrackerSlots().getAt(pBaseTracker.getSlot())
+		end
+		
+		if slotTarget == null or slotBase == null or pCalibrateBones.getCount() == 0 \
+		or pTargetBone.empty() or pBaseBone.empty() or pTipBone.empty()
+			return
+		end
+		
+		var AnimatorDefinition adef = config.getAnimatorDefinition()
+		var String rootBone = pCalibrateBones.getAt(-1) cast String
+		
+		var float fullRotation = 180
+		var float rotationStep = fullRotation / pCalibrateBones.getCount()
+		
+		pADControllerRotationX = ADController.new()
+		pADControllerRotationX.setName(behavior.getControllerNameRotateX())
+		pADControllerRotationX.setMinimum(-fullRotation)
+		pADControllerRotationX.setMaximum(fullRotation)
+		adef.addController(pADControllerRotationX)
+		
+		pADControllerRotationY = ADController.new()
+		pADControllerRotationY.setName(behavior.getControllerNameRotateY())
+		pADControllerRotationY.setMinimum(-fullRotation)
+		pADControllerRotationY.setMaximum(fullRotation)
+		adef.addController(pADControllerRotationY)
+		
+		pADControllerRotationZ = ADController.new()
+		pADControllerRotationZ.setName(behavior.getControllerNameRotateZ())
+		pADControllerRotationZ.setMinimum(-fullRotation)
+		pADControllerRotationZ.setMaximum(fullRotation)
+		adef.addController(pADControllerRotationZ)
+		
+		var ADLink linkRotateX = ADLink.new()
+		linkRotateX.setController(pADControllerRotationX)
+		adef.addLink(linkRotateX)
+		
+		var ADLink linkRotateY = ADLink.new()
+		linkRotateY.setController(pADControllerRotationY)
+		adef.addLink(linkRotateY)
+		
+		var ADLink linkRotateZ = ADLink.new()
+		linkRotateZ.setController(pADControllerRotationZ)
+		adef.addLink(linkRotateZ)
+		
+		pADRuleRotateX = ADRuleBoneTransformator.new()
+		pADRuleRotateX.setName(getName())
+		pADRuleRotateX.setCoordinateFrame(ARBoneTransformatorCFrame.component)
+		pADRuleRotateX.setMinimumRotation(Vector.new(pScaleRotation.getX() * -rotationStep, 0, 0))
+		pADRuleRotateX.setMaximumRotation(Vector.new(pScaleRotation.getX() * rotationStep, 0, 0))
+		pADRuleRotateX.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkRotateX))
+		pCalibrateBones.forEach(block String each
+			pADRuleRotateX.addBone(each)
+		end)
+		adef.addRule(pADRuleRotateX)
+		
+		pADRuleRotateY = ADRuleBoneTransformator.new()
+		pADRuleRotateY.setName(getName())
+		pADRuleRotateY.setCoordinateFrame(ARBoneTransformatorCFrame.component)
+		pADRuleRotateY.setMinimumRotation(Vector.new(0, pScaleRotation.getY() * -rotationStep, 0))
+		pADRuleRotateY.setMaximumRotation(Vector.new(0, pScaleRotation.getY() * rotationStep, 0))
+		pADRuleRotateY.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkRotateY))
+		pCalibrateBones.forEach(block String each
+			pADRuleRotateY.addBone(each)
+		end)
+		adef.addRule(pADRuleRotateY)
+		
+		pADRuleRotateZ = ADRuleBoneTransformator.new()
+		pADRuleRotateZ.setName(getName())
+		pADRuleRotateZ.setCoordinateFrame(ARBoneTransformatorCFrame.component)
+		pADRuleRotateZ.setMinimumRotation(Vector.new(0, 0, pScaleRotation.getZ() * -rotationStep))
+		pADRuleRotateZ.setMaximumRotation(Vector.new(0, 0, pScaleRotation.getZ() * rotationStep))
+		pADRuleRotateZ.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkRotateZ))
+		pCalibrateBones.forEach(block String each
+			pADRuleRotateZ.addBone(each)
+		end)
+		adef.addRule(pADRuleRotateZ)
+		
+		// register bones to record
+		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
+		if recordAnimation != null
+			recordAnimation.addBones(pCalibrateBones)
+		end
+	end
+	
+	/** Reset calibration. */
+	public func void resetCalibration()
+		pCalibrateBones.removeAll()
+		pTargetTracker.resetTransform()
+		pBaseTracker.resetTransform()
+		pCalibrateZeroRotation = Vector2.new()
+	end
+	
+	/** Calibrate character. */
+	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
+	BaseVRActor actor, Component component)
+		findBoneChain(component.getRig(), pTipBone, pBoneCount, pCalibrateBones)
+		
+		pTargetTracker.resolveRealSlot(config)
+		pTargetTracker.setTransform(component, pTargetBone)
+		
+		pBaseTracker.resolveRealSlot(config)
+		pBaseTracker.setTransform(component, pBaseBone)
+		
+		// calibrate zero rotation
+		pCalibrateZeroRotation = Vector2.new()
+		
+		var int indexBase = -1, indexTarget = -1
+		if not pBaseBone.empty() and not pTargetBone.empty()
+			indexBase = component.indexOfBoneNamed(pBaseBone)
+			indexTarget = component.indexOfBoneNamed(pTargetBone)
+		end
+		
+		if indexBase != -1 and indexTarget != -1
+			var Matrix baseMatrix = Matrix.newRT(pBaseTracker.getOffsetRotation(), \
+				pBaseTracker.getOffsetPosition()) * component.boneGetMatrix(indexBase)
+			var Matrix baseMatrixInv = baseMatrix.getInverse()
+			
+			var Matrix targetMatrix = Matrix.newRT(pTargetTracker.getOffsetRotation(), \
+				pTargetTracker.getOffsetPosition()) * component.boneGetMatrix(indexTarget)
+				
+			var Vector position = baseMatrixInv * targetMatrix.getPosition()
+			
+			pCalibrateZeroRotation = Vector2.new(\
+				DEMath.atan2(position.getY(), position.getZ()),\
+				DEMath.atan2(position.getZ(), position.getX()))
+		end
+		
+		GameApp.getGameApp().getConsole().addMessage("MotionTransferRotate.calibrate: name='" \
+			+ getName() + "' zeroRot=" + pCalibrateZeroRotation)
+	end
+	
+	/** Find bone chain. */
+	protected func void findBoneChain(Rig rig, String targetBone, int boneCount, Array bones)
+		bones.removeAll()
+		
+		var int index = rig.indexOfBoneNamed(targetBone)
+		while index != -1 and boneCount-- > 0
+			bones.add(rig.boneGetName(index))
+			index = rig.boneGetParent(index)
+		end
+	end
+	
+	/** Create copy of motion transfer. */
+	public func MotionTransfer createCopy()
+		return MotionTransferRotate.new(this)
+	end
+	
+	/** Load from XML. */
+	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("name")
+				setName(element.getFirstCData())
+				
+			elif tagName.equals("targetBone")
+				setTargetBone(element.getFirstCData())
+				
+			elif tagName.equals("baseBone")
+				setBaseBone(element.getFirstCData())
+				
+			elif tagName.equals("tipBone")
+				setTipBone(element.getFirstCData())
+				
+			elif tagName.equals("boneCount")
+				setBoneCount(element.getFirstCDataInt())
+				
+			elif tagName.equals("targetTracker")
+				pTargetTracker.load(loader, element)
+				
+			elif tagName.equals("baseTracker")
+				pBaseTracker.load(loader, element)
+				
+			elif tagName.equals("scaleRotation")
+				setScaleRotation(loader.readVector(element))
+				
+			elif tagName.equals("calibrated")
+				loadCalibrated(loader, element)
+			end
+		end)
+	end
+	
+	protected func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("bone")
+				pCalibrateBones.add(element.getFirstCData())
+				
+			elif tagName.equals("targetTracker")
+				pTargetTracker.loadCalibrated(loader, element)
+				
+			elif tagName.equals("baseTracker")
+				pBaseTracker.loadCalibrated(loader, element)
+				
+			elif tagName.equals("calibrateZeroRotation")
+				pCalibrateZeroRotation = loader.readVector2(element)
+			end
+		end)
+	end
+	
+	/** Save to XML. */
+	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+		tag.addDataTag("name", getName())
+		tag.addDataTag("targetBone", pTargetBone)
+		tag.addDataTag("baseBone", pBaseBone)
+		tag.addDataTag("tipBone", pTipBone)
+		tag.addDataTag("boneCount", pBoneCount)
+		pTargetTracker.save(loader, tag.addTag("targetTracker"))
+		pBaseTracker.save(loader, tag.addTag("baseTracker"))
+		loader.writeVector(tag, "scaleRotation", pScaleRotation)
+		saveCalibrated(loader, tag.addTag("calibrated"))
+	end
+	
+	protected func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+		pCalibrateBones.forEach(block String each
+			tag.addDataTag("bone", each)
+		end)
+		pTargetTracker.saveCalibrated(loader, tag.addTag("targetTracker"))
+		pBaseTracker.saveCalibrated(loader, tag.addTag("baseTracker"))
+		loader.writeVector2(tag, "calibrateZeroRotation", pCalibrateZeroRotation)
+	end
+end

@@ -1,0 +1,239 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Commands
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior for MotionTransferSlot.
+ */
+class ECBMotionTransferSlot extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Copy slots. */
+		class CopySlots extends ECBehaviorActorAnimated.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void updateControllers(ECBehaviorActorAnimated.Instance instance, float elapsed)
+				pInstance.copySlots()
+			end
+		end
+		
+		
+		
+		private var ECBMotionTransferSlot pECBehavior
+		private var ECBehaviorActorAnimated.Instance pActorAnimated
+		private var ECBTrackerSlot.Instance pSlotTarget
+		private var ECBTrackerSlot.Instance pSlotSource
+		private var Matrix pTransform
+		private var Vector pScaleRotation
+		
+		
+		
+		/** Create instance. */
+		public func new(ECBMotionTransferSlot ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			
+			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
+			pScaleRotation = ecbehavior.getTransfer().getScaleRotation()
+			
+			if ecbehavior.getSlotTarget() != null
+				pSlotTarget = ecbehavior.getSlotTarget().instance(element)
+			end
+			
+			if ecbehavior.getSlotSource() != null
+				pSlotSource = ecbehavior.getSlotSource().instance(element)
+				pTransform = ecbehavior.getTransfer().getSource().getTransformMatrix()
+			end
+		end
+		
+		/** Dispose of instance. */
+		public func void dispose()
+			pSlotSource = null
+			pSlotTarget = null
+			pActorAnimated = null
+			super.dispose()
+		end
+		
+		
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			pActorAnimated.addListener(CopySlots.new(this))
+		end
+		
+		
+		
+		/** Behavior. */
+		public func ECBMotionTransferSlot getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Actor animated. */
+		public func ECBehaviorActorAnimated.Instance getActorAnimated()
+			return pActorAnimated
+		end
+		
+		/** Target slot behavior instance or null. */
+		public func ECBTrackerSlot.Instance getSlotTarget()
+			return pSlotTarget
+		end
+		
+		/** Source slot behavior instance or null. */
+		public func ECBTrackerSlot.Instance getSlotSource()
+			return pSlotSource
+		end
+		
+		
+		
+		/** Copy slots. */
+		public func void copySlots()
+			if pSlotTarget == null or pSlotSource == null or pSlotTarget.isAttached()
+				return
+			end
+			
+			var Matrix matrix = pTransform * pSlotSource.getMatrixPlayspace()
+			
+			var Vector position = matrix.getPosition()
+			var Vector rotation = matrix.normalize().getEulerAngles().compMultiply(pScaleRotation)
+			
+			pSlotTarget.setMatrixPlayspace(position, rotation)
+		end
+	end
+	
+	
+	
+	private var MotionTransferSlot pTransfer
+	private var ECBehaviorActorAnimated pActorAnimated
+	private var ECBTrackerSlot pSlotTarget
+	private var ECBTrackerSlot pSlotSource
+	
+	
+	
+	/** Create behavior element class. */
+	public func new(BaseVRActorClass eclass, MotionTransferSlot transfer) super(eclass, transfer.getName())
+		if transfer == null
+			throw ENullPointer.new("transfer")
+		end
+		
+		var String subId = "MotionTransferSlot(" + transfer.getName() + ")"
+		var String prefix = subId + "."
+		
+		pTransfer = transfer
+		pActorAnimated = eclass.getActorAnimated()
+		if transfer.getTarget() != null
+			pSlotTarget = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getTarget())
+		end
+		if transfer.getSource() != null
+			pSlotSource = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getSource().getSlot())
+		end
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pTransfer = null
+		pActorAnimated = null
+		pSlotSource = null
+		pSlotTarget = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Motion transfer. */
+	public func MotionTransferSlot getTransfer()
+		return pTransfer
+	end
+	
+	/** Actor animated behavior. */
+	public func ECBehaviorActorAnimated getActorAnimated()
+		return pActorAnimated
+	end
+	
+	/** Target slot behavior or null. */
+	public func ECBTrackerSlot getSlotTarget()
+		return pSlotTarget
+	end
+	
+	/** Source slot behavior or null. */
+	public func ECBTrackerSlot getSlotSource()
+		return pSlotSource
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
+	end
+	
+	
+	
+	/** Get behavior with slot name in element class or null if absent. */
+	static public func ECBMotionTransferSlot getBehaviorIn(BehaviorElementClass eclass, String slotName)
+		return eclass.findBehavior(block ECBMotionTransferSlot each
+			return each.getTransfer().getName().equals(slotName)
+		end) cast ECBMotionTransferSlot
+	end
+	
+	/** Get list of all behaviors in element. */
+	static public func Array getAllBehaviorsIn(BehaviorElementClass eclass)
+		return eclass.collectBehaviors(block ECBMotionTransferSlot each
+			return true
+		end)
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element, String slotName)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getTransfer().getName().equals(slotName)
+		end) cast Instance
+	end
+	
+	/** Get list of all instances in element. */
+	static public func Array getAllInstancesIn(BehaviorElement element)
+		return element.collectInstances(block Instance each
+			return true
+		end)
+	end
+	
+	
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

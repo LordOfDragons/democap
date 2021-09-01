@@ -1,0 +1,174 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Democap.Actors
+pin Democap.Behaviors
+pin Democap.Characters
+
+pin Dragengine.Animators
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+/**
+ * Motion transfer set slot position and rotation relative to another slot. If target slot
+ * has a tracker assigned no transformation is applied. This can be used for example to
+ * update a chest slot using a HMD slot if the chest slot has no tracker attached.
+ */
+class MotionTransferSlot extends DefaultMotionTransfer
+	/** Factory. */
+	class Factory implements MotionTransferFactory
+		public func new()
+		end
+		
+		public func String factoryID()
+			return "slot"
+		end
+		
+		public func MotionTransfer createMotionTransfer()
+			return MotionTransferSlot.new(factoryID())
+		end
+	end
+	
+	
+	
+	private var String pTarget
+	private var MotionTransferTracker pSource
+	private var Vector pScaleRotation
+	
+	
+	
+	/** Create motion transfer. */
+	public func new(String factoryID) super(factoryID)
+		pTarget = ""
+		pSource = MotionTransferTracker.new()
+		pScaleRotation = Vector.new(1, 1, 1)
+	end
+	
+	/** Create copy of motion transfer. */
+	public func new(MotionTransferSlot transfer) super(transfer.factoryID())
+		pTarget = transfer.pTarget
+		pSource = MotionTransferTracker.new(transfer.pSource)
+		pScaleRotation = transfer.pScaleRotation
+	end
+	
+	
+	
+	/** Target slot. */
+	public func String getTarget()
+		return pTarget
+	end
+	
+	/** Set target slot. */
+	public func void setTarget(String slot)
+		if slot == null
+			throw ENullPointer.new("slot")
+		end
+		pTarget = slot
+	end
+	
+	/** Source slot. */
+	public func MotionTransferTracker getSource()
+		return pSource
+	end
+	
+	/** Scale transformed rotation. */
+	public func Vector getScaleRotation()
+		return pScaleRotation
+	end
+	
+	/** Set scaling to apply to transformed rotation. */
+	public func void setScaleRotation(Vector scale)
+		if scale == null
+			throw ENullPointer.new("scale")
+		end
+		pScaleRotation = scale
+	end
+	
+	
+	
+	/** Init element clas. */
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
+		ECBMotionTransferSlot.new(eclass, this)
+	end
+	
+	/** Reset calibration. */
+	public func void resetCalibration()
+		pSource.resetTransform()
+	end
+	
+	/** Calibrate character. */
+	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
+	BaseVRActor actor, Component component)
+		pSource.resolveRealSlot(config)
+		pSource.resetTransform()
+	end
+	
+	/** Create copy of motion transfer. */
+	public func MotionTransfer createCopy()
+		return MotionTransferSlot.new(this)
+	end
+	
+	/** Load from XML. */
+	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("name")
+				setName(element.getFirstCData())
+				
+			elif tagName.equals("target")
+				setTarget(element.getFirstCData())
+				
+			elif tagName.equals("source")
+				pSource.load(loader, element)
+				
+			elif tagName.equals("scaleRotation")
+				setScaleRotation(loader.readVector(element))
+				
+			elif tagName.equals("calibrated")
+				loadCalibrated(loader, element)
+			end
+		end)
+	end
+	
+	protected func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("tracker")
+				pSource.loadCalibrated(loader, element)
+			end
+		end)
+	end
+	
+	/** Save to XML. */
+	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+		tag.addDataTag("name", getName())
+		tag.addDataTag("target", pTarget)
+		pSource.save(loader, tag.addTag("source"))
+		loader.writeVector(tag, "scaleRotation", pScaleRotation)
+	end
+	
+	protected func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+		pSource.saveCalibrated(loader, tag.addTag("tracker"))
+	end
+end
