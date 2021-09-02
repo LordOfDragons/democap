@@ -73,6 +73,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var Component pComponent
 		private var int pTargetBone
 		private var float pScaleReach
+		private var Quaternion pTwistQuat, pTwistQuatInv
 		
 		
 		
@@ -85,6 +86,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			
 			pTargetOffset = ecbehavior.getTransfer().getCalibrateTargetOffset()
 			pScaleReach = ecbehavior.getTransfer().getCalibrateReachScale()
+			pTwistQuat = Quaternion.newFromEuler(ecbehavior.getTransfer().getTwistAxisRotation())
+			pTwistQuatInv = pTwistQuat.conjugate()
 			
 			if ecbehavior.getSlotTarget() != null
 				pSlotTarget = ecbehavior.getSlotTarget().instance(element)
@@ -210,7 +213,22 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			
 			if pControllerTwist != null
 				if pTargetBone != -1
-					pControllerTwist.setValue(pComponent.boneGetRotation(pTargetBone).getEulerAngles().getZ())
+					if true // using bone local twist
+						//pControllerTwist.setValue(pComponent.boneGetRotation(pTargetBone).getEulerAngles().getZ())
+						
+						var Quaternion orientation = pTwistQuat * pComponent.boneGetRotation(pTargetBone) * pTwistQuatInv
+						pControllerTwist.setValue(orientation.getEulerAngles().getZ())
+						
+					else
+						var Quaternion orientation = pTwistQuat * pComponent.boneGetRotation(pTargetBone) * pTwistQuatInv
+						var float angle = orientation.getEulerAngles().getZ()
+						
+// 						if pECBehavior.getTransfer().getName().equals("Head Spine")
+// 							getElement().log("Twist: " + angle)
+// 						end
+						
+						pControllerTwist.setValue(angle)
+					end
 					
 				else
 					pControllerTwist.setValue(0)
