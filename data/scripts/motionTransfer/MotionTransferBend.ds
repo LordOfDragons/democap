@@ -46,18 +46,18 @@ pin Dragengine.XML
  * along each axis. This rotation is split across all bones in the chain. The amount
  * of transfered rotation can be scaled.
  */
-class MotionTransferRotate extends DefaultMotionTransfer
+class MotionTransferBend extends DefaultMotionTransfer
 	/** Factory. */
 	class Factory implements MotionTransferFactory
 		public func new()
 		end
 		
 		public func String factoryID()
-			return "rotate"
+			return "bend"
 		end
 		
 		public func MotionTransfer createMotionTransfer()
-			return MotionTransferRotate.new(factoryID())
+			return MotionTransferBend.new(factoryID())
 		end
 	end
 	
@@ -69,7 +69,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 	private var int pBoneCount
 	private var MotionTransferTracker pTargetTracker
 	private var MotionTransferTracker pBaseTracker
-	private var Vector pScaleRotation
+	private var Vector2 pScaleRotation
 	
 	private var ADController pADControllerRotationX
 	private var ADController pADControllerRotationY
@@ -80,7 +80,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 	private var ADRuleBoneTransformator pADRuleRotateZ
 	
 	private var Array pCalibrateBones
-	private var Vector pCalibrateZeroRotation
+	private var Vector2 pCalibrateZeroRotation
 	
 	
 	
@@ -92,13 +92,13 @@ class MotionTransferRotate extends DefaultMotionTransfer
 		pBoneCount = 1
 		pTargetTracker = MotionTransferTracker.new()
 		pBaseTracker = MotionTransferTracker.new()
-		pScaleRotation = Vector.new(1, 1, 1)
+		pScaleRotation = Vector2.new(1, 1)
 		pCalibrateBones = Array.new()
-		pCalibrateZeroRotation = Vector.new()
+		pCalibrateZeroRotation = Vector2.new()
 	end
 	
 	/** Create copy of motion transfer. */
-	public func new(MotionTransferRotate transfer) super(transfer.factoryID())
+	public func new(MotionTransferBend transfer) super(transfer.factoryID())
 		pTargetBone = transfer.pTargetBone
 		pBaseBone = transfer.pBaseBone
 		pTipBone = transfer.pTipBone
@@ -174,12 +174,12 @@ class MotionTransferRotate extends DefaultMotionTransfer
 	end
 	
 	/** Scale rotation. */
-	public func Vector getScaleRotation()
+	public func Vector2 getScaleRotation()
 		return pScaleRotation
 	end
 	
 	/** Set scale rotation. */
-	public func void setScaleRotation(Vector scale)
+	public func void setScaleRotation(Vector2 scale)
 		if scale == null
 			throw ENullPointer.new("scale")
 		end
@@ -204,7 +204,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 	
 	
 	/** Calibrate zero rotation. */
-	public func Vector getCalibrateZeroRotation()
+	public func Vector2 getCalibrateZeroRotation()
 		return pCalibrateZeroRotation
 	end
 	
@@ -220,7 +220,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 		pADRuleRotateZ = null
 		
 		// add behavior
-		var ECBMotionTransferRotate behavior = ECBMotionTransferRotate.new(eclass, this)
+		var ECBMotionTransferBend behavior = ECBMotionTransferBend.new(eclass, this)
 		
 		// add rules
 		var CharacterTrackerSlot slotTarget, slotBase
@@ -317,7 +317,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 		pCalibrateBones.removeAll()
 		pTargetTracker.resetTransform()
 		pBaseTracker.resetTransform()
-		pCalibrateZeroRotation = Vector.new()
+		pCalibrateZeroRotation = Vector2.new()
 	end
 	
 	/** Calibrate character. */
@@ -332,7 +332,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 		pBaseTracker.setTransform(component, pBaseBone)
 		
 		// calibrate zero rotation
-		pCalibrateZeroRotation = Vector.new()
+		pCalibrateZeroRotation = Vector2.new()
 		
 		var int indexBase = -1, indexTarget = -1
 		if not pBaseBone.empty() and not pTargetBone.empty()
@@ -351,13 +351,12 @@ class MotionTransferRotate extends DefaultMotionTransfer
 			var Matrix transform = targetMatrix * baseMatrixInv
 			var Vector position = transform.getPosition()
 			
-			pCalibrateZeroRotation = Vector.new(\
+			pCalibrateZeroRotation = Vector2.new(\
 				DEMath.atan2(position.getY(), position.getZ()),\
-				-DEMath.atan2(position.getX(), position.getZ()),\
-				transform.normalize().getEulerAngles().getZ())
+				-DEMath.atan2(position.getX(), position.getZ()))
 		end
 		
-		GameApp.getGameApp().getConsole().addMessage("MotionTransferRotate.calibrate: name='" \
+		GameApp.getGameApp().getConsole().addMessage("MotionTransferBend.calibrate: name='" \
 			+ getName() + "' zeroRot=" + pCalibrateZeroRotation)
 	end
 	
@@ -374,7 +373,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 	
 	/** Create copy of motion transfer. */
 	public func MotionTransfer createCopy()
-		return MotionTransferRotate.new(this)
+		return MotionTransferBend.new(this)
 	end
 	
 	/** Load from XML. */
@@ -402,7 +401,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 				pBaseTracker.load(loader, element)
 				
 			elif tagName.equals("scaleRotation")
-				setScaleRotation(loader.readVector(element))
+				setScaleRotation(loader.readVector2(element))
 				
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
@@ -422,7 +421,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 				pBaseTracker.loadCalibrated(loader, element)
 				
 			elif tagName.equals("calibrateZeroRotation")
-				pCalibrateZeroRotation = loader.readVector(element)
+				pCalibrateZeroRotation = loader.readVector2(element)
 			end
 		end)
 	end
@@ -436,7 +435,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 		tag.addDataTag("boneCount", pBoneCount)
 		pTargetTracker.save(loader, tag.addTag("targetTracker"))
 		pBaseTracker.save(loader, tag.addTag("baseTracker"))
-		loader.writeVector(tag, "scaleRotation", pScaleRotation)
+		loader.writeVector2(tag, "scaleRotation", pScaleRotation)
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
@@ -446,6 +445,6 @@ class MotionTransferRotate extends DefaultMotionTransfer
 		end)
 		pTargetTracker.saveCalibrated(loader, tag.addTag("targetTracker"))
 		pBaseTracker.saveCalibrated(loader, tag.addTag("baseTracker"))
-		loader.writeVector(tag, "calibrateZeroRotation", pCalibrateZeroRotation)
+		loader.writeVector2(tag, "calibrateZeroRotation", pCalibrateZeroRotation)
 	end
 end

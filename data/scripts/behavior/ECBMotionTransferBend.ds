@@ -32,9 +32,9 @@ pin Dragengine.Utils
 
 
 /**
- * Behavior for MotionTransferRotate.
+ * Behavior for MotionTransferBend.
  */
-class ECBMotionTransferRotate extends DefaultECBehavior
+class ECBMotionTransferBend extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		/** Update controllers. */
@@ -52,7 +52,7 @@ class ECBMotionTransferRotate extends DefaultECBehavior
 		
 		
 		
-		private var ECBMotionTransferRotate pECBehavior
+		private var ECBMotionTransferBend pECBehavior
 		private var ECBehaviorVRPlayspace.Instance pVRPlayspace
 		private var ECBehaviorActorAnimated.Instance pActorAnimated
 		private var ECBTrackerSlot.Instance pSlotTarget
@@ -64,15 +64,13 @@ class ECBMotionTransferRotate extends DefaultECBehavior
 		private var Matrix pTransformBase
 		private var float pZeroRotationX
 		private var float pZeroRotationY
-		private var float pZeroRotationZ
 		private var float pScaleRotationX
 		private var float pScaleRotationY
-		private var float pScaleRotationZ
 		
 		
 		
 		/** Create instance. */
-		public func new(ECBMotionTransferRotate ecbehavior, BehaviorElement element) super(element)
+		public func new(ECBMotionTransferBend ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			
 			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
@@ -80,10 +78,8 @@ class ECBMotionTransferRotate extends DefaultECBehavior
 			
 			pZeroRotationX = ecbehavior.getTransfer().getCalibrateZeroRotation().getX()
 			pZeroRotationY = ecbehavior.getTransfer().getCalibrateZeroRotation().getY()
-			pZeroRotationZ = ecbehavior.getTransfer().getCalibrateZeroRotation().getZ()
 			pScaleRotationX = ecbehavior.getTransfer().getScaleRotation().getX()
 			pScaleRotationY = ecbehavior.getTransfer().getScaleRotation().getY()
-			pScaleRotationZ = ecbehavior.getTransfer().getScaleRotation().getZ()
 			
 			if ecbehavior.getSlotTarget() != null
 				pSlotTarget = ecbehavior.getSlotTarget().instance(element)
@@ -118,7 +114,7 @@ class ECBMotionTransferRotate extends DefaultECBehavior
 		
 		
 		/** Behavior. */
-		public func ECBMotionTransferRotate getECBehavior()
+		public func ECBMotionTransferBend getECBehavior()
 			return pECBehavior
 		end
 		
@@ -171,11 +167,9 @@ class ECBMotionTransferRotate extends DefaultECBehavior
 			
 			var float rotateX = DEMath.atan2(position.getY(), position.getZ()) - pZeroRotationX
 			var float rotateY = -DEMath.atan2(position.getX(), position.getZ()) - pZeroRotationY
-			var float rotateZ = 0 //matrix.normalize().getEulerAngles().getZ() - pZeroRotationZ
 			
 			matrix = baseMatrix.normalize()
-			matrix = Matrix.newRotationAxis(matrix.getViewVector(), rotateZ * pScaleRotationZ) \
-				* Matrix.newRotationAxis(matrix.getRightVector(), rotateX * pScaleRotationX) \
+			matrix = Matrix.newRotationAxis(matrix.getRightVector(), rotateX * pScaleRotationX) \
 				* Matrix.newRotationAxis(matrix.getUpVector(), rotateY * pScaleRotationY)
 			var Vector rotation = matrix.getEulerAngles()
 			
@@ -193,7 +187,7 @@ class ECBMotionTransferRotate extends DefaultECBehavior
 	
 	
 	
-	private var MotionTransferRotate pTransfer
+	private var MotionTransferBend pTransfer
 	private var ECBehaviorVRPlayspace pVRPlayspace
 	private var ECBehaviorActorAnimated pActorAnimated
 	private var ECBTrackerSlot pSlotTarget
@@ -205,12 +199,12 @@ class ECBMotionTransferRotate extends DefaultECBehavior
 	
 	
 	/** Create behavior element class. */
-	public func new(BaseVRActorClass eclass, MotionTransferRotate transfer) super(eclass, transfer.getName())
+	public func new(BaseVRActorClass eclass, MotionTransferBend transfer) super(eclass, transfer.getName())
 		if transfer == null
 			throw ENullPointer.new("transfer")
 		end
 		
-		var String subId = "motionTransferRotate(" + transfer.getName() + ")"
+		var String subId = "motionTransferBend(" + transfer.getName() + ")"
 		var String prefix = subId + "."
 		
 		pTransfer = transfer
@@ -243,7 +237,7 @@ class ECBMotionTransferRotate extends DefaultECBehavior
 	
 	
 	/** Motion transfer. */
-	public func MotionTransferRotate getTransfer()
+	public func MotionTransferBend getTransfer()
 		return pTransfer
 	end
 	
@@ -290,15 +284,15 @@ class ECBMotionTransferRotate extends DefaultECBehavior
 	
 	
 	/** Get behavior with slot name in element class or null if absent. */
-	static public func ECBMotionTransferRotate getBehaviorIn(BehaviorElementClass eclass, String slotName)
-		return eclass.findBehavior(block ECBMotionTransferRotate each
+	static public func ECBMotionTransferBend getBehaviorIn(BehaviorElementClass eclass, String slotName)
+		return eclass.findBehavior(block ECBMotionTransferBend each
 			return each.getTransfer().getName().equals(slotName)
-		end) cast ECBMotionTransferRotate
+		end) cast ECBMotionTransferBend
 	end
 	
 	/** Get list of all behaviors in element. */
 	static public func Array getAllBehaviorsIn(BehaviorElementClass eclass)
-		return eclass.collectBehaviors(block ECBMotionTransferRotate each
+		return eclass.collectBehaviors(block ECBMotionTransferBend each
 			return true
 		end)
 	end
