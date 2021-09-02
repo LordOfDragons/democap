@@ -62,9 +62,12 @@ class ECBMotionTransferRotate extends DefaultECBehavior
 		private var AnimatorController pControllerRotateZ
 		private var Matrix pTransformTarget
 		private var Matrix pTransformBase
-		private var Matrix pTransformBaseReverse
 		private var float pZeroRotationX
 		private var float pZeroRotationY
+		private var float pZeroRotationZ
+		private var float pScaleRotationX
+		private var float pScaleRotationY
+		private var float pScaleRotationZ
 		
 		
 		
@@ -77,6 +80,10 @@ class ECBMotionTransferRotate extends DefaultECBehavior
 			
 			pZeroRotationX = ecbehavior.getTransfer().getCalibrateZeroRotation().getX()
 			pZeroRotationY = ecbehavior.getTransfer().getCalibrateZeroRotation().getY()
+			pZeroRotationZ = ecbehavior.getTransfer().getCalibrateZeroRotation().getZ()
+			pScaleRotationX = ecbehavior.getTransfer().getScaleRotation().getX()
+			pScaleRotationY = ecbehavior.getTransfer().getScaleRotation().getY()
+			pScaleRotationZ = ecbehavior.getTransfer().getScaleRotation().getZ()
 			
 			if ecbehavior.getSlotTarget() != null
 				pSlotTarget = ecbehavior.getSlotTarget().instance(element)
@@ -85,7 +92,6 @@ class ECBMotionTransferRotate extends DefaultECBehavior
 			if ecbehavior.getSlotBase() != null
 				pSlotBase = ecbehavior.getSlotBase().instance(element)
 				pTransformBase = ecbehavior.getTransfer().getBaseTracker().getTransformMatrix()
-				pTransformBaseReverse = pTransformBase.getInverse()
 			end
 		end
 		
@@ -157,19 +163,20 @@ class ECBMotionTransferRotate extends DefaultECBehavior
 				return
 			end
 			
-			var Matrix baseMatrix = pSlotBase.getMatrixPlayspace()
+			var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixPlayspace()
 			
-			var Matrix matrix = pTransformTarget * pSlotTarget.getMatrixPlayspace() \
-				* baseMatrix.getInverse() * pTransformBaseReverse
+			var Matrix matrix = pTransformTarget * pSlotTarget.getMatrixPlayspace() * baseMatrix.getInverse()
 			
 			var Vector position = matrix.getPosition()
 			
 			var float rotateX = DEMath.atan2(position.getY(), position.getZ()) - pZeroRotationX
-			var float rotateY = DEMath.atan2(position.getZ(), position.getX()) - pZeroRotationY
+			var float rotateY = -DEMath.atan2(position.getX(), position.getZ()) - pZeroRotationY
+			var float rotateZ = 0 //matrix.normalize().getEulerAngles().getZ() - pZeroRotationZ
 			
-			matrix = pTransformBase * baseMatrix
-			matrix = Matrix.newRotationAxis(matrix.getRightVector(), rotateX) \
-				* Matrix.newRotationAxis(matrix.getUpVector(), rotateY)
+			matrix = baseMatrix.normalize()
+			matrix = Matrix.newRotationAxis(matrix.getViewVector(), rotateZ * pScaleRotationZ) \
+				* Matrix.newRotationAxis(matrix.getRightVector(), rotateX * pScaleRotationX) \
+				* Matrix.newRotationAxis(matrix.getUpVector(), rotateY * pScaleRotationY)
 			var Vector rotation = matrix.getEulerAngles()
 			
 			if pControllerRotateX != null

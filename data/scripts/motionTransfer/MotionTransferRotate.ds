@@ -80,7 +80,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 	private var ADRuleBoneTransformator pADRuleRotateZ
 	
 	private var Array pCalibrateBones
-	private var Vector2 pCalibrateZeroRotation
+	private var Vector pCalibrateZeroRotation
 	
 	
 	
@@ -94,7 +94,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 		pBaseTracker = MotionTransferTracker.new()
 		pScaleRotation = Vector.new(1, 1, 1)
 		pCalibrateBones = Array.new()
-		pCalibrateZeroRotation = Vector2.new()
+		pCalibrateZeroRotation = Vector.new()
 	end
 	
 	/** Create copy of motion transfer. */
@@ -204,7 +204,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 	
 	
 	/** Calibrate zero rotation. */
-	public func Vector2 getCalibrateZeroRotation()
+	public func Vector getCalibrateZeroRotation()
 		return pCalibrateZeroRotation
 	end
 	
@@ -272,11 +272,22 @@ class MotionTransferRotate extends DefaultMotionTransfer
 		linkRotateZ.setController(pADControllerRotationZ)
 		adef.addLink(linkRotateZ)
 		
+		pADRuleRotateZ = ADRuleBoneTransformator.new()
+		pADRuleRotateZ.setName(getName())
+		pADRuleRotateZ.setCoordinateFrame(ARBoneTransformatorCFrame.component)
+		pADRuleRotateZ.setMinimumRotation(Vector.new(0, 0, -rotationStep))
+		pADRuleRotateZ.setMaximumRotation(Vector.new(0, 0, rotationStep))
+		pADRuleRotateZ.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkRotateZ))
+		pCalibrateBones.forEach(block String each
+			pADRuleRotateZ.addBone(each)
+		end)
+		adef.addRule(pADRuleRotateZ)
+		
 		pADRuleRotateX = ADRuleBoneTransformator.new()
 		pADRuleRotateX.setName(getName())
 		pADRuleRotateX.setCoordinateFrame(ARBoneTransformatorCFrame.component)
-		pADRuleRotateX.setMinimumRotation(Vector.new(pScaleRotation.getX() * -rotationStep, 0, 0))
-		pADRuleRotateX.setMaximumRotation(Vector.new(pScaleRotation.getX() * rotationStep, 0, 0))
+		pADRuleRotateX.setMinimumRotation(Vector.new(-rotationStep, 0, 0))
+		pADRuleRotateX.setMaximumRotation(Vector.new(rotationStep, 0, 0))
 		pADRuleRotateX.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkRotateX))
 		pCalibrateBones.forEach(block String each
 			pADRuleRotateX.addBone(each)
@@ -286,24 +297,13 @@ class MotionTransferRotate extends DefaultMotionTransfer
 		pADRuleRotateY = ADRuleBoneTransformator.new()
 		pADRuleRotateY.setName(getName())
 		pADRuleRotateY.setCoordinateFrame(ARBoneTransformatorCFrame.component)
-		pADRuleRotateY.setMinimumRotation(Vector.new(0, pScaleRotation.getY() * -rotationStep, 0))
-		pADRuleRotateY.setMaximumRotation(Vector.new(0, pScaleRotation.getY() * rotationStep, 0))
+		pADRuleRotateY.setMinimumRotation(Vector.new(0, -rotationStep, 0))
+		pADRuleRotateY.setMaximumRotation(Vector.new(0, rotationStep, 0))
 		pADRuleRotateY.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkRotateY))
 		pCalibrateBones.forEach(block String each
 			pADRuleRotateY.addBone(each)
 		end)
 		adef.addRule(pADRuleRotateY)
-		
-		pADRuleRotateZ = ADRuleBoneTransformator.new()
-		pADRuleRotateZ.setName(getName())
-		pADRuleRotateZ.setCoordinateFrame(ARBoneTransformatorCFrame.component)
-		pADRuleRotateZ.setMinimumRotation(Vector.new(0, 0, pScaleRotation.getZ() * -rotationStep))
-		pADRuleRotateZ.setMaximumRotation(Vector.new(0, 0, pScaleRotation.getZ() * rotationStep))
-		pADRuleRotateZ.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkRotateZ))
-		pCalibrateBones.forEach(block String each
-			pADRuleRotateZ.addBone(each)
-		end)
-		adef.addRule(pADRuleRotateZ)
 		
 		// register bones to record
 		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
@@ -317,7 +317,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 		pCalibrateBones.removeAll()
 		pTargetTracker.resetTransform()
 		pBaseTracker.resetTransform()
-		pCalibrateZeroRotation = Vector2.new()
+		pCalibrateZeroRotation = Vector.new()
 	end
 	
 	/** Calibrate character. */
@@ -332,7 +332,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 		pBaseTracker.setTransform(component, pBaseBone)
 		
 		// calibrate zero rotation
-		pCalibrateZeroRotation = Vector2.new()
+		pCalibrateZeroRotation = Vector.new()
 		
 		var int indexBase = -1, indexTarget = -1
 		if not pBaseBone.empty() and not pTargetBone.empty()
@@ -347,12 +347,14 @@ class MotionTransferRotate extends DefaultMotionTransfer
 			
 			var Matrix targetMatrix = Matrix.newRT(pTargetTracker.getOffsetRotation(), \
 				pTargetTracker.getOffsetPosition()) * component.boneGetMatrix(indexTarget)
-				
-			var Vector position = baseMatrixInv * targetMatrix.getPosition()
 			
-			pCalibrateZeroRotation = Vector2.new(\
+			var Matrix transform = targetMatrix * baseMatrixInv
+			var Vector position = transform.getPosition()
+			
+			pCalibrateZeroRotation = Vector.new(\
 				DEMath.atan2(position.getY(), position.getZ()),\
-				DEMath.atan2(position.getZ(), position.getX()))
+				-DEMath.atan2(position.getX(), position.getZ()),\
+				transform.normalize().getEulerAngles().getZ())
 		end
 		
 		GameApp.getGameApp().getConsole().addMessage("MotionTransferRotate.calibrate: name='" \
@@ -420,7 +422,7 @@ class MotionTransferRotate extends DefaultMotionTransfer
 				pBaseTracker.loadCalibrated(loader, element)
 				
 			elif tagName.equals("calibrateZeroRotation")
-				pCalibrateZeroRotation = loader.readVector2(element)
+				pCalibrateZeroRotation = loader.readVector(element)
 			end
 		end)
 	end
@@ -444,6 +446,6 @@ class MotionTransferRotate extends DefaultMotionTransfer
 		end)
 		pTargetTracker.saveCalibrated(loader, tag.addTag("targetTracker"))
 		pBaseTracker.saveCalibrated(loader, tag.addTag("baseTracker"))
-		loader.writeVector2(tag, "calibrateZeroRotation", pCalibrateZeroRotation)
+		loader.writeVector(tag, "calibrateZeroRotation", pCalibrateZeroRotation)
 	end
 end
