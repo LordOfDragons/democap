@@ -141,6 +141,13 @@ class CharacterConfiguration
 	public func void dispose()
 		dropElementClass()
 		disposeOldElementClass()
+		
+		if pTrackerSlots != null
+			pTrackerSlots.forEach(block CharacterTrackerSlot each
+				each.dispose()
+			end)
+		end
+		
 		pProfile = null
 	end
 	
@@ -391,6 +398,10 @@ class CharacterConfiguration
 	
 	/** Calibrate character. */
 	public func void calibrate(BaseVRActor actor, ActorProfile actorProfile)
+		if pProfile.getOriginBone().empty()
+			throw EInvalidParam.new("profile.originBone is empty")
+		end
+		
 		// drop element class. we need to create a new one
 		dropElementClass()
 		
@@ -522,20 +533,19 @@ class CharacterConfiguration
 			mocapAnimator.getAnimation().setPath(pProfile.getAppearance().getPathAnimation())
 			mocapAnimator.getAnimation().setAnimation(pProfile.getAppearance().getAnimation())
 			
-			ECBRecordAnimation.new(eclass)
+			var ECBRecordAnimation recordAnimation = ECBRecordAnimation.new(eclass)
 			
 			pAnimatorDefinition = AnimatorDefinition.new("")
 			
-			if pMoveCalibrate.empty()
-				var ADRuleStateManipulator rule = ADRuleStateManipulator.new()
-				rule.setName("Reset State")
-				rule.setEnablePosition(true)
-				rule.setEnableSize(true)
-				pAnimatorDefinition.addRule(rule)
-				
-			else
+			var ADRuleStateManipulator ruleInit = ADRuleStateManipulator.new()
+			ruleInit.setName("Init")
+			ruleInit.setEnablePosition(true)
+			ruleInit.setEnableSize(true)
+			pAnimatorDefinition.addRule(ruleInit)
+			
+			if not pMoveCalibrate.empty()
 				var ADRuleAnimation rule = ADRuleAnimation.new()
-				rule.setName("Reset State")
+				rule.setName("Init Move Calibrate")
 				rule.setMoveName(pMoveCalibrate)
 				pAnimatorDefinition.addRule(rule)
 			end
@@ -551,6 +561,35 @@ class CharacterConfiguration
 			pMotionTransfers.forEach(block MotionTransfer each
 				each.initElementClass(this, eclass)
 			end)
+			
+			// add behavior moving origin bone to calibration origin if present
+			if not pProfile.getOriginBone().empty()
+				var Animator animator = Animator.new()
+				var Vector translation = pMatrixCalibrateInv.getPosition()
+				var Vector rotation = pMatrixCalibrateInv.getEulerAngles()
+				
+				var ARStateSnapshot ruleCurState = ARStateSnapshot.new()
+				ruleCurState.setUseLastState(true)
+				ruleCurState.setEnableSize(true)
+				animator.addRule(ruleCurState)
+				
+				var ARBoneTransformator ruleMove = ARBoneTransformator.new()
+				ruleMove.setEnablePosition(true)
+				ruleMove.setEnableOrientation(true)
+				ruleMove.setCoordinateFrame(ARBoneTransformatorCFrame.component)
+				ruleMove.setMinimumTranslation(translation)
+				ruleMove.setMaximumTranslation(translation)
+				ruleMove.setMinimumRotation(rotation)
+				ruleMove.setMaximumRotation(rotation)
+				ruleMove.addBone(pProfile.getOriginBone())
+				animator.addRule(ruleMove)
+				
+				animator.addBone(pProfile.getOriginBone())
+				
+				recordAnimation.addBone(pProfile.getOriginBone())
+				
+				ECBMoveOriginBone.new(eclass, animator)
+			end
 			
 			// finalize motion capture animator
 			var Animator animator = Animator.new()

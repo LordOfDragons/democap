@@ -1,0 +1,144 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Gui
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior moving origin bone to calibration origin.
+ */
+class ECBMoveOriginBone extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Apply animator. */
+		class ApplyAnimator extends ECBehaviorActorAnimated.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void animationApplied(ECBehaviorActorAnimated.Instance instance)
+				pInstance.applyAnimator()
+			end
+		end
+		
+		
+		
+		protected var ECBMoveOriginBone pECBehavior
+		protected var ECBehaviorActorAnimated.Instance pActorAnimated
+		private var Component pComponent
+		private var AnimatorInstance pAnimatorInstance
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBMoveOriginBone ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
+		end
+		
+		/** Dispose of instance. */
+		public func void dispose()
+			pActorAnimated = null
+			super.dispose()
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			pComponent = pActorAnimated.getComponent().getComponent()
+			
+			var Animator animator = pECBehavior.getAnimator()
+			if animator == null
+				return
+			end
+			
+			animator.setRig(pComponent.getRig())
+			
+			pAnimatorInstance = AnimatorInstance.new()
+			pAnimatorInstance.setAnimator(animator)
+			pAnimatorInstance.setComponent(pComponent)
+			
+			pActorAnimated.addListener(ApplyAnimator.new(this))
+		end
+		
+		
+		
+		/** Apply animator. Called after ECBehaviorActorAnimated has been applied. */
+		public func void applyAnimator()
+			if pAnimatorInstance != null
+				pAnimatorInstance.apply()
+			end
+		end
+	end
+	
+	
+	
+	protected var ECBehaviorActorAnimated pActorAnimated
+	protected var Animator pAnimator
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BaseVRActorClass eclass, Animator animator) super(eclass)
+		pActorAnimated = eclass.getActorAnimated()
+		pAnimator = animator
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pActorAnimated = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Actor animated behavior. */
+	public func ECBehaviorActorAnimated getActorAnimated()
+		return pActorAnimated
+	end
+	
+	/** Animator. */
+	public func Animator getAnimator()
+		return pAnimator
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
+	end
+	
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
