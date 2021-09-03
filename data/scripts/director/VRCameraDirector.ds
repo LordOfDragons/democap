@@ -21,6 +21,9 @@
 
 namespace Democap
 
+pin Democap.Behaviors
+pin Democap.Characters
+
 pin Dragengine.CameraDirectors
 pin Dragengine.Commands
 pin Dragengine.Scenery
@@ -32,6 +35,11 @@ pin Dragengine.Scenery
  */
 class VRCameraDirector extends PlayerControlledActorCameraDirector
 	private var ECBehaviorVRHMD.Instance pHMD
+	
+	protected var ECBCharacterConfiguration.Instance character
+	protected var ECBehaviorComponent.Instance component
+	
+	
 	
 	/** Create director. */
 	public func new()
@@ -59,6 +67,13 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 		else
 			pHMD = null
 		end
+	end
+	
+	/** \brief Init behaviors. */
+	protected func void initBehaviors(BehaviorElement element)
+		super.initBehaviors(element)
+		character = ECBCharacterConfiguration.getInstanceIn(element)
+		component = ECBehaviorComponent.getInstanceIn(element)
 	end
 	
 	/** Set camera. */
@@ -89,11 +104,40 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	
 	/** Overrides ElementCameraDirector.getCameraMatrix() */
 	public func DMatrix getCameraMatrix()
-		if pHMD != null and pHMD.isAttached()
-			return pHMD.getMatrix()
-			
-		else
+		if pHMD == null or pHMD.isDetached()
 			return DMatrix.newWorld(getCamera().getPosition(), getCamera().getOrientation())
 		end
+		
+		if character == null or component == null
+			return pHMD.getMatrix()
+		end
+		
+		var CharacterConfiguration config = character.getCharacter()
+		if not config.isCalibrated()
+			return pHMD.getMatrix()
+		end
+		
+		var CharacterAppearance appearance = config.getProfile().getAppearance()
+		var String bone = appearance.getCameraBone()
+		if bone.empty()
+			return pHMD.getMatrix()
+		end
+		
+		var int boneIndex = component.getComponent().indexOfBoneNamed(bone)
+		if boneIndex == -1
+			return pHMD.getMatrix()
+		end
+		
+		// slotMatrix = poseMatrix * calibMatrix
+		// 
+		var DMatrix matrix = (Matrix.newRT(appearance.getCameraRotation(), appearance.getCameraPosition()) \
+			* component.getComponent().boneGetMatrix(boneIndex) \
+			* character.getCharacter().getCalibrateMatrixInverse()).normalize().toDMatrix() \
+			* getActor().getElement().getElementMatrix()
+		
+// 		GameApp.getGameApp().getConsole().addMessage("VRCamDir: " \
+// 			+ matrix.getEulerAngles() + " " + pHMD.getMatrix().getEulerAngles())
+		
+		return matrix
 	end
 end

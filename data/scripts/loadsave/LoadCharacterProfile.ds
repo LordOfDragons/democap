@@ -115,6 +115,15 @@ class LoadCharacterProfile extends BaseXmlLoader
 				
 			elif tagName.equals("animation")
 				appearance.setPathAnimation(element.getFirstCData())
+				
+			elif tagName.equals("cameraBone")
+				appearance.setCameraBone(element.getFirstCData())
+				
+			elif tagName.equals("cameraPosition")
+				appearance.setCameraPosition(readVector(element))
+				
+			elif tagName.equals("cameraRotation")
+				appearance.setCameraRotation(readVector(element))
 			end
 		end)
 	end
@@ -134,6 +143,12 @@ class LoadCharacterProfile extends BaseXmlLoader
 				
 			elif tagName.equals("calibrateScale")
 				configuration.setCalibrateScale(element.getFirstCDataFloat())
+				
+			elif tagName.equals("calibrateCenter")
+				configuration.setCalibrateCenter(readVector(element))
+				
+			elif tagName.equals("calibrateTurn")
+				configuration.setCalibrateTurn(element.getFirstCDataFloat())
 				
 			elif tagName.equals("trackerSlot")
 				readTrackerSlot(element, configuration)
@@ -197,6 +212,9 @@ class LoadCharacterProfile extends BaseXmlLoader
 		tag.addDataTag("skin", appearance.getPathSkin())
 		tag.addDataTag("rig", appearance.getPathRig())
 		tag.addDataTag("animation", appearance.getPathAnimation())
+		tag.addDataTag("cameraBone", appearance.getCameraBone())
+		writeVector(tag, "cameraPosition", appearance.getCameraPosition())
+		writeVector(tag, "cameraRotation", appearance.getCameraRotation())
 	end
 	
 	/** Write configuration. */
@@ -207,6 +225,8 @@ class LoadCharacterProfile extends BaseXmlLoader
 		tag.addDataTag("shoulderLevel", configuration.getShoulderLevel())
 		tag.addDataTag("moveCalibrate", configuration.getMoveCalibrate())
 		tag.addDataTag("calibrateScale", configuration.getCalibrateScale())
+		writeVector(tag, "calibrateCenter", configuration.getCalibrateCenter())
+		tag.addDataTag("calibrateTurn", configuration.getCalibrateTurn())
 		
 		configuration.getTrackerSlots().forEach(block CharacterTrackerSlot each
 			writeTrackerSlot(tag, each)

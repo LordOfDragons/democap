@@ -95,6 +95,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	private var ADRuleTrackTo pADRuleGuide
 	private var ADRuleInverseKinematic pADRuleIK
+	private var ADRuleInverseKinematic pADRuleIKForce
 	private var ADRuleAnimation pADRuleBaseIK
 	private var ADRuleAnimation pADRuleRetracted
 	
@@ -363,6 +364,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADControllerGuideUp = null
 		pADControllerTwist = null
 		pADRuleIK = null
+		pADRuleIKForce = null
 		pADRuleGuide = null
 		pADRuleBaseIK = null
 		pADRuleRetracted = null
@@ -488,6 +490,16 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADRuleIK.addBone(pTargetBone)
 		adef.addRule(pADRuleIK)
 		
+		if false
+			pADRuleIKForce = ADRuleInverseKinematic.new()
+			pADRuleIKForce.setName(getName() + ".force")
+			pADRuleIKForce.setAdjustOrientation(true)
+			pADRuleIKForce.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, linkTargetPosition))
+			pADRuleIKForce.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkTargetOrientation))
+			pADRuleIKForce.addBone(pTargetBone)
+			adef.addRule(pADRuleIKForce)
+		end
+		
 		// post animator
 		adef = AnimatorDefinition.new("")
 		
@@ -556,6 +568,16 @@ class MotionTransferIK extends DefaultMotionTransfer
 				// 
 				// NOTE this one is not working since this would require the rotation to be
 				//      applied before the IK is applied otherwise the rotation is off
+				// 
+				// NOTE it can actually work if it is not problematic if the rotation of
+				//      the spine moves the shoulder and head out of a place a bit. should
+				//      be not a problem in general since the HMD is attached to the head
+				//      after IK not the other way round
+				// 
+				// NOTE this can though turn into a problem since the arm IK is resolved
+				//      before the twist is done (during postThink). this works only if
+				//      each transfer adds an own animator which are applied in sequence.
+				//      then the order is correct although less efficient
 				var Vector axis = trackToVectorFromAxis(pCalibrateGuideTrackAxis)
 				var float angle = pTwistPropagation * maxAngle / count
 				var Vector minRot = axis * -angle

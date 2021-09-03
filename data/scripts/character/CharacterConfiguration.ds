@@ -41,7 +41,13 @@ class CharacterConfiguration
 	
 	private var float pShoulderLevel
 	private var String pMoveCalibrate
+	
+	private var bool pIsCalibrated
 	private var float pCalibrateScale
+	private var Vector pCalibrateCenter
+	private var float pCalibrateTurn
+	private var Matrix pCalibrateMatrix
+	private var Matrix pCalibrateMatrixInverse
 	
 	private var CharacterTrackerSlots pTrackerSlots
 	private var MotionTransfers pMotionTransfers
@@ -64,7 +70,13 @@ class CharacterConfiguration
 		
 		pShoulderLevel = 1.6
 		pMoveCalibrate = ""
+		
+		pIsCalibrated = false
 		pCalibrateScale = 1
+		pCalibrateCenter = Vector.new()
+		pCalibrateTurn = 0
+		pCalibrateMatrix = Matrix.new()
+		pCalibrateMatrixInverse = Matrix.new()
 		
 		pTrackerSlots = CharacterTrackerSlots.new()
 		pMotionTransfers = MotionTransfers.new()
@@ -75,7 +87,13 @@ class CharacterConfiguration
 		pName = configuration.pName
 		pShoulderLevel = configuration.pShoulderLevel
 		pMoveCalibrate = configuration.pMoveCalibrate
+		
+		pIsCalibrated = configuration.pIsCalibrated
 		pCalibrateScale = configuration.pCalibrateScale
+		pCalibrateCenter = configuration.pCalibrateCenter
+		pCalibrateTurn = configuration.pCalibrateTurn
+		pCalibrateMatrix = configuration.pCalibrateMatrix
+		pCalibrateMatrixInverse = configuration.pCalibrateMatrixInverse
 		
 		pTrackerSlots = CharacterTrackerSlots.new()
 		configuration.pTrackerSlots.forEach(block CharacterTrackerSlot each
@@ -143,16 +161,6 @@ class CharacterConfiguration
 		pMoveCalibrate = animation
 	end
 	
-	/** Calibrated scale between actor and character. */
-	public func float getCalibrateScale()
-		return pCalibrateScale
-	end
-	
-	/** Set calibrated scale between actor and character. */
-	public func void setCalibrateScale(float scale)
-		pCalibrateScale = scale
-	end
-	
 	
 	
 	/** Tracker slots. */
@@ -208,8 +216,81 @@ class CharacterConfiguration
 	
 	
 	
+	/** Character is calibrated. */
+	public func bool isCalibrated()
+		return pIsCalibrated
+	end
+	
+	/** Calibrated scale between actor and character. */
+	public func float getCalibrateScale()
+		return pCalibrateScale
+	end
+	
+	/** Set calibrated scale between actor and character. */
+	public func void setCalibrateScale(float scale)
+		pCalibrateScale = scale
+		updateCalibrateMatrix()
+	end
+	
+	/** Calibrated center. */
+	public func Vector getCalibrateCenter()
+		return pCalibrateCenter
+	end
+	
+	/** Set calibrated center. */
+	public func void setCalibrateCenter(Vector center)
+		if center == null
+			throw ENullPointer.new("center")
+		end
+		pCalibrateCenter = center
+		updateCalibrateMatrix()
+	end
+	
+	/** Calibrated turn. */
+	public func float getCalibrateTurn()
+		return pCalibrateTurn
+	end
+	
+	/** Set calibrated turn. */
+	public func void setCalibrateTurn(float turn)
+		pCalibrateTurn = turn
+		updateCalibrateMatrix()
+	end
+	
+	/** Calibrate matrix. */
+	public func Matrix getCalibrateMatrix()
+		return pCalibrateMatrix
+	end
+	
+	/** Inverse calibrate matrix. */
+	public func Matrix getCalibrateMatrixInverse()
+		return pCalibrateMatrixInverse
+	end
+	
+	/** Update calibrate matrix. */
+	public func void updateCalibrateMatrix()
+		pCalibrateMatrix = Matrix.newTranslation(pCalibrateCenter) \
+			* Matrix.newRotationY(pCalibrateTurn) \
+			* Matrix.newScaling(pCalibrateScale, pCalibrateScale, pCalibrateScale)
+		pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
+	end
+	
 	/** Reset calibration. */
 	public func void resetCalibration()
+		pIsCalibrated = false
+		pCalibrateScale = 1
+		pCalibrateCenter = Vector.new()
+		pCalibrateTurn = 0
+		pCalibrateMatrix = Matrix.new()
+		pCalibrateMatrixInverse = Matrix.new()
+		
+		pTrackerSlots.forEach(block CharacterTrackerSlot each
+			each.resetCalibration()
+		end)
+		
+		pMotionTransfers.forEach(block MotionTransfer each
+			each.resetCalibration()
+		end)
 	end
 	
 	/** Calibrate character. */
@@ -277,16 +358,16 @@ class CharacterConfiguration
 		var Vector centerBody = posNeck.compSelect(true, false, true)
 		var float turnBody = turnHMD
 		
-		if true
+		if false
 			centerBody = centerHands.compSelect(true, false, true)
 			turnBody = rotHands + 90
 		end
 		
 		//pCalibrateScale = pShoulderLevel / actorProfile.getShoulderLevel()
 		pCalibrateScale = pShoulderLevel / centerHands.getY()
-		
-		var Matrix matrix = Matrix.newTranslation(-centerBody) * Matrix.newRotationY(-turnBody)\
-			* Matrix.newScaling(pCalibrateScale, pCalibrateScale, pCalibrateScale)
+		pCalibrateCenter = -centerBody
+		pCalibrateTurn = -turnBody
+		updateCalibrateMatrix()
 		
 		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: posHMD=" \
 			+ posHMD + " posRightHand=" + posRightHand + " posLeftHand=" + posLeftHand)
@@ -298,7 +379,7 @@ class CharacterConfiguration
 		
 		// calibrate tracker slots using the calibration matrix
 		pTrackerSlots.forEach(block CharacterTrackerSlot each
-			each.calibrate(actor, matrix)
+			each.calibrate(actor, pCalibrateMatrix)
 		end)
 		
 		// calibrate motion transfers using the calibrated trackers slots
@@ -307,6 +388,9 @@ class CharacterConfiguration
 		pMotionTransfers.forEach(block MotionTransfer each
 			each.calibrate(this, actorProfile, actor, component)
 		end)
+		
+		// save calibration
+		pIsCalibrated = true
 		
 		// calibration finished
 		pProfile.notifyCalibrated(this)
