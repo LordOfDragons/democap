@@ -144,8 +144,8 @@ class LoadCharacterProfile extends BaseXmlLoader
 			elif tagName.equals("moveCalibrate")
 				configuration.setMoveCalibrate(element.getFirstCData())
 				
-			elif tagName.equals("calibrateScale")
-				configuration.setCalibrateScale(element.getFirstCDataFloat())
+			elif tagName.equals("calibrate")
+				readConfigurationCalibrate(element, configuration)
 				
 			elif tagName.equals("trackerSlot")
 				readTrackerSlot(element, configuration)
@@ -166,9 +166,27 @@ class LoadCharacterProfile extends BaseXmlLoader
 		end)
 	end
 	
+	/** Read configuration calibration tag. */
+	public func void readConfigurationCalibrate(EasyXMLElement root, CharacterConfiguration configuration)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("scale")
+				configuration.setCalibrateScale(element.getFirstCDataFloat())
+				
+			elif tagName.equals("matrix")
+				configuration.setMatrixCalibrate(Matrix.new(\
+					element.getAttributeFloatNamed("a11"), element.getAttributeFloatNamed("a12"), \
+					element.getAttributeFloatNamed("a13"), element.getAttributeFloatNamed("a14"), \
+					element.getAttributeFloatNamed("a21"), element.getAttributeFloatNamed("a22"), \
+					element.getAttributeFloatNamed("a23"), element.getAttributeFloatNamed("a24"), \
+					element.getAttributeFloatNamed("a31"), element.getAttributeFloatNamed("a32"), \
+					element.getAttributeFloatNamed("a33"), element.getAttributeFloatNamed("a34")))
+			end
+		end)
+	end
+	
 	/** Read tracker slot tag. */
 	public func void readTrackerSlot(EasyXMLElement root, CharacterConfiguration configuration)
-		var CharacterTrackerSlot slot = CharacterTrackerSlot.new(root.getAttributeNamed("name"))
+		var CharacterTrackerSlot slot = CharacterTrackerSlot.new(configuration, root.getAttributeNamed("name"))
 		configuration.getTrackerSlots().add(slot)
 		
 		root.forEachTag(block EasyXMLElement element, String tagName
@@ -201,15 +219,6 @@ class LoadCharacterProfile extends BaseXmlLoader
 				
 			elif tagName.equals("rotation")
 				slot.setCalibrateRotation(readVector(element))
-				
-			elif tagName.equals("playspaceTransform")
-				slot.setPlayspaceTransform(Matrix.new(\
-					element.getAttributeFloatNamed("a11"), element.getAttributeFloatNamed("a12"), \
-					element.getAttributeFloatNamed("a13"), element.getAttributeFloatNamed("a14"), \
-					element.getAttributeFloatNamed("a21"), element.getAttributeFloatNamed("a22"), \
-					element.getAttributeFloatNamed("a23"), element.getAttributeFloatNamed("a24"), \
-					element.getAttributeFloatNamed("a31"), element.getAttributeFloatNamed("a32"), \
-					element.getAttributeFloatNamed("a33"), element.getAttributeFloatNamed("a34")))
 			end
 		end)
 	end
@@ -246,7 +255,6 @@ class LoadCharacterProfile extends BaseXmlLoader
 		tag.addDataTag("cameraBone", configuration.getCameraBone())
 		writeVector(tag, "cameraPosition", configuration.getCameraPosition())
 		writeVector(tag, "cameraRotation", configuration.getCameraRotation())
-		tag.addDataTag("calibrateScale", configuration.getCalibrateScale())
 		
 		configuration.getTrackerSlots().forEach(block CharacterTrackerSlot each
 			writeTrackerSlot(tag, each)
@@ -257,6 +265,29 @@ class LoadCharacterProfile extends BaseXmlLoader
 			childTag.setAttribute("type", each.factoryID())
 			each.save(this, childTag)
 		end)
+		
+		writeConfigurationCalibrate(tag, configuration)
+	end
+	
+	/** Write configuration calibration. */
+	public func void writeConfigurationCalibrate(EasyXMLElement root, CharacterConfiguration configuration)
+		var EasyXMLElement tag = root.addTag("calibrate")
+		
+		tag.addDataTag("scale", configuration.getCalibrateScale())
+		
+		var EasyXMLElement tag2 = tag.addTag("matrix")
+		tag2.setAttribute("a11", configuration.getMatrixCalibrate().get11())
+		tag2.setAttribute("a12", configuration.getMatrixCalibrate().get12())
+		tag2.setAttribute("a13", configuration.getMatrixCalibrate().get13())
+		tag2.setAttribute("a14", configuration.getMatrixCalibrate().get14())
+		tag2.setAttribute("a21", configuration.getMatrixCalibrate().get21())
+		tag2.setAttribute("a22", configuration.getMatrixCalibrate().get22())
+		tag2.setAttribute("a23", configuration.getMatrixCalibrate().get23())
+		tag2.setAttribute("a24", configuration.getMatrixCalibrate().get24())
+		tag2.setAttribute("a31", configuration.getMatrixCalibrate().get31())
+		tag2.setAttribute("a32", configuration.getMatrixCalibrate().get32())
+		tag2.setAttribute("a33", configuration.getMatrixCalibrate().get33())
+		tag2.setAttribute("a34", configuration.getMatrixCalibrate().get34())
 	end
 	
 	/** Write tracker slot. */
@@ -276,19 +307,5 @@ class LoadCharacterProfile extends BaseXmlLoader
 		var EasyXMLElement tag = root.addTag("calibrate")
 		writeVector(tag, "position", slot.getCalibratePosition())
 		writeVector(tag, "rotation", slot.getCalibrateRotation())
-		
-		var EasyXMLElement tag2 = tag.addTag("playspaceTransform")
-		tag2.setAttribute("a11", slot.getPlayspaceTransform().get11())
-		tag2.setAttribute("a12", slot.getPlayspaceTransform().get12())
-		tag2.setAttribute("a13", slot.getPlayspaceTransform().get13())
-		tag2.setAttribute("a14", slot.getPlayspaceTransform().get14())
-		tag2.setAttribute("a21", slot.getPlayspaceTransform().get21())
-		tag2.setAttribute("a22", slot.getPlayspaceTransform().get22())
-		tag2.setAttribute("a23", slot.getPlayspaceTransform().get23())
-		tag2.setAttribute("a24", slot.getPlayspaceTransform().get24())
-		tag2.setAttribute("a31", slot.getPlayspaceTransform().get31())
-		tag2.setAttribute("a32", slot.getPlayspaceTransform().get32())
-		tag2.setAttribute("a33", slot.getPlayspaceTransform().get33())
-		tag2.setAttribute("a34", slot.getPlayspaceTransform().get34())
 	end
 end

@@ -59,6 +59,10 @@ class CharacterConfiguration
 	private var float pCalibrateScale
 	private var float pActorScale
 	private var float pCharacterScale
+	private var Matrix pMatrixScale
+	private var Matrix pMatrixScaleInv
+	private var Matrix pMatrixCalibrate
+	private var Matrix pMatrixCalibrateInv
 	
 	private var CharacterTrackerSlots pTrackerSlots
 	private var MotionTransfers pMotionTransfers
@@ -91,13 +95,22 @@ class CharacterConfiguration
 		pCalibrateScale = 1
 		pActorScale = 1
 		pCharacterScale = 1
+		pMatrixScale = Matrix.new()
+		pMatrixScaleInv = Matrix.new()
+		pMatrixCalibrate = Matrix.new()
+		pMatrixCalibrateInv = Matrix.new()
 		
 		pTrackerSlots = CharacterTrackerSlots.new()
 		pMotionTransfers = MotionTransfers.new()
 	end
 	
 	/** Create copy of character configuration. */
-	public func new(CharacterConfiguration configuration)
+	public func new(CharacterProfile profile, CharacterConfiguration configuration)
+		if profile == null
+			throw ENullPointer.new("profile")
+		end
+		
+		pProfile = profile
 		pName = configuration.pName
 		
 		pScaleMode = configuration.pScaleMode
@@ -108,10 +121,14 @@ class CharacterConfiguration
 		pCalibrateScale = configuration.pCalibrateScale
 		pActorScale = configuration.pActorScale
 		pCharacterScale = configuration.pCharacterScale
+		pMatrixScale = configuration.pMatrixScale
+		pMatrixScaleInv = configuration.pMatrixScaleInv
+		pMatrixCalibrate = configuration.pMatrixCalibrate
+		pMatrixCalibrateInv = configuration.pMatrixCalibrateInv
 		
 		pTrackerSlots = CharacterTrackerSlots.new()
 		configuration.pTrackerSlots.forEach(block CharacterTrackerSlot each
-			pTrackerSlots.add(CharacterTrackerSlot.new(each))
+			pTrackerSlots.add(CharacterTrackerSlot.new(this, each))
 		end)
 		
 		pMotionTransfers = MotionTransfers.new()
@@ -314,13 +331,42 @@ class CharacterConfiguration
 	/** Update scales. */
 	public func void updateScales()
 		if pScaleMode == ScaleMode.character
-			pCharacterScale = pCalibrateScale
+			pCharacterScale = 1.0 / pCalibrateScale
 			pActorScale = 1
 			
 		else
 			pCharacterScale = 1
-			pActorScale = 1.0 / pCalibrateScale
+			pActorScale = pCalibrateScale
 		end
+		
+		pMatrixScale = Matrix.newScaling(pCalibrateScale, pCalibrateScale, pCalibrateScale)
+		pMatrixScaleInv = Matrix.newScaling(1.0 / pCalibrateScale, 1.0 / pCalibrateScale, 1.0 / pCalibrateScale)
+	end
+	
+	/** Scale matrix. */
+	public func Matrix getMatrixScale()
+		return pMatrixScale
+	end
+	
+	/** Inverse scale matrix. */
+	public func Matrix getMatrixScaleInverse()
+		return pMatrixScaleInv
+	end
+	
+	/** Calibration matrix. */
+	public func Matrix getMatrixCalibrate()
+		return pMatrixCalibrate
+	end
+	
+	/** Inverse calibration matrix. */
+	public func Matrix getMatrixCalibrateInverse()
+		return pMatrixCalibrateInv
+	end
+	
+	/** Set calibration matrix. */
+	public func void setMatrixCalibrate(Matrix matrix)
+		pMatrixCalibrate = matrix
+		pMatrixCalibrateInv = matrix.getInverse()
 	end
 	
 	/** Reset calibration. */
@@ -329,6 +375,10 @@ class CharacterConfiguration
 		pCalibrateScale = 1
 		pActorScale = 1
 		pCharacterScale = 1
+		pMatrixScale = Matrix.new()
+		pMatrixScaleInv = Matrix.new()
+		pMatrixCalibrate = Matrix.new()
+		pMatrixCalibrateInv = Matrix.new()
 		
 		pTrackerSlots.forEach(block CharacterTrackerSlot each
 			each.resetCalibration()
@@ -352,21 +402,18 @@ class CharacterConfiguration
 		// too small shoulder level compared to characters where the shoulder level is
 		// measured all the way to the ground. for these reasons actors are required to
 		// have their shoulder level measured to get precise results matching characters
-		setCalibrateScale(actorProfile.getShoulderLevel() / pShoulderLevel)
-		
-		var Matrix actorScaleMatrix = Matrix.newScaling(pActorScale, pActorScale, pActorScale)
-// 		var Matrix characterScaleMatrix = Matrix.newScaling(pCharacterScale, pCharacterScale, pCharacterScale)
+		setCalibrateScale(pShoulderLevel / actorProfile.getShoulderLevel())
 		
 		// get hand positions to align calibration space
 		var Matrix hmd, rightHand, leftHand
 		if actor.getVRHMD().isAttached()
-			hmd = (actor.getVRHMD().getMatrixPlayspace() * actorScaleMatrix).normalize()
+			hmd = actor.getVRHMD().getMatrixPlayspace()
 		end
 		if actor.getVRRightHand().isAttached()
-			rightHand = (actor.getVRRightHand().getMatrixPlayspace() * actorScaleMatrix).normalize()
+			rightHand = actor.getVRRightHand().getMatrixPlayspace()
 		end
 		if actor.getVRLeftHand().isAttached()
-			leftHand = (actor.getVRLeftHand().getMatrixPlayspace() * actorScaleMatrix).normalize()
+			leftHand = actor.getVRLeftHand().getMatrixPlayspace()
 		end
 		
 		// for calibration we need these three for the time being
@@ -431,14 +478,15 @@ class CharacterConfiguration
 			+ " turnBody=" + turnBody + " centerBody=" + centerBody)
 		
 		// scale element if required
-		actor.setScaling(Vector.new(pCharacterScale, pCharacterScale, pCharacterScale))
+		if pScaleMode == ScaleMode.character
+			actor.setScaling(Vector.new(1.0 / pCalibrateScale, 1.0 / pCalibrateScale, 1.0 / pCalibrateScale))
+		end
 		
 		// calibrate tracker slots
-		var Matrix calibMatrix = actorScaleMatrix * Matrix.newTranslation(-centerBody) \
-			* Matrix.newRotationY(-turnBody)
+		setMatrixCalibrate(Matrix.newTranslation(-centerBody) * Matrix.newRotationY(-turnBody))
 		
 		pTrackerSlots.forEach(block CharacterTrackerSlot each
-			each.calibrate(actor, calibMatrix, actorScaleMatrix)
+			each.calibrate(actor)
 		end)
 		
 		// calibrate motion transfers using the calibrated trackers slots
@@ -446,11 +494,6 @@ class CharacterConfiguration
 		
 		pMotionTransfers.forEach(block MotionTransfer each
 			each.calibrate(this, actorProfile, actor, component)
-		end)
-		
-		// set tracker slot playspace transforms
-		pTrackerSlots.forEach(block CharacterTrackerSlot each
-			each.finishCalibrate(actor, calibMatrix, actorScaleMatrix)
 		end)
 		
 		// save calibration
@@ -571,7 +614,6 @@ class CharacterConfiguration
 		
 		var Component component = Component.new(null, null)
 		component.setRig(appearance.getRig())
-		component.setScaling(Vector.new(pCharacterScale, pCharacterScale, pCharacterScale))
 		
 		ainst.setComponent(component)
 		

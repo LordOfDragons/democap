@@ -32,6 +32,8 @@ pin Dragengine.Utils
  * Character configuration tracker slot.
  */
 class CharacterTrackerSlot
+	private var CharacterConfiguration pConfiguration
+	
 	private var String pName
 	private var Vector pPosition
 	private var Vector pRotation
@@ -46,7 +48,6 @@ class CharacterTrackerSlot
 	private var Vector pCalibrateRotation
 	private var Matrix pCalibrateMatrix
 	private var Matrix pCalibrateMatrixInverse
-	private var Matrix pPlayspaceTransform
 	
 	private var ADController pADControllerPosition
 	private var ADController pADControllerRotation
@@ -56,8 +57,13 @@ class CharacterTrackerSlot
 	
 	
 	/** Create character configuration tracker slot. */
-	public func new(String name)
+	public func new(CharacterConfiguration configuration, String name)
+		if configuration == null
+			throw ENullPointer.new("configuration")
+		end
+		pConfiguration = configuration
 		setName(name)
+		
 		pPosition = Vector.new()
 		pRotation = Vector.new()
 		pMatrix = Matrix.new()
@@ -70,14 +76,18 @@ class CharacterTrackerSlot
 		pCalibrateRotation = Vector.new()
 		pCalibrateMatrix = Matrix.new()
 		pCalibrateMatrixInverse = Matrix.new()
-		pPlayspaceTransform = Matrix.new()
 		
 		resetCalibration()
 	end
 	
 	/** Create copy of character configuration tracker slot. */
-	public func new(CharacterTrackerSlot slot)
+	public func new(CharacterConfiguration configuration, CharacterTrackerSlot slot)
+		if configuration == null
+			throw ENullPointer.new("configuration")
+		end
+		pConfiguration = configuration
 		pName = slot.pName
+		
 		pPosition = slot.pPosition
 		pRotation = slot.pRotation
 		pMatrix = slot.pMatrix
@@ -90,12 +100,16 @@ class CharacterTrackerSlot
 		pCalibrateRotation = slot.pCalibrateRotation
 		pCalibrateMatrix = slot.pCalibrateMatrix
 		pCalibrateMatrixInverse = slot.pCalibrateMatrixInverse
-		pPlayspaceTransform = slot.pPlayspaceTransform
 		
 		resetCalibration()
 	end
 	
 	
+	
+	/** Owner configuration. */
+	public func CharacterConfiguration getConfiguration()
+		return pConfiguration
+	end
 	
 	/** Name of character configuration tracker slot. */
 	public func String getName()
@@ -309,19 +323,6 @@ class CharacterTrackerSlot
 		pCalibrateMatrixInverse = matrix.getInverse()
 	end
 	
-	/** Playspace transform. */
-	public func Matrix getPlayspaceTransform()
-		return pPlayspaceTransform
-	end
-	
-	/** Set playspace matrix. */
-	public func void setPlayspaceTransform(Matrix matrix)
-		if matrix == null
-			throw ENullPointer.new("matrix")
-		end
-		pPlayspaceTransform = matrix
-	end
-	
 	
 	
 	/** Reset calibration. */
@@ -333,22 +334,20 @@ class CharacterTrackerSlot
 	end
 	
 	/** Calibrate character. */
-	public func void calibrate(BaseVRActor actor, Matrix matrixCalibrate, Matrix matrixActor)
+	public func void calibrate(BaseVRActor actor)
 		var ECBTrackerSlot.Instance behavior = ECBTrackerSlot.getInstanceIn(actor, pName)
-		if pInputDeviceID.empty() or behavior == null or behavior.isDetached()
+		if behavior == null
+			resetCalibration()
+			return
+		end
+		
+		behavior.updateMatrix()
+		
+		if pInputDeviceID.empty() or behavior.isDetached()
 			resetCalibration()
 			
-			pPlayspaceTransform = Matrix.new()
-			behavior.updateMatrix()
-			
-			GameApp.getGameApp().getConsole().addMessage("CharacterTrackerSlot.calibrate(nd): slot=" \
-				+ pName + " pos=" + pCalibratePosition + " rot=" + pCalibrateRotation)
-			
 		else
-			pPlayspaceTransform = matrixCalibrate
-			behavior.updateMatrix()
-			
-			pCalibrateMatrix = behavior.getMatrixPlayspace() // contains matrixCalibrate
+			pCalibrateMatrix = behavior.getMatrixPlayspace()
 			pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
 			pCalibratePosition = pCalibrateMatrix.getPosition()
 			pCalibrateRotation = pCalibrateMatrix.normalize().getEulerAngles()
@@ -356,18 +355,5 @@ class CharacterTrackerSlot
 			GameApp.getGameApp().getConsole().addMessage("CharacterTrackerSlot.calibrate: slot=" \
 				+ pName + " pos=" + pCalibratePosition + " rot=" + pCalibrateRotation)
 		end
-	end
-	
-	/** Finish calibration. */
-	public func void finishCalibrate(BaseVRActor actor, Matrix matrixCalibrate, Matrix matrixActor)
-		var ECBTrackerSlot.Instance behavior = ECBTrackerSlot.getInstanceIn(actor, pName)
-		if pInputDeviceID.empty() or behavior == null or behavior.isDetached()
-			pPlayspaceTransform = matrixCalibrate.getInverse().normalize()
-			
-		else
-			pPlayspaceTransform = matrixActor
-		end
-		
-		behavior.updateMatrix()
 	end
 end
