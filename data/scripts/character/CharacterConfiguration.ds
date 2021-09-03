@@ -54,11 +54,10 @@ class CharacterConfiguration
 	private var String pCameraBone
 	private var Vector pCameraPosition
 	private var Vector pCameraRotation
+	private var Matrix pCameraMatrix
 	
 	private var bool pIsCalibrated
 	private var float pCalibrateScale
-	private var float pActorScale
-	private var float pCharacterScale
 	private var Matrix pMatrixScale
 	private var Matrix pMatrixScaleInv
 	private var Matrix pMatrixCalibrate
@@ -90,11 +89,10 @@ class CharacterConfiguration
 		pCameraBone = ""
 		pCameraPosition = Vector.new()
 		pCameraRotation = Vector.new()
+		pCameraMatrix = Matrix.new()
 		
 		pIsCalibrated = false
 		pCalibrateScale = 1
-		pActorScale = 1
-		pCharacterScale = 1
 		pMatrixScale = Matrix.new()
 		pMatrixScaleInv = Matrix.new()
 		pMatrixCalibrate = Matrix.new()
@@ -119,8 +117,6 @@ class CharacterConfiguration
 		
 		pIsCalibrated = configuration.pIsCalibrated
 		pCalibrateScale = configuration.pCalibrateScale
-		pActorScale = configuration.pActorScale
-		pCharacterScale = configuration.pCharacterScale
 		pMatrixScale = configuration.pMatrixScale
 		pMatrixScaleInv = configuration.pMatrixScaleInv
 		pMatrixCalibrate = configuration.pMatrixCalibrate
@@ -239,6 +235,7 @@ class CharacterConfiguration
 			throw ENullPointer.new("position")
 		end
 		pCameraPosition = position
+		pCameraMatrix = Matrix.newRT(pCameraRotation, pCameraPosition)
 	end
 	
 	/** Rotation of camera relative to bone. */
@@ -252,6 +249,12 @@ class CharacterConfiguration
 			throw ENullPointer.new("rotation")
 		end
 		pCameraRotation = rotation
+		pCameraMatrix = Matrix.newRT(pCameraRotation, pCameraPosition)
+	end
+	
+	/** Camera matrix relative to bone. */
+	public func Matrix getCameraMatrix()
+		return pCameraMatrix
 	end
 	
 	
@@ -325,27 +328,8 @@ class CharacterConfiguration
 		updateScales()
 	end
 	
-	/** Actor scale. */
-	public func float getActorScale()
-		return pActorScale
-	end
-	
-	/** Character scale. */
-	public func float getCharacterScale()
-		return pCharacterScale
-	end
-	
 	/** Update scales. */
 	public func void updateScales()
-		if pScaleMode == ScaleMode.character
-			pCharacterScale = 1.0 / pCalibrateScale
-			pActorScale = 1
-			
-		else
-			pCharacterScale = 1
-			pActorScale = pCalibrateScale
-		end
-		
 		pMatrixScale = Matrix.newScaling(pCalibrateScale, pCalibrateScale, pCalibrateScale)
 		pMatrixScaleInv = Matrix.newScaling(1.0 / pCalibrateScale, 1.0 / pCalibrateScale, 1.0 / pCalibrateScale)
 	end
@@ -380,8 +364,6 @@ class CharacterConfiguration
 	public func void resetCalibration()
 		pIsCalibrated = false
 		pCalibrateScale = 1
-		pActorScale = 1
-		pCharacterScale = 1
 		pMatrixScale = Matrix.new()
 		pMatrixScaleInv = Matrix.new()
 		pMatrixCalibrate = Matrix.new()
@@ -613,7 +595,9 @@ class CharacterConfiguration
 		var StubElement stub
 		if pElementClass != null and not isElementClassPreloading()
 			stub = StubElement.new(getElementClass(), GameApp.getGameApp().getIDGenerator().nextID())
-			// sometimes it can be required to set stub properties
+			if pScaleMode == ScaleMode.character
+				stub.setScaling(Vector.new(1.0 / pCalibrateScale, 1.0 / pCalibrateScale, 1.0 / pCalibrateScale))
+			end
 		end
 		return stub
 	end
