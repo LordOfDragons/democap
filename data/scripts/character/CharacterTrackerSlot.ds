@@ -43,6 +43,7 @@ class CharacterTrackerSlot
 	private var Vector pOffsetRotation
 	private var Matrix pOffsetMatrix
 	private var Matrix pOffsetMatrixInverse
+	private var Vector pForceCalibrateRotation
 	
 	private var Vector pCalibratePosition
 	private var Vector pCalibrateRotation
@@ -72,6 +73,8 @@ class CharacterTrackerSlot
 		pOffsetRotation = Vector.new()
 		pOffsetMatrix = Matrix.new()
 		pOffsetMatrixInverse = Matrix.new()
+		pForceCalibrateRotation = null
+		
 		pCalibratePosition = Vector.new()
 		pCalibrateRotation = Vector.new()
 		pCalibrateMatrix = Matrix.new()
@@ -96,6 +99,8 @@ class CharacterTrackerSlot
 		pOffsetRotation = slot.pOffsetRotation
 		pOffsetMatrix = slot.pOffsetMatrix
 		pOffsetMatrixInverse = slot.pOffsetMatrixInverse
+		pForceCalibrateRotation = slot.pForceCalibrateRotation
+		
 		pCalibratePosition = slot.pCalibratePosition
 		pCalibrateRotation = slot.pCalibrateRotation
 		pCalibrateMatrix = slot.pCalibrateMatrix
@@ -236,6 +241,16 @@ class CharacterTrackerSlot
 		return pOffsetMatrixInverse
 	end
 	
+	/** Force calibrate rotation or null. */
+	public func Vector getForceCalibrateRotation()
+		return pForceCalibrateRotation
+	end
+	
+	/** Set force calibrate rotation or null. */
+	public func void setForceCalibrateRotation(Vector rotation)
+		pForceCalibrateRotation = rotation
+	end
+	
 	
 	
 	/** Animator definition controller for position or null. */
@@ -353,6 +368,13 @@ class CharacterTrackerSlot
 			
 		else
 			pCalibrateMatrix = behavior.getMatrixPlayspace()
+			
+			if pForceCalibrateRotation != null
+				var Vector position = pCalibrateMatrix.getPosition()
+				pCalibrateMatrix = Matrix.newTranslation(position)
+				behavior.setMatrixPlayspace(position, pForceCalibrateRotation)
+			end
+			
 			pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
 			pCalibratePosition = pCalibrateMatrix.getPosition()
 			pCalibrateRotation = pCalibrateMatrix.normalize().getEulerAngles()
