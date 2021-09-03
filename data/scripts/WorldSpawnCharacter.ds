@@ -69,12 +69,16 @@ class WorldSpawnCharacter
 	private var BaseVRActor pActor
 	private var UpdateCheck pUpdateCheck
 	private var UpdateCharacter pUpdateCharacter
+	private var DVector pLastActorPosition
+	private var Quaternion pLastActorOrientation
 	
 	
 	
 	/** Create. */
 	public func new()
 		pUpdateCharacter = UpdateCharacter.new(this)
+		pLastActorPosition = DVector.new()
+		pLastActorOrientation = Quaternion.new()
 	end
 	
 	/** Dispose. */
@@ -193,10 +197,15 @@ class WorldSpawnCharacter
 	
 	/** Dispose actor if present. */
 	protected func void disposeActor()
-		if pActor != null
-			pActor.safeDispose()
-			pActor = null
+		if pActor == null
+			return
 		end
+		
+		pLastActorPosition = pActor.getPosition()
+		pLastActorOrientation = pActor.getOrientation()
+		
+		pActor.safeDispose()
+		pActor = null
 	end
 	
 	/** Create actor. */
@@ -207,7 +216,11 @@ class WorldSpawnCharacter
 		end
 		
 		// spawn player actor
-		pActor = pCharacter.createStubElement().createElement() cast BaseVRActor
+		var StubElement stub = pCharacter.createStubElement()
+		stub.setPosition(pLastActorPosition)
+		stub.setRotation(pLastActorOrientation.getEulerAngles())
+		
+		pActor = stub.createElement() cast BaseVRActor
 		pSpawnPoint.spawn(pGameWorld, pActor)
 		
 		// take control of actor

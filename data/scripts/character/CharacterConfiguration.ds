@@ -36,18 +36,29 @@ pin Dragengine.Preloading
  * data affects the character rig.
  */
 class CharacterConfiguration
+	/** Scale mode. */
+	enum ScaleMode
+		actor //<! Scale actor to match character
+		character //<! Scale character to match actor
+	end
+	
+	
+	
 	private var CharacterProfile pProfile
 	private var String pName
 	
+	private var ScaleMode pScaleMode
 	private var float pShoulderLevel
 	private var String pMoveCalibrate
 	
+	private var String pCameraBone
+	private var Vector pCameraPosition
+	private var Vector pCameraRotation
+	
 	private var bool pIsCalibrated
 	private var float pCalibrateScale
-	private var Vector pCalibrateCenter
-	private var float pCalibrateTurn
-	private var Matrix pCalibrateMatrix
-	private var Matrix pCalibrateMatrixInverse
+	private var float pActorScale
+	private var float pCharacterScale
 	
 	private var CharacterTrackerSlots pTrackerSlots
 	private var MotionTransfers pMotionTransfers
@@ -68,15 +79,18 @@ class CharacterConfiguration
 		pProfile = profile
 		setName(name)
 		
+		pScaleMode = ScaleMode.actor
 		pShoulderLevel = 1.6
 		pMoveCalibrate = ""
 		
+		pCameraBone = ""
+		pCameraPosition = Vector.new()
+		pCameraRotation = Vector.new()
+		
 		pIsCalibrated = false
 		pCalibrateScale = 1
-		pCalibrateCenter = Vector.new()
-		pCalibrateTurn = 0
-		pCalibrateMatrix = Matrix.new()
-		pCalibrateMatrixInverse = Matrix.new()
+		pActorScale = 1
+		pCharacterScale = 1
 		
 		pTrackerSlots = CharacterTrackerSlots.new()
 		pMotionTransfers = MotionTransfers.new()
@@ -85,15 +99,15 @@ class CharacterConfiguration
 	/** Create copy of character configuration. */
 	public func new(CharacterConfiguration configuration)
 		pName = configuration.pName
+		
+		pScaleMode = configuration.pScaleMode
 		pShoulderLevel = configuration.pShoulderLevel
 		pMoveCalibrate = configuration.pMoveCalibrate
 		
 		pIsCalibrated = configuration.pIsCalibrated
 		pCalibrateScale = configuration.pCalibrateScale
-		pCalibrateCenter = configuration.pCalibrateCenter
-		pCalibrateTurn = configuration.pCalibrateTurn
-		pCalibrateMatrix = configuration.pCalibrateMatrix
-		pCalibrateMatrixInverse = configuration.pCalibrateMatrixInverse
+		pActorScale = configuration.pActorScale
+		pCharacterScale = configuration.pCharacterScale
 		
 		pTrackerSlots = CharacterTrackerSlots.new()
 		configuration.pTrackerSlots.forEach(block CharacterTrackerSlot each
@@ -137,6 +151,20 @@ class CharacterConfiguration
 		pName = name
 	end
 	
+	/** Scale mode. */
+	public func ScaleMode getScaleMode()
+		return pScaleMode
+	end
+	
+	/** Set scale mode. */
+	public func void setScaleMode(ScaleMode scaleMode)
+		if scaleMode == null
+			throw ENullPointer.new("scaleMode")
+		end
+		pScaleMode = scaleMode
+		updateScales()
+	end
+	
 	/** Shoulder level in meters. */
 	public func float getShoulderLevel()
 		return pShoulderLevel
@@ -159,6 +187,47 @@ class CharacterConfiguration
 		end
 		
 		pMoveCalibrate = animation
+	end
+	
+	
+	
+	/** Bone to attach HMD to if calibrated or empty string to attach to character origin. */
+	public func String getCameraBone()
+		return pCameraBone
+	end
+	
+	/** Set bone to attach HMD to if calibrated or empty string to attach to character origin. */
+	public func void setCameraBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pCameraBone = bone
+	end
+	
+	/** Camera position relative to bone. */
+	public func Vector getCameraPosition()
+		return pCameraPosition
+	end
+	
+	/** Set camera position relative to bone. */
+	public func void setCameraPosition(Vector position)
+		if position == null
+			throw ENullPointer.new("position")
+		end
+		pCameraPosition = position
+	end
+	
+	/** Rotation of camera relative to bone. */
+	public func Vector getCameraRotation()
+		return pCameraRotation
+	end
+	
+	/** Set rotation of camera relative to bone. */
+	public func void setCameraRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pCameraRotation = rotation
 	end
 	
 	
@@ -221,68 +290,45 @@ class CharacterConfiguration
 		return pIsCalibrated
 	end
 	
-	/** Calibrated scale between actor and character. */
+	/** Calibrated scale. */
 	public func float getCalibrateScale()
 		return pCalibrateScale
 	end
 	
-	/** Set calibrated scale between actor and character. */
+	/** Set calibrated scale. */
 	public func void setCalibrateScale(float scale)
 		pCalibrateScale = scale
-		updateCalibrateMatrix()
+		updateScales()
 	end
 	
-	/** Calibrated center. */
-	public func Vector getCalibrateCenter()
-		return pCalibrateCenter
+	/** Actor scale. */
+	public func float getActorScale()
+		return pActorScale
 	end
 	
-	/** Set calibrated center. */
-	public func void setCalibrateCenter(Vector center)
-		if center == null
-			throw ENullPointer.new("center")
+	/** Character scale. */
+	public func float getCharacterScale()
+		return pCharacterScale
+	end
+	
+	/** Update scales. */
+	public func void updateScales()
+		if pScaleMode == ScaleMode.character
+			pCharacterScale = pCalibrateScale
+			pActorScale = 1
+			
+		else
+			pCharacterScale = 1
+			pActorScale = 1.0 / pCalibrateScale
 		end
-		pCalibrateCenter = center
-		updateCalibrateMatrix()
-	end
-	
-	/** Calibrated turn. */
-	public func float getCalibrateTurn()
-		return pCalibrateTurn
-	end
-	
-	/** Set calibrated turn. */
-	public func void setCalibrateTurn(float turn)
-		pCalibrateTurn = turn
-		updateCalibrateMatrix()
-	end
-	
-	/** Calibrate matrix. */
-	public func Matrix getCalibrateMatrix()
-		return pCalibrateMatrix
-	end
-	
-	/** Inverse calibrate matrix. */
-	public func Matrix getCalibrateMatrixInverse()
-		return pCalibrateMatrixInverse
-	end
-	
-	/** Update calibrate matrix. */
-	public func void updateCalibrateMatrix()
-		pCalibrateMatrix = Matrix.newTranslation(pCalibrateCenter) \
-			* Matrix.newRotationY(pCalibrateTurn) \
-			* Matrix.newScaling(pCalibrateScale, pCalibrateScale, pCalibrateScale)
-		pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
 	end
 	
 	/** Reset calibration. */
 	public func void resetCalibration()
 		pIsCalibrated = false
 		pCalibrateScale = 1
-		pCalibrateCenter = Vector.new()
-		pCalibrateTurn = 0
-		pCalibrateMatrix = Matrix.new()
-		pCalibrateMatrixInverse = Matrix.new()
+		pActorScale = 1
+		pCharacterScale = 1
 		
 		pTrackerSlots.forEach(block CharacterTrackerSlot each
 			each.resetCalibration()
@@ -298,16 +344,29 @@ class CharacterConfiguration
 		// drop element class. we need to create a new one
 		dropElementClass()
 		
+		// determine scaling. we could try using the actor hands to find the shoulder level
+		// but this method is unstable. actors can not hold their arms exactly the same way
+		// each time they calibrate. furthermore it is difficult to hold the arms in the
+		// correct location using VR view. last but not least VR system measure distance to
+		// the ground with an offset leading. this causes the actor to be measured with a
+		// too small shoulder level compared to characters where the shoulder level is
+		// measured all the way to the ground. for these reasons actors are required to
+		// have their shoulder level measured to get precise results matching characters
+		setCalibrateScale(actorProfile.getShoulderLevel() / pShoulderLevel)
+		
+		var Matrix actorScaleMatrix = Matrix.newScaling(pActorScale, pActorScale, pActorScale)
+// 		var Matrix characterScaleMatrix = Matrix.newScaling(pCharacterScale, pCharacterScale, pCharacterScale)
+		
 		// get hand positions to align calibration space
 		var Matrix hmd, rightHand, leftHand
 		if actor.getVRHMD().isAttached()
-			hmd = actor.getVRHMD().getMatrixPlayspace()
+			hmd = (actor.getVRHMD().getMatrixPlayspace() * actorScaleMatrix).normalize()
 		end
 		if actor.getVRRightHand().isAttached()
-			rightHand = actor.getVRRightHand().getMatrixPlayspace()
+			rightHand = (actor.getVRRightHand().getMatrixPlayspace() * actorScaleMatrix).normalize()
 		end
 		if actor.getVRLeftHand().isAttached()
-			leftHand = actor.getVRLeftHand().getMatrixPlayspace()
+			leftHand = (actor.getVRLeftHand().getMatrixPlayspace() * actorScaleMatrix).normalize()
 		end
 		
 		// for calibration we need these three for the time being
@@ -363,12 +422,6 @@ class CharacterConfiguration
 			turnBody = rotHands + 90
 		end
 		
-		//pCalibrateScale = pShoulderLevel / actorProfile.getShoulderLevel()
-		pCalibrateScale = pShoulderLevel / centerHands.getY()
-		pCalibrateCenter = -centerBody
-		pCalibrateTurn = -turnBody
-		updateCalibrateMatrix()
-		
 		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: posHMD=" \
 			+ posHMD + " posRightHand=" + posRightHand + " posLeftHand=" + posLeftHand)
 		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: turnHMD=" \
@@ -377,9 +430,15 @@ class CharacterConfiguration
 			+ centerHands + " rotHands=" + rotHands + " scale=" + pCalibrateScale \
 			+ " turnBody=" + turnBody + " centerBody=" + centerBody)
 		
-		// calibrate tracker slots using the calibration matrix
+		// scale element if required
+		actor.setScaling(Vector.new(pCharacterScale, pCharacterScale, pCharacterScale))
+		
+		// calibrate tracker slots
+		var Matrix calibMatrix = actorScaleMatrix * Matrix.newTranslation(-centerBody) \
+			* Matrix.newRotationY(-turnBody)
+		
 		pTrackerSlots.forEach(block CharacterTrackerSlot each
-			each.calibrate(actor, pCalibrateMatrix)
+			each.calibrate(actor, calibMatrix, actorScaleMatrix)
 		end)
 		
 		// calibrate motion transfers using the calibrated trackers slots
@@ -387,6 +446,11 @@ class CharacterConfiguration
 		
 		pMotionTransfers.forEach(block MotionTransfer each
 			each.calibrate(this, actorProfile, actor, component)
+		end)
+		
+		// set tracker slot playspace transforms
+		pTrackerSlots.forEach(block CharacterTrackerSlot each
+			each.finishCalibrate(actor, calibMatrix, actorScaleMatrix)
 		end)
 		
 		// save calibration
@@ -507,6 +571,8 @@ class CharacterConfiguration
 		
 		var Component component = Component.new(null, null)
 		component.setRig(appearance.getRig())
+		component.setScaling(Vector.new(pCharacterScale, pCharacterScale, pCharacterScale))
+		
 		ainst.setComponent(component)
 		
 		ainst.applyDirect()

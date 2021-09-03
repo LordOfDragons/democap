@@ -117,27 +117,23 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 			return pHMD.getMatrix()
 		end
 		
-		var CharacterAppearance appearance = config.getProfile().getAppearance()
-		var String bone = appearance.getCameraBone()
-		if bone.empty()
-			return pHMD.getMatrix()
+		var String bone = config.getCameraBone()
+		var Matrix matrix = Matrix.newRT(config.getCameraRotation(), config.getCameraPosition())
+		
+		if not bone.empty()
+			var int boneIndex = component.getComponent().indexOfBoneNamed(bone)
+			if boneIndex == -1
+				return pHMD.getMatrix()
+			end
+			
+			matrix = matrix * component.getComponent().boneGetMatrix(boneIndex)
 		end
 		
-		var int boneIndex = component.getComponent().indexOfBoneNamed(bone)
-		if boneIndex == -1
-			return pHMD.getMatrix()
-		end
-		
-		// slotMatrix = poseMatrix * calibMatrix
-		// 
-		var DMatrix matrix = (Matrix.newRT(appearance.getCameraRotation(), appearance.getCameraPosition()) \
-			* component.getComponent().boneGetMatrix(boneIndex) \
-			* character.getCharacter().getCalibrateMatrixInverse()).normalize().toDMatrix() \
-			* getActor().getElement().getElementMatrix()
+		var DMatrix dmatrix = matrix.normalize().toDMatrix() * getActor().getElement().getElementMatrix()
 		
 // 		GameApp.getGameApp().getConsole().addMessage("VRCamDir: " \
 // 			+ matrix.getEulerAngles() + " " + pHMD.getMatrix().getEulerAngles())
 		
-		return matrix
+		return dmatrix
 	end
 end

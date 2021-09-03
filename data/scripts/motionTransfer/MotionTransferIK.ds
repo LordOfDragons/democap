@@ -672,8 +672,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end
 		
 		if indexRoot != -1 and indexBase != -1 and indexTarget != -1
-			var Matrix baseMatrix = component.boneGetMatrix(indexBase)
-			var Matrix targetMatrix = component.boneGetMatrix(indexTarget)
+			var Matrix baseMatrix = component.boneGetMatrix(indexBase) * component.getMatrix().toMatrix()
+			var Matrix targetMatrix = component.boneGetMatrix(indexTarget) * component.getMatrix().toMatrix()
 			
 			var Vector posRoot = baseMatrix.getPosition()
 			var Vector posTarget = targetMatrix * pTargetTracker.getReverseTransformPosition()
@@ -738,6 +738,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			// create a temporary component so we can apply the move and do some measuring
 			var Component tcomponent = Component.new(component.getModel(), component.getSkin())
 			tcomponent.setRig(component.getRig())
+			tcomponent.setScaling(component.getScaling())
 			
 			var CharacterAppearance appearance = config.getProfile().getAppearance()
 			var Animator tanimator = Animator.new()
@@ -755,8 +756,12 @@ class MotionTransferIK extends DefaultMotionTransfer
 			tcomponent.updateBones()
 			
 			// measure the reach and store it
-			var Vector posRoot = tcomponent.boneGetMatrix(indexBase).getPosition()
-			var Vector posTarget = tcomponent.boneGetMatrix(indexTarget) * pTargetTracker.getReverseTransformPosition()
+			var Vector posRoot = (tcomponent.boneGetMatrix(indexBase) \
+				* component.getMatrix().toMatrix()).getPosition()
+			
+			var Vector posTarget = tcomponent.boneGetMatrix(indexTarget) \
+				* component.getMatrix().toMatrix() * pTargetTracker.getReverseTransformPosition()
+			
 			pCalibrateReachRetracted = (posTarget - posRoot).getLength()
 		end
 		

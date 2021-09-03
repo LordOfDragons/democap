@@ -115,15 +115,6 @@ class LoadCharacterProfile extends BaseXmlLoader
 				
 			elif tagName.equals("animation")
 				appearance.setPathAnimation(element.getFirstCData())
-				
-			elif tagName.equals("cameraBone")
-				appearance.setCameraBone(element.getFirstCData())
-				
-			elif tagName.equals("cameraPosition")
-				appearance.setCameraPosition(readVector(element))
-				
-			elif tagName.equals("cameraRotation")
-				appearance.setCameraRotation(readVector(element))
 			end
 		end)
 	end
@@ -135,20 +126,26 @@ class LoadCharacterProfile extends BaseXmlLoader
 		profile.getConfigurations().add(configuration)
 		
 		root.forEachTag(block EasyXMLElement element, String tagName
-			if tagName.equals("shoulderLevel")
+			if tagName.equals("scaleMode")
+				configuration.setScaleMode(CharacterConfiguration.ScaleMode.named(element.getFirstCData()))
+				
+			elif tagName.equals("shoulderLevel")
 				configuration.setShoulderLevel(element.getFirstCDataFloat())
+				
+			elif tagName.equals("cameraBone")
+				configuration.setCameraBone(element.getFirstCData())
+				
+			elif tagName.equals("cameraPosition")
+				configuration.setCameraPosition(readVector(element))
+				
+			elif tagName.equals("cameraRotation")
+				configuration.setCameraRotation(readVector(element))
 				
 			elif tagName.equals("moveCalibrate")
 				configuration.setMoveCalibrate(element.getFirstCData())
 				
 			elif tagName.equals("calibrateScale")
 				configuration.setCalibrateScale(element.getFirstCDataFloat())
-				
-			elif tagName.equals("calibrateCenter")
-				configuration.setCalibrateCenter(readVector(element))
-				
-			elif tagName.equals("calibrateTurn")
-				configuration.setCalibrateTurn(element.getFirstCDataFloat())
 				
 			elif tagName.equals("trackerSlot")
 				readTrackerSlot(element, configuration)
@@ -179,7 +176,7 @@ class LoadCharacterProfile extends BaseXmlLoader
 				slot.setPosition(readVector(element))
 				
 			elif tagName.equals("rotation")
-				slot.setRotation( readVector(element))
+				slot.setRotation(readVector(element))
 				
 			elif tagName.equals("inputDevice")
 				slot.setInputDeviceID(element.getFirstCData())
@@ -189,6 +186,30 @@ class LoadCharacterProfile extends BaseXmlLoader
 				
 			elif tagName.equals("offsetRotation")
 				slot.setOffsetRotation(readVector(element))
+				
+			elif tagName.equals("calibrate")
+				readTrackerSlotCalibrate(element, slot)
+			end
+		end)
+	end
+	
+	/** Read tracker slot calibration tag. */
+	public func void readTrackerSlotCalibrate(EasyXMLElement root, CharacterTrackerSlot slot)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("position")
+				slot.setCalibratePosition(readVector(element))
+				
+			elif tagName.equals("rotation")
+				slot.setCalibrateRotation(readVector(element))
+				
+			elif tagName.equals("playspaceTransform")
+				slot.setPlayspaceTransform(Matrix.new(\
+					element.getAttributeFloatNamed("a11"), element.getAttributeFloatNamed("a12"), \
+					element.getAttributeFloatNamed("a13"), element.getAttributeFloatNamed("a14"), \
+					element.getAttributeFloatNamed("a21"), element.getAttributeFloatNamed("a22"), \
+					element.getAttributeFloatNamed("a23"), element.getAttributeFloatNamed("a24"), \
+					element.getAttributeFloatNamed("a31"), element.getAttributeFloatNamed("a32"), \
+					element.getAttributeFloatNamed("a33"), element.getAttributeFloatNamed("a34")))
 			end
 		end)
 	end
@@ -212,9 +233,6 @@ class LoadCharacterProfile extends BaseXmlLoader
 		tag.addDataTag("skin", appearance.getPathSkin())
 		tag.addDataTag("rig", appearance.getPathRig())
 		tag.addDataTag("animation", appearance.getPathAnimation())
-		tag.addDataTag("cameraBone", appearance.getCameraBone())
-		writeVector(tag, "cameraPosition", appearance.getCameraPosition())
-		writeVector(tag, "cameraRotation", appearance.getCameraRotation())
 	end
 	
 	/** Write configuration. */
@@ -222,11 +240,13 @@ class LoadCharacterProfile extends BaseXmlLoader
 		var EasyXMLElement tag = root.addTag("configuration")
 		tag.setAttribute("name", configuration.getName())
 		
+		tag.addDataTag("scaleMode", configuration.getScaleMode().name())
 		tag.addDataTag("shoulderLevel", configuration.getShoulderLevel())
 		tag.addDataTag("moveCalibrate", configuration.getMoveCalibrate())
+		tag.addDataTag("cameraBone", configuration.getCameraBone())
+		writeVector(tag, "cameraPosition", configuration.getCameraPosition())
+		writeVector(tag, "cameraRotation", configuration.getCameraRotation())
 		tag.addDataTag("calibrateScale", configuration.getCalibrateScale())
-		writeVector(tag, "calibrateCenter", configuration.getCalibrateCenter())
-		tag.addDataTag("calibrateTurn", configuration.getCalibrateTurn())
 		
 		configuration.getTrackerSlots().forEach(block CharacterTrackerSlot each
 			writeTrackerSlot(tag, each)
@@ -249,5 +269,26 @@ class LoadCharacterProfile extends BaseXmlLoader
 		tag.addDataTag("inputDevice", slot.getInputDeviceID())
 		writeVector(tag, "offsetPosition", slot.getOffsetPosition())
 		writeVector(tag, "offsetRotation", slot.getOffsetRotation())
+	end
+	
+	/** Write tracker slot calibrate. */
+	public func void writeTrackerSlotCalibrate(EasyXMLElement root, CharacterTrackerSlot slot)
+		var EasyXMLElement tag = root.addTag("calibrate")
+		writeVector(tag, "position", slot.getCalibratePosition())
+		writeVector(tag, "rotation", slot.getCalibrateRotation())
+		
+		var EasyXMLElement tag2 = tag.addTag("playspaceTransform")
+		tag2.setAttribute("a11", slot.getPlayspaceTransform().get11())
+		tag2.setAttribute("a12", slot.getPlayspaceTransform().get12())
+		tag2.setAttribute("a13", slot.getPlayspaceTransform().get13())
+		tag2.setAttribute("a14", slot.getPlayspaceTransform().get14())
+		tag2.setAttribute("a21", slot.getPlayspaceTransform().get21())
+		tag2.setAttribute("a22", slot.getPlayspaceTransform().get22())
+		tag2.setAttribute("a23", slot.getPlayspaceTransform().get23())
+		tag2.setAttribute("a24", slot.getPlayspaceTransform().get24())
+		tag2.setAttribute("a31", slot.getPlayspaceTransform().get31())
+		tag2.setAttribute("a32", slot.getPlayspaceTransform().get32())
+		tag2.setAttribute("a33", slot.getPlayspaceTransform().get33())
+		tag2.setAttribute("a34", slot.getPlayspaceTransform().get34())
 	end
 end
