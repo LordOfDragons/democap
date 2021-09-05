@@ -99,8 +99,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var ADRuleAnimation pADRuleBaseIK
 	private var ADRuleAnimation pADRuleRetracted
 	
-	private var Animator pAnimatorPost
-	
 	private var Array pCalibrateBones
 	private var float pCalibrateReach
 	private var float pCalibrateReachScale
@@ -109,6 +107,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var Vector pCalibrateTargetOffset
 	private var float pCalibrateReachRetracted
 	private var Vector pCalibrateTwistRotation
+	private var Array pCalibrateTwistAxes
+	private var Vector pCalibrateTwistBoneAxisRotation
 	
 	
 	
@@ -135,6 +135,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateGuideUpAxis = ARTrackToAxis.posY
 		pCalibrateTargetOffset = Vector.new()
 		pCalibrateTwistRotation = Vector.new()
+		pCalibrateTwistAxes = Array.new()
+		pCalibrateTwistBoneAxisRotation = Vector.new()
 	end
 	
 	/** Create copy of motion transfer. */
@@ -160,6 +162,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateGuideUpAxis = transfer.pCalibrateGuideUpAxis
 		pCalibrateTargetOffset = transfer.pCalibrateTargetOffset
 		pCalibrateTwistRotation = transfer.pCalibrateTwistRotation
+		pCalibrateTwistAxes = Array.new(transfer.pCalibrateTwistAxes)
+		pCalibrateTwistBoneAxisRotation = transfer.pCalibrateTwistBoneAxisRotation
 	end
 	
 	
@@ -318,11 +322,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pADRuleBaseIK
 	end
 	
-	/** Animator applied after main animator is applied. */
-	public func Animator getAnimatorPost()
-		return pAnimatorPost
-	end
-	
 	/** Calibrate reach. */
 	public func float getCalibrateReach()
 		return pCalibrateReach
@@ -353,6 +352,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pCalibrateTwistRotation
 	end
 	
+	/** Calibrate twist bone axis rotation. */
+	public func Vector getCalibrateTwistBoneAxisRotation()
+		return pCalibrateTwistBoneAxisRotation
+	end
+	
 	
 	
 	/** Init element clas. */
@@ -368,7 +372,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADRuleGuide = null
 		pADRuleBaseIK = null
 		pADRuleRetracted = null
-		pAnimatorPost = null
 		
 		// add behavior
 		var ECBMotionTransferIK behavior = ECBMotionTransferIK.new(eclass, this)
@@ -432,6 +435,106 @@ class MotionTransferIK extends DefaultMotionTransfer
 			end)
 			pADRuleRetracted.addTargetLink(ADRuleTargetLink.new(ARAnimationTarget.blendFactor, link))
 			adef.addRule(pADRuleRetracted)
+		end
+		
+		if pTwistBoneCount > 0 and pTwistPropagation > 0.01 and pCalibrateBones.getCount() >= 2
+			var int count = DEMath.min(pTwistBoneCount, pCalibrateBones.getCount() - 1)
+			var ADRuleBoneTransformator rule
+			var String name = getName() + ".twist"
+			var float maxAngle = 180
+			var int i
+			
+			pADControllerTwist = ADController.new()
+			pADControllerTwist.setName(behavior.getControllerNameTwist())
+			pADControllerTwist.setMinimum(-maxAngle)
+			pADControllerTwist.setMaximum(maxAngle)
+			adef.addController(pADControllerTwist)
+			
+			var ADLink link = ADLink.new()
+			link.setController(pADControllerTwist)
+			adef.addLink(link)
+			
+			var float angle = pTwistPropagation * maxAngle / count
+			var int baseIndex = count
+			
+			for i = 0 to count
+				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
+// 				var String boneNext = pCalibrateBones.getAt(baseIndex - i - 1) cast String
+				var Vector axis = pCalibrateTwistAxes.getAt(i) cast Vector
+				
+				rule = ADRuleBoneTransformator.new()
+				rule.setName(name)
+				rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+				rule.setUseAxis(true)
+				rule.setAxis(axis)
+				rule.setMinimumAngle(-angle)
+				rule.setMaximumAngle(angle)
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				rule.addBone(bone)
+				adef.addRule(rule)
+				/*
+				rule = ADRuleBoneTransformator.new()
+				rule.setName(name)
+				rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+				rule.setUseAxis(true)
+				rule.setAxis(axis)
+				rule.setMinimumAngle(angle)
+				rule.setMaximumAngle(-angle)
+				rule.setTargetBone(bone)
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				rule.addBone(boneNext)
+				adef.addRule(rule)
+				*/
+			end
+			
+			rule = ADRuleBoneTransformator.new()
+			rule.setName(name)
+			rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+			rule.setUseAxis(true)
+			rule.setAxis(pCalibrateTwistAxes.getAt(-1) cast Vector)
+			rule.setMinimumAngle(pTwistPropagation * maxAngle)
+			rule.setMaximumAngle(-pTwistPropagation * maxAngle)
+			rule.setTargetBone(pCalibrateBones.getAt(1) cast String)
+			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+			rule.addBone(pTargetBone)
+			adef.addRule(rule)
+			
+			/*
+			// TODO we need an option to define the Z axis relative to the target bone.
+			//      this is required if the target bone is not pointing along the chain
+			var float angle = pTwistPropagation * maxAngle / count
+			var Vector minRot = Vector.new(0, 0, -angle)
+			var Vector maxRot = Vector.new(0, 0, angle)
+			var int baseIndex = count
+			
+			for i = 0 to count
+				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
+				var String boneNext = pCalibrateBones.getAt(baseIndex - i - 1) cast String
+				
+				rule = ADRuleBoneTransformator.new()
+				rule.setName(name)
+				rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+				rule.setMinimumRotation(minRot)
+				rule.setMaximumRotation(maxRot)
+				rule.setTargetBone(bone)
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				rule.addBone(bone)
+				adef.addRule(rule)
+				
+				rule = ADRuleBoneTransformator.new()
+				rule.setName(name)
+				rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+				rule.setMinimumRotation(maxRot)
+				rule.setMaximumRotation(minRot)
+				rule.setTargetBone(bone)
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				rule.addBone(boneNext)
+				adef.addRule(rule)
+				
+				addBones.add(bone)
+				addBones.add(boneNext)
+			end
+			*/
 		end
 		
 		if slotGuide != null and slotGuide.isDeviceAttached()
@@ -500,130 +603,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(pADRuleIKForce)
 		end
 		
-		// post animator
-		adef = AnimatorDefinition.new("")
-		
-		var ADRuleStateSnapshot ruleStaSnap = ADRuleStateSnapshot.new()
-		ruleStaSnap.setName(getName() + ".currentState")
-		ruleStaSnap.setUseLastState(true)
-		adef.addRule(ruleStaSnap)
-		
-		var Set addBones = Set.new()
-		
-		if pTwistBoneCount > 0 and pTwistPropagation > 0.01 and pCalibrateBones.getCount() >= 2
-			var int count = DEMath.min(pTwistBoneCount, pCalibrateBones.getCount() - 1)
-			var ADRuleBoneTransformator rule
-			var String name = getName() + ".twist"
-			var float maxAngle = 180
-			var int i
-			
-			pADControllerTwist = ADController.new()
-			pADControllerTwist.setName(behavior.getControllerNameTwist())
-			pADControllerTwist.setMinimum(-maxAngle)
-			pADControllerTwist.setMaximum(maxAngle)
-			adef.addController(pADControllerTwist)
-			
-			var ADLink link = ADLink.new()
-			link.setController(pADControllerTwist)
-			adef.addLink(link)
-			
-			if true // add option for using bone local rotation
-				// TODO we need an option to define the Z axis relative to the target bone.
-				//      this is required if the target bone is not pointing along the chain
-				var float angle = pTwistPropagation * maxAngle / count
-				var Vector minRot = Vector.new(0, 0, -angle)
-				var Vector maxRot = Vector.new(0, 0, angle)
-				var int baseIndex = count
-				
-				for i = 0 to count
-					var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
-					var String boneNext = pCalibrateBones.getAt(baseIndex - i - 1) cast String
-					
-					rule = ADRuleBoneTransformator.new()
-					rule.setName(name)
-					rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
-					rule.setMinimumRotation(minRot)
-					rule.setMaximumRotation(maxRot)
-					rule.setTargetBone(bone)
-					rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
-					rule.addBone(bone)
-					adef.addRule(rule)
-					
-					rule = ADRuleBoneTransformator.new()
-					rule.setName(name)
-					rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
-					rule.setMinimumRotation(maxRot)
-					rule.setMaximumRotation(minRot)
-					rule.setTargetBone(bone)
-					rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
-					rule.addBone(boneNext)
-					adef.addRule(rule)
-					
-					addBones.add(bone)
-					addBones.add(boneNext)
-				end
-				
-			else
-				// one rule to rotate all bones relative to first twist bone
-				// 
-				// NOTE this one is not working since this would require the rotation to be
-				//      applied before the IK is applied otherwise the rotation is off
-				// 
-				// NOTE it can actually work if it is not problematic if the rotation of
-				//      the spine moves the shoulder and head out of a place a bit. should
-				//      be not a problem in general since the HMD is attached to the head
-				//      after IK not the other way round
-				// 
-				// NOTE this can though turn into a problem since the arm IK is resolved
-				//      before the twist is done (during postThink). this works only if
-				//      each transfer adds an own animator which are applied in sequence.
-				//      then the order is correct although less efficient
-				var Vector axis = trackToVectorFromAxis(pCalibrateGuideTrackAxis)
-				var float angle = pTwistPropagation * maxAngle / count
-				var Vector minRot = axis * -angle
-				var Vector maxRot = axis * angle
-				var int baseIndex = count
-				var String twistBone = pCalibrateBones.getAt(baseIndex) cast String
-				
-				rule = ADRuleBoneTransformator.new()
-				rule.setName(name)
-				rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
-				rule.setMinimumRotation(minRot)
-				rule.setMaximumRotation(maxRot)
-				rule.setTargetBone(twistBone)
-				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
-				for i = 0 to count
-					rule.addBone(pCalibrateBones.getAt(baseIndex - i) cast String)
-				end
-				adef.addRule(rule)
-				
-				rule = ADRuleBoneTransformator.new()
-				rule.setName(name)
-				rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
-				rule.setMinimumRotation(Vector.new(0, 0, maxAngle / count))
-				rule.setMaximumRotation(Vector.new(0, 0, -(maxAngle / count)))
-				rule.setTargetBone(twistBone)
-				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
-				rule.addBone(pTargetBone)
-				adef.addRule(rule)
-			end
-		end
-		
-		if adef.getRuleCount() > 0 and addBones.getCount() > 0
-			addBones.forEach(block String each
-				adef.addBone(each)
-			end)
-			
-			var CharacterAppearance appearance = config.getProfile().getAppearance()
-			var Animator animator = Animator.new()
-			animator.setRig(appearance.getRig())
-			animator.setAnimation(appearance.getAnimation())
-			
-			adef.buildAnimator(animator)
-			adef.debug(GameApp.getGameApp().getConsole())
-			behavior.setAnimatorPost(animator)
-		end
-		
 		// register bones to record
 		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
 		if recordAnimation != null
@@ -642,6 +621,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTargetTracker.resetTransform()
 		pGuideTracker.resetTransform()
 		pBaseTracker.resetTransform()
+		pCalibrateTwistAxes.removeAll()
+		pCalibrateTwistBoneAxisRotation = Vector.new()
 	end
 	
 	/** Calibrate character. */
@@ -761,6 +742,27 @@ class MotionTransferIK extends DefaultMotionTransfer
 				* pTargetTracker.getReverseTransformPosition()
 			
 			pCalibrateReachRetracted = (posTarget - posRoot).getLength()
+		end
+		
+		// calculate twist axes
+		if pTwistBoneCount > 0 and pTwistPropagation > 0.01 and pCalibrateBones.getCount() >= 2
+			var int count = DEMath.min(pTwistBoneCount, pCalibrateBones.getCount() - 1)
+			var Vector axis = Matrix.newRotation(pTwistAxisRotation).getViewVector()
+			var int i, baseIndex = count
+			
+			for i = 0 to count
+				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
+				var int indexBone = component.indexOfBoneNamed(bone)
+				if indexBone != -1
+					pCalibrateTwistAxes.add(component.boneGetInverseMatrix(indexBone).transformNormal(axis))
+					
+				else
+					pCalibrateTwistAxes.add(Vector.new(0, 0, 1))
+				end
+			end
+			
+			pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation) \
+				* component.boneGetInverseMatrix(indexTarget)).getEulerAngles()
 		end
 		
 		GameApp.getGameApp().getConsole().addMessage("MotionTransferIK.calibrate: name='" \
@@ -937,6 +939,12 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 			elif tagName.equals("twistRotation")
 				pCalibrateTwistRotation = loader.readVector(element)
+				
+			elif tagName.equals("twistAxis")
+				pCalibrateTwistAxes.add(loader.readVector(element))
+				
+			elif tagName.equals("twistBoneAxisRotation")
+				pCalibrateTwistBoneAxisRotation = loader.readVector(element)
 			end
 		end)
 	end
@@ -973,5 +981,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 		tag.addDataTag("guideTrackAxis", pCalibrateGuideTrackAxis.name())
 		tag.addDataTag("reachRetracted", pCalibrateReachRetracted)
 		loader.writeVector(tag, "twistRotation", pCalibrateTwistRotation)
+		pCalibrateTwistAxes.forEach(block Vector each
+			loader.writeVector(tag, "twistAxis", each)
+		end)
+		loader.writeVector(tag, "twistBoneAxisRotation", pCalibrateTwistBoneAxisRotation)
 	end
 end

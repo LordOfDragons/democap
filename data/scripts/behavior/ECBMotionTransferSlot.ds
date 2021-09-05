@@ -38,22 +38,24 @@ class ECBMotionTransferSlot extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		/** Copy slots. */
-		class CopySlots extends ECBehaviorActorAnimated.DefaultListener
+		class CopySlots extends ECBMoCapAnimator.DefaultListener
 			private var Instance pInstance
 			
 			public func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void updateControllers(ECBehaviorActorAnimated.Instance instance, float elapsed)
-				pInstance.copySlots()
+			public func void updateControllers(ECBMoCapAnimator.Instance instance, float elapsed, int phase)
+				if phase == 0
+					pInstance.copySlots()
+				end
 			end
 		end
 		
 		
 		
 		private var ECBMotionTransferSlot pECBehavior
-		private var ECBehaviorActorAnimated.Instance pActorAnimated
+		private var ECBMoCapAnimator.Instance pMoCapAnimator
 		private var ECBTrackerSlot.Instance pSlotTarget
 		private var ECBTrackerSlot.Instance pSlotSource
 		private var Matrix pTransform
@@ -65,7 +67,7 @@ class ECBMotionTransferSlot extends DefaultECBehavior
 		public func new(ECBMotionTransferSlot ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			
-			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
+			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
 			pScaleRotation = ecbehavior.getTransfer().getScaleRotation()
 			
 			if ecbehavior.getSlotTarget() != null
@@ -82,7 +84,7 @@ class ECBMotionTransferSlot extends DefaultECBehavior
 		public func void dispose()
 			pSlotSource = null
 			pSlotTarget = null
-			pActorAnimated = null
+			pMoCapAnimator = null
 			super.dispose()
 		end
 		
@@ -90,7 +92,7 @@ class ECBMotionTransferSlot extends DefaultECBehavior
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
-			pActorAnimated.addListener(CopySlots.new(this))
+			pMoCapAnimator.addListener(CopySlots.new(this))
 		end
 		
 		
@@ -100,9 +102,9 @@ class ECBMotionTransferSlot extends DefaultECBehavior
 			return pECBehavior
 		end
 		
-		/** Actor animated. */
-		public func ECBehaviorActorAnimated.Instance getActorAnimated()
-			return pActorAnimated
+		/** Motion capture animator. */
+		public func ECBMoCapAnimator.Instance getMoCapAnimator()
+			return pMoCapAnimator
 		end
 		
 		/** Target slot behavior instance or null. */
@@ -123,19 +125,19 @@ class ECBMotionTransferSlot extends DefaultECBehavior
 				return
 			end
 			
-			var Matrix matrix = pTransform * pSlotSource.getMatrixPlayspace()
+			var Matrix matrix = pTransform * pSlotSource.getMatrixCharacter()
 			
 			var Vector position = matrix.getPosition()
 			var Vector rotation = matrix.normalize().getEulerAngles().compMultiply(pScaleRotation)
 			
-			pSlotTarget.setMatrixPlayspace(position, rotation)
+			pSlotTarget.setMatrixCharacter(position, rotation)
 		end
 	end
 	
 	
 	
 	private var MotionTransferSlot pTransfer
-	private var ECBehaviorActorAnimated pActorAnimated
+	private var ECBMoCapAnimator pMoCapAnimator
 	private var ECBTrackerSlot pSlotTarget
 	private var ECBTrackerSlot pSlotSource
 	
@@ -151,7 +153,7 @@ class ECBMotionTransferSlot extends DefaultECBehavior
 		var String prefix = subId + "."
 		
 		pTransfer = transfer
-		pActorAnimated = eclass.getActorAnimated()
+		pMoCapAnimator = ECBMoCapAnimator.getBehaviorIn(eclass)
 		if transfer.getTarget() != null
 			pSlotTarget = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getTarget())
 		end
@@ -165,7 +167,7 @@ class ECBMotionTransferSlot extends DefaultECBehavior
 	/** Dispose of behavior. */
 	public func void dispose()
 		pTransfer = null
-		pActorAnimated = null
+		pMoCapAnimator = null
 		pSlotSource = null
 		pSlotTarget = null
 		super.dispose()
@@ -178,9 +180,9 @@ class ECBMotionTransferSlot extends DefaultECBehavior
 		return pTransfer
 	end
 	
-	/** Actor animated behavior. */
-	public func ECBehaviorActorAnimated getActorAnimated()
-		return pActorAnimated
+	/** Motion capture animator behavior. */
+	public func ECBMoCapAnimator getMoCapAnimator()
+		return pMoCapAnimator
 	end
 	
 	/** Target slot behavior or null. */

@@ -34,14 +34,14 @@ class ECBMoveOriginBone extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		/** Apply animator. */
-		class ApplyAnimator extends ECBehaviorActorAnimated.DefaultListener
+		class ApplyAnimator extends ECBMoCapAnimator.DefaultListener
 			private var Instance pInstance
 			
 			public func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void animationApplied(ECBehaviorActorAnimated.Instance instance)
+			public func void animationApplied(ECBMoCapAnimator.Instance instance)
 				pInstance.applyAnimator()
 			end
 		end
@@ -49,7 +49,7 @@ class ECBMoveOriginBone extends DefaultECBehavior
 		
 		
 		protected var ECBMoveOriginBone pECBehavior
-		protected var ECBehaviorActorAnimated.Instance pActorAnimated
+		protected var ECBMoCapAnimator.Instance pMoCapAnimator
 		private var Component pComponent
 		private var AnimatorInstance pAnimatorInstance
 		
@@ -58,18 +58,18 @@ class ECBMoveOriginBone extends DefaultECBehavior
 		/** Create behavior instance. */
 		public func new(ECBMoveOriginBone ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
-			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
+			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
 		end
 		
 		/** Dispose of instance. */
 		public func void dispose()
-			pActorAnimated = null
+			pMoCapAnimator = null
 			super.dispose()
 		end
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
-			pComponent = pActorAnimated.getComponent().getComponent()
+			pComponent = pMoCapAnimator.getActorAnimated().getComponent().getComponent()
 			
 			var Animator animator = pECBehavior.getAnimator()
 			if animator == null
@@ -82,12 +82,12 @@ class ECBMoveOriginBone extends DefaultECBehavior
 			pAnimatorInstance.setAnimator(animator)
 			pAnimatorInstance.setComponent(pComponent)
 			
-			pActorAnimated.addListener(ApplyAnimator.new(this))
+			pMoCapAnimator.addListener(ApplyAnimator.new(this))
 		end
 		
 		
 		
-		/** Apply animator. Called after ECBehaviorActorAnimated has been applied. */
+		/** Apply animator. Called after ECBMoCapAnimator has been applied. */
 		public func void applyAnimator()
 			if pAnimatorInstance != null
 				pAnimatorInstance.apply()
@@ -97,14 +97,14 @@ class ECBMoveOriginBone extends DefaultECBehavior
 	
 	
 	
-	protected var ECBehaviorActorAnimated pActorAnimated
+	protected var ECBMoCapAnimator pMoCapAnimator
 	protected var Animator pAnimator
 	
 	
 	
 	/** Create behavior and add it to element class. */
 	public func new(BaseVRActorClass eclass, Animator animator) super(eclass)
-		pActorAnimated = eclass.getActorAnimated()
+		pMoCapAnimator = ECBMoCapAnimator.getBehaviorIn(eclass)
 		pAnimator = animator
 		
 		eclass.addBehavior(this)
@@ -112,15 +112,15 @@ class ECBMoveOriginBone extends DefaultECBehavior
 	
 	/** Dispose of behavior. */
 	public func void dispose()
-		pActorAnimated = null
+		pMoCapAnimator = null
 		super.dispose()
 	end
 	
 	
 	
-	/** Actor animated behavior. */
-	public func ECBehaviorActorAnimated getActorAnimated()
-		return pActorAnimated
+	/** Motion capture animator behavior. */
+	public func ECBMoCapAnimator getMoCapAnimator()
+		return pMoCapAnimator
 	end
 	
 	/** Animator. */

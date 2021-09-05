@@ -38,15 +38,17 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		/** Update controllers. */
-		class UpdateControllers extends ECBehaviorActorAnimated.DefaultListener
+		class UpdateControllers extends ECBMoCapAnimator.DefaultListener
 			private var Instance pInstance
 			
 			public func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void updateControllers(ECBehaviorActorAnimated.Instance instance, float elapsed)
-				pInstance.updateControllers()
+			public func void updateControllers(ECBMoCapAnimator.Instance instance, float elapsed, int phase)
+				if phase == 0
+					pInstance.updateControllers()
+				end
 			end
 		end
 		
@@ -54,7 +56,7 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 		
 		private var ECBMotionTransferFingers pECBehavior
 		private var ECBehaviorVRPlayspace.Instance pVRPlayspace
-		private var ECBehaviorActorAnimated.Instance pActorAnimated
+		private var ECBMoCapAnimator.Instance pMoCapAnimator
 		private var ECBTrackerSlot.Instance pSlotTracker
 		private var AnimatorController pControllerThumb
 		private var AnimatorController pControllerIndex
@@ -75,7 +77,7 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 			pECBehavior = ecbehavior
 			
 			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
-			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
+			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
 			if ecbehavior.getSlotTracker() != null
 				pSlotTracker = ecbehavior.getSlotTracker().instance(element)
 			end
@@ -85,7 +87,7 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 		public func void dispose()
 			pSlotTracker = null
 			pVRPlayspace = null
-			pActorAnimated = null
+			pMoCapAnimator = null
 			super.dispose()
 		end
 		
@@ -93,13 +95,15 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
-			pControllerThumb = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameThumb())
-			pControllerIndex = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameIndex())
-			pControllerMiddle = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameMiddle())
-			pControllerRing = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameRing())
-			pControllerPinky = pActorAnimated.getControllerNamed(pECBehavior.getControllerNamePinky())
+			var ECBehaviorActorAnimated.Instance actorAnimated = pMoCapAnimator.getActorAnimated()
 			
-			pActorAnimated.addListener(UpdateControllers.new(this))
+			pControllerThumb = actorAnimated.getControllerNamed(pECBehavior.getControllerNameThumb())
+			pControllerIndex = actorAnimated.getControllerNamed(pECBehavior.getControllerNameIndex())
+			pControllerMiddle = actorAnimated.getControllerNamed(pECBehavior.getControllerNameMiddle())
+			pControllerRing = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRing())
+			pControllerPinky = actorAnimated.getControllerNamed(pECBehavior.getControllerNamePinky())
+			
+			pMoCapAnimator.addListener(UpdateControllers.new(this))
 		end
 		
 		
@@ -113,9 +117,9 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 			return pVRPlayspace
 		end
 		
-		/** Actor animated. */
-		public func ECBehaviorActorAnimated.Instance getActorAnimated()
-			return pActorAnimated
+		/** Motion capture animator. */
+		public func ECBMoCapAnimator.Instance getMoCapAnimator()
+			return pMoCapAnimator
 		end
 		
 		/** Tracker slot behavior instance or null. */
@@ -228,7 +232,7 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 	
 	private var MotionTransferFingers pTransfer
 	private var ECBehaviorVRPlayspace pVRPlayspace
-	private var ECBehaviorActorAnimated pActorAnimated
+	private var ECBMoCapAnimator pMoCapAnimator
 	private var ECBTrackerSlot pSlotTracker
 	private var String pControllerNameThumb
 	private var String pControllerNameIndex
@@ -249,7 +253,7 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 		
 		pTransfer = transfer
 		pVRPlayspace = eclass.getVRPlayspace()
-		pActorAnimated = eclass.getActorAnimated()
+		pMoCapAnimator = ECBMoCapAnimator.getBehaviorIn(eclass)
 		if transfer.getTrackerSlot() != null
 			pSlotTracker = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getTracker())
 		end
@@ -283,9 +287,9 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 		return pVRPlayspace
 	end
 	
-	/** Actor animated behavior. */
-	public func ECBehaviorActorAnimated getActorAnimated()
-		return pActorAnimated
+	/** Motion capture animator behavior. */
+	public func ECBMoCapAnimator getMoCapAnimator()
+		return pMoCapAnimator
 	end
 	
 	/** Tracker slot behavior or null. */

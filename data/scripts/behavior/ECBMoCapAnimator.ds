@@ -31,17 +31,82 @@ pin Dragengine.Utils
  * Behavior storing a generated animator. During init assigns the animator to actor animated.
  */
 class ECBMoCapAnimator extends DefaultECBehavior
+	/** Listener for behavior instance events. */
+	interface Listener
+		/** Count of required phases. */
+		func int requiredPhaseCount(Instance instance)
+		
+		/** Update controllers if required. */
+		func void updateControllers(Instance instance, float elapsed, int phase)
+		
+		/** Animation has been applied. Called after last phase */
+		func void animationApplied(Instance instance)
+	end
+	
+	/** Default implementation of behavior instance listener. */
+	class DefaultListener implements Listener
+		/** Create default listener. */
+		public func new()
+		end
+		
+		/** Count of required phases. */
+		public func int requiredPhaseCount(Instance instance)
+			return 1
+		end
+		
+		/** Update controllers if required. */
+		public func void updateControllers(Instance instance, float elapsed, int phase)
+		end
+		
+		/** Animation has been applied. */
+		public func void animationApplied(Instance instance)
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
+		/** Animator applied. */
+		class MultiPhaseAnimation extends ECBehaviorActorAnimated.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void updateControllers(ECBehaviorActorAnimated.Instance instance, float elapsed)
+				pInstance.updateControllers(elapsed)
+			end
+			
+			public func void animationApplied(ECBehaviorActorAnimated.Instance instance)
+				pInstance.animationApplied()
+			end
+		end
+		
+		
+		
 		protected var ECBMoCapAnimator pECBehavior
 		protected var ECBehaviorActorAnimated.Instance pActorAnimated
+		
+		private var int pRequiredPhaseCount
+		private var float pElapsedControllerTime
+		private var Array pListeners
 		
 		
 		
 		/** Create behavior instance. */
 		public func new(ECBMoCapAnimator ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
+			
+			pRequiredPhaseCount = 1
+			pListeners = Array.new()
 			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			this.pListeners = null
+			
+			super.dispose()
 		end
 		
 		/** Init behavior instance. */
@@ -50,8 +115,88 @@ class ECBMoCapAnimator extends DefaultECBehavior
 			animator.setRig(pActorAnimated.getComponent().getComponent().getRig())
 			animator.setAnimation(pECBehavior.getAnimation().getAnimation())
 			pActorAnimated.setAnimator(animator)
+			pActorAnimated.addListener(MultiPhaseAnimation.new(this))
+		end
+		
+		
+		
+		/** Behavior. */
+		public func ECBMoCapAnimator getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Actor animated behavior. */
+		public func ECBehaviorActorAnimated.Instance getActorAnimated()
+			return pActorAnimated
+		end
+		
+		/** Required phase count. */
+		public func int getRequiredPhaseCount()
+			return pRequiredPhaseCount
+		end
+		
+		
+		
+		/** Add listener. */
+		public func void addListener(Listener listener)
+			if listener == null
+				throw EInvalidParam.new()
+			end
+			this.pListeners.add(listener)
+		end
+		
+		/** Remove listener. */
+		public func void removeListener(Listener listener)
+			this.pListeners.remove(listener)
+		end
+		
+		/** Notify listeners controllers have changed. */
+		public func void notifyControllersChanged(float elapsed, int phase)
+			this.pListeners.forEach(block Listener each
+				each.updateControllers(this, elapsed, phase)
+			end)
+		end
+		
+		
+		
+		/** Internal use. */
+		public func void updateControllers(float elapsed)
+			pElapsedControllerTime = elapsed
+			
+			// find count of required phases
+			pRequiredPhaseCount = pListeners.inject(1, block int count, Listener listener
+				return DEMath.max(count, listener.requiredPhaseCount(this))
+			end) cast int
+			
+			// update controllers for phase 0
+			this.pListeners.forEach(block Listener each
+				each.updateControllers(this, pElapsedControllerTime, 0)
+			end)
+		end
+		
+		public func void animationApplied()
+			// run animator for additional phases
+			var int i
+			for i = 1 to pRequiredPhaseCount
+				// force an update so this animator finished running
+				pActorAnimated.getComponent().getComponent().updateBones()
+				
+				// update controllers
+				this.pListeners.forEach(block Listener each
+					each.updateControllers(this, pElapsedControllerTime, i)
+				end)
+				
+				// apply animator without calling listeners
+				pActorAnimated.getAnimatorInstance().apply()
+			end
+			
+			// notify listeners animator has been fully applied
+			this.pListeners.forEach(block Listener each
+				each.animationApplied(this)
+			end)
 		end
 	end
+	
 	
 	
 	protected var ECBehaviorActorAnimated pActorAnimated
@@ -101,8 +246,22 @@ class ECBMoCapAnimator extends DefaultECBehavior
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance( BehaviorElement element )
-		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(this.getInstanceIndex()) cast Instance
+	end
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBMoCapAnimator getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBMoCapAnimator each
+			return true
+		end) cast ECBMoCapAnimator
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
 	end
 	
 	

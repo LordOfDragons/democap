@@ -38,14 +38,14 @@ class ECBMotionTransferBend extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		/** Update controllers. */
-		class UpdateControllers extends ECBehaviorActorAnimated.DefaultListener
+		class UpdateControllers extends ECBMoCapAnimator.DefaultListener
 			private var Instance pInstance
 			
 			public func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void updateControllers(ECBehaviorActorAnimated.Instance instance, float elapsed)
+			public func void updateControllers(ECBMoCapAnimator.Instance instance, float elapsed, int phase)
 				pInstance.updateControllers()
 			end
 		end
@@ -54,7 +54,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		
 		private var ECBMotionTransferBend pECBehavior
 		private var ECBehaviorVRPlayspace.Instance pVRPlayspace
-		private var ECBehaviorActorAnimated.Instance pActorAnimated
+		private var ECBMoCapAnimator.Instance pMoCapAnimator
 		private var ECBTrackerSlot.Instance pSlotTarget
 		private var ECBTrackerSlot.Instance pSlotBase
 		private var AnimatorController pControllerRotateX
@@ -74,7 +74,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			pECBehavior = ecbehavior
 			
 			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
-			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
+			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
 			
 			pZeroRotationX = ecbehavior.getTransfer().getCalibrateZeroRotation().getX()
 			pZeroRotationY = ecbehavior.getTransfer().getCalibrateZeroRotation().getY()
@@ -96,7 +96,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			pSlotTarget = null
 			pSlotBase = null
 			pVRPlayspace = null
-			pActorAnimated = null
+			pMoCapAnimator = null
 			super.dispose()
 		end
 		
@@ -104,11 +104,12 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
-			pControllerRotateX = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateX())
-			pControllerRotateY = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateY())
-			pControllerRotateZ = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateZ())
+			var ECBehaviorActorAnimated.Instance actorAnimated = pMoCapAnimator.getActorAnimated()
+			pControllerRotateX = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateX())
+			pControllerRotateY = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateY())
+			pControllerRotateZ = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateZ())
 			
-			pActorAnimated.addListener(UpdateControllers.new(this))
+			pMoCapAnimator.addListener(UpdateControllers.new(this))
 		end
 		
 		
@@ -124,8 +125,8 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		end
 		
 		/** Actor animated. */
-		public func ECBehaviorActorAnimated.Instance getActorAnimated()
-			return pActorAnimated
+		public func ECBMoCapAnimator.Instance getMoCapAnimator()
+			return pMoCapAnimator
 		end
 		
 		/** Target slot behavior instance or null. */
@@ -159,9 +160,9 @@ class ECBMotionTransferBend extends DefaultECBehavior
 				return
 			end
 			
-			var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixPlayspace()
+			var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixCharacter()
 			
-			var Matrix matrix = pTransformTarget * pSlotTarget.getMatrixPlayspace() * baseMatrix.getInverse()
+			var Matrix matrix = pTransformTarget * pSlotTarget.getMatrixCharacter() * baseMatrix.getInverse()
 			
 			var Vector position = matrix.getPosition()
 			
@@ -189,7 +190,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 	
 	private var MotionTransferBend pTransfer
 	private var ECBehaviorVRPlayspace pVRPlayspace
-	private var ECBehaviorActorAnimated pActorAnimated
+	private var ECBMoCapAnimator pMoCapAnimator
 	private var ECBTrackerSlot pSlotTarget
 	private var ECBTrackerSlot pSlotBase
 	private var String pControllerNameRotateX
@@ -209,7 +210,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		
 		pTransfer = transfer
 		pVRPlayspace = eclass.getVRPlayspace()
-		pActorAnimated = eclass.getActorAnimated()
+		pMoCapAnimator = ECBMoCapAnimator.getBehaviorIn(eclass)
 		if transfer.getTargetTracker() != null
 			pSlotTarget = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getTargetTracker().getSlot())
 		end
@@ -227,7 +228,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 	/** Dispose of behavior. */
 	public func void dispose()
 		pVRPlayspace = null
-		pActorAnimated = null
+		pMoCapAnimator = null
 		pTransfer = null
 		pSlotTarget = null
 		pSlotBase = null
@@ -246,9 +247,9 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		return pVRPlayspace
 	end
 	
-	/** Actor animated behavior. */
-	public func ECBehaviorActorAnimated getActorAnimated()
-		return pActorAnimated
+	/** Motion capture animated behavior. */
+	public func ECBMoCapAnimator getMoCapAnimator()
+		return pMoCapAnimator
 	end
 	
 	/** Target slot behavior or null. */

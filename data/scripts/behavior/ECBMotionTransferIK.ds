@@ -38,15 +38,25 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		/** Update controllers. */
-		class UpdateControllers extends ECBehaviorActorAnimated.DefaultListener
+		class UpdateControllers extends ECBMoCapAnimator.DefaultListener
 			private var Instance pInstance
 			
 			public func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void updateControllers(ECBehaviorActorAnimated.Instance instance, float elapsed)
-				pInstance.updateControllers()
+			public func int requiredPhaseCount(ECBMoCapAnimator.Instance instance)
+				return pInstance.requiredPhaseCount()
+			end
+			
+			public func void updateControllers(ECBMoCapAnimator.Instance instance, float elapsed, int phase)
+				select phase
+				case 0
+					pInstance.updateControllersPhase1()
+					
+				case 1
+					pInstance.updateControllersPhase2()
+				end
 			end
 		end
 		
@@ -54,7 +64,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		
 		private var ECBMotionTransferIK pECBehavior
 		private var ECBehaviorVRPlayspace.Instance pVRPlayspace
-		private var ECBehaviorActorAnimated.Instance pActorAnimated
+		private var ECBMoCapAnimator.Instance pMoCapAnimator
 		private var ECBTrackerSlot.Instance pSlotTarget
 		private var ECBTrackerSlot.Instance pSlotGuide
 		private var ECBTrackerSlot.Instance pSlotBase
@@ -65,14 +75,17 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var AnimatorController pControllerTwist
 		private var AnimatorController pControllerRetracted
 		private var Matrix pTransformTarget
+		private var Quaternion pTransformTargetQuat
 		private var Matrix pTransformGuide
 		private var Matrix pTransformBase
 		private var Vector pGuideUp
 		private var Vector pTargetOffset
 		private var AnimatorInstance pAnimatorInstance
 		private var Component pComponent
-		private var int pTargetBone
+		private var int pTwistBone
 		private var float pScaleReach
+		private var Matrix pTwistMat
+		private var Matrix pTwistMatInv
 		private var Quaternion pTwistQuat, pTwistQuatInv
 		
 		
@@ -82,16 +95,18 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pECBehavior = ecbehavior
 			
 			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
-			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
+			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
 			
 			pTargetOffset = ecbehavior.getTransfer().getCalibrateTargetOffset()
 			pScaleReach = ecbehavior.getTransfer().getCalibrateReachScale()
-			pTwistQuat = Quaternion.newFromEuler(ecbehavior.getTransfer().getTwistAxisRotation())
+			
+			pTwistQuat = Quaternion.newFromEuler(ecbehavior.getTransfer().getCalibrateTwistBoneAxisRotation())
 			pTwistQuatInv = pTwistQuat.conjugate()
 			
 			if ecbehavior.getSlotTarget() != null
 				pSlotTarget = ecbehavior.getSlotTarget().instance(element)
 				pTransformTarget = ecbehavior.getTransfer().getTargetTracker().getTransformMatrix()
+				pTransformTargetQuat = pTransformTarget.normalize().toQuaternion()
 			end
 			
 			if ecbehavior.getSlotGuide() != null
@@ -103,7 +118,15 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			if ecbehavior.getSlotBase() != null
 				pSlotBase = ecbehavior.getSlotBase().instance(element)
 				pTransformBase = ecbehavior.getTransfer().getBaseTracker().getTransformMatrix()
+				
+				pTwistMat = Matrix.newRotation(ecbehavior.getTransfer().getTwistAxisRotation()) \
+					* pSlotBase.getTrackerSlot().getCalibrateMatrixInverse().normalize().getRotation()
+				
+			else
+				pTwistMat = Matrix.newRotation(ecbehavior.getTransfer().getTwistAxisRotation())
 			end
+			
+			pTwistMatInv = pTwistMat.getInverse()
 		end
 		
 		/** Dispose of instance. */
@@ -112,7 +135,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pSlotTarget = null
 			pSlotBase = null
 			pVRPlayspace = null
-			pActorAnimated = null
+			pMoCapAnimator = null
 			super.dispose()
 		end
 		
@@ -120,31 +143,22 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
-			pComponent = pActorAnimated.getComponent().getComponent()
+			var ECBehaviorActorAnimated.Instance actorAnimated = pMoCapAnimator.getActorAnimated()
+			pComponent = actorAnimated.getComponent().getComponent()
 			
-			pControllerTargetPosition = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameTargetPosition())
-			pControllerTargetOrientation = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameTargetOrientation())
-			pControllerGuidePosition = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameGuidePosition())
-			pControllerGuideUp = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameGuideUp())
-			pControllerRetracted = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameRetracted())
-			
-			pActorAnimated.addListener(UpdateControllers.new(this))
-			
-			// post animator if used
-			var Animator animator = pECBehavior.getAnimatorPost()
-			if animator != null
-				animator.setRig(pComponent.getRig())
-				
-				pAnimatorInstance = AnimatorInstance.new()
-				pAnimatorInstance.setAnimator(animator)
-				pAnimatorInstance.setComponent(pComponent)
-				
-				pControllerTwist = pAnimatorInstance.getControllerNamed(pECBehavior.getControllerNameTwist())
-				
-				pTargetBone = pComponent.indexOfBoneNamed(pECBehavior.getTransfer().getTargetBone())
-				
-				setRequiresThink(true)
+			pTwistBone = -1
+			if not pECBehavior.getTransfer().getTargetBone().empty()
+				pTwistBone = pComponent.indexOfBoneNamed(pECBehavior.getTransfer().getTargetBone())
 			end
+			
+			pControllerTargetPosition = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTargetPosition())
+			pControllerTargetOrientation = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTargetOrientation())
+			pControllerGuidePosition = actorAnimated.getControllerNamed(pECBehavior.getControllerNameGuidePosition())
+			pControllerGuideUp = actorAnimated.getControllerNamed(pECBehavior.getControllerNameGuideUp())
+			pControllerRetracted = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRetracted())
+			pControllerTwist = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTwist())
+			
+			pMoCapAnimator.addListener(UpdateControllers.new(this))
 		end
 		
 		
@@ -158,9 +172,9 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			return pVRPlayspace
 		end
 		
-		/** Actor animated. */
-		public func ECBehaviorActorAnimated.Instance getActorAnimated()
-			return pActorAnimated
+		/** Motion capture animator behavior. */
+		public func ECBMoCapAnimator.Instance getMoCapAnimator()
+			return pMoCapAnimator
 		end
 		
 		/** Target slot behavior instance or null. */
@@ -200,49 +214,20 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		
 		
 		
-		/** Frame update. */
-		public func void think(float elapsed)
-			if pAnimatorInstance == null
-				return
+		/** Internal use. */
+		public func int requiredPhaseCount()
+			if pSlotTarget != null and pControllerTwist != null and pTwistBone != -1
+				return 2
+				
+			else
+				return 1
 			end
-			
-			// update bones. this causes the actor animator to be processed now instead of
-			// in parallel. this is not optimal for performance but required to run post
-			// animator since it needs to know certain states
-			pComponent.updateBones()
-			
-			if pControllerTwist != null
-				if pTargetBone != -1
-					if true // using bone local twist
-						//pControllerTwist.setValue(pComponent.boneGetRotation(pTargetBone).getEulerAngles().getZ())
-						
-						var Quaternion orientation = pTwistQuat * pComponent.boneGetRotation(pTargetBone) * pTwistQuatInv
-						pControllerTwist.setValue(orientation.getEulerAngles().getZ())
-						
-					else
-						var Quaternion orientation = pTwistQuat * pComponent.boneGetRotation(pTargetBone) * pTwistQuatInv
-						var float angle = orientation.getEulerAngles().getZ()
-						
-// 						if pECBehavior.getTransfer().getName().equals("Head Spine")
-// 							getElement().log("Twist: " + angle)
-// 						end
-						
-						pControllerTwist.setValue(angle)
-					end
-					
-				else
-					pControllerTwist.setValue(0)
-				end
-			end
-			
-			pAnimatorInstance.apply()
 		end
 		
-		
 		/** Update controllers. */
-		public func void updateControllers()
+		public func void updateControllersPhase1()
 			if pSlotTarget != null
-				var Matrix matrix = pTransformTarget * pSlotTarget.getMatrixPlayspace()
+				var Matrix matrix = pTransformTarget * pSlotTarget.getMatrixCharacter()
 				
 				if pControllerTargetPosition != null
 					var Vector targetPosition = matrix.getPosition() + pTargetOffset
@@ -250,7 +235,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 					var Matrix baseMatrix
 					var Vector basePosition
 					if pSlotBase != null
-						baseMatrix = pTransformBase * pSlotBase.getMatrixPlayspace()
+						baseMatrix = pTransformBase * pSlotBase.getMatrixCharacter()
 						basePosition = baseMatrix.getPosition() + pTargetOffset
 						
 						targetPosition = basePosition + (targetPosition - basePosition) * pScaleReach
@@ -266,10 +251,53 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				if pControllerTargetOrientation != null
 					pControllerTargetOrientation.setRotation(matrix.normalize().getEulerAngles())
 				end
+				
+				if pControllerTwist != null
+					pControllerTwist.setValue(0)
+					
+					/*
+					var Matrix matrix = pTwistMat \
+						* pSlotTarget.getMatrixCharacter().normalize().getRotation() \
+						* pSlotBase.getMatrixCharacter().getInverse().normalize().getRotation() \
+						* pTwistMatInv
+					
+					var Vector view = matrix.getViewVector()
+					var float value
+					
+					if view.getY() > 0.9995 // up pole: ~1.8°
+						var Vector up = matrix.getUpVector()
+						value = DEMath.atan2(up.getX(), -up.getZ())
+						
+					elif view.getY() < -0.9995 // down pole: ~1.8°
+						var Vector up = matrix.getUpVector()
+						value = DEMath.atan2(up.getX(), up.getZ())
+						
+					else
+						value = matrix.getEulerAngles().getZ()
+					end
+					
+					pControllerTwist.setValue(value)
+					
+					if pSlotTarget.getTrackerSlot().getName().equals("HMD")
+						var Quaternion orientation = pSlotTarget.getOrientationCharacter()
+						var Vector view = matrix.getViewVector()
+						var Vector up = matrix.getUpVector()
+						var Vector right = matrix.getRightVector()
+						var float value = pControllerTwist.getValue()
+						
+						var Dictionary dict = Dictionary.new()
+						dict.setAt("view", view)
+						dict.setAt("up", up)
+						dict.setAt("right", right)
+						dict.setAt("value", value)
+						GameApp.getGameApp().getConsole().addMessage("IK " + dict)
+					end
+					*/
+				end
 			end
 			
 			if pSlotGuide != null
-				var Matrix matrix = pTransformGuide * pSlotGuide.getMatrixPlayspace()
+				var Matrix matrix = pTransformGuide * pSlotGuide.getMatrixCharacter()
 				
 				if pControllerGuidePosition != null
 					pControllerGuidePosition.setVector(matrix.getPosition() + pTargetOffset)
@@ -279,13 +307,24 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				end
 			end
 		end
+		
+		public func void updateControllersPhase2()
+			if pSlotTarget != null and pControllerTwist != null and pTwistBone != -1
+				//pControllerTwist.setValue(pComponent.boneGetRotation(pTwistBone).getEulerAngles().getZ())
+				
+				var Quaternion orientation = pTwistQuat * pComponent.boneGetRotation(pTwistBone) * pTwistQuatInv
+				pControllerTwist.setValue(orientation.getEulerAngles().getZ())
+// 				GameApp.getGameApp().getConsole().addMessage("Phase2 " + pECBehavior.getTransfer().getName() \
+// 					+ " " + pControllerTwist.getValue() + " " + pComponent.boneGetName(pTwistBone))
+			end
+		end
 	end
 	
 	
 	
 	private var MotionTransferIK pTransfer
 	private var ECBehaviorVRPlayspace pVRPlayspace
-	private var ECBehaviorActorAnimated pActorAnimated
+	private var ECBMoCapAnimator pMoCapAnimator
 	private var ECBTrackerSlot pSlotTarget
 	private var ECBTrackerSlot pSlotGuide
 	private var ECBTrackerSlot pSlotBase
@@ -295,12 +334,12 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	private var String pControllerNameGuideUp
 	private var String pControllerNameTwist
 	private var String pControllerNameRetracted
-	private var Animator pAnimatorPost
 	
 	
 	
 	/** Create behavior element class. */
-	public func new(BaseVRActorClass eclass, MotionTransferIK transfer) super(eclass, transfer.getName())
+	public func new(BaseVRActorClass eclass, MotionTransferIK transfer) \
+	super(eclass, transfer.getName())
 		if transfer == null
 			throw ENullPointer.new("transfer")
 		end
@@ -310,7 +349,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		
 		pTransfer = transfer
 		pVRPlayspace = eclass.getVRPlayspace()
-		pActorAnimated = eclass.getActorAnimated()
+		pMoCapAnimator = ECBMoCapAnimator.getBehaviorIn(eclass)
 		if transfer.getTargetTracker() != null
 			pSlotTarget = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getTargetTracker().getSlot())
 		end
@@ -334,7 +373,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	/** Dispose of behavior. */
 	public func void dispose()
 		pVRPlayspace = null
-		pActorAnimated = null
+		pMoCapAnimator = null
 		pTransfer = null
 		pSlotGuide = null
 		pSlotTarget = null
@@ -354,9 +393,9 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		return pVRPlayspace
 	end
 	
-	/** Actor animated behavior. */
-	public func ECBehaviorActorAnimated getActorAnimated()
-		return pActorAnimated
+	/** Motion capture animator behavior. */
+	public func ECBMoCapAnimator getMoCapAnimator()
+		return pMoCapAnimator
 	end
 	
 	/** Target slot behavior or null. */
@@ -402,16 +441,6 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	/** Animator controller name retracted. */
 	public func String getControllerNameRetracted()
 		return pControllerNameRetracted
-	end
-	
-	/** Post animator. */
-	public func Animator getAnimatorPost()
-		return pAnimatorPost
-	end
-	
-	/** Set post animator. */
-	public func void setAnimatorPost(Animator animator)
-		pAnimatorPost = animator
 	end
 	
 	
