@@ -21,6 +21,7 @@
 
 namespace Democap.Characters
 
+pin Dragengine.Scenery
 pin Dragengine.Utils
 
 
@@ -107,5 +108,23 @@ class CharacterTrackerSlots
 			end
 		end)
 		return list
+	end
+	
+	/**
+	 * Find closest slot with matching type or null.
+	 */
+	public func CharacterTrackerSlot bestMatching(InputDeviceType type, Vector position)
+		return pSlots.injectValue(null, block CharacterTrackerSlot inject, CharacterTrackerSlot slot
+			if slot.getInputDeviceType() != type
+				return inject
+				
+			elif inject == null or (position - slot.getPosition()).getLengthSquared() \
+			< (position - inject.getPosition()).getLengthSquared()
+				return slot
+				
+			else
+				return inject
+			end
+		end) cast CharacterTrackerSlot
 	end
 end

@@ -25,6 +25,7 @@ pin Democap.Actors
 pin Democap.Behaviors
 pin Democap.MotionTransferSystem
 
+pin Dragengine.Commands
 pin Dragengine.Animators
 pin Dragengine.Scenery
 pin Dragengine.Utils
@@ -419,17 +420,15 @@ class CharacterConfiguration
 		// the wrong location to use for calibration. to fix this find the tracker slots
 		// matching the hand controllers. there the user stored the offset required to
 		// moved the calibration point to a sane location
-		var String deviceID = actor.getVRRightHand().getInputDevice().getID()
 		var CharacterTrackerSlot slot = pTrackerSlots.find(block CharacterTrackerSlot each
-			return each.getInputDeviceID().equals(deviceID)
+			return each.getInputDeviceType() == InputDeviceType.vrRightHand
 		end)
 		if slot != null
 			rightHand = slot.getOffsetMatrix() * rightHand
 		end
 		
-		deviceID = actor.getVRLeftHand().getInputDevice().getID()
 		slot = pTrackerSlots.find(block CharacterTrackerSlot each
-			return each.getInputDeviceID().equals(deviceID)
+			return each.getInputDeviceType() == InputDeviceType.vrLeftHand
 		end)
 		if slot != null
 			leftHand = slot.getOffsetMatrix() * leftHand
@@ -478,6 +477,8 @@ class CharacterConfiguration
 		// calibrate tracker slots
 		setMatrixCalibrate(Matrix.newTranslation(-centerBody) * Matrix.newRotationY(-turnBody))
 		
+		assignInputDevices(actorProfile)
+		
 		pTrackerSlots.forEach(block CharacterTrackerSlot each
 			each.calibrate(actor)
 		end)
@@ -494,6 +495,39 @@ class CharacterConfiguration
 		
 		// calibration finished
 		pProfile.notifyCalibrated(this)
+	end
+	
+	/** Assign input devices to closest slot with matching type. */
+	public func void assignInputDevices(ActorProfile actorProfile)
+		var BindingManager bindings = GameApp.getGameApp().getBindingManager()
+		
+		// clear all assignments
+		pTrackerSlots.forEach(block CharacterTrackerSlot slot
+			slot.setInputDeviceID("")
+		end)
+		
+		// assign input devices
+		var Console console = GameApp.getGameApp().getConsole()
+		console.addMessage("Assign input devices:")
+		
+		bindings.forEachDevice(block InputDevice device
+			select device.getType()
+			case InputDeviceType.vrHMD, InputDeviceType.vrLeftHand, \
+			     InputDeviceType.vrRightHand, InputDeviceType.vrTracker
+				var CharacterTrackerSlot slot = pTrackerSlots.bestMatching(\
+					device.getType(), pMatrixCalibrate * device.getDevicePosePosition())
+				
+				if slot != null
+					slot.setInputDeviceID(device.getID())
+					console.addMessage("- {} ({}): Assign to slot '{}'".format(\
+						Array.newWith(device.getID(), device.getType().name(), slot.getName())))
+					
+				else
+					console.addMessage("- {} ({}): Not assigned".format(\
+						Array.newWith(device.getID(), device.getType().name())))
+				end
+			end
+		end)
 	end
 	
 	

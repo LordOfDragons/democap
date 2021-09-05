@@ -38,6 +38,7 @@ class CharacterTrackerSlot
 	private var Vector pPosition
 	private var Vector pRotation
 	private var Matrix pMatrix
+	private var InputDeviceType pInputDeviceType
 	private var String pInputDeviceID
 	private var Vector pOffsetPosition
 	private var Vector pOffsetRotation
@@ -95,6 +96,7 @@ class CharacterTrackerSlot
 		pRotation = slot.pRotation
 		pMatrix = slot.pMatrix
 		pInputDeviceID = slot.pInputDeviceID
+		pInputDeviceType = slot.pInputDeviceType
 		pOffsetPosition = slot.pOffsetPosition
 		pOffsetRotation = slot.pOffsetRotation
 		pOffsetMatrix = slot.pOffsetMatrix
@@ -169,6 +171,16 @@ class CharacterTrackerSlot
 	/** Static matrix. */
 	public func Matrix getMatrix()
 		return pMatrix
+	end
+	
+	/** Input device type to auto-assign or null. */
+	public func InputDeviceType getInputDeviceType()
+		return pInputDeviceType
+	end
+	
+	/** Set input device type to auto-assign or null. */
+	public func void setInputDeviceType(InputDeviceType type)
+		pInputDeviceType = type
 	end
 	
 	/** ID of input device attached to this slot or empty string. */
@@ -361,18 +373,19 @@ class CharacterTrackerSlot
 			return
 		end
 		
+		behavior.findInputDevice()
 		behavior.updateMatrix()
 		
 		if pInputDeviceID.empty() or behavior.isDetached()
 			resetCalibration()
 			
 		else
-			pCalibrateMatrix = behavior.getMatrixPlayspace()
+			pCalibrateMatrix = behavior.getMatrixCharacter()
 			
 			if pForceCalibrateRotation != null
 				var Vector position = pCalibrateMatrix.getPosition()
 				pCalibrateMatrix = Matrix.newTranslation(position)
-				behavior.setMatrixPlayspace(position, pForceCalibrateRotation)
+				behavior.setMatrixCharacter(position, pForceCalibrateRotation)
 			end
 			
 			pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()

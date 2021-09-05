@@ -61,9 +61,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 			
 			public func void devicesReloaded(BindingManager manager)
 				// temporary
-				pInstance.setInputDevice(manager.findDevice(block InputDevice each
-					return each.getID().equals(pDeviceID)
-				end))
+				pInstance.findInputDevice()
 			end
 		end
 		
@@ -155,6 +153,11 @@ class ECBTrackerSlot extends DefaultECBehavior
 			return pComponent
 		end
 		
+		/** Character tracker slot. */
+		public func CharacterTrackerSlot getTrackerSlot()
+			return pECBehavior.getTrackerSlot()
+		end
+		
 		/** Animator controller position. */
 		public func AnimatorController getControllerPosition()
 			return pControllerPosition
@@ -227,8 +230,8 @@ class ECBTrackerSlot extends DefaultECBehavior
 			return pMatrix.toDMatrix() * pVRPlayspace.getMatrix()
 		end
 		
-		/** Playspace local matrix. */
-		public func Matrix getMatrixPlayspace()
+		/** Character local matrix. */
+		public func Matrix getMatrixCharacter()
 			return pMatrix
 		end
 		
@@ -237,13 +240,23 @@ class ECBTrackerSlot extends DefaultECBehavior
 			return pVRPlayspace.getMatrix() * DVector.new(pPosition)
 		end
 		
-		/** Playspace local position. */
-		public func Vector getPositionPlayspace()
+		/** Character local position. */
+		public func Vector getPositionCharacter()
 			return pPosition
 		end
 		
-		/** Set playspace local matrix. */
-		public func void setMatrixPlayspace(Matrix matrix)
+		/** World orientation. */
+		public func Quaternion getOrientation()
+			return pOrientation * pVRPlayspace.getOrientation()
+		end
+		
+		/** Character local orientation. */
+		public func Quaternion getOrientationCharacter()
+			return pOrientation
+		end
+		
+		/** Set character local matrix. */
+		public func void setMatrixCharacter(Matrix matrix)
 			if matrix == null
 				throw ENullPointer.new("matrix")
 			end
@@ -252,7 +265,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 		end
 		
 		/** Set playspace local matrix. */
-		public func void setMatrixPlayspace(Vector position, Vector rotation)
+		public func void setMatrixCharacter(Vector position, Vector rotation)
 			if position == null
 				throw ENullPointer.new("position")
 			end
@@ -263,6 +276,16 @@ class ECBTrackerSlot extends DefaultECBehavior
 			pMatrix = Matrix.newRT(rotation, position)
 		end
 		
+		/** Find input device. */
+		public func void findInputDevice()
+			var BindingManager bindingManager = GameApp.getGameApp().getBindingManager()
+			var String id = pECBehavior.getTrackerSlot().getInputDeviceID()
+			
+			setInputDevice(bindingManager.findDevice(block InputDevice each
+				return each.getID().equals(id)
+			end))
+		end
+		
 		
 		
 		/** Element has been added to game world. Start tracking device. */
@@ -270,12 +293,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 			var BindingManager bindingManager = GameApp.getGameApp().getBindingManager()
 			bindingManager.addListener(pAttachDetachListener)
 			
-			// find device
-			var String id = pECBehavior.getTrackerSlot().getInputDeviceID()
-			setInputDevice(bindingManager.findDevice(block InputDevice each
-				return each.getID().equals(id)
-			end))
-			
+			findInputDevice()
 			createDDCoordSystem()
 		end
 		
