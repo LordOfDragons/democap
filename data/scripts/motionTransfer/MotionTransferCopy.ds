@@ -1,0 +1,323 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Democap.Actors
+pin Democap.Behaviors
+pin Democap.Characters
+
+pin Dragengine.Animators
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+/**
+ * Motion transfer copying state between bones.
+ */
+class MotionTransferCopy extends DefaultMotionTransfer
+	/** Factory. */
+	class Factory implements MotionTransferFactory
+		public func new()
+		end
+		
+		public func String factoryID()
+			return "copy"
+		end
+		
+		public func MotionTransfer createMotionTransfer()
+			return MotionTransferCopy.new(factoryID())
+		end
+	end
+	
+	/** Copy mode. */
+	enum CopyMode
+		local //<! Copy from bone local space to bone local space
+		component //<! Copy from component space to component space
+	end
+	
+	
+	
+	private var String pSourceBone
+	private var Array pTargetBones
+	private var float pScalePosition
+	private var float pScaleRotation
+	private var bool pCopyPosition
+	private var bool pCopyRotation
+	private var CopyMode pCopyMode
+	private var bool pLockX
+	private var bool pLockY
+	private var bool pLockZ
+	
+	private var ADRuleForeignState pADRule
+	
+	
+	
+	/** Create motion transfer. */
+	public func new(String factoryID) super(factoryID)
+		pSourceBone = ""
+		pTargetBones = Array.new()
+		pScalePosition = 1
+		pScaleRotation = 1
+		pCopyPosition = false
+		pCopyRotation = true
+		pCopyMode = CopyMode.component
+		pLockX = false
+		pLockY = false
+		pLockZ = false
+	end
+	
+	/** Create copy of motion transfer. */
+	public func new(MotionTransferCopy transfer) super(transfer.factoryID())
+		pSourceBone = transfer.pSourceBone
+		pTargetBones = Array.new(transfer.pTargetBones)
+		pScalePosition = transfer.pScalePosition
+		pScaleRotation = transfer.pScaleRotation
+		pCopyPosition = transfer.pCopyPosition
+		pCopyRotation = transfer.pCopyRotation
+		pCopyMode = transfer.pCopyMode
+		pLockX = transfer.pLockX
+		pLockY = transfer.pLockY
+		pLockZ = transfer.pLockZ
+	end
+	
+	
+	
+	/** Source bone to copy state from. */
+	public func String getSourceBone()
+		return pSourceBone
+	end
+	
+	/** Set source bone to copy state from. */
+	public func void setSourceBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pSourceBone = bone
+	end
+	
+	/** Target bones as Array of String. */
+	public func Array getTargetBones()
+		return pTargetBones
+	end
+	
+	/** Position scale factor. */
+	public func float getScalePosition()
+		return pScalePosition
+	end
+	
+	/** Set position scale factor. */
+	public func void setScalePosition(float scale)
+		pScalePosition = scale
+	end
+	
+	/** Rotation scale factor. */
+	public func float getScaleRotation()
+		return pScaleRotation
+	end
+	
+	/** Set rotation scale factor. */
+	public func void setScaleRotation(float rotation)
+		pScaleRotation = rotation
+	end
+	
+	/** Copy position. */
+	public func bool getCopyPosition()
+		return pCopyPosition
+	end
+	
+	/** Set copy position. */
+	public func void setCopyPosition(bool copy)
+		pCopyPosition = copy
+	end
+	
+	/** Copy rotation. */
+	public func bool getCopyRotation()
+		return pCopyRotation
+	end
+	
+	/** Set copy rotation. */
+	public func void setCopyRotation(bool copy)
+		pCopyRotation = copy
+	end
+	
+	/** Copy mode. */
+	public func CopyMode getCopyMode()
+		return pCopyMode
+	end
+	
+	/** Set copy mode. */
+	public func void setCopyMode(CopyMode mode)
+		if mode == null
+			throw ENullPointer.new("mode")
+		end
+		pCopyMode = mode
+	end
+	
+	/** Lock X component. */
+	public func bool getLockX()
+		return pLockX
+	end
+	
+	/** Set lock X component. */
+	public func void setLockX(bool lock)
+		pLockX = lock
+	end
+	
+	/** Lock Y component. */
+	public func bool getLockY()
+		return pLockY
+	end
+	
+	/** Set lock Y component. */
+	public func void setLockY(bool lock)
+		pLockY = lock
+	end
+	
+	/** Lock Z component. */
+	public func bool getLockZ()
+		return pLockZ
+	end
+	
+	/** Set lock Z component. */
+	public func void setLockZ(bool lock)
+		pLockZ = lock
+	end
+	
+	
+	
+	/** Animator definition rule or null. */
+	public func ADRuleForeignState getADRule()
+		return pADRule
+	end
+	
+	
+	
+	/** Init element clas. */
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
+		// no behavior required
+		
+		// add rule
+		pADRule = null
+		
+		if pSourceBone.empty() or pTargetBones.getCount() == 0
+			return
+		end
+		
+		pADRule = ADRuleForeignState.new()
+		pADRule.setName(getName())
+		pADRule.setEnableOrientation(pCopyRotation)
+		pADRule.setEnablePosition(pCopyPosition)
+		pADRule.setEnableSize(false)
+		pADRule.setForeignBone(pSourceBone)
+		pADRule.setScaleOrientation(pScaleRotation)
+		pADRule.setScalePosition(pScalePosition)
+		pADRule.setModifyX(not pLockX)
+		pADRule.setModifyY(not pLockY)
+		pADRule.setModifyZ(not pLockZ)
+		
+		select pCopyMode
+		case CopyMode.local
+			pADRule.setSourceCoordinateFrame(ARForeignStateCFrame.local)
+			pADRule.setDestinationCoordinateFrame(ARForeignStateCFrame.local)
+			
+		case CopyMode.component
+			pADRule.setSourceCoordinateFrame(ARForeignStateCFrame.component)
+			pADRule.setDestinationCoordinateFrame(ARForeignStateCFrame.component)
+		end
+		
+		pTargetBones.forEach(block String each
+			pADRule.addBone(each)
+		end)
+		config.getAnimatorDefinition().addRule(pADRule)
+		
+		// register bones to record
+		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
+		if recordAnimation != null
+			pTargetBones.forEach(block String each
+				recordAnimation.addBone(each)
+			end)
+		end
+	end
+	
+	/** Create copy of motion transfer. */
+	public func MotionTransfer createCopy()
+		return MotionTransferCopy.new(this)
+	end
+	
+	/** Load from XML. */
+	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("name")
+				setName(element.getFirstCData())
+				
+			elif tagName.equals("sourceBone")
+				setSourceBone(element.getFirstCData())
+				
+			elif tagName.equals("targetBone")
+				pTargetBones.add(element.getFirstCData())
+				
+			elif tagName.equals("scalePosition")
+				setScalePosition(element.getFirstCDataFloat())
+				
+			elif tagName.equals("scaleRotation")
+				setScaleRotation(element.getFirstCDataFloat())
+				
+			elif tagName.equals("copyPosition")
+				setCopyPosition(element.getFirstCDataBool())
+				
+			elif tagName.equals("copyRotation")
+				setCopyRotation(element.getFirstCDataBool())
+				
+			elif tagName.equals("copyMode")
+				setCopyMode(CopyMode.named(element.getFirstCData()))
+				
+			elif tagName.equals("lockX")
+				setLockX(element.getFirstCDataBool())
+				
+			elif tagName.equals("lockY")
+				setLockY(element.getFirstCDataBool())
+				
+			elif tagName.equals("lockZ")
+				setLockZ(element.getFirstCDataBool())
+			end
+		end)
+	end
+	
+	/** Save to XML. */
+	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+		tag.addDataTag("name", getName())
+		tag.addDataTag("sourceBone", pSourceBone)
+		pTargetBones.forEach(block String each
+			tag.addDataTag("targetBone", each)
+		end)
+		tag.addDataTag("scalePosition", pScalePosition)
+		tag.addDataTag("scaleRotation", pScaleRotation)
+		tag.addDataTag("copyPosition", pCopyPosition)
+		tag.addDataTag("copyRotation", pCopyRotation)
+		tag.addDataTag("copyMode", pCopyMode.name())
+		tag.addDataTag("lockX", pLockX)
+		tag.addDataTag("lockY", pLockY)
+		tag.addDataTag("lockZ", pLockZ)
+	end
+end

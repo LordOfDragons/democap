@@ -80,6 +80,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var MotionTransferTracker pBaseTracker
 	private var ActorReach pActorReach
 	private var float pReachLimit
+	private var bool pAdjustPosition
 	private var String pMoveBaseIK
 	private var String pMoveRetracted
 	private var float pTwistPropagation
@@ -122,6 +123,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBaseTracker = MotionTransferTracker.new()
 		pActorReach = ActorReach.none
 		pReachLimit = 1
+		pAdjustPosition = true
 		pMoveBaseIK = ""
 		pMoveRetracted = ""
 		pTwistPropagation = 0
@@ -149,6 +151,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBaseTracker = MotionTransferTracker.new(transfer.pBaseTracker)
 		pActorReach = transfer.pActorReach
 		pReachLimit = transfer.pReachLimit
+		pAdjustPosition = transfer.pAdjustPosition
 		pMoveBaseIK = transfer.pMoveBaseIK
 		pMoveRetracted = transfer.pMoveRetracted
 		pTwistPropagation = transfer.pTwistPropagation
@@ -243,6 +246,16 @@ class MotionTransferIK extends DefaultMotionTransfer
 	/** Set limit reach to percentage of bone chain reach. */
 	public func void setReachLimit(float limit)
 		pReachLimit = DEMath.max(limit, 0.1)
+	end
+	
+	/** Adjust position if chain is of length 1. */
+	public func bool getAdjustPosition()
+		return pAdjustPosition
+	end
+	
+	/** Set adjust position if chain is of length 1. */
+	public func void setAdjustPosition(bool adjust)
+		pAdjustPosition = adjust
 	end
 	
 	/** Name of move to use to init base IK state for better results. */
@@ -584,6 +597,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		pADRuleIK = ADRuleInverseKinematic.new()
 		pADRuleIK.setName(getName())
+		pADRuleIK.setAdjustPosition(pAdjustPosition)
 		pADRuleIK.setAdjustOrientation(true)
 		pADRuleIK.setReachBone(baseBone)
 		pADRuleIK.setReachRange(pCalibrateReach)
@@ -596,6 +610,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		if false
 			pADRuleIKForce = ADRuleInverseKinematic.new()
 			pADRuleIKForce.setName(getName() + ".force")
+			pADRuleIKForce.setAdjustPosition(false)
 			pADRuleIKForce.setAdjustOrientation(true)
 			pADRuleIKForce.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, linkTargetPosition))
 			pADRuleIKForce.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkTargetOrientation))
@@ -886,6 +901,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("reachLimit")
 				setReachLimit(element.getFirstCDataFloat())
 				
+			elif tagName.equals("adjustPosition")
+				setAdjustPosition(element.getFirstCDataBool())
+				
 			elif tagName.equals("moveBaseIK")
 				setMoveBaseIK(element.getFirstCData())
 				
@@ -960,6 +978,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBaseTracker.save(loader, tag.addTag("baseTracker"))
 		tag.addDataTag("actorReach", pActorReach.name())
 		tag.addDataTag("reachLimit", pReachLimit)
+		tag.addDataTag("adjustPosition", pAdjustPosition)
 		tag.addDataTag("moveBaseIK", pMoveBaseIK)
 		tag.addDataTag("moveRetracted", pMoveRetracted)
 		tag.addDataTag("twistPropagation", pTwistPropagation)
