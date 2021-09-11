@@ -401,7 +401,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			slotReach = config.getTrackerSlots().getAt(pBaseTracker.getSlot())
 		end
 		
-		if slotTarget == null or pCalibrateBones.getCount() == 0 or pTargetBone.empty()
+		if slotTarget == null or pCalibrateBones.getCount() < 2 or pTargetBone.empty()
 			return
 		end
 		
@@ -450,7 +450,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(pADRuleRetracted)
 		end
 		
-		if pTwistBoneCount > 0 and pTwistPropagation > 0.01 and pCalibrateBones.getCount() >= 2
+		if pTwistBoneCount > 0 and pTwistPropagation > 0.01
 			var int count = DEMath.min(pTwistBoneCount, pCalibrateBones.getCount() - 1)
 			var ADRuleBoneTransformator rule
 			var String name = getName() + ".twist"
@@ -645,7 +645,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	BaseVRActor actor, Component component)
 		findBoneChain(component.getRig(), pTargetBone, pBoneCount, pCalibrateBones)
 		var String rootBone = "", baseBone = ""
-		if pCalibrateBones.getCount() > 0
+		if pCalibrateBones.getCount() >= 2
 			rootBone = pCalibrateBones.getAt(-1) cast String
 			baseBone = pCalibrateBones.getAt(-(pBaseChainIndex + 1)) cast String
 		end
@@ -760,7 +760,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end
 		
 		// calculate twist axes
-		if pTwistBoneCount > 0 and pTwistPropagation > 0.01 and pCalibrateBones.getCount() >= 2
+		if pTwistBoneCount > 0 and pTwistPropagation > 0.01
 			var int count = DEMath.min(pTwistBoneCount, pCalibrateBones.getCount() - 1)
 			var Vector axis = Matrix.newRotation(pTwistAxisRotation).getViewVector()
 			var int i, baseIndex = count

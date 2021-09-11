@@ -1,0 +1,231 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Democap.Actors
+pin Democap.Behaviors
+pin Democap.Characters
+
+pin Dragengine.Animators
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+/**
+ * Motion transfer applying an animation.
+ */
+class MotionTransferAnimation extends DefaultMotionTransfer
+	/** Factory. */
+	class Factory implements MotionTransferFactory
+		public func new()
+		end
+		
+		public func String factoryID()
+			return "animation"
+		end
+		
+		public func MotionTransfer createMotionTransfer()
+			return MotionTransferAnimation.new(factoryID())
+		end
+	end
+	
+	/** Mode. */
+	enum Mode
+		replace //<! Animation replaces bone states
+		overlay //<! Animation is superimposed on bone states
+	end
+	
+	
+	
+	private var String pMove
+	private var Array pTargetBones
+	private var Mode pMode
+	private var float pPlaytime
+	
+	private var ADController pADControllerPlayback
+	private var ADLink pADLink
+	private var ADRuleAnimation pADRule
+	
+	
+	
+	/** Create motion transfer. */
+	public func new(String factoryID) super(factoryID)
+		pMove = ""
+		pTargetBones = Array.new()
+		pMode = Mode.replace
+		pPlaytime = 10
+	end
+	
+	/** Create copy of motion transfer. */
+	public func new(MotionTransferAnimation transfer) super(transfer.factoryID())
+		pMove = transfer.pMove
+		pTargetBones = Array.new(transfer.pTargetBones)
+		pMode = transfer.pMode
+		pPlaytime = transfer.pPlaytime
+	end
+	
+	
+	
+	/** Animation move. */
+	public func String getMove()
+		return pMove
+	end
+	
+	/** Set animation move. */
+	public func void setMove(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pMove = move
+	end
+	
+	/** Target bones as Array of String. */
+	public func Array getTargetBones()
+		return pTargetBones
+	end
+	
+	/** Mode. */
+	public func Mode getMode()
+		return pMode
+	end
+	
+	/** Set mode. */
+	public func void setMode(Mode mode)
+		if mode == null
+			throw ENullPointer.new("mode")
+		end
+		pMode = mode
+	end
+	
+	/** Playtime in seconds. */
+	public func float getPlaytime()
+		return pPlaytime
+	end
+	
+	/** Set playtime in seconds. */
+	public func void setPlaytime(float playtime)
+		pPlaytime = playtime
+	end
+	
+	
+	
+	/** Animator definition rules or null. */
+	public func ADRuleAnimation getADRuleAbsolute()
+		return pADRule
+	end
+	
+	
+	
+	/** Init element clas. */
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
+		var ECBMotionTransferAnimation behavior = ECBMotionTransferAnimation.new(eclass, this)
+		var AnimatorDefinition adef = config.getAnimatorDefinition()
+		
+		// add rule
+		pADControllerPlayback = null
+		pADLink = null
+		pADRule = null
+		
+		if pMove.empty() or pTargetBones.getCount() == 0
+			return
+		end
+		
+		// add controller
+		pADControllerPlayback = ADController.new()
+		pADControllerPlayback.setName(behavior.getControllerNamePlayback())
+		pADControllerPlayback.setMinimum(0)
+		pADControllerPlayback.setMaximum(pPlaytime)
+		pADControllerPlayback.setClamp(false)
+		adef.addController(pADControllerPlayback)
+		
+		// add link
+		pADLink = ADLink.new()
+		pADLink.setController(pADControllerPlayback)
+		adef.addLink(pADLink)
+		
+		// add rule
+		pADRule = ADRuleAnimation.new()
+		pADRule.setName(getName())
+		pADRule.setMoveName(pMove)
+		pADRule.addTargetLink(ADRuleTargetLink.new(ARAnimationTarget.moveTime, pADLink))
+		
+		select pMode
+		case Mode.replace
+			pADRule.setBlendMode(AnimatorRuleBlendMode.blend)
+			
+		case Mode.overlay
+			pADRule.setBlendMode(AnimatorRuleBlendMode.overlay)
+		end
+		
+		pTargetBones.forEach(block String each
+			pADRule.addBone(each)
+		end)
+		adef.addRule(pADRule)
+		
+		// register bones to record
+		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
+		if recordAnimation != null
+			pTargetBones.forEach(block String each
+				recordAnimation.addBone(each)
+			end)
+		end
+	end
+	
+	/** Create copy of motion transfer. */
+	public func MotionTransfer createCopy()
+		return MotionTransferAnimation.new(this)
+	end
+	
+	/** Load from XML. */
+	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("name")
+				setName(element.getFirstCData())
+				
+			elif tagName.equals("move")
+				setMove(element.getFirstCData())
+				
+			elif tagName.equals("targetBone")
+				pTargetBones.add(element.getFirstCData())
+				
+			elif tagName.equals("mode")
+				setMode(Mode.named(element.getFirstCData()))
+				
+			elif tagName.equals("playtime")
+				setPlaytime(element.getFirstCDataFloat())
+			end
+		end)
+	end
+	
+	/** Save to XML. */
+	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+		tag.addDataTag("name", getName())
+		tag.addDataTag("move", pMove)
+		pTargetBones.forEach(block String each
+			tag.addDataTag("targetBone", each)
+		end)
+		tag.addDataTag("mode", pMode.name())
+		tag.addDataTag("playtime", pPlaytime)
+	end
+end

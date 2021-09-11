@@ -1,0 +1,354 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Democap.Actors
+pin Democap.Behaviors
+pin Democap.Characters
+
+pin Dragengine.Animators
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+/**
+ * Motion transfer applying secondary motion derived from a primary bone motion.
+ */
+class MotionTransferSecondary extends DefaultMotionTransfer
+	/** Factory. */
+	class Factory implements MotionTransferFactory
+		public func new()
+		end
+		
+		public func String factoryID()
+			return "secondary"
+		end
+		
+		public func MotionTransfer createMotionTransfer()
+			return MotionTransferSecondary.new(factoryID())
+		end
+	end
+	
+	/** Mode. */
+	enum Mode
+		replace //<! Secondary motion replaces bone states
+		overlay //<! Secondary motion is superimposed on bone states
+	end
+	
+	/** Source bone parameter. */
+	enum Parameter
+		rotationX
+		rotationY
+		rotationZ
+	end
+	
+	
+	
+	private var String pSourceBone
+	private var Parameter pParameter
+	private var float pMinimum
+	private var float pMaximum
+	private var Array pTargetBones
+	private var Mode pMode
+	private var String pMove
+	private var float pReferenceTime
+	private var bool pFlip
+	
+	private var ADLink pADLink
+	private var ADRuleAnimation pADRuleReplace
+	private var ADRuleAnimationDifference pADRuleOverlay
+	
+	
+	
+	/** Create motion transfer. */
+	public func new(String factoryID) super(factoryID)
+		pSourceBone = ""
+		pParameter = Parameter.rotationZ
+		pMinimum = 0
+		pMaximum = 0
+		pTargetBones = Array.new()
+		pMode = Mode.replace
+		pMove = ""
+		pReferenceTime = 0
+		pFlip = false
+	end
+	
+	/** Create copy of motion transfer. */
+	public func new(MotionTransferSecondary transfer) super(transfer.factoryID())
+		pSourceBone = transfer.pSourceBone
+		pParameter = transfer.pParameter
+		pMinimum = transfer.pMinimum
+		pMaximum = transfer.pMaximum
+		pTargetBones = Array.new(transfer.pTargetBones)
+		pMode = transfer.pMode
+		pMove = transfer.pMove
+		pReferenceTime = transfer.pReferenceTime
+		pFlip = transfer.pFlip
+	end
+	
+	
+	
+	/** Source bone to use as input. */
+	public func String getSourceBone()
+		return pSourceBone
+	end
+	
+	/** Set source bone to use as input. */
+	public func void setSourceBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pSourceBone = bone
+	end
+	
+	/** Parameter of source bone to use as input. */
+	public func Parameter getParameter()
+		return pParameter
+	end
+	
+	/** Set parameter of source bone to use as input. */
+	public func void setParameter(Parameter parameter)
+		if parameter == null
+			throw ENullPointer.new("parameter")
+		end
+		pParameter = parameter
+	end
+	
+	/** Source bone parameter minimum value mapped to start of move. */
+	public func float getMinimum()
+		return pMinimum
+	end
+	
+	/** Set source bone parameter minimum value mapped to start of move. */
+	public func void setMinimum(float value)
+		pMinimum = value
+	end
+	
+	/** Source bone parameter maximum value mapped to start of move. */
+	public func float getMaximum()
+		return pMaximum
+	end
+	
+	/** Set source bone parameter maximum value mapped to start of move. */
+	public func void setMaximum(float value)
+		pMaximum = value
+	end
+	
+	/** Target bones as Array of String. */
+	public func Array getTargetBones()
+		return pTargetBones
+	end
+	
+	/** Mode. */
+	public func Mode getMode()
+		return pMode
+	end
+	
+	/** Set mode. */
+	public func void setMode(Mode mode)
+		if mode == null
+			throw ENullPointer.new("mode")
+		end
+		pMode = mode
+	end
+	
+	/** Move to apply to target bones. */
+	public func String getMove()
+		return pMove
+	end
+	
+	/** Set move to apply to target bones. */
+	public func void setMove(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pMove = move
+	end
+	
+	/** Move reference time if overlay application mode is used. */
+	public func float getReferenceTime()
+		return pReferenceTime
+	end
+	
+	/** Set move reference time if overlay application mode is used. */
+	public func void setReferenceTime(float time)
+		pReferenceTime = time
+	end
+	
+	/** Flip link curve along Y axis. */
+	public func bool getFlip()
+		return pFlip
+	end
+	
+	/** Set flip link curve along Y axis. */
+	public func void setFlip(bool flip)
+		pFlip = flip
+	end
+	
+	
+	
+	/** Animator definition rules or null. */
+	public func ADRuleAnimation getADRuleAbsolute()
+		return pADRuleReplace
+	end
+	
+	public func ADRuleAnimationDifference getADRuleAdditive()
+		return pADRuleOverlay
+	end
+	
+	
+	
+	/** Init element clas. */
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
+		// no behavior required
+		
+		// add rule
+		pADLink = null
+		pADRuleReplace = null
+		pADRuleOverlay = null
+		
+		if pSourceBone.empty() or pTargetBones.getCount() == 0 or pMove.empty()
+			return
+		end
+		
+		// add link
+		pADLink = ADLink.new()
+		pADLink.setBone(pSourceBone)
+		pADLink.setBoneMinimum(pMinimum)
+		pADLink.setBoneMaximum(pMaximum)
+		
+		select pParameter
+		case Parameter.rotationX
+			pADLink.setBoneParameter(AnimatorLinkBoneParameter.rotationX)
+			
+		case Parameter.rotationY
+			pADLink.setBoneParameter(AnimatorLinkBoneParameter.rotationY)
+			
+		case Parameter.rotationZ
+			pADLink.setBoneParameter(AnimatorLinkBoneParameter.rotationZ)
+		end
+		
+		if pFlip
+			var CurveBezier curve = CurveBezier.new()
+			curve.setInterpolationMode(CurveBezierInterpolation.linear)
+			curve.addPoint(0, 1)
+			curve.addPoint(1, 0)
+			pADLink.setCurve(curve)
+		end
+		
+		config.getAnimatorDefinition().addLink(pADLink)
+		
+		// add rule
+		var ADRule rule
+		
+		select pMode
+		case Mode.replace
+			pADRuleReplace = ADRuleAnimation.new()
+			pADRuleReplace.setName(getName())
+			pADRuleReplace.setMoveName(pMove)
+			pADRuleReplace.addTargetLink(ADRuleTargetLink.new(ARAnimationTarget.moveTime, pADLink))
+			rule = pADRuleReplace
+			
+		case Mode.overlay
+			pADRuleOverlay = ADRuleAnimationDifference.new()
+			pADRuleOverlay.setName(getName())
+			pADRuleOverlay.setLeadingMoveName(pMove)
+			pADRuleOverlay.setReferenceMoveName(pMove)
+			pADRuleOverlay.setReferenceMoveTime(pReferenceTime)
+			pADRuleOverlay.setBlendMode(AnimatorRuleBlendMode.overlay)
+			pADRuleOverlay.addTargetLink(ADRuleTargetLink.new(ARAnimationDifferenceTarget.leadingMoveTime, pADLink))
+			rule = pADRuleOverlay
+		end
+		
+		pTargetBones.forEach(block String each
+			rule.addBone(each)
+		end)
+		config.getAnimatorDefinition().addRule(rule)
+		
+		// register bones to record
+		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
+		if recordAnimation != null
+			pTargetBones.forEach(block String each
+				recordAnimation.addBone(each)
+			end)
+		end
+	end
+	
+	/** Create copy of motion transfer. */
+	public func MotionTransfer createCopy()
+		return MotionTransferSecondary.new(this)
+	end
+	
+	/** Load from XML. */
+	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("name")
+				setName(element.getFirstCData())
+				
+			elif tagName.equals("sourceBone")
+				setSourceBone(element.getFirstCData())
+				
+			elif tagName.equals("parameter")
+				setParameter(Parameter.named(element.getFirstCData()))
+				
+			elif tagName.equals("minimum")
+				setMinimum(element.getFirstCDataFloat())
+				
+			elif tagName.equals("maximum")
+				setMaximum(element.getFirstCDataFloat())
+				
+			elif tagName.equals("targetBone")
+				pTargetBones.add(element.getFirstCData())
+				
+			elif tagName.equals("mode")
+				setMode(Mode.named(element.getFirstCData()))
+				
+			elif tagName.equals("move")
+				setMove(element.getFirstCData())
+				
+			elif tagName.equals("referenceTime")
+				setReferenceTime(element.getFirstCDataFloat())
+				
+			elif tagName.equals("flip")
+				setFlip(element.getFirstCDataBool())
+			end
+		end)
+	end
+	
+	/** Save to XML. */
+	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+		tag.addDataTag("name", getName())
+		tag.addDataTag("sourceBone", pSourceBone)
+		tag.addDataTag("parameter", pParameter.name())
+		tag.addDataTag("minimum", pMinimum)
+		tag.addDataTag("maximum", pMaximum)
+		pTargetBones.forEach(block String each
+			tag.addDataTag("targetBone", each)
+		end)
+		tag.addDataTag("mode", pMode.name())
+		tag.addDataTag("move", pMove)
+		tag.addDataTag("referenceTime", pReferenceTime)
+		tag.addDataTag("flip", pFlip)
+	end
+end
