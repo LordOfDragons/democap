@@ -30,7 +30,7 @@ pin Dragengine.Utils
 /**
  * Console window.
  */
-class DMCWindowConsole extends WindowModal implements ConsoleListener
+class DMCWindowConsole extends Window implements ConsoleListener
 	private var Panel pPanelMessages
 	private var Viewport pViewportMessages
 	private var ConsoleInputField pEditInput
@@ -46,6 +46,7 @@ class DMCWindowConsole extends WindowModal implements ConsoleListener
 			setCanMaximize(false)
 			setCanMinimize(false)
 			setCanReorder(true)
+			setVisible(false)
 			setPosition(Point.new(10, desktop.getContainerHeight() - 250))
 			setSize(Point.new(desktop.getContainerWidth() - 350, 200))
 			
@@ -73,13 +74,13 @@ class DMCWindowConsole extends WindowModal implements ConsoleListener
 	 * Dispose of window.
 	 */
 	public func void dispose()
-		super.dispose()
+		GameApp.getGameApp().getConsole().removeListener(this)
 		
 		pEditInput = null
 		pViewportMessages = null
 		pPanelMessages = null
 		
-		GameApp.getGameApp().getConsole().removeListener(this)
+		super.dispose()
 	end
 	
 	
@@ -87,11 +88,19 @@ class DMCWindowConsole extends WindowModal implements ConsoleListener
 	 * Modify close to hide instead of close.
 	 */
 	public func void close()
-		if getBlockWindow() != null
-			getBlockWindow().close()
-		end
-		
 		setVisible(false)
+	end
+	
+	/**
+	 * Window becomes visible.
+	 */
+	public func void onShown(WidgetEvent event)
+		super.onShown(event)
+		
+		pPanelMessages.doLayout()
+		
+		var RangeModel model = pViewportMessages.getVerticalRangeModel()
+		model.setValue(model.getMaximum())
 	end
 	
 	
@@ -104,20 +113,26 @@ class DMCWindowConsole extends WindowModal implements ConsoleListener
 		
 		pPanelMessages.runWhileBlockingLayout(block
 			if removedTop
-				pPanelMessages.removeWidget(pPanelMessages.getWidget(0))
+				pPanelMessages.getWidget(0).safeDispose()
+				pPanelMessages.getWidget(0).safeDispose()
 			end
+			
+			pPanelMessages.addWidget(Label.new(\
+				message.getTimeStamp().format("%H:%M:%S"), "Label.WindowConsole.Timestamp"))
 			
 			var String text = message.getMessage()
 			if message.getSource() != null
-				text = message.getSource() + ": " + text
+				text = "{}: {}".format(Array.newWith(message.getSource(), text))
 			end
 			
-			var Label label = Label.new(text, "Label.WindowConsole")
+			var Label label = Label.new(text, "Label.WindowConsole.Message")
 			label.setWordWrap(true)
 			pPanelMessages.addWidget(label)
 		end)
 		
-		pPanelMessages.doLayout()
+		if getVisible()
+			pPanelMessages.doLayout()
+		end
 		
 		if hasBeenAtBottom
 			model.setValue(model.getMaximum())
@@ -138,7 +153,7 @@ class DMCWindowConsole extends WindowModal implements ConsoleListener
 	protected func void createContent()
 		setLayout(BorderLayout.new(2))
 		
-		pPanelMessages = Panel.new(FlowLayout.new(LayoutAxis.y))
+		pPanelMessages = Panel.new(FormLayout.new(true, 5, 0))
 		
 		pViewportMessages = Viewport.new(pPanelMessages)
 		pViewportMessages.setDesignerSelector("Viewport.WindowConsoleMainMenu")
