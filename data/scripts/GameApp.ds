@@ -25,6 +25,7 @@ pin Democap.Actors
 pin Democap.Characters
 pin Democap.Commands
 pin Democap.MotionTransferSystem
+pin Democap.Gui
 
 pin Dragengine.Commands
 pin Dragengine.Gui.Layouts
@@ -49,6 +50,9 @@ class GameApp extends BaseGameApp
 	
 	private var WorldSpawnCharacter pWorldSpawnCharacter
 	
+	private var WindowMain pWindowMain
+	private var DMCWindowConsole pDMCWindowConsole
+	
 	
 	
 	/**
@@ -58,6 +62,23 @@ class GameApp extends BaseGameApp
 		pathDesktopGuiTheme = "/content/gui/main.guitheme.xml"
 	end
 	
+	
+	
+	/**
+	 * Main window.
+	 */
+	public func WindowMain getWindowMain()
+		return pWindowMain
+	end
+	
+	/**
+	 * Console window.
+	 */
+	public func DMCWindowConsole getDMCWindowConsole()
+		return pDMCWindowConsole
+	end
+	
+	
 	/**
 	 * Initialize game.
 	 */
@@ -66,6 +87,23 @@ class GameApp extends BaseGameApp
 		
 		pMotionTransferFactories = MotionTransferFactories.new()
 		addMotionTransferFactories()
+		
+		// modify render window to be a regular window showing the VR view
+		var Desktop desktop = getDesktop()
+		var WindowGameWorld windowGameWorld = getWindowGameWorld()
+		windowGameWorld.setTitle("VR View")
+		windowGameWorld.setPosition(Point.new(10, 30))
+		windowGameWorld.setSize(desktop.getContainerSize() - Point.new(350, 50))
+		windowGameWorld.setCanClose(false)
+		windowGameWorld.setCanMaximize(false)
+		windowGameWorld.setCanMinimize(false)
+		windowGameWorld.setCanReorder(false)
+		
+		// create main window
+		pWindowMain = WindowMain.new(desktop)
+		
+		// create console window
+		pDMCWindowConsole = DMCWindowConsole.new(desktop)
 		
 		// do not capture input. this allows the window to be used like regular windows
 		InputSystem.setCaptureInputDevices(false)
@@ -78,10 +116,22 @@ class GameApp extends BaseGameApp
 	end
 	
 	/**
+	 * Prevent console window from being created. We will create our own.
+	 */
+	protected func WindowConsole createWindowConsole()
+		return null
+	end
+	
+	/**
 	 * Launch example application.
 	 */
 	public func void launchApplication()
-		getWindowGameWorld().addWidget(ShoutConsole.new(getConsole()))
+		//getWindowGameWorld().addWidget(ShoutConsole.new(getConsole()))
+		
+		// set input processor to forward mouse and keyboard input to the desktop widget
+		// while processing all other inputs using bindings. adding, removing and changing
+		// device events are forwarded to both input processors
+		setInputProcessor(SplitInputProcessor.new(getBindingManager(), getDesktop()))
 		
 		// start VR runtime. this can fail hence capture exceptions
 		getConsole().addMessage("Start VR Runtime...")
@@ -89,13 +139,6 @@ class GameApp extends BaseGameApp
 			VRSystem.startRuntime()
 			
 		catch Exception e
-			/*
-			WindowDialog.message(getWindowGameWorld(), "Start VR Runtime Failed", \
-			e.toString(), null, null, WindowDialog.BlockResultListener.new(block Object result
-				quitGame()
-			end))
-			return
-			*/
 			getConsole().addMessage("Failed starting VR Runtime")
 		end
 		
@@ -155,9 +198,12 @@ class GameApp extends BaseGameApp
 		
 		CommandsAAControllerInput.addDefaultBindings(helper)
 		
-		// remove mouse bindings. we redirect them to the operator window anyway
+		// remove mouse and keyboard bindings since we redirect them
 		if helper.getMouse() != null
 			helper.removeAllDeviceBindings(helper.getMouse())
+		end
+		if helper.getKeyboard() != null
+			helper.removeAllDeviceBindings(helper.getKeyboard())
 		end
 		
 		return helper
@@ -199,6 +245,8 @@ class GameApp extends BaseGameApp
 		
 		pLoadCharacterProfile = null
 		pLoadActorProfile = null
+		pWindowMain = null
+		pDMCWindowConsole = null
 		
 		super.cleanUp()
 	end

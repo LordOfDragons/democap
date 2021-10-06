@@ -1,0 +1,153 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Dragengine.Gui.Events
+pin Dragengine.Gui.Layouts
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Console window.
+ */
+class DMCWindowConsole extends WindowModal implements ConsoleListener
+	private var Panel pPanelMessages
+	private var Viewport pViewportMessages
+	private var ConsoleInputField pEditInput
+	
+	
+	/**
+	 * Create console window.
+	 */
+	public func new(Desktop desktop)
+		runWhileBlockingLayout(block
+			setDesignerSelector("Window.Console")
+			setTitle("Console")
+			setCanMaximize(false)
+			setCanMinimize(false)
+			setCanReorder(true)
+			setPosition(Point.new(10, desktop.getContainerHeight() - 250))
+			setSize(Point.new(desktop.getContainerWidth() - 350, 200))
+			
+			createContent()
+			
+			var GameApp app = GameApp.getGameApp()
+			var Console console = app.getConsole()
+			
+			pEditInput.setConsoleCommands(app.getConsoleCommands())
+			pEditInput.setCommands(app.getCommandManager())
+			pEditInput.setConsole(console)
+			console.addListener(this)
+			
+			console.forEachMessage(block ConsoleMessage each
+				messageAdded(console, each, false)
+			end)
+			
+			pEditInput.grabFocus()
+		end)
+		
+		desktop.addWindow(this)
+	end
+	
+	/**
+	 * Dispose of window.
+	 */
+	public func void dispose()
+		super.dispose()
+		
+		pEditInput = null
+		pViewportMessages = null
+		pPanelMessages = null
+		
+		GameApp.getGameApp().getConsole().removeListener(this)
+	end
+	
+	
+	/**
+	 * Modify close to hide instead of close.
+	 */
+	public func void close()
+		if getBlockWindow() != null
+			getBlockWindow().close()
+		end
+		
+		setVisible(false)
+	end
+	
+	
+	/**
+	 * Message added to console.
+	 */
+	public func void messageAdded(Console console, ConsoleMessage message, bool removedTop)
+		var RangeModel model = pViewportMessages.getVerticalRangeModel()
+		var bool hasBeenAtBottom = model.getValue() == model.getMaximum()
+		
+		pPanelMessages.runWhileBlockingLayout(block
+			if removedTop
+				pPanelMessages.removeWidget(pPanelMessages.getWidget(0))
+			end
+			
+			var String text = message.getMessage()
+			if message.getSource() != null
+				text = message.getSource() + ": " + text
+			end
+			
+			var Label label = Label.new(text, "Label.WindowConsole")
+			label.setWordWrap(true)
+			pPanelMessages.addWidget(label)
+		end)
+		
+		pPanelMessages.doLayout()
+		
+		if hasBeenAtBottom
+			model.setValue(model.getMaximum())
+		end
+	end
+	
+	/**
+	 * Console cleared.
+	 */
+	public func void consoleCleared(Console console)
+		pPanelMessages.removeAllWidgets()
+	end
+	
+	
+	/**
+	 * Create content.
+	 */
+	protected func void createContent()
+		setLayout(BorderLayout.new(2))
+		
+		pPanelMessages = Panel.new(FlowLayout.new(LayoutAxis.y))
+		
+		pViewportMessages = Viewport.new(pPanelMessages)
+		pViewportMessages.setDesignerSelector("Viewport.WindowConsoleMainMenu")
+		pViewportMessages.setLayout(FlowLayout.new(LayoutAxis.y))
+		addWidget(ScrollPanel.new(pViewportMessages, ScrollPanel.Policy.hidden, \
+			ScrollPanel.Policy.visible), BorderLayout.Area.content)
+		
+		pEditInput = ConsoleInputField.new()
+		pEditInput.setDesignerSelector("TextField.WindowConsoleMainMenu")
+		addWidget(pEditInput, BorderLayout.Area.bottom)
+	end
+end

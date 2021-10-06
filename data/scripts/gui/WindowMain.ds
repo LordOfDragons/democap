@@ -1,0 +1,88 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+
+/**
+ * Main window.
+ */
+class WindowMain extends Window
+	/**
+	 * Show console window action.
+	 */
+	class ShowConsoleAction implements ActionListener
+		public func new()
+		end
+		
+		public func void onAction(ActionEvent event)
+			GameApp.getGameApp().getDMCWindowConsole().setVisible(true)
+		end
+	end
+	
+	
+	
+	/**
+	 * Create main window
+	 */
+	public func new(Desktop desktop)
+		runWhileBlockingLayout(block
+			setTitle("DEMoCap")
+			setCanMinimize(false)
+			setCanMaximize(false)
+			setCanReorder(true)
+			setDesignerSelector("Window.Main")
+			setSize(Point.new(300, 600))
+			setPosition(Point.new(desktop.getContainerWidth() - 320, 50))
+			
+			createContent(desktop)
+		end)
+		
+		desktop.addWindow(this)
+	end
+	
+	
+	
+	/**
+	 * Create window content.
+	 */
+	protected func void createContent(Desktop desktop)
+		setLayout(BorderLayout.new())
+		
+		addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
+			p.addWidget(Button.new("Quit", QuitGameActionListener.new()))
+			p.addWidget(Button.new("Console", ShowConsoleAction.new()))
+		end), BorderLayout.Area.bottom)
+	end
+	
+	/**
+	 * Closing window closes application.
+	 */
+	public func void onClosing(WindowEvent event)
+		super.onClosing(event)
+		Dragengine.Engine.quit()
+	end
+end
