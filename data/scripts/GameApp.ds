@@ -89,6 +89,13 @@ class GameApp extends BaseGameApp
 		pMotionTransferFactories = MotionTransferFactories.new()
 		addMotionTransferFactories()
 		
+		pNextElementClassID = MutableID.new(1)
+		pLoadActorProfile = LoadActorProfile.new(getConsole())
+		pLoadCharacterProfile = LoadCharacterProfile.new(getConsole())
+		
+		pActorProfiles = ActorProfiles.new("/actors")
+		pCharacterProfiles = CharacterProfiles.new("/characters")
+		
 		// modify render window to be a regular window showing the VR view
 		var Desktop desktop = getDesktop()
 		var WindowGameWorld windowGameWorld = getWindowGameWorld()
@@ -143,12 +150,7 @@ class GameApp extends BaseGameApp
 			getConsole().addMessage("Failed starting VR Runtime")
 		end
 		
-		// create other stuff
-		pNextElementClassID = MutableID.new(1)
-		pLoadActorProfile = LoadActorProfile.new(getConsole())
-		pLoadCharacterProfile = LoadCharacterProfile.new(getConsole())
-		
-		pActorProfiles = ActorProfiles.new("/actors")
+		// load stuff
 		pActorProfiles.loadAll()
 		
 		if pActorProfiles.getCount() > 0
@@ -159,7 +161,6 @@ class GameApp extends BaseGameApp
 			setActiveActorProfile(pActorProfiles.getAt(names.sorted().getAt(0) cast String))
 		end
 		
-		pCharacterProfiles = CharacterProfiles.new("/characters")
 		pCharacterProfiles.loadAll()
 		
 		pWorldSpawnCharacter = WorldSpawnCharacter.new()
@@ -228,6 +229,15 @@ class GameApp extends BaseGameApp
 	 * Cleaning up.
 	 */
 	public func void cleanUp()
+		if pDMCWindowConsole != null
+			pDMCWindowConsole.safeDispose()
+			pDMCWindowConsole = null
+		end
+		if pWindowMain != null
+			pWindowMain.safeDispose()
+			pWindowMain = null
+		end
+		
 		if pWorldSpawnCharacter != null
 			pWorldSpawnCharacter.dispose()
 			pWorldSpawnCharacter = null
@@ -246,8 +256,6 @@ class GameApp extends BaseGameApp
 		
 		pLoadCharacterProfile = null
 		pLoadActorProfile = null
-		pWindowMain = null
-		pDMCWindowConsole = null
 		
 		super.cleanUp()
 	end

@@ -1,0 +1,309 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Characters
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+
+/**
+ * Main window character panel.
+ */
+class WMPanelCharacter extends Panel
+	/** Character profile list element renderer. */
+	class CharacterProfileRenderer extends DefaultListElementRenderer
+		public func new()
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text = String.new(' ', 20)
+			if element != null
+				text = (element cast CharacterProfile).getName()
+			end
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	/** Character profile selection listener. */
+	class CharacterProfileSelection extends DefaultListModelListener
+		protected var WMPanelCharacter pWindow
+		
+		public func new(WMPanelCharacter window)
+			pWindow = window
+		end
+		
+		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+			pWindow.updateCharacterConfigurations()
+			selectionChanged(model)
+		end
+		
+		public func void selectionChanged(ListModel model)
+			var int index = model.getSelected()
+			if index != -1
+				pWindow.setCharacterProfile(model.getAt(index) cast CharacterProfile)
+				
+			else
+				pWindow.setCharacterProfile(null)
+			end
+		end
+	end
+	
+	/** Character configuration list element renderer. */
+	class CharacterConfigurationRenderer extends DefaultListElementRenderer
+		public func new()
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text = String.new(' ', 20)
+			if element != null
+				text = (element cast CharacterConfiguration).getName()
+			end
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	/** Character configuration selection listener. */
+	class CharacterConfigurationSelection extends DefaultListModelListener
+		protected var WMPanelCharacter pWindow
+		
+		public func new(WMPanelCharacter window)
+			pWindow = window
+		end
+		
+		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+			selectionChanged(model)
+		end
+		
+		public func void selectionChanged(ListModel model)
+			var int index = model.getSelected()
+			if index != -1
+				pWindow.setCharacterConfiguration(model.getAt(index) cast CharacterConfiguration)
+				
+			else
+				pWindow.setCharacterConfiguration(null)
+			end
+		end
+	end
+	
+	/** Character profiles listener. */
+	class ListenCharacterProfiles extends DefaultCharacterProfilesListener
+		protected var WMPanelCharacter pWindow
+		
+		public func new(WMPanelCharacter window)
+			pWindow = window
+		end
+		
+		public func void profileAdded(CharacterProfiles profiles, CharacterProfile profile)
+			pWindow.updateCharacterProfiles()
+		end
+		
+		public func void profileRemoved(CharacterProfiles profiles, CharacterProfile profile)
+			pWindow.updateCharacterProfiles()
+		end
+		
+		public func void allProfilesRemoved(CharacterProfiles profiles)
+			pWindow.updateCharacterProfiles()
+		end
+	end
+	
+	/** Character configurations listener. */
+	class ListenCharacterConfigurations extends DefaultCharacterConfigurationsListener
+		protected var WMPanelCharacter pWindow
+		
+		public func new(WMPanelCharacter window)
+			pWindow = window
+		end
+		
+		public func void configurationAdded(CharacterConfigurations configurations, CharacterConfiguration configuration)
+			pWindow.updateCharacterConfigurations()
+		end
+		
+		public func void configurationRemoved(CharacterConfigurations configurations, CharacterConfiguration configuration)
+			pWindow.updateCharacterConfigurations()
+		end
+		
+		public func void allConfigurationsRemoved(CharacterConfigurations configurations)
+			pWindow.updateCharacterConfigurations()
+		end
+	end
+	
+	
+	
+	protected var DefaultListModel pModelCharacterProfiles
+	protected var DefaultListModel pModelCharacterConfigurations
+	protected var ListenCharacterConfigurations pListenCharacterConfigurations
+	protected var CharacterProfile pCharacterProfile
+	protected var CharacterConfiguration pCharacterConfiguration
+	
+	
+	
+	/** Create character panel. */
+	public func new()
+		pModelCharacterProfiles = DefaultListModel.new()
+		pModelCharacterConfigurations = DefaultListModel.new()
+		pListenCharacterConfigurations = ListenCharacterConfigurations.new(this)
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+		
+		pModelCharacterProfiles.addListener(CharacterProfileSelection.new(this))
+		pModelCharacterConfigurations.addListener(CharacterConfigurationSelection.new(this))
+		
+		GameApp.getGameApp().getCharacterProfiles().addListener(ListenCharacterProfiles.new(this))
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		setCharacterProfile(null)
+		
+		pModelCharacterProfiles = null
+		pModelCharacterConfigurations = null
+		pListenCharacterConfigurations = null
+		
+		super.dispose()
+	end
+	
+	
+	
+	/** Selected character profile or null. */
+	public func CharacterProfile getCharacterProfile()
+		return pCharacterProfile
+	end
+	
+	/** Set selected character profile or null. */
+	public func void setCharacterProfile(CharacterProfile profile)
+		if profile == pCharacterProfile
+			return
+		end
+		
+		if pCharacterProfile != null
+			pCharacterProfile.getConfigurations().removeListener(pListenCharacterConfigurations)
+		end
+		
+		pCharacterProfile = profile
+		
+		if profile != null
+			profile.getConfigurations().addListener(pListenCharacterConfigurations)
+		end
+		
+		updateCharacterConfigurations()
+	end
+	
+	/** Update character profiles model. */
+	public func void updateCharacterProfiles()
+		var CharacterProfile profile = pCharacterProfile
+		
+		pModelCharacterProfiles.setContent(GameApp.getGameApp().getCharacterProfiles().toArray())
+		
+		var int index = pModelCharacterProfiles.indexOf(profile)
+		if index != -1
+			pModelCharacterProfiles.setSelected(index)
+		end
+	end
+	
+	
+	
+	/** Selected character configuration or null. */
+	public func CharacterConfiguration getCharacterConfiguration()
+		return pCharacterConfiguration
+	end
+	
+	/** Set selected character configuration or null. */
+	public func void setCharacterConfiguration(CharacterConfiguration configuration)
+		if configuration == pCharacterConfiguration
+			return
+		end
+		
+		pCharacterConfiguration = configuration
+	end
+	
+	/** Selected character configuration or null. */
+	public func CharacterConfiguration getSelectedCharacterConfiguration()
+		var int index = pModelCharacterConfigurations.getSelected()
+		if index != -1
+			return pModelCharacterConfigurations.getAt(index) cast CharacterConfiguration
+		end
+		return null
+	end
+	
+	/** Update character configurations model. */
+	public func void updateCharacterConfigurations()
+		var CharacterConfiguration selected = getSelectedCharacterConfiguration()
+		
+		if pCharacterProfile != null
+			pModelCharacterConfigurations.setContent(pCharacterProfile.getConfigurations().toArray())
+			
+		else
+			pModelCharacterConfigurations.removeAll()
+		end
+		
+		var int index = pModelCharacterConfigurations.indexOf(selected)
+		if index != -1
+			pModelCharacterConfigurations.setSelected(index)
+		end
+	end
+	
+	
+	
+	/** Activate selected character configuration if present. */
+	public func void activateCharacterConfiguration()
+		if pCharacterConfiguration != null
+			GameApp.getGameApp().getWorldSpawnCharacter().setCharacter(pCharacterConfiguration)
+		end
+	end
+	
+	/** Edit characters. */
+	public func void editCharacters()
+		// TODO
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent()
+		setDesignerSelector("Panel.WMPanelCharacter.CharacterSelection")
+		setLayout(BorderLayout.new(2))
+		
+		addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			p.addWidget(Label.new("Character:", "Label.FormCaption"))
+			p.addWidget(ComboBox.new(pModelCharacterProfiles, CharacterProfileRenderer.new()))
+			
+			p.addWidget(Label.new("Configuration:", "Label.FormCaption"))
+			p.addWidget(ComboBox.new(pModelCharacterConfigurations, CharacterConfigurationRenderer.new()))
+		end), BorderLayout.Area.content)
+		
+		addWidget(Panel.new(GridLayout.new(2, 0), block Panel p
+			p.addWidget(Button.new("Activate", BlockActionListener.new(block ActionEvent event
+				activateCharacterConfiguration()
+			end)))
+			
+			p.addWidget(Button.new("Edit", BlockActionListener.new(block ActionEvent event
+				editCharacters()
+			end)))
+		end), BorderLayout.Area.bottom)
+	end
+end

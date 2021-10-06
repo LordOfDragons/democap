@@ -33,6 +33,7 @@ pin Dragengine.Utils
 class CharacterProfiles
 	private var String pDirectory
 	private var Dictionary pProfiles
+	private var Array pListeners
 	
 	
 	
@@ -42,12 +43,14 @@ class CharacterProfiles
 			throw ENullPointer.new("directory")
 		end
 		
+		pListeners = Array.new()
 		pDirectory = directory
 		pProfiles = Dictionary.new()
 	end
 	
 	/** Dispose of list. */
 	public func void dispose()
+		pListeners.removeAll()
 		removeAll()
 	end
 	
@@ -81,20 +84,33 @@ class CharacterProfiles
 			throw EInvalidParam.new("named profile is present: " + profile.getName())
 		end
 		pProfiles.setAt(profile.getName(), profile)
+		
+		pListeners.forEach(block CharacterProfilesListener each
+			each.profileAdded(this, profile)
+		end)
 	end
 	
 	/** Remove profile. Throws exception if named profile is absent. */
 	public func void remove(CharacterProfile profile)
 		pProfiles.remove(profile.getName())
+		
+		pListeners.forEach(block CharacterProfilesListener each
+			each.profileRemoved(this, profile)
+		end)
+		
 		profile.dispose()
 	end
 	
 	/** Remove all profiles. */
 	public func void removeAll()
-	pProfiles.forEachValue(block CharacterProfile each
+		pProfiles.forEachValue(block CharacterProfile each
 			each.dispose()
 		end)
 		pProfiles.removeAll()
+		
+		pListeners.forEach(block CharacterProfilesListener each
+			each.allProfilesRemoved(this)
+		end)
 	end
 	
 	/**
@@ -162,6 +178,12 @@ class CharacterProfiles
 		end)
 	end
 	
+	/** Reload characters from directory (*.dmcc). */
+	public func void reloadAll()
+		removeAll()
+		loadAll()
+	end
+	
 	/** Save characters to directory (*.dmcc). */
 	public func void saveAll()
 		var LoadCharacterProfile loader = GameApp.getGameApp().getLoadCharacterProfile()
@@ -181,5 +203,20 @@ class CharacterProfiles
 				console.addError("Failed saving character profile to file '" + filename + "'", e)
 			end
 		end)
+	end
+	
+	
+	
+	/** Add listener. */
+	public func void addListener(CharacterProfilesListener listener)
+		if listener == null
+			throw ENullPointer.new("listener")
+		end
+		pListeners.add(listener)
+	end
+	
+	/** Remove listener. */
+	public func void removeListener(CharacterProfilesListener listener)
+		pListeners.remove(listener)
 	end
 end

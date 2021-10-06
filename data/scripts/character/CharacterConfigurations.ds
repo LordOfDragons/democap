@@ -29,16 +29,19 @@ pin Dragengine.Utils
  */
 class CharacterConfigurations
 	private var Dictionary pConfigurations
+	private var Array pListeners
 	
 	
 	
 	/** Create configuration list. */
 	public func new()
+		pListeners = Array.new()
 		pConfigurations = Dictionary.new()
 	end
 	
 	/** Dispose of list. */
 	public func void dispose()
+		pListeners.removeAll()
 		removeAll()
 	end
 	
@@ -65,11 +68,20 @@ class CharacterConfigurations
 			throw EInvalidParam.new("named configuration is present: " + configuration.getName())
 		end
 		pConfigurations.setAt(configuration.getName(), configuration)
+		
+		pListeners.forEach(block CharacterConfigurationsListener each
+			each.configurationAdded(this, configuration)
+		end)
 	end
 	
 	/** Remove configuration. Throws exception if named configuration is absent. */
 	public func void remove(CharacterConfiguration configuration)
 		pConfigurations.remove(configuration.getName())
+		
+		pListeners.forEach(block CharacterConfigurationsListener each
+			each.configurationRemoved(this, configuration)
+		end)
+		
 		configuration.dispose()
 	end
 	
@@ -79,6 +91,10 @@ class CharacterConfigurations
 			each.dispose()
 		end)
 		pConfigurations.removeAll()
+		
+		pListeners.forEach(block CharacterConfigurationsListener each
+			each.allConfigurationsRemoved(this)
+		end)
 	end
 	
 	/**
@@ -110,5 +126,20 @@ class CharacterConfigurations
 			list.add(each)
 		end)
 		return list
+	end
+	
+	
+	
+	/** Add listener. */
+	public func void addListener(CharacterConfigurationsListener listener)
+		if listener == null
+			throw ENullPointer.new("listener")
+		end
+		pListeners.add(listener)
+	end
+	
+	/** Remove listener. */
+	public func void removeListener(CharacterConfigurationsListener listener)
+		pListeners.remove(listener)
 	end
 end

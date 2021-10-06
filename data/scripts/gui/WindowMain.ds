@@ -26,28 +26,11 @@ pin Dragengine.Gui.Events
 pin Dragengine.Scenery
 
 
-
 /**
  * Main window.
  */
 class WindowMain extends Window
-	/**
-	 * Show console window action.
-	 */
-	class ShowConsoleAction implements ActionListener
-		public func new()
-		end
-		
-		public func void onAction(ActionEvent event)
-			GameApp.getGameApp().getDMCWindowConsole().setVisible(true)
-		end
-	end
-	
-	
-	
-	/**
-	 * Create main window
-	 */
+	/** Create main window */
 	public func new(Desktop desktop)
 		runWhileBlockingLayout(block
 			setTitle("DEMoCap")
@@ -64,25 +47,39 @@ class WindowMain extends Window
 		desktop.addWindow(this)
 	end
 	
-	
-	
-	/**
-	 * Create window content.
-	 */
-	protected func void createContent(Desktop desktop)
-		setLayout(BorderLayout.new())
-		
-		addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
-			p.addWidget(Button.new("Quit", QuitGameActionListener.new()))
-			p.addWidget(Button.new("Console", ShowConsoleAction.new()))
-		end), BorderLayout.Area.bottom)
+	/** Dispose of window. */
+	public func void dispose()
+		super.dispose()
 	end
 	
-	/**
-	 * Closing window closes application.
-	 */
+	
+	
+	/** Closing window closes application. */
 	public func void onClosing(WindowEvent event)
 		super.onClosing(event)
 		Engine.quit()
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent(Desktop desktop)
+		setLayout(BorderLayout.new())
+		
+		// category buttons at top
+		
+		// content
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+			p.addWidget(WMPanelCharacter.new())
+		end), BorderLayout.Area.content)
+		
+		// button bar at bottom
+		addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
+			p.addWidget(Button.new("Quit", QuitGameActionListener.new()))
+			
+			p.addWidget(Button.new("Console", BlockActionListener.new(block ActionEvent event
+				GameApp.getGameApp().getDMCWindowConsole().setVisible(true)
+			end)))
+		end), BorderLayout.Area.bottom)
 	end
 end
