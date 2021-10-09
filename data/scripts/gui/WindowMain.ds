@@ -30,7 +30,8 @@ pin Dragengine.Scenery
  * Main window.
  */
 class WindowMain extends Window
-	protected var bool pQuitOnClose
+	private var bool pQuitOnClose
+	private var DMCWindowConsole pWindowConsole
 	
 	
 	
@@ -51,10 +52,14 @@ class WindowMain extends Window
 		end)
 		
 		desktop.addWindow(this)
+		
+		// create console window and add it to desktop
+		pWindowConsole = DMCWindowConsole.new(desktop)
 	end
 	
 	/** Dispose of window. */
 	public func void dispose()
+		pWindowConsole = null
 		super.dispose()
 	end
 	
@@ -63,6 +68,11 @@ class WindowMain extends Window
 	/** Quit engine if window is closed. */
 	public func void setQuitOnClose(bool quitOnClose)
 		pQuitOnClose = quitOnClose
+	end
+	
+	/** Console window. */
+	public func DMCWindowConsole getWindowConsole()
+		return pWindowConsole
 	end
 	
 	
@@ -94,7 +104,7 @@ class WindowMain extends Window
 			p.addWidget(Button.new("Quit", QuitGameActionListener.new()))
 			
 			p.addWidget(Button.new("Console", BlockActionListener.new(block ActionEvent event
-				GameApp.getGameApp().getDMCWindowConsole().setVisible(true)
+				pWindowConsole.setVisible(true)
 			end)))
 		end), BorderLayout.Area.bottom)
 	end
