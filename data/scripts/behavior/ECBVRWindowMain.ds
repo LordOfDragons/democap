@@ -1,0 +1,119 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Gui
+
+pin Dragengine.Gui
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding WindowMain to renderable desktop.
+ */
+class ECBVRWindowMain extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBVRWindowMain pECBehavior
+		private var WindowMain pWindow
+		
+		
+		/** Create instance. */
+		public func new(ECBVRWindowMain ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			var Desktop desktop = pECBehavior.getRenderableDesktop().instance(getElement()).getDesktop()
+			pWindow = WindowMain.new(desktop)
+			pWindow.setCanClose(false)
+			pWindow.setSize(Point.new(500, desktop.getContainerHeight() - 80))
+			pWindow.setPosition(Point.new(desktop.getContainerWidth() - pWindow.getWidth() - 20, 50))
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pWindow = null
+			super.dispose()
+		end
+		
+		
+		/** Behavior. */
+		public func ECBVRWindowMain getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Window. */
+		public func WindowMain getWindow()
+			return pWindow
+		end
+	end
+	
+	
+	private var ECBehaviorRenderableDesktop pRenderableDesktop
+	
+	
+	/** Create behavior element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorRenderableDesktop renderabledesktop) super(eclass)
+		if renderabledesktop == null
+			throw ENullPointer.new("renderabledesktop")
+		end
+		
+		pRenderableDesktop = renderabledesktop
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pRenderableDesktop = null
+		super.dispose()
+	end
+	
+	
+	/** Renderable desktop. */
+	public func ECBehaviorRenderableDesktop getRenderableDesktop()
+		return pRenderableDesktop
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

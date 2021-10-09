@@ -38,6 +38,15 @@ class StartGame extends WindowGameWorld.Loader
 	
 	
 	
+	/** Create loading window. */
+	protected func void createLoadingWindow()
+		super.createLoadingWindow()
+		
+		// the base class implementation activates the desktop input processor.
+		// revert back to our split input processor
+		GameApp.getGameApp().setSplitInputProcessor()
+	end
+	
 	/** Loading world finished successfully. */
 	public func void onLoadWorldFinished()
 		var GameApp app = BaseGameApp.getApp() cast GameApp
@@ -49,6 +58,9 @@ class StartGame extends WindowGameWorld.Loader
 		director.setHighestIntensity(20)
 		director.setAdaptionTime(30)
 		getWindow().setCameraDirector(director)
+		
+		director.getCamera().setPosition(DVector.new(0, 1, 1))
+		director.getCamera().setOrientation(Quaternion.newFromEulerY(180))
 		
 		// finish loading
 		super.onLoadWorldFinished()

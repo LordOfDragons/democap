@@ -64,10 +64,30 @@ class AADefault extends AABase
 	
 	/** Trigger pulled. */
 	public func void triggerPull(bool rightHand)
+		if rightHand
+			if vrRightHandPointAt.hasVRHandPointAtElement()
+				pointAtPull(vrRightHandPointAt)
+			end
+			
+		else
+			if vrLeftHandPointAt.hasVRHandPointAtElement()
+				pointAtPull(vrLeftHandPointAt)
+			end
+		end
 	end
 	
 	/** Trigger released. */
 	public func void triggerRelease(bool rightHand)
+		if rightHand
+			if vrRightHandPointAt.hasVRHandPointAtElement()
+				pointAtRelease(vrRightHandPointAt)
+			end
+			
+		else
+			if vrLeftHandPointAt.hasVRHandPointAtElement()
+				pointAtRelease(vrLeftHandPointAt)
+			end
+		end
 	end
 	
 	
@@ -75,7 +95,9 @@ class AADefault extends AABase
 	/** Menu button pressed. */
 	public func void menuPress(bool rightHand)
 		if rightHand
-			aiAction.setAction(AACalibrate.new())
+			if ECBCharacterConfiguration.getInstanceIn(actor) != null
+				aiAction.setAction(AACalibrate.new())
+			end
 			
 		else
 			var ECBRecordAnimation.Instance behavior = ECBRecordAnimation.getInstanceIn(actor)
@@ -93,18 +115,86 @@ class AADefault extends AABase
 	
 	/** Secondary button pressed. */
 	public func void secondaryPress(bool rightHand)
-		if rightHand
-			var WorldSpawnCharacter spawner = GameApp.getGameApp().getWorldSpawnCharacter()
-			var Array profiles = GameApp.getGameApp().getCharacterProfiles().toArray()
-			var Characters.CharacterProfile profile = profiles.getAt((profiles.indexOf(\
-				spawner.getCharacter().getProfile()) + 1) % profiles.getCount()) cast Characters.CharacterProfile
-			var Array configs = profile.getConfigurations().toArray()
-			spawner.setCharacter(configs.getAt(0) cast Characters.CharacterConfiguration)
-		end
 	end
 	
 	/** Secondary button released. */
 	public func void secondaryRelease(bool rightHand)
+	end
+	
+	
+	
+	/** Pointing at element. */
+	public func void pointAt(ECBehaviorVRHandPointAt.Instance behavior)
+		var BehaviorElement element = behavior.getPointAtBehaviorElement()
+		var DVector hitPoint = behavior.getPointAtHitPoint()
+		if element == null or hitPoint == null
+			return
+		end
+		
+		// interact with desktop widget if present
+		if element.findInstance(block ECBehaviorControlDesktop.Instance each
+// 			log("check " + each.planePosition(hitPoint) + " " + each.desktopPoint(hitPoint))
+			return each.moveMouse(hitPoint)
+		end) != null
+			return
+		end
+	end
+	
+	/** Pull trigger on pointed at element. */
+	public func void pointAtPull(ECBehaviorVRHandPointAt.Instance behavior)
+		var BehaviorElement element = behavior.getPointAtBehaviorElement()
+		var DVector hitPoint = behavior.getPointAtHitPoint()
+		if element == null or hitPoint == null
+			return
+		end
+		
+		// interact with desktop widget if present
+		if element.findInstance(block ECBehaviorControlDesktop.Instance each
+			if each.planePosition(hitPoint) != null
+				each.leftMousePress()
+				return true
+				
+			else
+				return false
+			end
+		end) != null
+			return
+		end
+	end
+	
+	/** Release trigger on pointed at element. */
+	public func void pointAtRelease(ECBehaviorVRHandPointAt.Instance behavior)
+		var BehaviorElement element = behavior.getPointAtBehaviorElement()
+		var DVector hitPoint = behavior.getPointAtHitPoint()
+		if element == null or hitPoint == null
+			return
+		end
+		
+		// interact with desktop widget if present
+		if element.findInstance(block ECBehaviorControlDesktop.Instance each
+			if each.planePosition(hitPoint) != null
+				each.leftMouseRelease()
+				return true
+				
+			else
+				return false
+			end
+		end) != null
+			return
+		end
+	end
+	
+	
+	
+	/** Frame update thinking. */
+	public func void playerThink(float elapsed)
+		// interact with pointed at elements
+		if vrRightHandPointAt.hasVRHandPointAtElement()
+			pointAt(vrRightHandPointAt)
+		end
+// 		if vrLeftHandPointAt.hasVRHandPointAtElement()
+// 			pointAt(vrLeftHandPointAt)
+// 		end
 	end
 	
 	

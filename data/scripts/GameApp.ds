@@ -24,6 +24,7 @@ namespace Democap
 pin Democap.Actors
 pin Democap.Characters
 pin Democap.Commands
+pin Democap.Elements
 pin Democap.MotionTransferSystem
 pin Democap.Gui
 
@@ -109,6 +110,7 @@ class GameApp extends BaseGameApp
 		
 		// create main window
 		pWindowMain = WindowMain.new(desktop)
+		pWindowMain.setQuitOnClose(true)
 		
 		// create console window
 		pDMCWindowConsole = DMCWindowConsole.new(desktop)
@@ -138,8 +140,8 @@ class GameApp extends BaseGameApp
 		
 		// set input processor to forward mouse and keyboard input to the desktop widget
 		// while processing all other inputs using bindings. adding, removing and changing
-		// device events are forwarded to both input processors
-		setInputProcessor(SplitInputProcessor.new(getBindingManager(), getDesktop()))
+		// device events are forwarded to both input processors.
+		setSplitInputProcessor()
 		
 		// start VR runtime. this can fail hence capture exceptions
 		getConsole().addMessage("Start VR Runtime...")
@@ -178,7 +180,8 @@ class GameApp extends BaseGameApp
 		super.createAndAddElementClasses()
 		
 		var ElementClassList eclist = getElementClassList()
-		//eclist.add(MyElementClass.new())
+		eclist.add(NoCharacterActorClass.new())
+		eclist.add(VRMenuClass.new())
 		
 		getLoaders().getElementClass().addXmlElementClasses(eclist, "/content/models", true)
 	end
@@ -264,6 +267,11 @@ class GameApp extends BaseGameApp
 	public func void finishLoadGameWorld()
 		super.finishLoadGameWorld()
 		pWorldSpawnCharacter.setGameWorld(getWindowGameWorld().getGameWorld())
+	end
+	
+	/** Set split input processor. */
+	public func void setSplitInputProcessor()
+		setInputProcessor(SplitInputProcessor.new(getBindingManager(), getDesktop()))
 	end
 	
 	

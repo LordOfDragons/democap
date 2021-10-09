@@ -22,6 +22,7 @@
 namespace Democap
 
 pin Democap.Characters
+pin Democap.Elements
 
 pin Dragengine.CameraDirectors
 pin Dragengine.Gui
@@ -32,7 +33,8 @@ pin Dragengine.Utils
 
 
 /**
- * Task ensuring active character is present in game world.
+ * Task ensuring active character is present in game world. Also stores the VR Menu and
+ * other gadgets potentially used by the player.
  */
 class WorldSpawnCharacter
 	/** Frame updater. */
@@ -71,6 +73,8 @@ class WorldSpawnCharacter
 	private var UpdateCharacter pUpdateCharacter
 	private var DVector pLastActorPosition
 	private var Quaternion pLastActorOrientation
+	private var BehaviorElement pVRMenu
+	private var ElementClass pNoCharacterActorClass
 	
 	
 	
@@ -79,6 +83,7 @@ class WorldSpawnCharacter
 		pUpdateCharacter = UpdateCharacter.new(this)
 		pLastActorPosition = DVector.new()
 		pLastActorOrientation = Quaternion.new()
+		pNoCharacterActorClass = GameApp.getGameApp().getElementClassList().getNamed("NoCharacterActor")
 	end
 	
 	/** Dispose. */
@@ -86,6 +91,11 @@ class WorldSpawnCharacter
 		stopUpdateCheck()
 		disposeActor()
 		pUpdateCharacter = null
+		
+		if pVRMenu != null
+			pVRMenu.safeDispose()
+			pVRMenu = null
+		end
 	end
 	
 	
@@ -101,6 +111,10 @@ class WorldSpawnCharacter
 			return
 		end
 		
+		if pVRMenu != null
+			pVRMenu.removeFromGameWorldIfPresent()
+		end
+		
 		disposeActor()
 		pSpawnPoint = null
 		
@@ -108,6 +122,11 @@ class WorldSpawnCharacter
 		
 		if gameWorld != null
 			pSpawnPoint = gameWorld.getSpawnPoints().getNamed("player")
+			
+			if pVRMenu == null
+				pVRMenu = createVRMenu()
+			end
+			gameWorld.addElement(pVRMenu)
 		end
 		
 		startUpdateCheck()
@@ -159,6 +178,13 @@ class WorldSpawnCharacter
 	
 	
 	
+	/** VR Menu or null if not created yet. */
+	public func BehaviorElement getVRMenu()
+		return pVRMenu
+	end
+	
+	
+	
 	/** Start update check if not running. */
 	protected func void startUpdateCheck()
 		if pUpdateCheck == null
@@ -176,12 +202,12 @@ class WorldSpawnCharacter
 	
 	/** Update check. */
 	public func void updateCheck()
-		if pGameWorld == null or pCharacter == null or pActor != null
+		if pGameWorld == null or pActor != null
 			stopUpdateCheck()
 			return
 		end
 		
-		if pCharacter.getElementClass() == null or pCharacter.isElementClassPreloading()
+		if pCharacter != null and (pCharacter.getElementClass() == null or pCharacter.isElementClassPreloading())
 			return
 		end
 		
@@ -216,7 +242,15 @@ class WorldSpawnCharacter
 		end
 		
 		// spawn player actor
-		var StubElement stub = pCharacter.createStubElement()
+		var StubElement stub
+		
+		if pCharacter != null
+			stub = pCharacter.createStubElement()
+			
+		else
+			stub = StubElement.new(pNoCharacterActorClass, GameApp.getGameApp().getIDGenerator().nextID())
+		end
+		
 		stub.setPosition(pLastActorPosition)
 		stub.setRotation(pLastActorOrientation.getEulerAngles())
 		
@@ -225,5 +259,19 @@ class WorldSpawnCharacter
 		
 		// take control of actor
 		pActor.getPlayerControllable().takeControl()
+	end
+	
+	/** Create VR menu. */
+	protected func BehaviorElement createVRMenu()
+		var ElementClass eclass = GameApp.getGameApp().getElementClassList().getNamed("VRMenu")
+		var StubElement stub = StubElement.new(eclass, GameApp.getGameApp().getIDGenerator().nextID())
+		
+		// add properties if required
+		stub.setPosition(DVector.new(0, 1, 0))
+		
+		stub.setPosition(DVector.new(-0.75, 1.6, 0.75))
+		stub.setRotation(Vector.new(0, -135, 0))
+		
+		return stub.createElement() cast BehaviorElement
 	end
 end
