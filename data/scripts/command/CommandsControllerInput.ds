@@ -96,6 +96,12 @@ class CommandsAAControllerInput
 			end
 		end
 		
+		public func void analogAbsolute(float value)
+			var AAControllerInput cinput = getControllerInput()
+			if cinput != null
+				analogAbsolute(cinput, value)
+			end
+		end
 		
 		
 		/** Touched. */
@@ -112,6 +118,10 @@ class CommandsAAControllerInput
 		
 		/** Released. */
 		public func void release(AAControllerInput action)
+		end
+		
+		/** Analog absolute. */
+		public func void analogAbsolute(AAControllerInput action, float value)
 		end
 	end
 	
@@ -186,6 +196,43 @@ class CommandsAAControllerInput
 		end
 	end
 	
+	/** Track pad analog up-down. */
+	public class TrackPadUDAction extends Base
+		public func new(ECBehaviorPlayerControllable.Tracker tracker, String name, \
+		String description, bool rightHand) super(tracker, name, description, rightHand)
+		end
+		
+		public func void analogAbsolute(AAControllerInput action, float value)
+			action.trackPadUD(pRightHand, value)
+		end
+	end
+	
+	/** Track pad analog left-right. */
+	public class TrackPadLRAction extends Base
+		public func new(ECBehaviorPlayerControllable.Tracker tracker, String name, \
+		String description, bool rightHand) super(tracker, name, description, rightHand)
+		end
+		
+		public func void analogAbsolute(AAControllerInput action, float value)
+			action.trackPadLR(pRightHand, value)
+		end
+	end
+	
+	/** Track pad touch. */
+	public class TrackPadTouchAction extends Base
+		public func new(ECBehaviorPlayerControllable.Tracker tracker, String name, \
+		String description, bool rightHand) super(tracker, name, description, rightHand)
+		end
+		
+		public func void touch(AAControllerInput action)
+			action.trackPadTouch(pRightHand)
+		end
+		
+		public func void untouch(AAControllerInput action)
+			action.trackPadUntouch(pRightHand)
+		end
+	end
+	
 	
 	
 	/** Add commands to command manager. */
@@ -193,10 +240,16 @@ class CommandsAAControllerInput
 		commands.add(TriggerAction.new(tracker, "triggerRight", "Trigger Right Hand", true))
 		commands.add(MenuAction.new(tracker, "menuRight", "Menu Right Hand", true))
 		commands.add(SecondaryAction.new(tracker, "secondaryRight", "Secondary Right Hand", true))
+		commands.add(TrackPadUDAction.new(tracker, "trackPadUDRight", "Track Pad Up-Down Right Hand", true))
+		commands.add(TrackPadLRAction.new(tracker, "trackPadLRRight", "Track Pad Left-Right Right Hand", true))
+		commands.add(TrackPadTouchAction.new(tracker, "trackPadTouchRight", "Track Pad Touch Right Hand", true))
 		
 		commands.add(TriggerAction.new(tracker, "triggerLeft", "Trigger Left Hand", false))
 		commands.add(MenuAction.new(tracker, "menuLeft", "Menu Left Hand", false))
 		commands.add(SecondaryAction.new(tracker, "secondaryLeft", "Secondary Left Hand", false))
+		commands.add(TrackPadUDAction.new(tracker, "trackPadUDLeft", "Track Pad Up-Down Left Hand", false))
+		commands.add(TrackPadLRAction.new(tracker, "trackPadLRLeft", "Track Pad Left-Right Left Hand", false))
+		commands.add(TrackPadTouchAction.new(tracker, "trackPadTouchLeft", "Track Pad Touch Left Hand", false))
 	end
 	
 	
@@ -213,12 +266,16 @@ class CommandsAAControllerInput
 			helper.vrHandBindButton(true, 0, "triggerRight")
 			helper.vrHandBindButton(true, 1, "menuRight")
 			helper.vrHandBindButton(true, 2, "secondaryRight")
+			helper.vrHandBindStick(true, InputDeviceAxisType.touchPad, 0, "trackPadLRRight", "trackPadUDRight")
+			helper.vrHandBindButton(true, InputDeviceButtonType.touchPad, 0, "trackPadTouchRight")
 		end
 		
 		if helper.hasVRHand(false)
 			helper.vrHandBindButton(false, 0, "triggerLeft")
 			helper.vrHandBindButton(false, 1, "menuLeft")
 			helper.vrHandBindButton(false, 2, "secondaryLeft")
+			helper.vrHandBindStick(false, InputDeviceAxisType.touchPad, 0, "trackPadLRLeft", "trackPadUDLeft")
+			helper.vrHandBindButton(false, InputDeviceButtonType.touchPad, 0, "trackPadTouchLeft")
 		end
 	end
 end

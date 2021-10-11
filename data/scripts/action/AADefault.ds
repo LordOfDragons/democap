@@ -56,10 +56,22 @@ class AADefault extends AABase
 	
 	
 	
+	protected var ECBAControlDesktop.Instance controlDesktop
+	
+	
+	
 	/** Create action. */
 	public func new()
 	end
 	
+	
+	
+	/** Init behaviors. */
+	protected func void initBehaviors()
+		super.initBehaviors()
+		
+		controlDesktop = ECBAControlDesktop.getInstanceIn(actor)
+	end
 	
 	
 	/** Trigger pulled. */
@@ -95,9 +107,9 @@ class AADefault extends AABase
 	/** Menu button pressed. */
 	public func void menuPress(bool rightHand)
 		if rightHand
-			if ECBCharacterConfiguration.getInstanceIn(actor) != null
-				aiAction.setAction(AACalibrate.new())
-			end
+// 			if ECBCharacterConfiguration.getInstanceIn(actor) != null
+// 				aiAction.setAction(AACalibrate.new())
+// 			end
 			
 		else
 			var ECBRecordAnimation.Instance behavior = ECBRecordAnimation.getInstanceIn(actor)
@@ -123,63 +135,51 @@ class AADefault extends AABase
 	
 	
 	
+	/** Touch track pad. */
+	public func void trackPadTouch(bool rightHand)
+		if rightHand
+			vrRightHandPointAt.setEnabled(true)
+			
+		else
+			vrLeftHandPointAt.setEnabled(true)
+		end
+	end
+	
+	/** Untouch track pad. */
+	public func void trackPadUntouch(bool rightHand)
+		if rightHand
+			if controlDesktop != null and controlDesktop.getPointAt() == vrRightHandPointAt
+				controlDesktop.cancel()
+			end
+			vrRightHandPointAt.setEnabled(false)
+			
+		else
+			if controlDesktop != null and controlDesktop.getPointAt() == vrLeftHandPointAt
+				controlDesktop.cancel()
+			end
+			vrLeftHandPointAt.setEnabled(false)
+		end
+	end
+	
+	
+	
 	/** Pointing at element. */
 	public func void pointAt(ECBehaviorVRHandPointAt.Instance behavior)
-		var BehaviorElement element = behavior.getPointAtBehaviorElement()
-		var DVector hitPoint = behavior.getPointAtHitPoint()
-		if element == null or hitPoint == null
-			return
-		end
-		
-		// interact with desktop widget if present
-		if element.findInstance(block ECBehaviorControlDesktop.Instance each
-// 			log("check " + each.planePosition(hitPoint) + " " + each.desktopPoint(hitPoint))
-			return each.moveMouse(hitPoint)
-		end) != null
+		if controlDesktop != null and controlDesktop.pointAt(behavior)
 			return
 		end
 	end
 	
 	/** Pull trigger on pointed at element. */
 	public func void pointAtPull(ECBehaviorVRHandPointAt.Instance behavior)
-		var BehaviorElement element = behavior.getPointAtBehaviorElement()
-		var DVector hitPoint = behavior.getPointAtHitPoint()
-		if element == null or hitPoint == null
-			return
-		end
-		
-		// interact with desktop widget if present
-		if element.findInstance(block ECBehaviorControlDesktop.Instance each
-			if each.planePosition(hitPoint) != null
-				each.leftMousePress()
-				return true
-				
-			else
-				return false
-			end
-		end) != null
+		if controlDesktop != null and controlDesktop.pointAtPull(behavior)
 			return
 		end
 	end
 	
 	/** Release trigger on pointed at element. */
 	public func void pointAtRelease(ECBehaviorVRHandPointAt.Instance behavior)
-		var BehaviorElement element = behavior.getPointAtBehaviorElement()
-		var DVector hitPoint = behavior.getPointAtHitPoint()
-		if element == null or hitPoint == null
-			return
-		end
-		
-		// interact with desktop widget if present
-		if element.findInstance(block ECBehaviorControlDesktop.Instance each
-			if each.planePosition(hitPoint) != null
-				each.leftMouseRelease()
-				return true
-				
-			else
-				return false
-			end
-		end) != null
+		if controlDesktop != null and controlDesktop.pointAtRelease(behavior)
 			return
 		end
 	end
@@ -189,12 +189,24 @@ class AADefault extends AABase
 	/** Frame update thinking. */
 	public func void playerThink(float elapsed)
 		// interact with pointed at elements
-		if vrRightHandPointAt.hasVRHandPointAtElement()
+		if vrRightHandPointAt.getEnabled()
 			pointAt(vrRightHandPointAt)
 		end
-// 		if vrLeftHandPointAt.hasVRHandPointAtElement()
-// 			pointAt(vrLeftHandPointAt)
-// 		end
+		if vrLeftHandPointAt.getEnabled()
+			pointAt(vrLeftHandPointAt)
+		end
+	end
+	
+	
+	
+	/** Start calibration. Return true if calibration started. */
+	public func bool startCalibrate()
+		if ECBCharacterConfiguration.getInstanceIn(actor) == null
+			return false
+		end
+		
+		aiAction.setAction(AACalibrate.new())
+		return true
 	end
 	
 	

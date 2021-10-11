@@ -33,6 +33,7 @@ pin Dragengine.Utils
 class ActorProfiles
 	private var String pDirectory
 	private var Dictionary pProfiles
+	private var Array pListeners
 	
 	
 	
@@ -42,12 +43,14 @@ class ActorProfiles
 			throw ENullPointer.new("directory")
 		end
 		
+		pListeners = Array.new()
 		pDirectory = directory
 		pProfiles = Dictionary.new()
 	end
 	
 	/** Dispose of list. */
 	public func void dispose()
+		pListeners.removeAll()
 		removeAll()
 	end
 	
@@ -81,20 +84,33 @@ class ActorProfiles
 			throw EInvalidParam.new("named profile is present: " + profile.getName())
 		end
 		pProfiles.setAt(profile.getName(), profile)
+		
+		pListeners.forEach(block ActorProfilesListener each
+			each.profileAdded(this, profile)
+		end)
 	end
 	
 	/** Remove profile. Throws exception if named profile is absent. */
 	public func void remove(ActorProfile profile)
 		pProfiles.remove(profile.getName())
+		
+		pListeners.forEach(block ActorProfilesListener each
+			each.profileRemoved(this, profile)
+		end)
+		
 		profile.dispose()
 	end
 	
 	/** Remove all profiles. */
 	public func void removeAll()
-	pProfiles.forEachValue(block ActorProfile each
+		pProfiles.forEachValue(block ActorProfile each
 			each.dispose()
 		end)
 		pProfiles.removeAll()
+		
+		pListeners.forEach(block ActorProfilesListener each
+			each.allProfilesRemoved(this)
+		end)
 	end
 	
 	/**
@@ -115,6 +131,15 @@ class ActorProfiles
 			if ablock.run(each) cast bool
 				list.add(each)
 			end
+		end)
+		return list
+	end
+	
+	/** List of profiles as Array of ActorProfile. */
+	public func Array toArray()
+		var Array list = Array.new()
+		pProfiles.forEachValue(block ActorProfile each
+			list.add(each)
 		end)
 		return list
 	end
@@ -168,5 +193,20 @@ class ActorProfiles
 				console.addError("Failed saving actor profile to file '" + filename + "'", e)
 			end
 		end)
+	end
+	
+	
+	
+	/** Add listener. */
+	public func void addListener(ActorProfilesListener listener)
+		if listener == null
+			throw ENullPointer.new("listener")
+		end
+		pListeners.add(listener)
+	end
+	
+	/** Remove listener. */
+	public func void removeListener(ActorProfilesListener listener)
+		pListeners.remove(listener)
 	end
 end

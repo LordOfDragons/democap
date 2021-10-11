@@ -22,6 +22,7 @@
 namespace Democap.Actions
 
 pin Democap.Actors
+pin Democap.Behaviors
 pin Democap.Characters
 
 pin Dragengine.LoadSave
@@ -67,6 +68,11 @@ class AACalibrate extends AABase
 		super.activate(actor)
 		log("Enter Calibration")
 		
+		var ECBAControlDesktop.Instance acd = ECBAControlDesktop.getInstanceIn(actor)
+		if acd != null
+			acd.cancel()
+		end
+		
 		var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
 		var CharacterConfiguration character = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
 		if actor != null and character != null
@@ -106,6 +112,10 @@ class AACalibrate extends AABase
 		aiAction.setAction(AADefault.new())
 	end
 	
+	/** Cancel calibrate. */
+	public func void cancelCalibrate()
+		aiAction.setAction(AADefault.new())
+	end
 	
 	
 	/** Name of PersistencyFactory required to load object from file. */

@@ -1,0 +1,170 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Actor behavior controlling desktop.
+ */
+class ECBAControlDesktop extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBAControlDesktop pECBehavior
+		private var ECBehaviorControlDesktop.Instance pControlDesktop
+		private var ECBehaviorVRHandPointAt.Instance pPointAt
+		private var bool pTriggerPulled
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBAControlDesktop ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pPointAt = null
+			pControlDesktop = null
+			super.dispose()
+		end
+		
+		
+		
+		/** Behavior instance control desktop or null. */
+		public func ECBehaviorControlDesktop.Instance getControlDesktop()
+			return pControlDesktop
+		end
+		
+		/** Behavior instance VR Hand Point At or null. */
+		public func ECBehaviorVRHandPointAt.Instance getPointAt()
+			return pPointAt
+		end
+		
+		/** Trigger is pulled. */
+		public func bool getTriggerPulled()
+			return pTriggerPulled
+		end
+		
+		
+		
+		/** Process pointing at element. Returns true if processed. */
+		public func bool pointAt(ECBehaviorVRHandPointAt.Instance behavior)
+			var DVector hitPoint = behavior.getPointAtHitPoint()
+			
+			if pControlDesktop != null
+				if behavior == pPointAt
+					if (hitPoint != null and pControlDesktop.moveMouse(hitPoint)) or pTriggerPulled
+						return true
+						
+					else
+						pControlDesktop = null
+						pPointAt = null
+						return false
+					end
+					
+				else
+					return false
+				end
+			end
+			
+			if hitPoint != null
+				pControlDesktop = behavior.getPointAtBehaviorElement().findInstance(\
+					block ECBehaviorControlDesktop.Instance each
+						return each.moveMouse(hitPoint)
+					end) cast ECBehaviorControlDesktop.Instance
+			end
+			
+			if pControlDesktop != null
+				pPointAt = behavior
+				return true
+				
+			else
+				pPointAt = null
+				return false
+			end
+		end
+		
+		/** Pull trigger on pointed at element. Returns true if processed. */
+		public func bool pointAtPull(ECBehaviorVRHandPointAt.Instance behavior)
+			if not pointAt(behavior)
+				return false
+			end
+			
+			pControlDesktop.leftMousePress()
+			pTriggerPulled = true
+			return true
+		end
+		
+		/** Release trigger on pointed at element. Returns true if processed. */
+		public func bool pointAtRelease(ECBehaviorVRHandPointAt.Instance behavior)
+			if pControlDesktop == null or behavior != pPointAt
+				return false
+			end
+			
+			pControlDesktop.leftMouseRelease()
+			
+			pControlDesktop = null
+			pPointAt = null
+			pTriggerPulled = false
+			return true
+		end
+		
+		/** Cancel triggering pointAtRelease if point at is present. */
+		public func void cancel()
+			pointAtRelease(pPointAt)
+		end
+	end
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass) super(eclass)
+		eclass.addBehavior(this)
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

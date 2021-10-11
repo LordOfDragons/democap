@@ -21,6 +21,8 @@
 
 namespace Democap.Gui
 
+pin Democap.Actors
+pin Democap.Actions
 pin Democap.Characters
 
 pin Dragengine.Gui.Layouts
@@ -33,6 +35,43 @@ pin Dragengine.Scenery
  * Main window character panel.
  */
 class WMPanelCharacter extends Panel
+	/** Actor profile list element renderer. */
+	class ActorProfileRenderer extends DefaultListElementRenderer
+		public func new()
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text = String.new(' ', 20)
+			if element != null
+				text = (element cast ActorProfile).getName()
+			end
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	/** Actor profile selection listener. */
+	class ActorProfileSelection extends DefaultListModelListener
+		protected var WMPanelCharacter pWindow
+		
+		public func new(WMPanelCharacter window)
+			pWindow = window
+		end
+		
+		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+			selectionChanged(model)
+		end
+		
+		public func void selectionChanged(ListModel model)
+			var int index = model.getSelected()
+			if index != -1
+				pWindow.setActorProfile(model.getAt(index) cast ActorProfile)
+				
+			else
+				pWindow.setActorProfile(null)
+			end
+		end
+	end
+	
 	/** Character profile list element renderer. */
 	class CharacterProfileRenderer extends DefaultListElementRenderer
 		public func new()
@@ -108,6 +147,27 @@ class WMPanelCharacter extends Panel
 		end
 	end
 	
+	/** Actor profiles listener. */
+	class ListenActorProfiles extends DefaultActorProfilesListener
+		protected var WMPanelCharacter pWindow
+		
+		public func new(WMPanelCharacter window)
+			pWindow = window
+		end
+		
+		public func void profileAdded(ActorProfiles profiles, ActorProfile profile)
+			pWindow.updateActorProfiles()
+		end
+		
+		public func void profileRemoved(ActorProfiles profiles, ActorProfile profile)
+			pWindow.updateActorProfiles()
+		end
+		
+		public func void allProfilesRemoved(ActorProfiles profiles)
+			pWindow.updateActorProfiles()
+		end
+	end
+	
 	/** Character profiles listener. */
 	class ListenCharacterProfiles extends DefaultCharacterProfilesListener
 		protected var WMPanelCharacter pWindow
@@ -152,9 +212,11 @@ class WMPanelCharacter extends Panel
 	
 	
 	
+	protected var DefaultListModel pModelActorProfiles
 	protected var DefaultListModel pModelCharacterProfiles
 	protected var DefaultListModel pModelCharacterConfigurations
 	protected var ListenCharacterConfigurations pListenCharacterConfigurations
+	protected var ActorProfile pActorProfile
 	protected var CharacterProfile pCharacterProfile
 	protected var CharacterConfiguration pCharacterConfiguration
 	
@@ -162,6 +224,7 @@ class WMPanelCharacter extends Panel
 	
 	/** Create character panel. */
 	public func new()
+		pModelActorProfiles = DefaultListModel.new()
 		pModelCharacterProfiles = DefaultListModel.new()
 		pModelCharacterConfigurations = DefaultListModel.new()
 		pListenCharacterConfigurations = ListenCharacterConfigurations.new(this)
@@ -170,8 +233,12 @@ class WMPanelCharacter extends Panel
 			createContent()
 		end)
 		
+		pModelActorProfiles.addListener(ActorProfileSelection.new(this))
 		pModelCharacterProfiles.addListener(CharacterProfileSelection.new(this))
 		pModelCharacterConfigurations.addListener(CharacterConfigurationSelection.new(this))
+		
+		GameApp.getGameApp().getActorProfiles().addListener(ListenActorProfiles.new(this))
+		updateActorProfiles()
 		
 		GameApp.getGameApp().getCharacterProfiles().addListener(ListenCharacterProfiles.new(this))
 		updateCharacterProfiles()
@@ -180,12 +247,42 @@ class WMPanelCharacter extends Panel
 	/** Dispose of widget. */
 	public func void dispose()
 		setCharacterProfile(null)
+		setActorProfile(null)
 		
+		pModelActorProfiles = null
 		pModelCharacterProfiles = null
 		pModelCharacterConfigurations = null
 		pListenCharacterConfigurations = null
 		
 		super.dispose()
+	end
+	
+	
+	
+	/** Selected actor profile or null. */
+	public func ActorProfile getActorProfile()
+		return pActorProfile
+	end
+	
+	/** Set selected actor profile or null. */
+	public func void setActorProfile(ActorProfile profile)
+		if profile == pActorProfile
+			return
+		end
+		
+		pActorProfile = profile
+	end
+	
+	/** Update actor profiles model. */
+	public func void updateActorProfiles()
+		var ActorProfile profile = pActorProfile
+		
+		pModelActorProfiles.setContent(GameApp.getGameApp().getActorProfiles().toArray())
+		
+		var int index = pModelActorProfiles.indexOf(profile)
+		if index != -1
+			pModelActorProfiles.setSelected(index)
+		end
 	end
 	
 	
@@ -272,9 +369,22 @@ class WMPanelCharacter extends Panel
 	
 	/** Activate selected character configuration if present. */
 	public func void activateCharacterConfiguration()
-		if pCharacterConfiguration != null
-			GameApp.getGameApp().getWorldSpawnCharacter().setCharacter(pCharacterConfiguration)
+		if pActorProfile == null
+			WindowDialog.message(getWindow(), "Activate Configuration", "No actor selected", null, null, null)
+			return
 		end
+		
+		if pCharacterConfiguration == null
+			WindowDialog.message(getWindow(), "Activate Configuration", "No character configuration selected", null, null, null)
+			return
+		end
+		
+		GameApp.getGameApp().getWorldSpawnCharacter().setCharacter(pCharacterConfiguration)
+	end
+	
+	/** Edit actors. */
+	public func void editActors()
+		// TODO
 	end
 	
 	/** Edit characters. */
@@ -284,8 +394,14 @@ class WMPanelCharacter extends Panel
 	
 	/** Calibrate character. */
 	public func void calibrateCharacter()
-		if pCharacterConfiguration != null
-			// TODO
+		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+		if actor == null
+			return
+		end
+		
+		var AAControlCommands aacc = actor.getAIAction().getAction() cast AAControlCommands
+		if aacc != null
+			aacc.startCalibrate()
 		end
 	end
 	
@@ -297,6 +413,9 @@ class WMPanelCharacter extends Panel
 		setLayout(BorderLayout.new(2))
 		
 		addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			p.addWidget(Label.new("Actors:", "Label.FormCaption"))
+			p.addWidget(ComboBox.new(pModelActorProfiles, ActorProfileRenderer.new()))
+			
 			p.addWidget(Label.new("Character:", "Label.FormCaption"))
 			p.addWidget(ComboBox.new(pModelCharacterProfiles, CharacterProfileRenderer.new()))
 			
@@ -305,12 +424,16 @@ class WMPanelCharacter extends Panel
 		end), BorderLayout.Area.content)
 		
 		addWidget(Panel.new(GridLayout.new(2, 0), block Panel p
-			p.addWidget(Button.new("Activate", BlockActionListener.new(block ActionEvent event
-				activateCharacterConfiguration()
+			p.addWidget(Button.new("Edit Actors", BlockActionListener.new(block ActionEvent event
+				editActors()
 			end)))
 			
-			p.addWidget(Button.new("Edit", BlockActionListener.new(block ActionEvent event
+			p.addWidget(Button.new("Edit Characters", BlockActionListener.new(block ActionEvent event
 				editCharacters()
+			end)))
+			
+			p.addWidget(Button.new("Activate", BlockActionListener.new(block ActionEvent event
+				activateCharacterConfiguration()
 			end)))
 			
 			p.addWidget(Button.new("Calibrate", BlockActionListener.new(block ActionEvent event

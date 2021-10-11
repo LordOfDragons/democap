@@ -1,0 +1,169 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adjusting ECBehaviorVRHand collider to line up with the actual character hand.
+ * This is required due to actor/character scaling. Otherwise the VR hand interactions are
+ * potentially offset confusing the user.
+ * 
+ * ECBehaviorVRHand updates the collider position and orientation during think(). This
+ * behavior is run after ECBehaviorVRHand and thus we can do the adjustment in think() too.
+ * 
+ * The position is obtained from an ECBTrackerSlot.
+ */
+class ECBAdjustVRHandCollider extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBAdjustVRHandCollider pECBehavior
+		private var ECBCharacterConfiguration.Instance pCharacter
+		private var ECBehaviorVRHand.Instance pVRHand
+		private var ECBTrackerSlot.Instance pTrackerSlot
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBAdjustVRHandCollider ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pCharacter = ecbehavior.getCharacter().instance(element)
+			pVRHand = ecbehavior.getVRHand().instance(element)
+			pTrackerSlot = ecbehavior.getTrackerSlot().instance(element)
+			setRequiresThink(true)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pCharacter = null
+			pVRHand = null
+			pTrackerSlot = null
+			super.dispose()
+		end
+		
+		
+		
+		/** Behavior instance Character Configuration. */
+		public func ECBCharacterConfiguration.Instance getCharacter()
+			return pCharacter
+		end
+		
+		/** Behavior instance VR Hand. */
+		public func ECBehaviorVRHand.Instance getVRHand()
+			return pVRHand
+		end
+		
+		/** Behavior instance tracker slot. */
+		public func ECBTrackerSlot.Instance getTrackerSlot()
+			return pTrackerSlot
+		end
+		
+		
+		
+		/** Frame update. */
+		public func void think(float elapsed)
+			if not pCharacter.getCharacter().isCalibrated()
+				return
+			end
+			
+			var Component component = pTrackerSlot.getComponent().getComponent()
+			if component == null
+				return
+			end
+			
+			pVRHand.getCollider().setGeometry(component.getPosition(), component.getOrientation())
+		end
+	end
+	
+	
+	
+	private var ECBCharacterConfiguration pCharacter
+	private var ECBehaviorVRHand pVRHand
+	private var ECBTrackerSlot pTrackerSlot
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorVRHand vrHand, \
+	ECBTrackerSlot trackerSlot, String id) super(eclass, id)
+		if vrHand == null
+			throw ENullPointer.new("vrHand")
+		end
+		if trackerSlot == null
+			throw ENullPointer.new("trackerSlot")
+		end
+		
+		pCharacter = ECBCharacterConfiguration.getBehaviorIn(eclass)
+		if pCharacter == null
+			throw BERequiresBehaviorException.new(eclass, this, "ECBCharacterConfiguration")
+		end
+		
+		pVRHand = vrHand
+		pTrackerSlot = trackerSlot
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pCharacter = null
+		pVRHand = null
+		pTrackerSlot = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Behavior Character Configuration. */
+	public func ECBCharacterConfiguration getCharacter()
+		return pCharacter
+	end
+	
+	/** Behavior VR Hand. */
+	public func ECBehaviorVRHand getVRHand()
+		return pVRHand
+	end
+	
+	/** Behavior tracker slot. */
+	public func ECBTrackerSlot getTrackerSlot()
+		return pTrackerSlot
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

@@ -37,6 +37,43 @@ pin Dragengine.Utils
  * other gadgets potentially used by the player.
  */
 class WorldSpawnCharacter
+	/** Listener. */
+	public interface Listener
+		/** Character configuration changed. */
+		func void characterChanged(WorldSpawnCharacter wsc)
+		
+		/** Charatcer actor is ready to be used. */
+		func void actorReady(WorldSpawnCharacter wsc)
+		
+		/** Charatcer actor is not ready to be used anymore. */
+		func void actorNotReady(WorldSpawnCharacter wsc)
+		
+		/** Game world changed. */
+		func void gameWorldChanged(WorldSpawnCharacter wsc)
+	end
+	
+	/** Default implementation of listener. */
+	public class DefaultListener implements Listener
+		public func new()
+		end
+		
+		/** Character configuration changed. */
+		public func void characterChanged(WorldSpawnCharacter wsc)
+		end
+		
+		/** Charatcer actor is ready to be used. */
+		public func void actorReady(WorldSpawnCharacter wsc)
+		end
+		
+		/** Charatcer actor is not ready to be used anymore. */
+		public func void actorNotReady(WorldSpawnCharacter wsc)
+		end
+		
+		/** Game world changed. */
+		public func void gameWorldChanged(WorldSpawnCharacter wsc)
+		end
+	end
+	
 	/** Frame updater. */
 	protected class UpdateCheck extends FrameUpdateListener
 		private var WorldSpawnCharacter pOwner
@@ -74,7 +111,8 @@ class WorldSpawnCharacter
 	private var DVector pLastActorPosition
 	private var Quaternion pLastActorOrientation
 	private var BehaviorElement pVRMenu
-	private var ElementClass pNoCharacterActorClass
+	private var ElementClass pMoCapActorClass
+	private var Array pListeners
 	
 	
 	
@@ -83,19 +121,22 @@ class WorldSpawnCharacter
 		pUpdateCharacter = UpdateCharacter.new(this)
 		pLastActorPosition = DVector.new()
 		pLastActorOrientation = Quaternion.new()
-		pNoCharacterActorClass = GameApp.getGameApp().getElementClassList().getNamed("NoCharacterActor")
+		pMoCapActorClass = GameApp.getGameApp().getElementClassList().getNamed("MoCapActor")
+		pListeners = Array.new()
 	end
 	
 	/** Dispose. */
 	public func void dispose()
-		stopUpdateCheck()
-		disposeActor()
-		pUpdateCharacter = null
-		
 		if pVRMenu != null
 			pVRMenu.safeDispose()
 			pVRMenu = null
 		end
+		
+		pListeners.removeAll()
+		
+		stopUpdateCheck()
+		disposeActor()
+		pUpdateCharacter = null
 	end
 	
 	
@@ -129,6 +170,10 @@ class WorldSpawnCharacter
 			gameWorld.addElement(pVRMenu)
 		end
 		
+		pListeners.forEach(block Listener each
+			each.gameWorldChanged(this)
+		end)
+		
 		startUpdateCheck()
 	end
 	
@@ -148,14 +193,6 @@ class WorldSpawnCharacter
 			return
 		end
 		
-		if character != null
-			GameApp.getGameApp().getConsole().addMessage("Activate character: profile='" \
-				+ character.getProfile().getName() + "' configuration='" + character.getName() + "'")
-			
-		else
-			GameApp.getGameApp().getConsole().addMessage("Activate null character")
-		end
-		
 		if pCharacter != null
 			pCharacter.getProfile().removeListener(pUpdateCharacter)
 		end
@@ -167,6 +204,10 @@ class WorldSpawnCharacter
 			character.getProfile().addListener(pUpdateCharacter)
 		end
 		
+		pListeners.forEach(block Listener each
+			each.characterChanged(this)
+		end)
+		
 		startUpdateCheck()
 	end
 	
@@ -176,11 +217,31 @@ class WorldSpawnCharacter
 		startUpdateCheck()
 	end
 	
+	/** Actor or null. */
+	public func BaseVRActor getActor()
+		return pActor
+	end
+	
 	
 	
 	/** VR Menu or null if not created yet. */
 	public func BehaviorElement getVRMenu()
 		return pVRMenu
+	end
+	
+	
+	
+	/** Add listener. */
+	public func void addListener(Listener listener)
+		if listener == null
+			throw ENullPointer.new("listener")
+		end
+		pListeners.add(listener)
+	end
+	
+	/** Remove listener. */
+	public func void removeListener(Listener listener)
+		pListeners.remove(listener)
 	end
 	
 	
@@ -215,6 +276,7 @@ class WorldSpawnCharacter
 		
 		try
 			createActor()
+			
 		catch Exception e
 			GameApp.getGameApp().getConsole().addError("creating actor failed", e)
 			disposeActor()
@@ -232,6 +294,10 @@ class WorldSpawnCharacter
 		
 		pActor.safeDispose()
 		pActor = null
+		
+		pListeners.forEach(block Listener each
+			each.actorNotReady(this)
+		end)
 	end
 	
 	/** Create actor. */
@@ -248,7 +314,7 @@ class WorldSpawnCharacter
 			stub = pCharacter.createStubElement()
 			
 		else
-			stub = StubElement.new(pNoCharacterActorClass, GameApp.getGameApp().getIDGenerator().nextID())
+			stub = StubElement.new(pMoCapActorClass, GameApp.getGameApp().getIDGenerator().nextID())
 		end
 		
 		stub.setPosition(pLastActorPosition)
@@ -259,6 +325,10 @@ class WorldSpawnCharacter
 		
 		// take control of actor
 		pActor.getPlayerControllable().takeControl()
+		
+		pListeners.forEach(block Listener each
+			each.actorReady(this)
+		end)
 	end
 	
 	/** Create VR menu. */

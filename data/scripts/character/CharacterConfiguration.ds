@@ -23,6 +23,7 @@ namespace Democap.Characters
 
 pin Democap.Actors
 pin Democap.Behaviors
+pin Democap.Elements
 pin Democap.MotionTransferSystem
 
 pin Dragengine.Commands
@@ -67,8 +68,8 @@ class CharacterConfiguration
 	private var CharacterTrackerSlots pTrackerSlots
 	private var MotionTransfers pMotionTransfers
 	
-	private var BaseVRActorClass pElementClass
-	private var BaseVRActorClass pOldElementClass
+	private var MoCapActorClass pElementClass
+	private var MoCapActorClass pOldElementClass
 	private var PreloadCounter pPreloadCounter
 	private var AnimatorDefinition pAnimatorDefinition
 	
@@ -276,7 +277,7 @@ class CharacterConfiguration
 	 * Element class creating and preloading it if required. Returned element class can be
 	 * still preloading so check isElementClassPreloading() to check if it is ready to be used.
 	 */
-	public func BaseVRActorClass getElementClass()
+	public func MoCapActorClass getElementClass()
 		if pElementClass == null
 			pElementClass = createElementClass()
 			pPreloadCounter = PreloadCounter.new()
@@ -461,13 +462,13 @@ class CharacterConfiguration
 			turnBody = rotHands + 90
 		end
 		
-		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: posHMD=" \
-			+ posHMD + " posRightHand=" + posRightHand + " posLeftHand=" + posLeftHand)
-		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: turnHMD=" \
-			+ turnHMD + " posNeck=" + posNeck)
-		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: centerHands=" \
-			+ centerHands + " rotHands=" + rotHands + " scale=" + pCalibrateScale \
-			+ " turnBody=" + turnBody + " centerBody=" + centerBody)
+// 		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: posHMD=" \
+// 			+ posHMD + " posRightHand=" + posRightHand + " posLeftHand=" + posLeftHand)
+// 		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: turnHMD=" \
+// 			+ turnHMD + " posNeck=" + posNeck)
+// 		GameApp.getGameApp().getConsole().addMessage("CharacterConfiguration.calibrate: centerHands=" \
+// 			+ centerHands + " rotHands=" + rotHands + " scale=" + pCalibrateScale \
+// 			+ " turnBody=" + turnBody + " centerBody=" + centerBody)
 		
 		// scale element if required
 		if pScaleMode == ScaleMode.character
@@ -508,7 +509,7 @@ class CharacterConfiguration
 		
 		// assign input devices
 		var Console console = GameApp.getGameApp().getConsole()
-		console.addMessage("Assign input devices:")
+// 		console.addMessage("Assign input devices:")
 		
 		bindings.forEachDevice(block InputDevice device
 			select device.getType()
@@ -519,12 +520,12 @@ class CharacterConfiguration
 				
 				if slot != null
 					slot.setInputDeviceID(device.getID())
-					console.addMessage("- {} ({}): Assign to slot '{}'".format(\
-						Array.newWith(device.getID(), device.getType().name(), slot.getName())))
+// 					console.addMessage("- {} ({}): Assign to slot '{}'".format(\
+// 						Array.newWith(device.getID(), device.getType().name(), slot.getName())))
 					
 				else
-					console.addMessage("- {} ({}): Not assigned".format(\
-						Array.newWith(device.getID(), device.getType().name())))
+// 					console.addMessage("- {} ({}): Not assigned".format(\
+// 						Array.newWith(device.getID(), device.getType().name())))
 				end
 			end
 		end)
@@ -533,16 +534,11 @@ class CharacterConfiguration
 	
 	
 	/** Create element class. Caller has to start preloading to use it. */
-	public func BaseVRActorClass createElementClass()
-		var BaseVRActorClass eclass = BaseVRActorClass.new(\
+	public func MoCapActorClass createElementClass()
+		var MoCapActorClass eclass = MoCapActorClass.new(\
 			"Character" + GameApp.getGameApp().getNextElementClassID().nextID())
 		
-		eclass.getAIAction().setActionFactory(Actions.AADefault.Factory.new())
-		
 		try
-// 			eclass.getVRRightHand().getShowHand().setValue(false)
-// 			eclass.getVRLeftHand().getShowHand().setValue(false)
-			
 			ECBCharacterConfiguration.new(eclass, this)
 			
 			var ECBMoCapAnimator mocapAnimator = ECBMoCapAnimator.new(eclass)
@@ -621,7 +617,7 @@ class CharacterConfiguration
 			// finalize motion capture animator
 			var Animator animator = Animator.new()
 			pAnimatorDefinition.buildAnimator(animator)
-			pAnimatorDefinition.debug(GameApp.getGameApp().getConsole())
+// 			pAnimatorDefinition.debug(GameApp.getGameApp().getConsole())
 			mocapAnimator.setAnimator(animator)
 			
 		catch Exception e
