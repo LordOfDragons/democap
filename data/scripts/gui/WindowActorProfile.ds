@@ -1,0 +1,172 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Actors
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit actor profile window.
+ */
+class WindowActorProfile extends WindowDialog
+	private var ActorProfile pActorProfile
+	private var DefaultTextModel pModelProfileName
+	private var DefaultTextModel pModelArmLength
+	private var DefaultTextModel pModelLegLength
+	
+	
+	
+	/** Create window. */
+	public func new(Window window, ActorProfile profile, ResultListener listener)
+		pActorProfile = profile
+		
+		pModelProfileName = DefaultTextModel.new(profile.getName())
+		pModelArmLength = DefaultTextModel.new(profile.getArmLength().toString())
+		pModelLegLength = DefaultTextModel.new(profile.getLegLength().toString())
+		
+		runWhileBlockingLayout(block
+			setGuiTheme(window.getGuiTheme())
+			setTitle("Actor Profile")
+			setDesignerSelector("Window.Dialog.ActorProfile")
+			setSize(Point.new(600, 600))
+			
+			createContent()
+		end)
+		
+		setResultListener(listener)
+		show(window, true, WindowModal.Placement.desktop)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		pModelProfileName = null
+		pModelArmLength = null
+		pModelLegLength = null
+		
+		super.dispose()
+	end
+	
+	
+	
+	/** Save dialog and close if no problems are found. */
+	public func void saveAndClose()
+		// verify input
+		var String profileName = pModelProfileName.getText()
+		if not profileName.toLower().equals(pActorProfile.getName().toLower())
+			if profileName.empty()
+				WindowDialog.message(this, "Save Profile", "Profile name can not be empty", null, null, null)
+				return
+			end
+			if GameApp.getGameApp().getActorProfiles().has(profileName)
+				WindowDialog.message(this, "Save Profile", "Profile with same name exists", null, null, null)
+				return
+			end
+			if not FileSystem.canDeleteFile(pActorProfile.getPathProfile())
+				WindowDialog.message(this, "Save Profile", \
+					"Profile can not be renamed. Old profile file can not be deleted", null, null, null)
+				return
+			end
+		end
+		
+		// save changes
+		var String oldPathProfile = pActorProfile.getPathProfile()
+		
+		pActorProfile.setName(profileName)
+		pActorProfile.setArmLength(pModelArmLength.getText().toFloat())
+		pActorProfile.setLegLength(pModelLegLength.getText().toFloat())
+		
+		pActorProfile.save()
+		
+		// if profile file name changed delete the old profile file
+		if not pActorProfile.getPathProfile().equals(oldPathProfile) and FileSystem.existsFile(oldPathProfile)
+			try
+				FileSystem.deleteFile(oldPathProfile)
+				
+			catch Exception e
+				GameApp.getGameApp().getConsole().addError("Delete profile", e)
+				WindowDialog.message(this, "Save Profile", "Failed deleting old profile:\n" + e, null, null, null)
+			end
+		end
+		
+		// finish and close window
+		setResult(true)
+		close()
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		setLayout(BorderLayout.new(20))
+		
+		// actor image
+		addWidget(DisplayImage.new(Image.new("/content/gui/images/actor_image.png"),\
+			"Image.WindowActorProfile.Actor"), BorderLayout.Area.left)
+		
+		// properties
+		var TextField textField
+		var Button button
+		
+		addWidget(Panel.new(FormLayout.new(true, 10, 2), block Panel p
+			// profile name
+			p.addWidget(Label.new("Profile Name:", "Label.FormCaption"))
+			
+			textField = TextField.new(pModelProfileName, 15)
+			textField.setDesignerSelector("TextField.WindowActorProfile")
+			p.addWidget(textField)
+			
+			// arm length
+			p.addWidget(Label.new("Arm Length:", "Label.FormCaption"))
+			
+			textField = TextField.new(pModelArmLength, 6)
+			textField.setDesignerSelector("TextField.WindowActorProfile")
+			textField.setValidator(SimpleTextValidator.new(6, SimpleTextValidator.CharacterClass.number))
+			p.addWidget(textField)
+			
+			// leg length
+			p.addWidget(Label.new("Leg Length:", "Label.FormCaption"))
+			
+			textField = TextField.new(pModelLegLength, 6)
+			textField.setDesignerSelector("TextField.WindowActorProfile")
+			textField.setValidator(SimpleTextValidator.new(6, SimpleTextValidator.CharacterClass.number))
+			p.addWidget(textField)
+			
+		end), BorderLayout.Area.content)
+		
+		// button line
+		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x), block Panel p
+			button = Button.new("Save", BlockActionListener.new(block ActionEvent e
+				saveAndClose()
+			end))
+			button.setDesignerSelector("Button.WindowActorProfile.Save")
+			p.addWidget(button)
+			
+			button = Button.new("Cancel", CloseDialog.new(this, false))
+			button.setDesignerSelector("Button.WindowActorProfile.Cancel")
+			p.addWidget(button)
+		end ), BorderLayout.Area.bottom )
+	end
+end

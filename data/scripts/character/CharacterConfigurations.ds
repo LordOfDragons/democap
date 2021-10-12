@@ -54,20 +54,20 @@ class CharacterConfigurations
 	
 	/** Named configuration is present. */
 	public func bool has(String name)
-		return pConfigurations.has(name)
+		return pConfigurations.has(name.toLower())
 	end
 	
 	/** Named configuration or null if absent. */
 	public func CharacterConfiguration getAt(String name)
-		return pConfigurations.getAt(name, null) cast CharacterConfiguration
+		return pConfigurations.getAt(name.toLower(), null) cast CharacterConfiguration
 	end
 	
 	/** Add configuration. Throws exception if named configuration is present. */
 	public func void add(CharacterConfiguration configuration)
-		if pConfigurations.has(configuration.getName())
+		if pConfigurations.has(configuration.getName().toLower())
 			throw EInvalidParam.new("named configuration is present: " + configuration.getName())
 		end
-		pConfigurations.setAt(configuration.getName(), configuration)
+		pConfigurations.setAt(configuration.getName().toLower(), configuration)
 		
 		pListeners.forEach(block CharacterConfigurationsListener each
 			each.configurationAdded(this, configuration)
@@ -76,7 +76,7 @@ class CharacterConfigurations
 	
 	/** Remove configuration. Throws exception if named configuration is absent. */
 	public func void remove(CharacterConfiguration configuration)
-		pConfigurations.remove(configuration.getName())
+		pConfigurations.remove(configuration.getName().toLower())
 		
 		pListeners.forEach(block CharacterConfigurationsListener each
 			each.configurationRemoved(this, configuration)

@@ -32,7 +32,7 @@ pin Dragengine.Utils
  */
 class ActorProfiles
 	private var String pDirectory
-	private var Dictionary pProfiles
+	private var Array pProfiles
 	private var Array pListeners
 	
 	
@@ -45,7 +45,7 @@ class ActorProfiles
 		
 		pListeners = Array.new()
 		pDirectory = directory
-		pProfiles = Dictionary.new()
+		pProfiles = Array.new()
 	end
 	
 	/** Dispose of list. */
@@ -70,20 +70,25 @@ class ActorProfiles
 	
 	/** Named profile is present. */
 	public func bool has(String name)
-		return pProfiles.has(name)
+		return pProfiles.find(block ActorProfile each
+			return each.getName().compareNoCase(name) == 0
+		end) != null
 	end
 	
 	/** Named profile or null if absent. */
 	public func ActorProfile getAt(String name)
-		return pProfiles.getAt(name, null) cast ActorProfile
+		name = name.toLower()
+		return pProfiles.find(block ActorProfile each
+			return each.getName().compareNoCase(name) == 0
+		end) cast ActorProfile
 	end
 	
 	/** Add profile. Throws exception if named profile is present. */
 	public func void add(ActorProfile profile)
-		if pProfiles.has(profile.getName())
+		if has(profile.getName())
 			throw EInvalidParam.new("named profile is present: " + profile.getName())
 		end
-		pProfiles.setAt(profile.getName(), profile)
+		pProfiles.add(profile)
 		
 		pListeners.forEach(block ActorProfilesListener each
 			each.profileAdded(this, profile)
@@ -92,7 +97,7 @@ class ActorProfiles
 	
 	/** Remove profile. Throws exception if named profile is absent. */
 	public func void remove(ActorProfile profile)
-		pProfiles.remove(profile.getName())
+		pProfiles.remove(profile)
 		
 		pListeners.forEach(block ActorProfilesListener each
 			each.profileRemoved(this, profile)
@@ -103,7 +108,7 @@ class ActorProfiles
 	
 	/** Remove all profiles. */
 	public func void removeAll()
-		pProfiles.forEachValue(block ActorProfile each
+		pProfiles.forEach(block ActorProfile each
 			each.dispose()
 		end)
 		pProfiles.removeAll()
@@ -117,7 +122,7 @@ class ActorProfiles
 	 * Visit profiles with block. Block receives as only argument ActorProfile.
 	 */
 	public func void forEach(Block ablock)
-		pProfiles.forEachValue(ablock)
+		pProfiles.forEach(ablock)
 	end
 	
 	/**
@@ -126,22 +131,12 @@ class ActorProfiles
 	 * Returns Array of ActorProfile.
 	 */
 	public func Array collect(Block ablock)
-		var Array list = Array.new()
-		pProfiles.forEachValue(block ActorProfile each
-			if ablock.run(each) cast bool
-				list.add(each)
-			end
-		end)
-		return list
+		return pProfiles.collect(ablock)
 	end
 	
 	/** List of profiles as Array of ActorProfile. */
 	public func Array toArray()
-		var Array list = Array.new()
-		pProfiles.forEachValue(block ActorProfile each
-			list.add(each)
-		end)
-		return list
+		return Array.new(pProfiles)
 	end
 	
 	
@@ -151,23 +146,16 @@ class ActorProfiles
 		var LoadActorProfile loader = GameApp.getGameApp().getLoadActorProfile()
 		var Console console = GameApp.getGameApp().getConsole()
 		
-		console.addMessage("Load actor profiles from '" + pDirectory + "'")
+		console.addMessage("Load actor profiles...")
 		
 		FileSystem.searchFiles(pDirectory, true, block String each, FileType type
-			var String filename = File.new(each).getName()
-			if type == FileType.file and FileSystem.pathMatchesPattern(filename, "*.demcap")
-				console.addMessage("Load actor profile '" + filename + "'")
-				var ActorProfile profile
+			if type == FileType.file and FileSystem.pathMatchesPattern(File.new(each).getName(), "*.demcap")
 				try
-					profile = loader.load(each)
+					add(loader.load(each))
+					
 				catch Exception e
-					console.addError("Failed loading actor profile from file '" + each + "'", e)
+					console.addError("Failed loading actor profile: " + each, e)
 					return true
-				end
-				try
-					add(profile)
-				catch Exception e
-					console.addError("Failed adding actor profile '" + profile.getName() + "'", e)
 				end
 			end
 			return true
@@ -178,19 +166,15 @@ class ActorProfiles
 	public func void saveAll()
 		var LoadActorProfile loader = GameApp.getGameApp().getLoadActorProfile()
 		var Console console = GameApp.getGameApp().getConsole()
-		var File basePath = File.new(pDirectory)
 		
-		console.addMessage("Save actor profiles to '" + pDirectory + "'")
+		console.addMessage("Save actor profiles...")
 		
-		pProfiles.forEachValue(block ActorProfile each
-			var String filename = each.getName() + ".demcap"
-			console.addMessage("Save actor profile '" + filename + "'")
-			
-			filename = (basePath + filename).getPath()
+		pProfiles.forEach(block ActorProfile each
 			try
-				loader.save(filename, each)
+				loader.save(each.getPathProfile(), each)
+				
 			catch Exception e
-				console.addError("Failed saving actor profile to file '" + filename + "'", e)
+				console.addError("Failed saving actor profile: " + each.getName(), e)
 			end
 		end)
 	end

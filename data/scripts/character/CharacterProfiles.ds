@@ -70,20 +70,20 @@ class CharacterProfiles
 	
 	/** Named profile is present. */
 	public func bool has(String name)
-		return pProfiles.has(name)
+		return pProfiles.has(name.toLower())
 	end
 	
 	/** Named profile or null if absent. */
 	public func CharacterProfile getAt(String name)
-		return pProfiles.getAt(name, null) cast CharacterProfile
+		return pProfiles.getAt(name.toLower(), null) cast CharacterProfile
 	end
 	
 	/** Add profile. Throws exception if named profile is present. */
 	public func void add(CharacterProfile profile)
-		if pProfiles.has(profile.getName())
+		if pProfiles.has(profile.getName().toLower())
 			throw EInvalidParam.new("named profile is present: " + profile.getName())
 		end
-		pProfiles.setAt(profile.getName(), profile)
+		pProfiles.setAt(profile.getName().toLower(), profile)
 		
 		pListeners.forEach(block CharacterProfilesListener each
 			each.profileAdded(this, profile)
@@ -92,7 +92,7 @@ class CharacterProfiles
 	
 	/** Remove profile. Throws exception if named profile is absent. */
 	public func void remove(CharacterProfile profile)
-		pProfiles.remove(profile.getName())
+		pProfiles.remove(profile.getName().toLower())
 		
 		pListeners.forEach(block CharacterProfilesListener each
 			each.profileRemoved(this, profile)
@@ -151,27 +151,16 @@ class CharacterProfiles
 		var LoadCharacterProfile loader = GameApp.getGameApp().getLoadCharacterProfile()
 		var Console console = GameApp.getGameApp().getConsole()
 		
-		console.addMessage("Load character profiles from '" + pDirectory + "'")
+		console.addMessage("Load character profiles...")
 		
 		FileSystem.searchFiles(pDirectory, true, block String each, FileType type
-			var String filename = File.new(each).getName()
-			if type == FileType.file and FileSystem.pathMatchesPattern(filename, "*.demccp")
-				console.addMessage("Load character profile '" + filename + "'")
-				var CharacterProfile profile
+			if type == FileType.file and FileSystem.pathMatchesPattern(File.new(each).getName(), "*.demccp")
 				try
-					profile = loader.load(each)
+					add(loader.load(each))
 					
 				catch Exception e
-					console.addError("Failed loading character profile from file '" + each + "'", e)
+					console.addError("Failed loading character profile: " + each, e)
 					return true
-				end
-				
-				try
-					add(profile)
-					profile.preloadResources()
-					
-				catch Exception e
-					console.addError("Failed adding character profile '" + profile.getName() + "'", e)
 				end
 			end
 			return true
@@ -194,13 +183,13 @@ class CharacterProfiles
 		
 		pProfiles.forEachValue(block CharacterProfile each
 			var String filename = each.getName() + ".demccp"
-			console.addMessage("Save character profile '" + filename + "'")
 			
 			filename = (basePath + filename).getPath()
 			try
 				loader.save(filename, each)
+				
 			catch Exception e
-				console.addError("Failed saving character profile to file '" + filename + "'", e)
+				console.addError("Failed saving character profile: " + each.getName(), e)
 			end
 		end)
 	end
