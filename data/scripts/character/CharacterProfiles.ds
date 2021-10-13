@@ -32,7 +32,7 @@ pin Dragengine.Utils
  */
 class CharacterProfiles
 	private var String pDirectory
-	private var Dictionary pProfiles
+	private var Array pProfiles
 	private var Array pListeners
 	
 	
@@ -45,7 +45,7 @@ class CharacterProfiles
 		
 		pListeners = Array.new()
 		pDirectory = directory
-		pProfiles = Dictionary.new()
+		pProfiles = Array.new()
 	end
 	
 	/** Dispose of list. */
@@ -70,20 +70,22 @@ class CharacterProfiles
 	
 	/** Named profile is present. */
 	public func bool has(String name)
-		return pProfiles.has(name.toLower())
+		return getAt(name) != null
 	end
 	
 	/** Named profile or null if absent. */
 	public func CharacterProfile getAt(String name)
-		return pProfiles.getAt(name.toLower(), null) cast CharacterProfile
+		return pProfiles.find(block CharacterProfile each
+			return each.getName().compareNoCase(name) == 0
+		end) cast CharacterProfile
 	end
 	
 	/** Add profile. Throws exception if named profile is present. */
 	public func void add(CharacterProfile profile)
-		if pProfiles.has(profile.getName().toLower())
+		if has(profile.getName())
 			throw EInvalidParam.new("named profile is present: " + profile.getName())
 		end
-		pProfiles.setAt(profile.getName().toLower(), profile)
+		pProfiles.add(profile)
 		
 		pListeners.forEach(block CharacterProfilesListener each
 			each.profileAdded(this, profile)
@@ -92,7 +94,7 @@ class CharacterProfiles
 	
 	/** Remove profile. Throws exception if named profile is absent. */
 	public func void remove(CharacterProfile profile)
-		pProfiles.remove(profile.getName().toLower())
+		pProfiles.remove(profile)
 		
 		pListeners.forEach(block CharacterProfilesListener each
 			each.profileRemoved(this, profile)
@@ -103,7 +105,7 @@ class CharacterProfiles
 	
 	/** Remove all profiles. */
 	public func void removeAll()
-		pProfiles.forEachValue(block CharacterProfile each
+		pProfiles.forEach(block CharacterProfile each
 			each.dispose()
 		end)
 		pProfiles.removeAll()
@@ -117,7 +119,7 @@ class CharacterProfiles
 	 * Visit profiles with block. Block receives as only argument CharacterProfile.
 	 */
 	public func void forEach(Block ablock)
-		pProfiles.forEachValue(ablock)
+		pProfiles.forEach(ablock)
 	end
 	
 	/**
@@ -126,22 +128,12 @@ class CharacterProfiles
 	 * Returns Array of CharacterProfile.
 	 */
 	public func Array collect(Block ablock)
-		var Array list = Array.new()
-		pProfiles.forEachValue(block CharacterProfile each
-			if ablock.run(each) cast bool
-				list.add(each)
-			end
-		end)
-		return list
+		return pProfiles.collect(ablock)
 	end
 	
 	/** List of profiles as Array of CharacterProfile. */
 	public func Array toArray()
-		var Array list = Array.new()
-		pProfiles.forEachValue(block CharacterProfile each
-			list.add(each)
-		end)
-		return list
+		return Array.new(pProfiles)
 	end
 	
 	
@@ -181,7 +173,7 @@ class CharacterProfiles
 		
 		console.addMessage("Save character profiles to '" + pDirectory + "'")
 		
-		pProfiles.forEachValue(block CharacterProfile each
+		pProfiles.forEach(block CharacterProfile each
 			var String filename = each.getName() + ".demccp"
 			
 			filename = (basePath + filename).getPath()

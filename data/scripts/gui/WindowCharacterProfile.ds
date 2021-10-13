@@ -1,0 +1,425 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Elements
+
+pin Dragengine.CameraDirectors
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character profile window.
+ */
+class WindowCharacterProfile extends WindowDialog
+	class PreviewPreloader implements ResourceListener
+		private var WindowCharacterProfile pWindow
+		private var PreloadCounter pPreloadCounter
+		
+		public var String pathModel, pathSkin, pathRig, pathAnimation
+		public var Model model
+		public var Skin skin
+		public var Rig rig
+		public var Animation animation
+		
+		public func new(WindowCharacterProfile window)
+			pWindow = window
+			pPreloadCounter = PreloadCounter.new()
+		end
+		
+		public func bool finished()
+			return pPreloadCounter.isZero()
+		end
+		
+		public func void preload()
+			if not pathModel.empty()
+				pPreloadCounter.increase()
+				Model.loadAsynchron(pathModel, this)
+			end
+			
+			if not pathSkin.empty()
+				pPreloadCounter.increase()
+				Skin.loadAsynchron(pathSkin, this)
+			end
+			
+			if not pathRig.empty()
+				pPreloadCounter.increase()
+				Rig.loadAsynchron(pathRig, this)
+			end
+			
+			if not pathAnimation.empty()
+				pPreloadCounter.increase()
+				Animation.loadAsynchron(pathAnimation, this)
+			end
+		end
+		
+		public func void finishedLoading(String filename, ResourceLoaderType resourceType, Object resource)
+			if filename.equals(pathModel)
+				model = resource cast Model
+				pPreloadCounter.decrease()
+			end
+			
+			if filename.equals(pathSkin)
+				skin = resource cast Skin
+				pPreloadCounter.decrease()
+			end
+			
+			if filename.equals(pathRig)
+				rig = resource cast Rig
+				pPreloadCounter.decrease()
+			end
+			
+			if filename.equals(pathAnimation)
+				animation = resource cast Animation
+				pPreloadCounter.decrease()
+			end
+		end
+		
+		public func void failedLoading(String filename, ResourceLoaderType resourceType)
+			pPreloadCounter.decrease()
+			GameApp.getGameApp().getConsole().addMessage("PreviewPreloader: Failed loading "\
+				+ resourceType.name() + " '" + filename)
+		end
+	end
+
+
+
+	private var CharacterProfile pCharacterProfile
+	private var DefaultTextModel pModelProfileName
+	private var DefaultListModel pModelListOriginBone
+	private var DefaultTextModel pModelTextOriginBone
+	private var DefaultTextModel pModelPathModel
+	private var DefaultTextModel pModelPathSkin
+	private var DefaultTextModel pModelPathRig
+	private var DefaultTextModel pModelPathAnimation
+	
+	private var WorldRenderer pWorldRenderer
+	private var GameWorld pGameWorld
+	private var ElementCameraDirector pCameraDirector
+	private var PreviewPreloader pPreviewPreloader
+	private var CharacterPreviewClass pCharacterPreviewClass
+	private var BehaviorElement pCharacterPreview
+	
+	
+	
+	/** Create window. */
+	public func new(Window window, CharacterProfile profile, ResultListener listener)
+		pCharacterPreviewClass = GameApp.getGameApp().getElementClassList()\
+			.getNamed("CharacterPreview") cast CharacterPreviewClass
+		
+		pCharacterProfile = profile
+		
+		pModelProfileName = DefaultTextModel.new(profile.getName())
+		pModelListOriginBone = DefaultListModel.new()
+		pModelListOriginBone.setAutoSelect(false)
+		pModelTextOriginBone = DefaultTextModel.new(profile.getOriginBone())
+		pModelPathModel = DefaultTextModel.new(profile.getAppearance().getPathModel())
+		pModelPathSkin = DefaultTextModel.new(profile.getAppearance().getPathSkin())
+		pModelPathRig = DefaultTextModel.new(profile.getAppearance().getPathRig())
+		pModelPathAnimation = DefaultTextModel.new(profile.getAppearance().getPathAnimation())
+		
+		runWhileBlockingLayout(block
+			setGuiTheme(window.getGuiTheme())
+			setTitle("Character Profile")
+			setDesignerSelector("Window.Dialog.CharacterProfile")
+			setSize(window.getDesktop().getContainerSize() - Point.new(100, 100))
+			
+			createContent()
+		end)
+		
+		setResultListener(listener)
+		show(window, false, WindowModal.Placement.desktop)
+		
+		reloadCharacterPreview()
+		startFrameUpdater()
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		stopFrameUpdater()
+		
+		if pCharacterPreview != null
+			pCharacterPreview.safeDispose()
+			pCharacterPreview = null
+		end
+		
+		pModelProfileName = null
+		pModelListOriginBone = null
+		pModelTextOriginBone = null
+		pModelPathModel = null
+		pModelPathSkin = null
+		pModelPathRig = null
+		pModelPathAnimation = null
+		
+		pWorldRenderer = null
+		pPreviewPreloader = null
+		
+		super.dispose()
+	end
+	
+	
+	
+	/** Save dialog and close if no problems are found. */
+	public func void saveAndClose()
+		// verify input
+		var String profileName = pModelProfileName.getText()
+		if not profileName.toLower().equals(pCharacterProfile.getName().toLower())
+			if profileName.empty()
+				WindowDialog.message(this, "Save Profile", "Profile name can not be empty", null, null, null)
+				return
+			end
+			if GameApp.getGameApp().getCharacterProfiles().has(profileName)
+				WindowDialog.message(this, "Save Profile", "Profile with same name exists", null, null, null)
+				return
+			end
+			if not FileSystem.canDeleteFile(pCharacterProfile.getPathProfile())
+				WindowDialog.message(this, "Save Profile", \
+					"Profile can not be renamed. Old profile file can not be deleted", null, null, null)
+				return
+			end
+		end
+		
+		// save changes
+		var String oldPathProfile = pCharacterProfile.getPathProfile()
+		
+		pCharacterProfile.setName(profileName)
+		pCharacterProfile.setOriginBone(pModelTextOriginBone.getText())
+		
+		var CharacterAppearance appearance = pCharacterProfile.getAppearance()
+		appearance.setPathModel(pModelPathModel.getText())
+		appearance.setPathSkin(pModelPathSkin.getText())
+		appearance.setPathRig(pModelPathRig.getText())
+		appearance.setPathAnimation(pModelPathAnimation.getText())
+		
+		pCharacterProfile.save()
+		pCharacterProfile.preloadResources()
+		
+		// if profile file name changed delete the old profile file
+		if not pCharacterProfile.getPathProfile().equals(oldPathProfile) and FileSystem.existsFile(oldPathProfile)
+			try
+				FileSystem.deleteFile(oldPathProfile)
+				
+			catch Exception e
+				GameApp.getGameApp().getConsole().addError("Delete profile", e)
+				WindowDialog.message(this, "Save Profile", "Failed deleting old profile:\n" + e, null, null, null)
+			end
+		end
+		
+		// finish and close window
+		setResult(true)
+		close()
+	end
+	
+	/** Reload character preview. */
+	public func void reloadCharacterPreview()
+		pPreviewPreloader = PreviewPreloader.new(this)
+		pPreviewPreloader.pathModel = pModelPathModel.getText()
+		pPreviewPreloader.pathSkin = pModelPathSkin.getText()
+		pPreviewPreloader.pathRig = pModelPathRig.getText()
+		pPreviewPreloader.pathAnimation = pModelPathAnimation.getText()
+		pPreviewPreloader.preload()
+	end
+	
+	
+	
+	/** Frame update. */
+	public func void onFrameUpdate(float elapsed)
+		if pPreviewPreloader != null and pPreviewPreloader.finished()
+			updateBoneLists()
+			createPreviewCharacter()
+			pPreviewPreloader = null
+		end
+		
+		pCameraDirector.update(elapsed)
+		pGameWorld.update(elapsed)
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		setLayout(BorderLayout.new(20))
+		
+		// character preview
+		pGameWorld = GameWorld.new()
+		
+		var SkyInstance sky = SkyInstance.new()
+		sky.setSky(GameApp.getGameApp().getLoaders().getSky().loadFromFile("/content/skies/static.desky"))
+		pGameWorld.getWorld().addSky(sky)
+		
+		// TODO add a ground/background model to root the model
+		
+		var Camera camera = Camera.new()
+		camera.setFov(60)
+		camera.setLowestIntensity(20)
+		camera.setHighestIntensity(20)
+		camera.setAdaptionTime(0)
+		camera.setEnableGI(false) // not required for preview and faster
+		pGameWorld.getWorld().addCamera(camera)
+		
+		pWorldRenderer = WorldRenderer.new()
+		pWorldRenderer.setCamera(camera)
+		addWidget(pWorldRenderer, BorderLayout.Area.content)
+		
+		pCameraDirector = ElementCameraDirector.new(pCharacterPreview, camera, null)
+		pCameraDirector.setPivot(DVector.new(0, 0.9, 0))
+		pCameraDirector.setDistance(2)
+		pCameraDirector.setAzimuth(180)
+		pCameraDirector.setFov(CameraDirector.fovNormal)
+		pCameraDirector.setLowestIntensity(20)
+		pCameraDirector.setHighestIntensity(20)
+		pCameraDirector.setAdaptionTime(0)
+		pCameraDirector.setEnableGI(false) // not required for preview and faster
+		pCameraDirector.update(0)
+		
+		// properties
+		var TextField textField
+		var ComboBox comboBox
+		var Button button
+		
+		addWidget(Panel.new(FormLayout.new(true, 10, 2), block Panel p
+			// profile name
+			p.addWidget(Label.new("Profile Name:", "Label.FormCaption"))
+			
+			textField = TextField.new(pModelProfileName, 15)
+			textField.setDesignerSelector("TextField.WindowCharacterProfile")
+			p.addWidget(textField)
+			
+			// path model resource
+			p.addWidget(Label.new("Model:", "Label.FormCaption"))
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.first), block Panel p2
+				textField = TextField.new(pModelPathModel, 20)
+				textField.setDesignerSelector("TextField.WindowCharacterProfile")
+				p2.addWidget(textField)
+				
+				button = Button.new("...", BlockActionListener.new(block ActionEvent e
+					// TODO select file using file dialog
+				end))
+				button.setDesignerSelector("Button.WindowCharacterProfile.Save")
+				p2.addWidget(button)
+			end))
+			
+			// path skin resource
+			p.addWidget(Label.new("Skin:", "Label.FormCaption"))
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.first), block Panel p2
+				textField = TextField.new(pModelPathSkin, 20)
+				textField.setDesignerSelector("TextField.WindowCharacterProfile")
+				p2.addWidget(textField)
+				
+				button = Button.new("...", BlockActionListener.new(block ActionEvent e
+					// TODO select file using file dialog
+				end))
+				button.setDesignerSelector("Button.WindowCharacterProfile.Save")
+				p2.addWidget(button)
+			end))
+			
+			// path rig resource
+			p.addWidget(Label.new("Rig:", "Label.FormCaption"))
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.first), block Panel p2
+				textField = TextField.new(pModelPathRig, 20)
+				textField.setDesignerSelector("TextField.WindowCharacterProfile")
+				p2.addWidget(textField)
+				
+				button = Button.new("...", BlockActionListener.new(block ActionEvent e
+					// TODO select file using file dialog
+				end))
+				button.setDesignerSelector("Button.WindowCharacterProfile.Save")
+				p2.addWidget(button)
+			end))
+			
+			// path animation resource
+			p.addWidget(Label.new("Animation:", "Label.FormCaption"))
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.first), block Panel p2
+				textField = TextField.new(pModelPathAnimation, 20)
+				textField.setDesignerSelector("TextField.WindowCharacterProfile")
+				p2.addWidget(textField)
+				
+				button = Button.new("...", BlockActionListener.new(block ActionEvent e
+					// TODO select file using file dialog
+				end))
+				button.setDesignerSelector("Button.WindowCharacterProfile.Save")
+				p2.addWidget(button)
+			end))
+			
+			// origin bone
+			p.addWidget(Label.new("Origin Bone:", "Label.FormCaption"))
+			
+			comboBox = ComboBox.new(pModelListOriginBone, DefaultComboBoxEditor.new(pModelTextOriginBone))
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterProfile")
+			p.addWidget(comboBox)
+			
+		end), BorderLayout.Area.right)
+		
+		// button line
+		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x), block Panel p
+			button = Button.new("Save", BlockActionListener.new(block ActionEvent e
+				saveAndClose()
+			end))
+			button.setDesignerSelector("Button.WindowCharacterProfile.Save")
+			p.addWidget(button)
+			
+			button = Button.new("Cancel", CloseDialog.new(this, false))
+			button.setDesignerSelector("Button.WindowCharacterProfile.Cancel")
+			p.addWidget(button)
+		end ), BorderLayout.Area.bottom )
+	end
+	
+	/** Update bone lists. */
+	protected func void updateBoneLists()
+		var Array bones = Array.new()
+		
+		if pPreviewPreloader.rig != null
+			var int i, count = pPreviewPreloader.rig.getBoneCount()
+			for i = 0 to count
+				bones.add(pPreviewPreloader.rig.boneGetName(i))
+			end
+			bones.sort()
+		end
+		
+		pModelListOriginBone.setContent(bones)
+	end
+	
+	/** Create preview character. */
+	protected func void createPreviewCharacter()
+		if pCharacterPreview != null
+			pCharacterPreview.safeDispose()
+			pCharacterPreview = null
+		end
+		
+		var StubElement stub = StubElement.new(pCharacterPreviewClass)
+		stub.setPropertyValueFor("component.model", pPreviewPreloader.pathModel)
+		stub.setPropertyValueFor("component.skin", pPreviewPreloader.pathSkin)
+		stub.setPropertyValueFor("component.rig", pPreviewPreloader.pathRig)
+		
+		pCharacterPreview = stub.createElement() cast BehaviorElement
+		pGameWorld.addElement(pCharacterPreview)
+	end
+end

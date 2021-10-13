@@ -55,6 +55,22 @@ class CharacterProfile
 		pListeners = Array.new()
 	end
 	
+	/** Create copy of character. */
+	public func new(String name, CharacterProfile profile)
+		setName(name)
+		
+		pAppearance = CharacterAppearance.new(profile.pAppearance)
+		
+		pConfigurations = CharacterConfigurations.new()
+		profile.pConfigurations.forEach(block CharacterConfiguration each
+			pConfigurations.add(CharacterConfiguration.new(this, each.getName(), each))
+		end)
+		
+		pOriginBone = profile.pOriginBone
+		
+		pListeners = Array.new()
+	end
+	
 	/** Dispose of character profile. */
 	public func void dispose()
 		pListeners.removeAll()
@@ -110,6 +126,18 @@ class CharacterProfile
 	/** Start loading resources. */
 	public func void preloadResources()
 		CharacterAppearanceLoader.new(this).preload()
+	end
+	
+	
+	
+	/** Character profile path. */
+	public func String getPathProfile()
+		return (File.new(GameApp.getGameApp().getCharacterProfiles().getDirectory()) + (pName + ".demccp")).getPath()
+	end
+	
+	/** Save character. */
+	public func void save()
+		GameApp.getGameApp().getLoadCharacterProfile().save(getPathProfile(), this)
 	end
 	
 	

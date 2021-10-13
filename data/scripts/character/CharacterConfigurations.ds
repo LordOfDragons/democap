@@ -28,7 +28,7 @@ pin Dragengine.Utils
  * List of character configurations.
  */
 class CharacterConfigurations
-	private var Dictionary pConfigurations
+	private var Array pConfigurations
 	private var Array pListeners
 	
 	
@@ -36,7 +36,7 @@ class CharacterConfigurations
 	/** Create configuration list. */
 	public func new()
 		pListeners = Array.new()
-		pConfigurations = Dictionary.new()
+		pConfigurations = Array.new()
 	end
 	
 	/** Dispose of list. */
@@ -54,20 +54,22 @@ class CharacterConfigurations
 	
 	/** Named configuration is present. */
 	public func bool has(String name)
-		return pConfigurations.has(name.toLower())
+		return getAt(name) != null
 	end
 	
 	/** Named configuration or null if absent. */
 	public func CharacterConfiguration getAt(String name)
-		return pConfigurations.getAt(name.toLower(), null) cast CharacterConfiguration
+		return pConfigurations.find(block CharacterConfiguration each
+			return each.getName().compareNoCase(name) == 0
+		end) cast CharacterConfiguration
 	end
 	
 	/** Add configuration. Throws exception if named configuration is present. */
 	public func void add(CharacterConfiguration configuration)
-		if pConfigurations.has(configuration.getName().toLower())
+		if has(configuration.getName())
 			throw EInvalidParam.new("named configuration is present: " + configuration.getName())
 		end
-		pConfigurations.setAt(configuration.getName().toLower(), configuration)
+		pConfigurations.add(configuration)
 		
 		pListeners.forEach(block CharacterConfigurationsListener each
 			each.configurationAdded(this, configuration)
@@ -76,7 +78,7 @@ class CharacterConfigurations
 	
 	/** Remove configuration. Throws exception if named configuration is absent. */
 	public func void remove(CharacterConfiguration configuration)
-		pConfigurations.remove(configuration.getName().toLower())
+		pConfigurations.remove(configuration)
 		
 		pListeners.forEach(block CharacterConfigurationsListener each
 			each.configurationRemoved(this, configuration)
@@ -87,7 +89,7 @@ class CharacterConfigurations
 	
 	/** Remove all configurations. */
 	public func void removeAll()
-		pConfigurations.forEachValue(block CharacterConfiguration each
+		pConfigurations.forEach(block CharacterConfiguration each
 			each.dispose()
 		end)
 		pConfigurations.removeAll()
@@ -101,7 +103,7 @@ class CharacterConfigurations
 	 * Visit configurations with block. Block receives as only argument CharacterConfiguration.
 	 */
 	public func void forEach(Block ablock)
-		pConfigurations.forEachValue(ablock)
+		pConfigurations.forEach(ablock)
 	end
 	
 	/**
@@ -110,22 +112,12 @@ class CharacterConfigurations
 	 * Returns Array of CharacterConfiguration.
 	 */
 	public func Array collect(Block ablock)
-		var Array list = Array.new()
-		pConfigurations.forEachValue(block CharacterConfiguration each
-			if ablock.run(each) cast bool
-				list.add(each)
-			end
-		end)
-		return list
+		return pConfigurations.collect(ablock)
 	end
 	
 	/** List of configurations as Array of CharacterConfiguration. */
 	public func Array toArray()
-		var Array list = Array.new()
-		pConfigurations.forEachValue(block CharacterConfiguration each
-			list.add(each)
-		end)
-		return list
+		return Array.new(pConfigurations)
 	end
 	
 	
