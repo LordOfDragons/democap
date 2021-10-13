@@ -105,9 +105,25 @@ class WindowCharacterProfile extends WindowDialog
 				+ resourceType.name() + " '" + filename)
 		end
 	end
-
-
-
+	
+	class ShowHelpClicked extends ClickedActionListener
+		private var WindowCharacterProfile pWindow
+		
+		public func new(WindowCharacterProfile window)
+			pWindow = window
+		end
+		
+		public func void onAction()
+			WindowDialog.message(pWindow, "Navigation", \
+				"Rotate Camera: Right Mouse\n" + \
+				"Pan Camera: Right Mouse + Shift\n" + \
+				"Zoom Camera: Right Mouse + Control\n\n" + \
+				"Touch Fields: Left Mouse\n", null, null, null)
+		end
+	end
+	
+	
+	
 	private var CharacterProfile pCharacterProfile
 	private var DefaultTextModel pModelProfileName
 	private var DefaultListModel pModelListOriginBone
@@ -262,6 +278,11 @@ class WindowCharacterProfile extends WindowDialog
 	
 	/** Create window content. */
 	protected func void createContent()
+		var TextField textField
+		var ComboBox comboBox
+		var Button button
+		var DisplayImage image
+		
 		setLayout(BorderLayout.new(20))
 		
 		// character preview
@@ -281,10 +302,6 @@ class WindowCharacterProfile extends WindowDialog
 		camera.setEnableGI(false) // not required for preview and faster
 		pGameWorld.getWorld().addCamera(camera)
 		
-		pWorldRenderer = WorldRenderer.new()
-		pWorldRenderer.setCamera(camera)
-		addWidget(pWorldRenderer, BorderLayout.Area.content)
-		
 		pCameraDirector = ElementCameraDirector.new(pCharacterPreview, camera, null)
 		pCameraDirector.setPivot(DVector.new(0, 0.9, 0))
 		pCameraDirector.setDistance(2)
@@ -296,11 +313,49 @@ class WindowCharacterProfile extends WindowDialog
 		pCameraDirector.setEnableGI(false) // not required for preview and faster
 		pCameraDirector.update(0)
 		
-		// properties
-		var TextField textField
-		var ComboBox comboBox
-		var Button button
+		addWidget(Panel.new(StackLayout.new(), block Panel p
+			pWorldRenderer = WorldRenderer.new()
+			pWorldRenderer.setCamera(camera)
+			
+			p.addWidget(pWorldRenderer)
+			
+			// add touch fields for vr use
+			p.addWidget(PanelHud.new(block PanelHud p2
+				p2.getRightCenter().setLayout(CentrizedBoxLayout.new(LayoutAxis.y))
+				
+				// the listeners are added to the panel and not the world renderer since the
+				// panel covers the entire world renderer blocking clicks
+				p2.addMouseListener(RotateCameraMouseListener.new(\
+					pCameraDirector, InputEventMouseButton.right, InputEventModifier.none))
+				
+				p2.addMouseListener(PanCameraMouseListener.new(\
+					pCameraDirector, InputEventMouseButton.right, InputEventModifier.shift))
+				
+				p2.addMouseListener(ZoomCameraMouseListener.new(\
+					pCameraDirector, InputEventMouseButton.right, InputEventModifier.control))
+				
+				image = DisplayImage.new(Image.new("/content/gui/images/icon_help_48.png"), "TouchField")
+				image.addMouseListener(ShowHelpClicked.new(this))
+				p2.getRightCenter().addWidget(image)
+				
+				image = DisplayImage.new(Image.new("/content/gui/images/icon_camera_zoom_48.png"), "TouchField")
+				image.addMouseListener(ZoomCameraMouseListener.new(\
+					pCameraDirector, InputEventMouseButton.left, InputEventModifier.none))
+				p2.getRightCenter().addWidget(image)
+				
+				image = DisplayImage.new(Image.new("/content/gui/images/icon_camera_rotate_48.png"), "TouchField")
+				image.addMouseListener(RotateCameraMouseListener.new(\
+					pCameraDirector, InputEventMouseButton.left, InputEventModifier.none))
+				p2.getRightCenter().addWidget(image)
+				
+				image = DisplayImage.new(Image.new("/content/gui/images/icon_camera_pan_48.png"), "TouchField")
+				image.addMouseListener(PanCameraMouseListener.new(\
+					pCameraDirector, InputEventMouseButton.left, InputEventModifier.none))
+				p2.getRightCenter().addWidget(image)
+			end))
+		end), BorderLayout.Area.content)
 		
+		// properties
 		addWidget(Panel.new(FormLayout.new(true, 10, 2), block Panel p
 			// profile name
 			p.addWidget(Label.new("Profile Name:", "Label.FormCaption"))
@@ -409,6 +464,7 @@ class WindowCharacterProfile extends WindowDialog
 	
 	/** Create preview character. */
 	protected func void createPreviewCharacter()
+		pCameraDirector.setElement(null)
 		if pCharacterPreview != null
 			pCharacterPreview.safeDispose()
 			pCharacterPreview = null
@@ -421,5 +477,6 @@ class WindowCharacterProfile extends WindowDialog
 		
 		pCharacterPreview = stub.createElement() cast BehaviorElement
 		pGameWorld.addElement(pCharacterPreview)
+		pCameraDirector.setElement(pCharacterPreview)
 	end
 end
