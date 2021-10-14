@@ -1,0 +1,356 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Elements
+
+pin Dragengine.CameraDirectors
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+
+
+/**
+ * Character preview renderer widget.
+ */
+class WidgetCharacterPreview extends Panel
+	interface Listener
+		func void characterReloaded(WidgetCharacterPreview widget)
+	end
+	
+	class PreviewPreloader implements ResourceListener
+		private var PreloadCounter pPreloadCounter
+		
+		public var String pathModel, pathSkin, pathRig, pathAnimation
+		public var Model model
+		public var Skin skin
+		public var Rig rig
+		public var Animation animation
+		
+		public func new()
+			pPreloadCounter = PreloadCounter.new()
+		end
+		
+		public func bool finished()
+			return pPreloadCounter.isZero()
+		end
+		
+		public func void preload()
+			if not pathModel.empty()
+				pPreloadCounter.increase()
+				Model.loadAsynchron(pathModel, this)
+			end
+			
+			if not pathSkin.empty()
+				pPreloadCounter.increase()
+				Skin.loadAsynchron(pathSkin, this)
+			end
+			
+			if not pathRig.empty()
+				pPreloadCounter.increase()
+				Rig.loadAsynchron(pathRig, this)
+			end
+			
+			if not pathAnimation.empty()
+				pPreloadCounter.increase()
+				Animation.loadAsynchron(pathAnimation, this)
+			end
+		end
+		
+		public func void finishedLoading(String filename, ResourceLoaderType resourceType, Object resource)
+			if filename.equals(pathModel)
+				model = resource cast Model
+				pPreloadCounter.decrease()
+			end
+			
+			if filename.equals(pathSkin)
+				skin = resource cast Skin
+				pPreloadCounter.decrease()
+			end
+			
+			if filename.equals(pathRig)
+				rig = resource cast Rig
+				pPreloadCounter.decrease()
+			end
+			
+			if filename.equals(pathAnimation)
+				animation = resource cast Animation
+				pPreloadCounter.decrease()
+			end
+		end
+		
+		public func void failedLoading(String filename, ResourceLoaderType resourceType)
+			pPreloadCounter.decrease()
+			GameApp.getGameApp().getConsole().addMessage("PreviewPreloader: Failed loading "\
+				+ resourceType.name() + " '" + filename)
+		end
+	end
+	
+	class ShowHelpClicked extends ClickedActionListener
+		private var Widget pWidget
+		
+		public func new(Widget widget)
+			pWidget = widget
+		end
+		
+		public func void onAction()
+			WindowDialog.message(pWidget.getWindow(), "Navigation", \
+				"Rotate Camera: Right Mouse\n" + \
+				"Pan Camera: Right Mouse + Shift\n" + \
+				"Zoom Camera: Right Mouse + Control\n\n" + \
+				"Touch Fields: Left Mouse\n", null, null, null)
+		end
+	end
+	
+	
+	private var WorldRenderer pWorldRenderer
+	private var GameWorld pGameWorld
+	private var ElementCameraDirector pCameraDirector
+	private var PreviewPreloader pPreviewPreloader
+	private var CharacterPreviewClass pCharacterPreviewClass
+	private var BehaviorElement pCharacterPreview
+	private var Array pListeners
+	
+	private var String pPathModel
+	private var String pPathSkin
+	private var String pPathRig
+	private var String pPathAnimation
+	
+	
+	
+	/** Create widget. */
+	public func new()
+		pPathModel = ""
+		pPathSkin = ""
+		pPathRig = ""
+		pPathAnimation = ""
+		pListeners = Array.new()
+		pCharacterPreviewClass = GameApp.getGameApp().getElementClassList()\
+			.getNamed("CharacterPreview") cast CharacterPreviewClass
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+		
+		reloadCharacterPreview()
+		startFrameUpdater()
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		pListeners = null
+		
+		stopFrameUpdater()
+		
+		if pCharacterPreview != null
+			pCharacterPreview.safeDispose()
+			pCharacterPreview = null
+		end
+		
+		pWorldRenderer = null
+		pPreviewPreloader = null
+		
+		super.dispose()
+	end
+	
+	
+	
+	/** Set model path. */
+	public func void setPathModel(String path)
+		pPathModel = path
+	end
+	
+	/** Set path skin. */
+	public func void setPathSkin(String path)
+		pPathSkin = path
+	end
+	
+	/** Set path rig. */
+	public func void setPathRig(String path)
+		pPathRig = path
+	end
+	
+	/** Set path animation. */
+	public func void setPathAnimation(String path)
+		pPathAnimation = path
+	end
+	
+	/** Reload character preview. */
+	public func void reloadCharacterPreview()
+		pPreviewPreloader = PreviewPreloader.new()
+		pPreviewPreloader.pathModel = pPathModel
+		pPreviewPreloader.pathSkin = pPathSkin
+		pPreviewPreloader.pathRig = pPathRig
+		pPreviewPreloader.pathAnimation = pPathAnimation
+		pPreviewPreloader.preload()
+	end
+	
+	
+	
+	/** World renderer. */
+	public func WorldRenderer getWorldRenderer()
+		return pWorldRenderer
+	end
+	
+	/** Game world. */
+	public func GameWorld getGameWorld()
+		return pGameWorld
+	end
+	
+	/** Camera director. */
+	public func ElementCameraDirector getCameraDirector()
+		return pCameraDirector
+	end
+	
+	/** Character preview element class. */
+	public func CharacterPreviewClass getCharacterPreviewClass()
+		return pCharacterPreviewClass
+	end
+	
+	/** Character preview element or null. */
+	public func BehaviorElement getCharacterPreview()
+		return pCharacterPreview
+	end
+	
+	
+	
+	/** Add listener. */
+	public func void addListener(Listener listener)
+		pListeners.add(listener)
+	end
+	
+	/** Remove listener. */
+	public func void removeListener(Listener listener)
+		pListeners.remove(listener)
+	end
+	
+	
+	
+	/** Frame update. */
+	public func void onFrameUpdate(float elapsed)
+		if pPreviewPreloader != null and pPreviewPreloader.finished()
+			createPreviewCharacter()
+			pPreviewPreloader = null
+		end
+		
+		pCameraDirector.update(elapsed)
+		pGameWorld.update(elapsed)
+		
+		pListeners.forEach(block Listener each
+			each.characterReloaded(this)
+		end)
+	end
+	
+	
+	
+	/** Create widget content. */
+	protected func void createContent()
+		var DisplayImage image
+		
+		pGameWorld = GameWorld.new()
+		
+		var SkyInstance sky = SkyInstance.new()
+		sky.setSky(GameApp.getGameApp().getLoaders().getSky().loadFromFile("/content/skies/static.desky"))
+		pGameWorld.getWorld().addSky(sky)
+		
+		// TODO add a ground/background model to root the model
+		
+		var Camera camera = Camera.new()
+		camera.setFov(60)
+		camera.setLowestIntensity(20)
+		camera.setHighestIntensity(20)
+		camera.setAdaptionTime(0)
+		camera.setEnableGI(false) // not required for preview and faster
+		pGameWorld.getWorld().addCamera(camera)
+		
+		pCameraDirector = ElementCameraDirector.new(pCharacterPreview, camera, null)
+		pCameraDirector.setPivot(DVector.new(0, 0.9, 0))
+		pCameraDirector.setDistance(2)
+		pCameraDirector.setAzimuth(180)
+		pCameraDirector.setFov(CameraDirector.fovNormal)
+		pCameraDirector.setLowestIntensity(20)
+		pCameraDirector.setHighestIntensity(20)
+		pCameraDirector.setAdaptionTime(0)
+		pCameraDirector.setEnableGI(false) // not required for preview and faster
+		pCameraDirector.update(0)
+		
+		setLayout(StackLayout.new())
+		pWorldRenderer = WorldRenderer.new()
+		pWorldRenderer.setCamera(camera)
+		
+		addWidget(pWorldRenderer)
+		
+		// add touch fields for vr use
+		addWidget(PanelHud.new(block PanelHud p
+			p.getRightCenter().setLayout(CentrizedBoxLayout.new(LayoutAxis.y))
+			
+			// the listeners are added to the panel and not the world renderer since the
+			// panel covers the entire world renderer blocking clicks
+			p.addMouseListener(RotateCameraMouseListener.new(\
+				pCameraDirector, InputEventMouseButton.right, InputEventModifier.none))
+			
+			p.addMouseListener(PanCameraMouseListener.new(\
+				pCameraDirector, InputEventMouseButton.right, InputEventModifier.shift))
+			
+			p.addMouseListener(ZoomCameraMouseListener.new(\
+				pCameraDirector, InputEventMouseButton.right, InputEventModifier.control))
+			
+			image = DisplayImage.new(Image.new("/content/gui/images/icon_help_48.png"), "TouchField")
+			image.addMouseListener(ShowHelpClicked.new(this))
+			p.getRightCenter().addWidget(image)
+			
+			image = DisplayImage.new(Image.new("/content/gui/images/icon_camera_zoom_48.png"), "TouchField")
+			image.addMouseListener(ZoomCameraMouseListener.new(\
+				pCameraDirector, InputEventMouseButton.left, InputEventModifier.none))
+			p.getRightCenter().addWidget(image)
+			
+			image = DisplayImage.new(Image.new("/content/gui/images/icon_camera_rotate_48.png"), "TouchField")
+			image.addMouseListener(RotateCameraMouseListener.new(\
+				pCameraDirector, InputEventMouseButton.left, InputEventModifier.none))
+			p.getRightCenter().addWidget(image)
+			
+			image = DisplayImage.new(Image.new("/content/gui/images/icon_camera_pan_48.png"), "TouchField")
+			image.addMouseListener(PanCameraMouseListener.new(\
+				pCameraDirector, InputEventMouseButton.left, InputEventModifier.none))
+			p.getRightCenter().addWidget(image)
+		end))
+	end
+	
+	/** Create preview character. */
+	protected func void createPreviewCharacter()
+		if pCharacterPreview != null
+			pCharacterPreview.safeDispose()
+			pCharacterPreview = null
+		end
+		
+		var StubElement stub = StubElement.new(pCharacterPreviewClass)
+		stub.setPropertyValueFor("component.model", pPreviewPreloader.pathModel)
+		stub.setPropertyValueFor("component.skin", pPreviewPreloader.pathSkin)
+		stub.setPropertyValueFor("component.rig", pPreviewPreloader.pathRig)
+		
+		pCharacterPreview = stub.createElement() cast BehaviorElement
+		pGameWorld.addElement(pCharacterPreview)
+	end
+end

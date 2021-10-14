@@ -36,89 +36,15 @@ pin Dragengine.Scenery
  * Edit character profile window.
  */
 class WindowCharacterProfile extends WindowDialog
-	class PreviewPreloader implements ResourceListener
-		private var WindowCharacterProfile pWindow
-		private var PreloadCounter pPreloadCounter
-		
-		public var String pathModel, pathSkin, pathRig, pathAnimation
-		public var Model model
-		public var Skin skin
-		public var Rig rig
-		public var Animation animation
-		
-		public func new(WindowCharacterProfile window)
-			pWindow = window
-			pPreloadCounter = PreloadCounter.new()
-		end
-		
-		public func bool finished()
-			return pPreloadCounter.isZero()
-		end
-		
-		public func void preload()
-			if not pathModel.empty()
-				pPreloadCounter.increase()
-				Model.loadAsynchron(pathModel, this)
-			end
-			
-			if not pathSkin.empty()
-				pPreloadCounter.increase()
-				Skin.loadAsynchron(pathSkin, this)
-			end
-			
-			if not pathRig.empty()
-				pPreloadCounter.increase()
-				Rig.loadAsynchron(pathRig, this)
-			end
-			
-			if not pathAnimation.empty()
-				pPreloadCounter.increase()
-				Animation.loadAsynchron(pathAnimation, this)
-			end
-		end
-		
-		public func void finishedLoading(String filename, ResourceLoaderType resourceType, Object resource)
-			if filename.equals(pathModel)
-				model = resource cast Model
-				pPreloadCounter.decrease()
-			end
-			
-			if filename.equals(pathSkin)
-				skin = resource cast Skin
-				pPreloadCounter.decrease()
-			end
-			
-			if filename.equals(pathRig)
-				rig = resource cast Rig
-				pPreloadCounter.decrease()
-			end
-			
-			if filename.equals(pathAnimation)
-				animation = resource cast Animation
-				pPreloadCounter.decrease()
-			end
-		end
-		
-		public func void failedLoading(String filename, ResourceLoaderType resourceType)
-			pPreloadCounter.decrease()
-			GameApp.getGameApp().getConsole().addMessage("PreviewPreloader: Failed loading "\
-				+ resourceType.name() + " '" + filename)
-		end
-	end
-	
-	class ShowHelpClicked extends ClickedActionListener
+	class UpdateBonesListener implements WidgetCharacterPreview.Listener
 		private var WindowCharacterProfile pWindow
 		
 		public func new(WindowCharacterProfile window)
 			pWindow = window
 		end
 		
-		public func void onAction()
-			WindowDialog.message(pWindow, "Navigation", \
-				"Rotate Camera: Right Mouse\n" + \
-				"Pan Camera: Right Mouse + Shift\n" + \
-				"Zoom Camera: Right Mouse + Control\n\n" + \
-				"Touch Fields: Left Mouse\n", null, null, null)
+		public func void characterReloaded(WidgetCharacterPreview widget)
+			pWindow.updateBoneLists()
 		end
 	end
 	
@@ -132,21 +58,12 @@ class WindowCharacterProfile extends WindowDialog
 	private var DefaultTextModel pModelPathSkin
 	private var DefaultTextModel pModelPathRig
 	private var DefaultTextModel pModelPathAnimation
-	
-	private var WorldRenderer pWorldRenderer
-	private var GameWorld pGameWorld
-	private var ElementCameraDirector pCameraDirector
-	private var PreviewPreloader pPreviewPreloader
-	private var CharacterPreviewClass pCharacterPreviewClass
-	private var BehaviorElement pCharacterPreview
+	private var WidgetCharacterPreview pCharacterPreview
 	
 	
 	
 	/** Create window. */
 	public func new(Window window, CharacterProfile profile, ResultListener listener)
-		pCharacterPreviewClass = GameApp.getGameApp().getElementClassList()\
-			.getNamed("CharacterPreview") cast CharacterPreviewClass
-		
 		pCharacterProfile = profile
 		
 		pModelProfileName = DefaultTextModel.new(profile.getName())
@@ -167,22 +84,15 @@ class WindowCharacterProfile extends WindowDialog
 			createContent()
 		end)
 		
+		reloadCharacterPreview()
+		
 		setResultListener(listener)
 		show(window, false, WindowModal.Placement.desktop)
-		
-		reloadCharacterPreview()
-		startFrameUpdater()
 	end
 	
 	/** Dispose of window. */
 	public func void dispose()
-		stopFrameUpdater()
-		
-		if pCharacterPreview != null
-			pCharacterPreview.safeDispose()
-			pCharacterPreview = null
-		end
-		
+		pCharacterPreview = null
 		pModelProfileName = null
 		pModelListOriginBone = null
 		pModelTextOriginBone = null
@@ -190,9 +100,6 @@ class WindowCharacterProfile extends WindowDialog
 		pModelPathSkin = null
 		pModelPathRig = null
 		pModelPathAnimation = null
-		
-		pWorldRenderer = null
-		pPreviewPreloader = null
 		
 		super.dispose()
 	end
@@ -252,26 +159,11 @@ class WindowCharacterProfile extends WindowDialog
 	
 	/** Reload character preview. */
 	public func void reloadCharacterPreview()
-		pPreviewPreloader = PreviewPreloader.new(this)
-		pPreviewPreloader.pathModel = pModelPathModel.getText()
-		pPreviewPreloader.pathSkin = pModelPathSkin.getText()
-		pPreviewPreloader.pathRig = pModelPathRig.getText()
-		pPreviewPreloader.pathAnimation = pModelPathAnimation.getText()
-		pPreviewPreloader.preload()
-	end
-	
-	
-	
-	/** Frame update. */
-	public func void onFrameUpdate(float elapsed)
-		if pPreviewPreloader != null and pPreviewPreloader.finished()
-			updateBoneLists()
-			createPreviewCharacter()
-			pPreviewPreloader = null
-		end
-		
-		pCameraDirector.update(elapsed)
-		pGameWorld.update(elapsed)
+		pCharacterPreview.setPathModel(pModelPathModel.getText())
+		pCharacterPreview.setPathSkin( pModelPathSkin.getText())
+		pCharacterPreview.setPathRig(pModelPathRig.getText())
+		pCharacterPreview.setPathAnimation(pModelPathAnimation.getText())
+		pCharacterPreview.reloadCharacterPreview()
 	end
 	
 	
@@ -281,79 +173,12 @@ class WindowCharacterProfile extends WindowDialog
 		var TextField textField
 		var ComboBox comboBox
 		var Button button
-		var DisplayImage image
 		
 		setLayout(BorderLayout.new(20))
 		
-		// character preview
-		pGameWorld = GameWorld.new()
-		
-		var SkyInstance sky = SkyInstance.new()
-		sky.setSky(GameApp.getGameApp().getLoaders().getSky().loadFromFile("/content/skies/static.desky"))
-		pGameWorld.getWorld().addSky(sky)
-		
-		// TODO add a ground/background model to root the model
-		
-		var Camera camera = Camera.new()
-		camera.setFov(60)
-		camera.setLowestIntensity(20)
-		camera.setHighestIntensity(20)
-		camera.setAdaptionTime(0)
-		camera.setEnableGI(false) // not required for preview and faster
-		pGameWorld.getWorld().addCamera(camera)
-		
-		pCameraDirector = ElementCameraDirector.new(pCharacterPreview, camera, null)
-		pCameraDirector.setPivot(DVector.new(0, 0.9, 0))
-		pCameraDirector.setDistance(2)
-		pCameraDirector.setAzimuth(180)
-		pCameraDirector.setFov(CameraDirector.fovNormal)
-		pCameraDirector.setLowestIntensity(20)
-		pCameraDirector.setHighestIntensity(20)
-		pCameraDirector.setAdaptionTime(0)
-		pCameraDirector.setEnableGI(false) // not required for preview and faster
-		pCameraDirector.update(0)
-		
-		addWidget(Panel.new(StackLayout.new(), block Panel p
-			pWorldRenderer = WorldRenderer.new()
-			pWorldRenderer.setCamera(camera)
-			
-			p.addWidget(pWorldRenderer)
-			
-			// add touch fields for vr use
-			p.addWidget(PanelHud.new(block PanelHud p2
-				p2.getRightCenter().setLayout(CentrizedBoxLayout.new(LayoutAxis.y))
-				
-				// the listeners are added to the panel and not the world renderer since the
-				// panel covers the entire world renderer blocking clicks
-				p2.addMouseListener(RotateCameraMouseListener.new(\
-					pCameraDirector, InputEventMouseButton.right, InputEventModifier.none))
-				
-				p2.addMouseListener(PanCameraMouseListener.new(\
-					pCameraDirector, InputEventMouseButton.right, InputEventModifier.shift))
-				
-				p2.addMouseListener(ZoomCameraMouseListener.new(\
-					pCameraDirector, InputEventMouseButton.right, InputEventModifier.control))
-				
-				image = DisplayImage.new(Image.new("/content/gui/images/icon_help_48.png"), "TouchField")
-				image.addMouseListener(ShowHelpClicked.new(this))
-				p2.getRightCenter().addWidget(image)
-				
-				image = DisplayImage.new(Image.new("/content/gui/images/icon_camera_zoom_48.png"), "TouchField")
-				image.addMouseListener(ZoomCameraMouseListener.new(\
-					pCameraDirector, InputEventMouseButton.left, InputEventModifier.none))
-				p2.getRightCenter().addWidget(image)
-				
-				image = DisplayImage.new(Image.new("/content/gui/images/icon_camera_rotate_48.png"), "TouchField")
-				image.addMouseListener(RotateCameraMouseListener.new(\
-					pCameraDirector, InputEventMouseButton.left, InputEventModifier.none))
-				p2.getRightCenter().addWidget(image)
-				
-				image = DisplayImage.new(Image.new("/content/gui/images/icon_camera_pan_48.png"), "TouchField")
-				image.addMouseListener(PanCameraMouseListener.new(\
-					pCameraDirector, InputEventMouseButton.left, InputEventModifier.none))
-				p2.getRightCenter().addWidget(image)
-			end))
-		end), BorderLayout.Area.content)
+		pCharacterPreview = WidgetCharacterPreview.new()
+		pCharacterPreview.addListener(UpdateBonesListener.new(this))
+		addWidget(pCharacterPreview, BorderLayout.Area.content)
 		
 		// properties
 		addWidget(Panel.new(FormLayout.new(true, 10, 2), block Panel p
@@ -448,35 +273,24 @@ class WindowCharacterProfile extends WindowDialog
 	end
 	
 	/** Update bone lists. */
-	protected func void updateBoneLists()
+	public func void updateBoneLists()
 		var Array bones = Array.new()
 		
-		if pPreviewPreloader.rig != null
-			var int i, count = pPreviewPreloader.rig.getBoneCount()
+		var Rig rig
+		
+		var BehaviorElement element = pCharacterPreview.getCharacterPreview()
+		if element != null
+			rig = ECBehaviorComponent.getInstanceIn(element).getComponent().getRig()
+		end
+		
+		if rig != null
+			var int i, count = rig.getBoneCount()
 			for i = 0 to count
-				bones.add(pPreviewPreloader.rig.boneGetName(i))
+				bones.add(rig.boneGetName(i))
 			end
 			bones.sort()
 		end
 		
 		pModelListOriginBone.setContent(bones)
-	end
-	
-	/** Create preview character. */
-	protected func void createPreviewCharacter()
-		pCameraDirector.setElement(null)
-		if pCharacterPreview != null
-			pCharacterPreview.safeDispose()
-			pCharacterPreview = null
-		end
-		
-		var StubElement stub = StubElement.new(pCharacterPreviewClass)
-		stub.setPropertyValueFor("component.model", pPreviewPreloader.pathModel)
-		stub.setPropertyValueFor("component.skin", pPreviewPreloader.pathSkin)
-		stub.setPropertyValueFor("component.rig", pPreviewPreloader.pathRig)
-		
-		pCharacterPreview = stub.createElement() cast BehaviorElement
-		pGameWorld.addElement(pCharacterPreview)
-		pCameraDirector.setElement(pCharacterPreview)
 	end
 end
