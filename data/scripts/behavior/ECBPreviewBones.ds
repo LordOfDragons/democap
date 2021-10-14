@@ -1,0 +1,342 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior displaying bones in a character preview. Also allows hilighting bones using
+ * individual colors for editing purpose.
+ */
+class ECBPreviewBones extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class Bone
+			public var String name
+			public var int bone
+			public var int shape
+			public var ColliderVolume collider
+			public var Color color
+			
+			public func new()
+			end
+		end
+		
+		
+		
+		private var ECBPreviewBones pECBehavior
+		private var ECBehaviorComponent.Instance pComponent
+		private var Model pModel
+		private var DebugDrawer pDebugDrawer
+		private var Array pBones
+		private var Dictionary pBonesMap
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBPreviewBones ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pBones = Array.new()
+			pBonesMap = Dictionary.new()
+			
+			pComponent = ecbehavior.getComponent().instance(element)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pComponent = null
+			super.dispose()
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			var ElementClass eclass = getElement().getClass()
+			
+			pModel = pECBehavior.getModel().getModel(stub, eclass)
+			
+			pDebugDrawer = DebugDrawer.new()
+			pDebugDrawer.setPosition(stub.getPosition())
+			pDebugDrawer.setOrientation(Quaternion.newFromEuler(stub.getRotation()))
+			pDebugDrawer.setXRay(true)
+			
+			createBones()
+		end
+		
+		
+		
+		/** Debug drawer. */
+		public func DebugDrawer getDebugDrawer()
+			return pDebugDrawer
+		end
+		
+		/** Model. */
+		public func Model getModel()
+			return pModel
+		end
+		
+		/** Set bone color. */
+		public func void setBoneColor(String name, Color color)
+			if color == null
+				throw ENullPointer.new("color")
+			end
+			
+			var Bone bone = pBonesMap.getAt(name) cast Bone
+			bone.color = color
+			updateBoneColor(bone)
+		end
+		
+		/** Set all bone color. */
+		public func void setAllBoneColor(Color color)
+			if color == null
+				throw ENullPointer.new("color")
+			end
+			
+			pBones.forEach(block Bone each
+				each.color = color
+				updateBoneColor(each)
+			end)
+		end
+		
+		
+		
+		/** Element has been added to game world. */
+		public func void addToGameWorld()
+			var World world = getElement().getGameWorld().getWorld()
+			
+			updateBoneShapes()
+			updateBoneColors()
+			updateBoneColliderGeometry()
+			
+			world.addDebugDrawer(pDebugDrawer)
+			
+			pBones.forEach(block Bone each
+				world.addCollider(each.collider)
+			end)
+		end
+		
+		/** Element is removed from game world. */
+		public func void removeFromGameWorld()
+			var World world = getElement().getGameWorld().getWorld()
+			
+			world.removeDebugDrawer(pDebugDrawer)
+			
+			pBones.forEach(block Bone each
+				world.removeCollider(each.collider)
+			end)
+		end
+		
+		/** Element position, orientation or scale changed. */
+		public func void geometryChanged()
+			var BehaviorElement element = getElement()
+			
+			pDebugDrawer.setPosition(element.getPosition())
+			pDebugDrawer.setOrientation(element.getOrientation())
+			
+			updateBoneColliderGeometry()
+		end
+		
+		/** Element state changed. */
+		public func void stateChanged()
+			var bool visible = getElement().getVisible()
+			
+			pDebugDrawer.setVisible(visible)
+			
+			pBones.forEach(block Bone each
+				each.collider.setEnabled(visible)
+			end)
+		end
+		
+		
+		
+		/** Create bones. */
+		protected func void createBones()
+			var Component component = pComponent.getComponent()
+			if component == null
+				return
+			end
+			
+			var Rig rig = component.getRig()
+			if rig == null
+				return
+			end
+			
+			var Color color = Color.new(0, 0.8, 1)
+			var String renderableName = "color"
+			
+			var int i, count = rig.getBoneCount()
+			var Bone bone
+			
+			pDebugDrawer.setShapeCount(count)
+			
+			for i = 0 to count
+				bone = Bone.new()
+				bone.name = rig.boneGetName(i)
+				bone.bone = i
+				bone.shape = i
+				bone.color = color
+				bone.collider = createBoneCollider()
+				pBones.add(bone)
+				pBonesMap.setAt(bone.name, bone)
+			end
+		end
+		
+		/** Create bone collider. */
+		protected func ColliderVolume createBoneCollider()
+			var ColliderVolume collider = ColliderVolume.new()
+			collider.setCollisionFilter(CollisionFilter.new(LayerMask.newWith(0)))
+			collider.setResponseType(CollisionResponse.none)
+			collider.setUseLocalGravity(true)
+			return collider
+		end
+		
+		/** Update bone shapes. */
+		protected func void updateBoneShapes()
+			pBones.forEach(block Bone each
+				updateBoneShape(each)
+			end)
+		end
+		
+		/** Update bone shape. */
+		protected func void updateBoneShape(Bone bone)
+			var Matrix matrix = pComponent.getComponent().boneGetMatrix(bone.bone).normalize()
+			matrix = Matrix.newScaling(0.1, 0.1, 0.1) * matrix
+			pDebugDrawer.shapeSetFacesFromModel(bone.shape, pModel, matrix)
+		end
+		
+		/** Update bone colors. */
+		protected func void updateBoneColors()
+			pBones.forEach(block Bone each
+				updateBoneColor(each)
+			end)
+		end
+		
+		/** Update bone color. */
+		protected func void updateBoneColor(Bone bone)
+			pDebugDrawer.shapeSetEdgeColor(bone.shape, bone.color)
+			pDebugDrawer.shapeSetFillColor(bone.shape, Color.new(bone.color, 0.25))
+		end
+		
+		/** Update bone collider shapes. */
+		protected func void updateBoneColliderShapes()
+			pBones.forEach(block Bone each
+				updateBoneColliderShape(each)
+			end)
+		end
+		
+		/** Update bone collider shape. */
+		protected func void updateBoneColliderShape(Bone bone)
+			var Matrix matrix = pComponent.getComponent().boneGetMatrix(bone.bone).normalize()
+			var ShapeList shape = ShapeList.new()
+			var float scale = 0.1
+			shape.addBox(matrix * Vector.new(0, 0, 0.5 * scale), Vector.new(0.1, 0.1, 0.5) * scale)
+			bone.collider.setShape(shape)
+		end
+		
+		/** Update bone collider geometry. */
+		protected func void updateBoneColliderGeometry()
+			pBones.forEach(block Bone each
+				updateBoneColliderGeometry(each)
+			end)
+		end
+		
+		/** Update bone collider geometry. */
+		protected func void updateBoneColliderGeometry(Bone bone)
+			var DMatrix matrix = pComponent.getComponent().boneGetMatrix(bone.bone)\
+				.normalize().toDMatrix() * getElement().getElementMatrix()
+			bone.collider.setGeometry(matrix.getPosition(), matrix.toQuaternion())
+		end
+	end
+	
+	
+	
+	private var ECBehaviorComponent pComponent
+	private var ECPModel pModel
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorComponent component) super(eclass)
+		if component == null
+			throw ENullPointer.new("component")
+		end
+		
+		var String prefix = "previewBones."
+		
+		pComponent = component
+		
+		pModel = ECPModel.new(prefix + "model", "/content/models/bone/bone.demodel")
+		eclass.addProperty(pModel)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pComponent = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Component behavior. */
+	public func ECBehaviorComponent getComponent()
+		return pComponent
+	end
+	
+	/** Model. */
+	public func ECPModel getModel()
+		return pModel
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance for element or null. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBPreviewBones getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBPreviewBones each
+			return true
+		end) cast ECBPreviewBones
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
