@@ -124,8 +124,59 @@ class WidgetCharacterPreview extends Panel
 		end
 	end
 	
+	class HitResult
+		private var Object pObject
+		private var float pDistance
+		
+		public func new(Object object, float distance)
+			pObject = object
+			pDistance = distance
+		end
+		
+		public func Object getObject()
+			return pObject
+		end
+		
+		public func float getDistance()
+			return pDistance
+		end
+		
+		public func int compare(Object obj)
+			if obj castable HitResult
+				return pDistance.compare((obj cast HitResult).pDistance)
+				
+			else
+				return 0
+			end
+		end
+	end
+	
+	class CollectHits implements ColliderListener
+		private var Array pHits
+		
+		public func new(Array hits)
+			pHits = hits
+		end
+		
+		public func bool canHitCollider(Collider owner, Collider collider)
+			return true
+		end
+		
+		public func void collisionResponse(Collider owner, CollisionInfo info)
+			var Collider collider = info.getCollider()
+			if collider != null and collider.getOwner() != null
+				pHits.add(HitResult.new(collider.getOwner(), info.getDistance()))
+			end
+		end
+		
+		public func void colliderChanged(Collider owner)
+		end
+	end
+	
+	
 	
 	private var WorldRenderer pWorldRenderer
+	private var PanelHud pPanelHud
 	private var GameWorld pGameWorld
 	private var ElementCameraDirector pCameraDirector
 	private var PreviewPreloader pPreviewPreloader
@@ -170,6 +221,7 @@ class WidgetCharacterPreview extends Panel
 		end
 		
 		pWorldRenderer = null
+		pPanelHud = null
 		pPreviewPreloader = null
 		
 		super.dispose()
@@ -232,6 +284,25 @@ class WidgetCharacterPreview extends Panel
 	/** Character preview element or null. */
 	public func BehaviorElement getCharacterPreview()
 		return pCharacterPreview
+	end
+	
+	
+	
+	/** Detect collisions along view direction. Stores sorted HitResult into list. */
+	public func void viewRayCollisions(Array list)
+		var CollisionFilter collisionFilter = CollisionFilter.new(LayerMask.newWith(0))
+		var CollectHits listener = CollectHits.new(list)
+		var DVector rayOrigin = pCameraDirector.getCamera().getPosition()
+		var Vector rayDirection = pCameraDirector.getCamera().backProject(pWorldRenderer.getSize(), \
+			getDesktop().getMouseLocation() - pWorldRenderer.getDesktopPosition())
+		
+		pGameWorld.getWorld().rayHits(rayOrigin, rayDirection * 100, listener, collisionFilter)
+		list.sort()
+	end
+	
+	/** Set tool tip. */
+	public func void setToolTip(Object toolTip)
+		pPanelHud.getCenter().setToolTip(toolTip)
 	end
 	
 	
@@ -303,7 +374,7 @@ class WidgetCharacterPreview extends Panel
 		addWidget(pWorldRenderer)
 		
 		// add touch fields for vr use
-		addWidget(PanelHud.new(block PanelHud p
+		pPanelHud = PanelHud.new(block PanelHud p
 			p.getRightCenter().setLayout(CentrizedBoxLayout.new(LayoutAxis.y))
 			
 			// the listeners are added to the panel and not the world renderer since the
@@ -319,23 +390,28 @@ class WidgetCharacterPreview extends Panel
 			
 			image = DisplayImage.new(Image.new("/content/gui/images/icon_help_48.png"), "TouchField")
 			image.addMouseListener(ShowHelpClicked.new(this))
+			image.setToolTip("Help")
 			p.getRightCenter().addWidget(image)
 			
 			image = DisplayImage.new(Image.new("/content/gui/images/icon_camera_zoom_48.png"), "TouchField")
 			image.addMouseListener(ZoomCameraMouseListener.new(\
 				pCameraDirector, InputEventMouseButton.left, InputEventModifier.none))
+			image.setToolTip("Zoom")
 			p.getRightCenter().addWidget(image)
 			
 			image = DisplayImage.new(Image.new("/content/gui/images/icon_camera_rotate_48.png"), "TouchField")
 			image.addMouseListener(RotateCameraMouseListener.new(\
 				pCameraDirector, InputEventMouseButton.left, InputEventModifier.none))
+			image.setToolTip("Rotate")
 			p.getRightCenter().addWidget(image)
 			
 			image = DisplayImage.new(Image.new("/content/gui/images/icon_camera_pan_48.png"), "TouchField")
 			image.addMouseListener(PanCameraMouseListener.new(\
 				pCameraDirector, InputEventMouseButton.left, InputEventModifier.none))
+			image.setToolTip("Pan")
 			p.getRightCenter().addWidget(image)
-		end))
+		end)
+		addWidget(pPanelHud)
 	end
 	
 	/** Create preview character. */

@@ -131,6 +131,7 @@ class ECBPreviewBones extends DefaultECBehavior
 			
 			updateBoneShapes()
 			updateBoneColors()
+			updateBoneColliderShapes()
 			updateBoneColliderGeometry()
 			
 			world.addDebugDrawer(pDebugDrawer)
@@ -201,6 +202,7 @@ class ECBPreviewBones extends DefaultECBehavior
 				bone.shape = i
 				bone.color = color
 				bone.collider = createBoneCollider()
+				bone.collider.setOwner(bone)
 				pBones.add(bone)
 				pBonesMap.setAt(bone.name, bone)
 			end
@@ -251,10 +253,9 @@ class ECBPreviewBones extends DefaultECBehavior
 		
 		/** Update bone collider shape. */
 		protected func void updateBoneColliderShape(Bone bone)
-			var Matrix matrix = pComponent.getComponent().boneGetMatrix(bone.bone).normalize()
 			var ShapeList shape = ShapeList.new()
 			var float scale = 0.1
-			shape.addBox(matrix * Vector.new(0, 0, 0.5 * scale), Vector.new(0.1, 0.1, 0.5) * scale)
+			shape.addBox(Vector.new(0, 0, 0.5 * scale), Vector.new(0.1, 0.1, 0.5) * scale)
 			bone.collider.setShape(shape)
 		end
 		
