@@ -26,10 +26,13 @@ pin Democap.Characters
 pin Democap.Elements
 
 pin Dragengine.CameraDirectors
+pin Dragengine.Gui.Designers
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Preloading
 pin Dragengine.Scenery
+pin Dragengine.Utils.StyledText.Definition
+pin Dragengine.Utils.StyledText.Definition.Nodes
 
 
 /**
@@ -124,6 +127,18 @@ class WidgetCharacterPreview extends Panel
 		end
 	end
 	
+	class ElementClicked extends ClickedActionListener
+		private var WidgetCharacterPreview pWidget
+		
+		public func new(WidgetCharacterPreview widget)
+			pWidget = widget
+		end
+		
+		public func void onAction()
+			pWidget.onElementClicked()
+		end
+	end
+	
 	class HitResult
 		private var Object pObject
 		private var float pDistance
@@ -189,6 +204,8 @@ class WidgetCharacterPreview extends Panel
 	private var String pPathRig
 	private var String pPathAnimation
 	
+	private var CharacterPreviewEditor pEditor
+	
 	
 	
 	/** Create widget. */
@@ -223,6 +240,7 @@ class WidgetCharacterPreview extends Panel
 		pWorldRenderer = null
 		pPanelHud = null
 		pPreviewPreloader = null
+		pEditor = null
 		
 		super.dispose()
 	end
@@ -286,6 +304,31 @@ class WidgetCharacterPreview extends Panel
 		return pCharacterPreview
 	end
 	
+	/** Editor or null. */
+	public func CharacterPreviewEditor getEditor()
+		return pEditor
+	end
+	
+	/** Set editor or null. */
+	public func void setEditor(CharacterPreviewEditor editor)
+		if editor == pEditor
+			return
+		end
+		
+		if pEditor != null
+			pEditor.onDeactivate()
+		end
+		
+		pEditor = editor
+		
+		if editor != null
+			editor.onActivate()
+			
+		else
+			clearEditorChanges()
+		end
+	end
+	
 	
 	
 	/** Detect collisions along view direction. Stores sorted HitResult into list. */
@@ -321,17 +364,41 @@ class WidgetCharacterPreview extends Panel
 	
 	/** Frame update. */
 	public func void onFrameUpdate(float elapsed)
+		// if preloading create preview character if finished
 		if pPreviewPreloader != null and pPreviewPreloader.finished()
 			createPreviewCharacter()
 			pPreviewPreloader = null
+			
+			pListeners.forEach(block Listener each
+				each.characterReloaded(this)
+			end)
 		end
 		
+		// editor frame updates
+		if pEditor != null
+			pEditor.onFrameUpdate(elapsed)
+		end
+		
+		// regular game updates
 		pCameraDirector.update(elapsed)
 		pGameWorld.update(elapsed)
 		
-		pListeners.forEach(block Listener each
-			each.characterReloaded(this)
-		end)
+		// tool tip update
+		updateToolTip()
+	end
+	
+	/** Element clicked. */
+	public func void onElementClicked()
+		if pEditor == null
+			return
+		end
+		
+		var Array hits = Array.new()
+		viewRayCollisions(hits)
+		
+		if hits.getCount() > 0
+			pEditor.selectElement(hits)
+		end
 	end
 	
 	
@@ -388,6 +455,8 @@ class WidgetCharacterPreview extends Panel
 			p.addMouseListener(ZoomCameraMouseListener.new(\
 				pCameraDirector, InputEventMouseButton.right, InputEventModifier.control))
 			
+			p.addMouseListener(ElementClicked.new(this))
+			
 			image = DisplayImage.new(Image.new("/content/gui/images/icon_help_48.png"), "TouchField")
 			image.addMouseListener(ShowHelpClicked.new(this))
 			image.setToolTip("Help")
@@ -428,5 +497,89 @@ class WidgetCharacterPreview extends Panel
 		
 		pCharacterPreview = stub.createElement() cast BehaviorElement
 		pGameWorld.addElement(pCharacterPreview)
+	end
+	
+	/** Update tool tip. */
+	protected func void updateToolTip()
+		var Array hits = Array.new()
+		viewRayCollisions(hits)
+		
+		var StyledTextDefinition std = createToolTipStyledTextDefinition()
+		var ECBPreviewBones.Instance.Bone bone
+		var STDNText nodeText
+		
+		hits.forEach(block WidgetCharacterPreview.HitResult each
+			if each.getObject() castable ECBPreviewBones.Instance.Bone
+				bone = each.getObject() cast ECBPreviewBones.Instance.Bone
+				
+				nodeText = STDNText.new()
+				
+				if bone.color.equals(CharacterPreviewEditor.previewBoneColorSelected)
+					nodeText.setStyle("selected")
+					
+				elif bone.color.equals(CharacterPreviewEditor.previewBoneColorChain)
+					nodeText.setStyle("chain")
+					
+				else
+					nodeText.setStyle("default")
+				end
+				
+				nodeText.addSpan(STDNTextSpan.new("- " + bone.name))
+				std.addNode(nodeText)
+			end
+		end)
+		
+		if std.getNodeCount() > 0
+			setToolTip(std)
+			
+		else
+			setToolTip(null)
+		end
+	end
+	
+	/**
+	 * Create styled text definition for tool tip.
+	 * 
+	 * Adds styles:
+	 * - "default": Default text using "Label.WindowToolTip" widget designer as base
+	 * - "selected": Based on "default" using red color
+	 * - "chain": Based on "default" using cyan color
+	 * 
+	 * Default style is "default"
+	 */
+	protected func StyledTextDefinition createToolTipStyledTextDefinition()
+		var StyledTextDefinition std = StyledTextDefinition.new()
+		var GuiTheme guiTheme = getGuiTheme()
+		
+		// page width indicates the maximum width to use before breaking words.
+		// here we use a huge size to avoid line breaking
+		std.setPageSize(Point.new(300, 100000))
+		
+		var STDStyle baseStyle = STDStyle.new("default", (guiTheme.getWidgetDesigner("Label.WindowToolTip") \
+			cast DefaultLabelDesigner).getLabelDesignNormal())
+		std.addStyle(baseStyle)
+		std.setDefaultStyle(baseStyle)
+		
+		var STDStyle styleSelected = STDStyle.new("selected", baseStyle)
+		styleSelected.setTextColor(Color.red)
+		std.addStyle(styleSelected)
+		
+		var STDStyle styleChain = STDStyle.new("chain", baseStyle)
+		styleChain.setTextColor(Color.new(0, 1, 1))
+		std.addStyle(styleChain)
+		
+		return std
+	end
+	
+	/** Clear editor changes. */
+	protected func void clearEditorChanges()
+		if pCharacterPreview == null
+			return
+		end
+		
+		var ECBPreviewBones.Instance previewBones = ECBPreviewBones.getInstanceIn(pCharacterPreview)
+		if previewBones != null
+			previewBones.setAllBoneColor(CharacterPreviewEditor.previewBoneColorDefault)
+		end
 	end
 end

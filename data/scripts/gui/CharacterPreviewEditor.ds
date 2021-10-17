@@ -1,0 +1,181 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+
+pin Dragengine.Gui.Events
+pin Dragengine.Gui.Layouts
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Character preview editor.
+ */
+class CharacterPreviewEditor
+	/** Default preview bone color. */
+	static public fixed var Color previewBoneColorDefault = Color.new(0, 0.8, 1)
+	
+	/** Selected preview bone color. */
+	static public fixed var Color previewBoneColorSelected = Color.new(1, 0, 0)
+	
+	/** Chain preview bone color. */
+	static public fixed var Color previewBoneColorChain = Color.new(0.5, 0.8, 0.5)
+	
+	
+	
+	/** Activate editor if widget receives focus. */
+	class ReceiveFocusActivateEditor extends DefaultFocusListener
+		private var CharacterPreviewEditor pEditor
+		
+		public func new(CharacterPreviewEditor editor)
+			if editor == null
+				throw ENullPointer.new("editor")
+			end
+			pEditor = editor
+		end
+		
+		public func void onFocusReceived(FocusEvent event)
+			pEditor.getPreview().setEditor(pEditor)
+		end
+	end
+	
+	/** Update editor if model changed. */
+	class UpdateOnTextChanged extends DefaultTextModelListener
+		private var CharacterPreviewEditor pEditor
+		
+		public func new(CharacterPreviewEditor editor)
+			if editor == null
+				throw ENullPointer.new("editor")
+			end
+			pEditor = editor
+		end
+		
+		public func void textChanged(TextModel textModel)
+			pEditor.onModelValueChanged()
+		end
+	end
+	
+	/** Update editor if model changed. */
+	class UpdateOnListChanged extends DefaultListModelListener
+		private var CharacterPreviewEditor pEditor
+		
+		public func new(CharacterPreviewEditor editor)
+			if editor == null
+				throw ENullPointer.new("editor")
+			end
+			pEditor = editor
+		end
+		
+		public func void contentChanged(ListModel listModel, int fromIndex, int toIndex)
+			pEditor.onModelValueChanged()
+		end
+		
+		public func void elementsAdded(ListModel listModel, int fromIndex, int toIndex)
+			pEditor.onModelValueChanged()
+		end
+		
+		public func void elementsRemoved(ListModel listModel, int fromIndex, int toIndex)
+			pEditor.onModelValueChanged()
+		end
+		
+		public func void selectionChanged(ListModel listModel)
+			pEditor.onModelValueChanged()
+		end
+	end
+	
+	/** Update editor if model changed. */
+	class UpdateOnAction implements ActionListener
+		private var CharacterPreviewEditor pEditor
+		
+		public func new(CharacterPreviewEditor editor)
+			if editor == null
+				throw ENullPointer.new("editor")
+			end
+			pEditor = editor
+		end
+		
+		public func void onAction(ActionEvent event)
+			pEditor.onModelValueChanged()
+		end
+	end
+	
+	
+	
+	private var WidgetCharacterPreview pPreview
+	
+	
+	
+	/**
+	 * Create character preview editor.
+	 */
+	public func new(WidgetCharacterPreview preview)
+		if preview == null
+			throw ENullPointer.new("preview")
+		end
+		pPreview = preview
+	end
+	
+	
+	
+	/** Preview widget. */
+	public func WidgetCharacterPreview getPreview()
+		return pPreview
+	end
+	
+	/** Preview element bones behavior or null. */
+	public func ECBPreviewBones.Instance getPreviewBones()
+		var BehaviorElement element = getPreview().getCharacterPreview()
+		if element == null
+			return null
+		end
+		return ECBPreviewBones.getInstanceIn(element)
+	end
+	
+	/** Editor is active. */
+	public func bool isActive()
+		return pPreview.getEditor() == this
+	end
+	
+	
+	
+	/** Editor has been activated. */
+	public func void onActivate()
+	end
+	
+	/** Editor has been deactivated. */
+	public func void onDeactivate()
+	end
+	
+	/** Update preview. */
+	public func void onFrameUpdate(float elapsed)
+	end
+	
+	/** Select element. Array contains hit objects of variable type. */
+	public func void selectElement(Array hits)
+	end
+	
+	/** Model value changed. */
+	public func void onModelValueChanged()
+	end
+end

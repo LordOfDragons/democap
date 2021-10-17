@@ -89,13 +89,11 @@ class WindowCharacterProfile extends WindowDialog
 		setResultListener(listener)
 		show(window, false, WindowModal.Placement.desktop)
 		
-		startFrameUpdater()
+		pCharacterPreview.setEditor(null)
 	end
 	
 	/** Dispose of window. */
 	public func void dispose()
-		stopFrameUpdater()
-		
 		pCharacterPreview = null
 		pModelProfileName = null
 		pModelListOriginBone = null
@@ -168,25 +166,6 @@ class WindowCharacterProfile extends WindowDialog
 		pCharacterPreview.setPathRig(pModelPathRig.getText())
 		pCharacterPreview.setPathAnimation(pModelPathAnimation.getText())
 		pCharacterPreview.reloadCharacterPreview()
-	end
-	
-	
-	
-	/** Frame update. */
-	public func void onFrameUpdate(float elapsed)
-		var Array hits = Array.new()
-		pCharacterPreview.viewRayCollisions(hits)
-		
-		var Array tipLines = Array.new()
-		hits.forEach(block WidgetCharacterPreview.HitResult each
-			if each.getObject() castable ECBPreviewBones.Instance.Bone
-				tipLines.add("- " + (each.getObject() cast ECBPreviewBones.Instance.Bone).name)
-			end
-		end)
-		
-		pCharacterPreview.setToolTip(tipLines.fold(block String a, String b
-			return a + "\n" + b
-		end))
 	end
 	
 	
@@ -279,6 +258,8 @@ class WindowCharacterProfile extends WindowDialog
 			comboBox.setDesignerSelector("ComboBox.WindowCharacterProfile")
 			p.addWidget(comboBox)
 			
+			CPEBone.new(pCharacterPreview, comboBox)
+			
 		end), BorderLayout.Area.right)
 		
 		// button line
@@ -311,7 +292,9 @@ class WindowCharacterProfile extends WindowDialog
 			for i = 0 to count
 				bones.add(rig.boneGetName(i))
 			end
-			bones.sort()
+			bones.sort(block String a, String b
+				return a.compareNoCase(b)
+			end)
 		end
 		
 		pModelListOriginBone.setContent(bones)

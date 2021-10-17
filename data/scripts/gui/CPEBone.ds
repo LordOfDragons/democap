@@ -1,0 +1,193 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+
+pin Dragengine.Gui.Events
+pin Dragengine.Gui.Layouts
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Character preview editor to select a single bone.
+ */
+class CPEBone extends CharacterPreviewEditor
+	/**
+	 * List element renderer to ask for bone to select. Modified version of
+	 * DefaultListElementRenderer supporting ECBPreviewBones.Instance.Bone
+	 */
+	class SelectBoneRenderer extends DefaultListElementRenderer
+		public func new()
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var ECBPreviewBones.Instance.Bone bone = element cast ECBPreviewBones.Instance.Bone
+			if bone == null
+				// null element typically is the one asking for the default size
+				super.updateRenderer(listBox, renderer, String.new('X', 15), selected, focused)
+				return
+			end
+			
+			var String text = bone.name
+			
+			if bone.color.equals(CharacterPreviewEditor.previewBoneColorSelected)
+				text = text + " [Selected]"
+				
+			elif bone.color.equals(CharacterPreviewEditor.previewBoneColorChain)
+				text = text + " [Chain]"
+			end
+			
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	
+	
+	private var ComboBox pCBBone
+	
+	
+	
+	/** Create character preview editor. */
+	public func new(WidgetCharacterPreview preview, ComboBox cbBone) super(preview)
+		if cbBone == null
+			throw ENullPointer.new("cbBone")
+		end
+		pCBBone = cbBone
+		
+		if cbBone.getEditor() != null
+			cbBone.getEditor().getWidget().addFocusListener(ReceiveFocusActivateEditor.new(this))
+			cbBone.getEditor().addActionListener(UpdateOnAction.new(this))
+			
+		else
+			cbBone.addFocusListener(ReceiveFocusActivateEditor.new(this))
+		end
+		cbBone.getModel().addListener(UpdateOnListChanged.new(this))
+	end
+	
+	
+	
+	/** Combo box bone. */
+	public func ComboBox getComboBoxBone()
+		return pCBBone
+	end
+	
+	
+	
+	/** Editor has been activated. */
+	public func void onActivate()
+		updateBoneColors()
+	end
+	
+	/** Editor has been deactivated. */
+	public func void onDeactivate()
+		var ECBPreviewBones.Instance bones = getPreviewBones()
+		if bones != null
+			bones.setAllBoneColor(previewBoneColorDefault)
+		end
+	end
+	
+	/** Select element. Array contains hit objects of variable type. */
+	public func void selectElement(Array hits)
+		// filter preview bones
+		hits = hits.collectCastable(block WidgetCharacterPreview.HitResult each
+			return each.getObject() castable ECBPreviewBones.Instance.Bone
+		end)
+		
+		// if more than one bone is hit ask which one to select
+		if hits.getCount() > 1
+			// model has to contain bones so map the array
+			var Array bones = hits.map(block WidgetCharacterPreview.HitResult each
+				return each.getObject() cast ECBPreviewBones.Instance.Bone
+			end)
+			
+			var DefaultListModel model = DefaultListModel.new(bones)
+			
+			// select selected bone if possible
+			var String selectedName
+			
+			if pCBBone.getEditor() != null
+				selectedName = pCBBone.getEditor().getEditorValue() cast String
+				
+			elif pCBBone.getSelectedElement() != -1
+				selectedName = pCBBone.getModel().getAt(pCBBone.getSelectedElement()) cast String
+			end
+			
+			if selectedName != null
+				var ECBPreviewBones.Instance.Bone bone = bones.find(block ECBPreviewBones.Instance.Bone each
+					return each.name.equals(selectedName)
+				end) cast ECBPreviewBones.Instance.Bone
+				
+				if bone != null
+					model.setSelected(bones.indexOf(bone))
+				end
+			end
+			
+			// show dialog to make user choose bone
+			WindowDialog.chooseList(getPreview().getWindow(), "Select Bone", "Choose bone to select",\
+				null, model, SelectBoneRenderer.new(), null, null, \
+				WindowDialog.BlockResultListener.new(block int result
+					if result != -1
+						selectElement(Array.newWith(hits.getAt(result)))
+					end
+				end))
+			
+			// result listener will call this method again with modified hits array
+			return
+		end
+		
+		// if only one bone is hit select it
+		if hits.getCount() == 1
+			var WidgetCharacterPreview.HitResult hit = hits.getAt(0) cast WidgetCharacterPreview.HitResult
+			var ECBPreviewBones.Instance.Bone bone = hit.getObject() cast ECBPreviewBones.Instance.Bone
+			
+			pCBBone.getEditor().setEditorValue(bone.name)
+		end
+	end
+	
+	/** Model value changed. */
+	public func void onModelValueChanged()
+		if isActive()
+			updateBoneColors()
+		end
+	end
+	
+	
+	
+	/** Update preview bone colors. */
+	protected func void updateBoneColors()
+		var ECBPreviewBones.Instance bones = getPreviewBones()
+		if bones == null
+			return
+		end
+		
+		bones.setAllBoneColor(previewBoneColorDefault)
+		
+		if pCBBone.getEditor() != null
+			var String selected = pCBBone.getEditor().getEditorValue() cast String
+			if selected != null
+				bones.setBoneColor(selected, previewBoneColorSelected)
+			end
+		end
+	end
+end
