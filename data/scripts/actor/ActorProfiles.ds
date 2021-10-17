@@ -69,14 +69,17 @@ class ActorProfiles
 	end
 	
 	/** Named profile is present. */
-	public func bool has(String name)
-		return pProfiles.find(block ActorProfile each
-			return each.getName().compareNoCase(name) == 0
-		end) != null
+	public func bool hasNamed(String name)
+		return getNamed(name) != null
+	end
+	
+	/** Profile at index. */
+	public func ActorProfile getAt(int index)
+		return pProfiles.getAt(index) cast ActorProfile
 	end
 	
 	/** Named profile or null if absent. */
-	public func ActorProfile getAt(String name)
+	public func ActorProfile getNamed(String name)
 		name = name.toLower()
 		return pProfiles.find(block ActorProfile each
 			return each.getName().compareNoCase(name) == 0
@@ -85,7 +88,7 @@ class ActorProfiles
 	
 	/** Add profile. Throws exception if named profile is present. */
 	public func void add(ActorProfile profile)
-		if has(profile.getName())
+		if hasNamed(profile.getName())
 			throw EInvalidParam.new("named profile is present: " + profile.getName())
 		end
 		pProfiles.add(profile)

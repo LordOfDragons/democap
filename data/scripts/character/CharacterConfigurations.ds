@@ -53,12 +53,17 @@ class CharacterConfigurations
 	end
 	
 	/** Named configuration is present. */
-	public func bool has(String name)
-		return getAt(name) != null
+	public func bool hasNamed(String name)
+		return getNamed(name) != null
+	end
+	
+	/** Configuration at index. */
+	public func CharacterConfiguration getAt(int index)
+		return pConfigurations.getAt(index) cast CharacterConfiguration
 	end
 	
 	/** Named configuration or null if absent. */
-	public func CharacterConfiguration getAt(String name)
+	public func CharacterConfiguration getNamed(String name)
 		return pConfigurations.find(block CharacterConfiguration each
 			return each.getName().compareNoCase(name) == 0
 		end) cast CharacterConfiguration
@@ -66,7 +71,7 @@ class CharacterConfigurations
 	
 	/** Add configuration. Throws exception if named configuration is present. */
 	public func void add(CharacterConfiguration configuration)
-		if has(configuration.getName())
+		if hasNamed(configuration.getName())
 			throw EInvalidParam.new("named configuration is present: " + configuration.getName())
 		end
 		pConfigurations.add(configuration)
