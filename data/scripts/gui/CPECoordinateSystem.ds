@@ -38,15 +38,18 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 	class InteractHandleListener extends DefaultMouseListener
 		private var CPECoordinateSystem pEditor
 		private var ECBPreviewCoordSystem.Handle pHandle
-		private var Point pDragOrigin
 		private var Matrix pViewMatrix
 		private var Matrix pCSMatrix
-		private var Matrix pInvCSMatrix
+		private var Matrix pInvCSParentMatrix
 		private var Vector pPlanePosition
 		private var Vector pPlaneNormal
+		private var Vector pPlaneX
+		private var Vector pPlaneY
 		private var Vector pInteractOrigin
 		private var Vector pInteractAxis
 		private var Vector pOriginPosition
+		private var bool pIsMove
+		private var bool pIsRotate
 		
 		
 		
@@ -73,9 +76,8 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 			var ECBPreviewCoordSystem.Instance previewCoordSystem = pEditor.getPreviewCoordSystem()
 			
 			pHandle = hit.getObject() cast ECBPreviewCoordSystem.Handle
-			pDragOrigin = event.getPosition()
 			pCSMatrix = previewCoordSystem.getMatrix().toMatrix()
-			pInvCSMatrix = pCSMatrix.getInverse()
+			pInvCSParentMatrix = previewCoordSystem.getParentMatrix().getInverse().toMatrix()
 			
 			pInteractOrigin = hit.getHitPoint().toVector()
 			
@@ -84,20 +86,39 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 			select pHandle
 			case ECBPreviewCoordSystem.Handle.moveX
 				pInteractAxis = pCSMatrix.getRightVector().normalize()
+				pIsMove = true
 				
 			case ECBPreviewCoordSystem.Handle.moveY
 				pInteractAxis = pCSMatrix.getUpVector().normalize()
+				pIsMove = true
 				
 			case ECBPreviewCoordSystem.Handle.moveZ
 				pInteractAxis = pCSMatrix.getViewVector().normalize()
+				pIsMove = true
+				
+			case ECBPreviewCoordSystem.Handle.rotateX
+				pInteractAxis = pCSMatrix.getRightVector().normalize()
+				pIsRotate = true
+				
+			case ECBPreviewCoordSystem.Handle.rotateY
+				pInteractAxis = pCSMatrix.getUpVector().normalize()
+				pIsRotate = true
+				
+			case ECBPreviewCoordSystem.Handle.rotateZ
+				pInteractAxis = pCSMatrix.getViewVector().normalize()
+				pIsRotate = true
+			end
+			
+			if pInteractAxis == null
+				return
 			end
 			
 			pViewMatrix = pEditor.getPreview().getCameraDirector().getCameraMatrix().toMatrix().normalize()
-			var Vector right = pViewMatrix.getRightVector()
-			var Vector view = pViewMatrix.getViewVector()
-			var Vector up = pViewMatrix.getUpVector()
 			
-			if pInteractAxis != null
+			if pIsMove
+				var Vector up = pViewMatrix.getUpVector()
+				var Vector right = pViewMatrix.getRightVector()
+				
 				pPlanePosition = pInteractOrigin
 				
 				if DEMath.fabs(up * pInteractAxis) < 0.707 // roughly 45 degrees
@@ -106,13 +127,39 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 				else
 					pPlaneNormal = (pInteractAxis % right).normalize()
 				end
+				
+			elif pIsRotate
+				pPlanePosition = pCSMatrix.getPosition()
+				pPlaneNormal = pInteractAxis
+				
+				// the direction towards the interaction point is used as X axis. the Y axis is
+				// then the X axis crossed with the plane normal. this allows to use the plane
+				// normal as rotation axis and DEMath.atan2() to calculate the rotation angle
+				
+				// ensure the interaction point is on the plane. this prevents the rotation
+				// jumping after the first mouse move due to the hit point being slightly
+				// outside the plane
+				var Vector rayOrigin = pViewMatrix.getPosition()
+				var Vector rayDirection = pEditor.getPreview().viewRayDirection(event.getPosition())
+				
+				var float denom = rayDirection * pPlaneNormal
+				if denom != 0
+					var float lambda = ((pPlanePosition - rayOrigin) * pPlaneNormal) / denom
+					var Vector hitPoint = rayOrigin + rayDirection * lambda
+					pPlaneX = (hitPoint - pPlanePosition).normalize()
+					
+				else
+					pPlaneX = (pInteractOrigin - pPlanePosition).normalize()
+				end
+				
+				pPlaneY = (pPlaneX % pPlaneNormal).normalize()
 			end
 			
 			pEditor.getPreview().getInteractionPanel().captureMouse()
 		end
 		
 		public func void onMouseMove(MouseEvent event)
-			if pHandle == null or pPlanePosition == null
+			if pHandle == null or pInteractAxis == null
 				return
 			end
 			
@@ -131,22 +178,29 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 			var float lambda = ((pPlanePosition - rayOrigin) * pPlaneNormal) / denom
 			var Vector hitPoint = rayOrigin + rayDirection * lambda
 			
-			var float difference = 0
-			
 			// apply interaction
-			if pInteractAxis != null
-				difference = pInteractAxis * (hitPoint - pInteractOrigin)
-			end
-			
-			select pHandle
-			case ECBPreviewCoordSystem.Handle.moveX
-				pEditor.getEditPosition().setVector(pOriginPosition + pCSMatrix.getRightVector() * difference)
+			if pIsMove
+				var float distance = pInteractAxis * (hitPoint - pInteractOrigin)
 				
-			case ECBPreviewCoordSystem.Handle.moveY
-				pEditor.getEditPosition().setVector(pOriginPosition + pCSMatrix.getUpVector() * difference)
+				select pHandle
+				case ECBPreviewCoordSystem.Handle.moveX
+					pEditor.getEditPosition().setVector(pOriginPosition + pCSMatrix.getRightVector() * distance)
+					
+				case ECBPreviewCoordSystem.Handle.moveY
+					pEditor.getEditPosition().setVector(pOriginPosition + pCSMatrix.getUpVector() * distance)
+					
+				case ECBPreviewCoordSystem.Handle.moveZ
+					pEditor.getEditPosition().setVector(pOriginPosition + pCSMatrix.getViewVector() * distance)
+				end
 				
-			case ECBPreviewCoordSystem.Handle.moveZ
-				pEditor.getEditPosition().setVector(pOriginPosition + pCSMatrix.getViewVector() * difference)
+			elif pIsRotate
+				var Vector v = hitPoint - pPlanePosition
+				if v.getLength() < 0.001
+					return
+				end
+				var float angle = DEMath.normalize(DEMath.atan2(pPlaneY * v, pPlaneX * v), -180.0, 180.0)
+				var Matrix matrix = pCSMatrix * Matrix.newRotationAxis(pPlaneNormal, angle) * pInvCSParentMatrix
+				pEditor.getEditRotation().setVector(matrix.getEulerAngles())
 			end
 		end
 		
@@ -158,9 +212,13 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 			pHandle = null
 			pPlanePosition = null
 			pPlaneNormal = null
+			pPlaneX = null
+			pPlaneY = null
 			pInteractOrigin = null
 			pInteractAxis = null
 			pOriginPosition = null
+			pIsMove = false
+			pIsRotate = false
 			
 			pEditor.getPreview().getInteractionPanel().releaseMouse()
 		end
@@ -187,6 +245,11 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 		
 		position.addFocusListener(ReceiveFocusActivateEditor.new(this))
 		position.addActionListener(UpdateOnAction.new(this))
+		
+		if rotation != null
+			rotation.addFocusListener(ReceiveFocusActivateEditor.new(this))
+			rotation.addActionListener(UpdateOnAction.new(this))
+		end
 	end
 	
 	
@@ -244,6 +307,7 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 		end
 		
 		coordSystem.setVisibleMove(true)
+		coordSystem.setVisibleRotate(true)
 	end
 	
 	/** Hide coordinate system. */
@@ -254,6 +318,7 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 		end
 		
 		coordSystem.setVisibleMove(false)
+		coordSystem.setVisibleRotate(false)
 	end
 	
 	/** Update coordinate system. */
@@ -266,10 +331,10 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 		coordSystem.setPosition(pEditPosition.getVector())
 		
 		if pEditRotation != null
-			coordSystem.setOrientation(Quaternion.newFromEuler(pEditRotation.getVector()))
+			coordSystem.setRotation(pEditRotation.getVector())
 			
 		else
-			coordSystem.setOrientation(Quaternion.new())
+			coordSystem.setRotation(Vector.new())
 		end
 		
 		if pCBBone != null
