@@ -1,0 +1,338 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Elements
+
+pin Dragengine.CameraDirectors
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window.
+ */
+class WindowCharacterConfiguration extends WindowDialog
+	class UpdateListsListener implements WidgetCharacterPreview.Listener
+		private var WindowCharacterConfiguration pWindow
+		
+		public func new(WindowCharacterConfiguration window)
+			pWindow = window
+		end
+		
+		public func void characterReloaded(WidgetCharacterPreview widget)
+			pWindow.updateBoneLists()
+			pWindow.updateMoveLists()
+			pWindow.updateMoveCalibrate()
+		end
+	end
+	
+	class MoveCalibrateChanged implements ActionListener
+		private var WindowCharacterConfiguration pWindow
+		
+		public func new(WindowCharacterConfiguration window)
+			pWindow = window
+		end
+		
+		public func void onAction(ActionEvent event)
+			pWindow.updateMoveCalibrate()
+		end
+	end
+	
+	
+	
+	private var CharacterConfiguration pCharacterConfiguration
+	private var DefaultTextModel pModelConfigName
+	private var DefaultListModel pModelScaleMode
+	private var DefaultTextModel pModelShoulderLevel
+	private var DefaultListModel pModelListMoveCalibrate
+	private var DefaultTextModel pModelTextMoveCalibrate
+	private var DefaultListModel pModelListCameraBone
+	private var DefaultTextModel pModelTextCameraBone
+	private var EditVector pEditCameraPosition
+	private var EditVector pEditCameraRotation
+	private var WidgetCharacterPreview pCharacterPreview
+	
+	
+	
+	/** Create window. */
+	public func new(Window window, CharacterConfiguration config, ResultListener listener)
+		pCharacterConfiguration = config
+		
+		pModelConfigName = DefaultTextModel.new(config.getName())
+		pModelScaleMode = DefaultListModel.new(CharacterConfiguration.ScaleMode.all().toArray().sorted())
+		pModelShoulderLevel = DefaultTextModel.new(config.getShoulderLevel().toString())
+		pModelListMoveCalibrate = DefaultListModel.new()
+		pModelListMoveCalibrate.setAutoSelect(false)
+		pModelTextMoveCalibrate = DefaultTextModel.new(config.getMoveCalibrate())
+		pModelListCameraBone = DefaultListModel.new()
+		pModelListCameraBone.setAutoSelect(false)
+		pModelTextCameraBone = DefaultTextModel.new(config.getCameraBone())
+		
+		runWhileBlockingLayout(block
+			setGuiTheme(window.getGuiTheme())
+			setTitle("Character Configuration")
+			setDesignerSelector("Window.Dialog.CharacterConfiguration")
+			setSize(window.getDesktop().getContainerSize() - Point.new(100, 100))
+			
+			createContent()
+			
+			pEditCameraPosition.setVector(config.getCameraPosition())
+			pEditCameraRotation.setVector(config.getCameraRotation())
+		end)
+		
+		var CharacterAppearance appearance = config.getProfile().getAppearance()
+		pCharacterPreview.setPathModel(appearance.getPathModel())
+		pCharacterPreview.setPathSkin(appearance.getPathSkin())
+		pCharacterPreview.setPathRig(appearance.getPathRig())
+		pCharacterPreview.setPathAnimation(appearance.getPathAnimation())
+		pCharacterPreview.reloadCharacterPreview()
+		
+		setResultListener(listener)
+		show(window, false, WindowModal.Placement.desktop)
+		
+		pCharacterPreview.setEditor(null)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		pModelConfigName = null
+		pModelScaleMode = null
+		pModelShoulderLevel = null
+		pModelListMoveCalibrate = null
+		pModelTextMoveCalibrate = null
+		pModelListCameraBone = null
+		pModelTextCameraBone = null
+		pEditCameraPosition = null
+		pEditCameraRotation = null
+		
+		super.dispose()
+	end
+	
+	
+	
+	/** Save dialog and close if no problems are found. */
+	public func void saveAndClose()
+		// verify input
+		var String configName = pModelConfigName.getText()
+		var float shoulderLevel
+		
+		if not configName.toLower().equals(pCharacterConfiguration.getName().toLower())
+			if configName.empty()
+				WindowDialog.message(this, "Save Configuration", "Configuration name can not be empty", null, null, null)
+				return
+			end
+			if pCharacterConfiguration.getProfile().getConfigurations().hasNamed(configName)
+				WindowDialog.message(this, "Save Configuration", "Configuration with same name exists", null, null, null)
+				return
+			end
+			try
+				shoulderLevel = pModelShoulderLevel.getText().toFloat()
+			catch Exception e
+				WindowDialog.message(this, "Save Configuration", "Invalid value", null, null, null)
+				return
+			end
+		end
+		
+		// save changes
+		pCharacterConfiguration.setName(configName)
+		pCharacterConfiguration.setScaleMode(pModelScaleMode.getAt(\
+			pModelScaleMode.getSelected()) cast CharacterConfiguration.ScaleMode)
+		pCharacterConfiguration.setShoulderLevel(shoulderLevel)
+		pCharacterConfiguration.setMoveCalibrate(pModelTextMoveCalibrate.getText())
+		pCharacterConfiguration.setCameraPosition(pEditCameraPosition.getVector())
+		pCharacterConfiguration.setCameraRotation(pEditCameraRotation.getVector())
+		
+		pCharacterConfiguration.getProfile().save()
+		
+		// finish and close window
+		setResult(true)
+		close()
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var TextField textField
+		var ComboBox comboBox
+		var Button button
+		
+		setLayout(BorderLayout.new(20))
+		
+		pCharacterPreview = WidgetCharacterPreview.new()
+		pCharacterPreview.addListener(UpdateListsListener.new(this))
+		addWidget(pCharacterPreview, BorderLayout.Area.content)
+		
+		// properties
+		addWidget(Panel.new(FormLayout.new(true, 10, 2), block Panel p
+			// config name
+			p.addWidget(Label.new("Configuration Name:", "Label.FormCaption"))
+			
+			textField = TextField.new(pModelConfigName, 15)
+			textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+			textField.setToolTip("Unique configuration name")
+			p.addWidget(textField)
+			
+			// scale mode
+			p.addWidget(Label.new("Scale Mode:", "Label.FormCaption"))
+			
+			comboBox = ComboBox.new(pModelScaleMode)
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+			comboBox.setToolTip("Scale actor or character to match the other.")
+			p.addWidget(comboBox)
+			
+			// shoulder level
+			p.addWidget(Label.new("Shoulder Level:", "Label.FormCaption"))
+			
+			textField = TextField.new(pModelShoulderLevel, 8)
+			textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+			textField.setToolTip("Shoulder level in meters. Use height of upper arm bone origin above ground.")
+			textField.setValidator(SimpleTextValidator.new(8, SimpleTextValidator.CharacterClass.positiveNumber))
+			p.addWidget(textField)
+			
+			// move calibrate
+			p.addWidget(Label.new("Move Calibrate:", "Label.FormCaption"))
+			
+			comboBox = ComboBox.new(pModelListMoveCalibrate, DefaultComboBoxEditor.new(pModelTextMoveCalibrate))
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+			comboBox.setToolTip("Animation move to use for calibration. " \
+				+ "This move is also applied before the first motion transfer is applied.")
+			comboBox.getEditor().addActionListener(MoveCalibrateChanged.new(this))
+			p.addWidget(comboBox)
+			
+			// camera bone
+			p.addWidget(Label.new("Camera Bone:", "Label.FormCaption"))
+			
+			var ComboBox cbCameraBone = ComboBox.new(pModelListCameraBone, DefaultComboBoxEditor.new(pModelTextCameraBone))
+			cbCameraBone.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+			cbCameraBone.setToolTip("Bone to attach VR Camera to. If empty string use HMD.")
+			p.addWidget(cbCameraBone)
+			
+			CPEBone.new(pCharacterPreview, cbCameraBone)
+			
+			// camera position
+			p.addWidget(Label.new("Camera Position:", "Label.FormCaption"))
+			
+			pEditCameraPosition = EditVector.new(pCharacterConfiguration.getCameraPosition())
+			pEditCameraPosition.setToolTip("Attach position of camera relative to bone. Not used if bone is empty string.")
+			p.addWidget(pEditCameraPosition)
+			
+			// camera rotation
+			p.addWidget(Label.new("Camera Rotation:", "Label.FormCaption"))
+			
+			pEditCameraRotation = EditVector.new(pCharacterConfiguration.getCameraRotation())
+			pEditCameraRotation.setToolTip("Attach rotation in degrees of camera relative to bone. Not used if bone is empty string.")
+			p.addWidget(pEditCameraRotation)
+			
+			// camera coordinate system
+			CPECoordinateSystem.new(pCharacterPreview, pEditCameraPosition, pEditCameraRotation, cbCameraBone)
+			
+		end), BorderLayout.Area.right)
+		
+		// button line
+		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x), block Panel p
+			button = Button.new("Save", BlockActionListener.new(block ActionEvent e
+				saveAndClose()
+			end))
+			button.setDesignerSelector("Button.WindowCharacterConfiguration.Save")
+			p.addWidget(button)
+			
+			button = Button.new("Cancel", CloseDialog.new(this, false))
+			button.setDesignerSelector("Button.WindowCharacterConfiguration.Cancel")
+			p.addWidget(button)
+		end ), BorderLayout.Area.bottom )
+	end
+	
+	/** Update bone lists. */
+	public func void updateBoneLists()
+		var Array bones = Array.new()
+		
+		var Rig rig
+		
+		var BehaviorElement element = pCharacterPreview.getCharacterPreview()
+		if element != null
+			rig = ECBehaviorComponent.getInstanceIn(element).getComponent().getRig()
+		end
+		
+		if rig != null
+			var int i, count = rig.getBoneCount()
+			for i = 0 to count
+				bones.add(rig.boneGetName(i))
+			end
+			bones.sort(block String a, String b
+				return a.compareNoCase(b)
+			end)
+		end
+		
+		pModelListCameraBone.setContent(bones)
+	end
+	
+	/** Update move lists. */
+	public func void updateMoveLists()
+		var Array moves = Array.new()
+		
+		var Animation animation
+		
+		var BehaviorElement element = pCharacterPreview.getCharacterPreview()
+		if element != null
+			var ECBPreviewAnimation.Instance previewAnimation = ECBPreviewAnimation.getInstanceIn(element)
+			if previewAnimation != null
+				animation = previewAnimation.getAnimation()
+			end
+		end
+		
+		if animation != null
+			var int i, count = animation.getMoveCount()
+			for i = 0 to count
+				moves.add(animation.getMoveName(i))
+			end
+			moves.sort(block String a, String b
+				return a.compareNoCase(b)
+			end)
+		end
+		
+		pModelListMoveCalibrate.setContent(moves)
+	end
+	
+	/** Update calibration move. */
+	public func void updateMoveCalibrate()
+		var BehaviorElement element = pCharacterPreview.getCharacterPreview()
+		if element == null
+			return
+		end
+		
+		var ECBPreviewAnimation.Instance previewAnimation = ECBPreviewAnimation.getInstanceIn(element)
+		if previewAnimation != null
+			previewAnimation.setMove(pModelTextMoveCalibrate.getText())
+		end
+		
+		var ECBPreviewBones.Instance previewBones = ECBPreviewBones.getInstanceIn(element)
+		if previewBones != null
+			previewBones.bonePositionChanged()
+		end
+	end
+end

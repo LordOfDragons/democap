@@ -1,0 +1,290 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+
+pin Dragengine.Gui.Events
+pin Dragengine.Gui.Layouts
+pin Dragengine.Scenery
+pin Dragengine.Utils.StyledText.Definition
+pin Dragengine.Utils.StyledText.Definition.Nodes
+
+
+/**
+ * Character preview editor to edit position.
+ */
+class CPECoordinateSystem extends CharacterPreviewEditor
+	/** Interact handle listener. */
+	class InteractHandleListener extends DefaultMouseListener
+		private var CPECoordinateSystem pEditor
+		private var ECBPreviewCoordSystem.Handle pHandle
+		private var Point pDragOrigin
+		private var Matrix pViewMatrix
+		private var Matrix pCSMatrix
+		private var Matrix pInvCSMatrix
+		private var Vector pPlanePosition
+		private var Vector pPlaneNormal
+		private var Vector pInteractOrigin
+		private var Vector pInteractAxis
+		private var Vector pOriginPosition
+		
+		
+		
+		public func new(CPECoordinateSystem editor)
+			pEditor = editor
+		end
+		
+		public func void onButtonPress(MouseEvent event)
+			if pHandle != null or event.getButton() != InputEventMouseButton.left
+				return
+			end
+			
+			var Array hits = Array.new()
+			pEditor.getPreview().viewRayCollisions(hits, event.getPosition())
+			
+			var WidgetCharacterPreview.HitResult hit = hits.findCastable(block WidgetCharacterPreview.HitResult each
+				return each.getObject() castable ECBPreviewCoordSystem.Handle
+			end) cast WidgetCharacterPreview.HitResult
+			
+			if hit == null
+				return
+			end
+			
+			var ECBPreviewCoordSystem.Instance previewCoordSystem = pEditor.getPreviewCoordSystem()
+			
+			pHandle = hit.getObject() cast ECBPreviewCoordSystem.Handle
+			pDragOrigin = event.getPosition()
+			pCSMatrix = previewCoordSystem.getMatrix().toMatrix()
+			pInvCSMatrix = pCSMatrix.getInverse()
+			
+			pInteractOrigin = hit.getHitPoint().toVector()
+			
+			pOriginPosition = previewCoordSystem.getPosition()
+			
+			select pHandle
+			case ECBPreviewCoordSystem.Handle.moveX
+				pInteractAxis = pCSMatrix.getRightVector().normalize()
+				
+			case ECBPreviewCoordSystem.Handle.moveY
+				pInteractAxis = pCSMatrix.getUpVector().normalize()
+				
+			case ECBPreviewCoordSystem.Handle.moveZ
+				pInteractAxis = pCSMatrix.getViewVector().normalize()
+			end
+			
+			pViewMatrix = pEditor.getPreview().getCameraDirector().getCameraMatrix().toMatrix().normalize()
+			var Vector right = pViewMatrix.getRightVector()
+			var Vector view = pViewMatrix.getViewVector()
+			var Vector up = pViewMatrix.getUpVector()
+			
+			if pInteractAxis != null
+				pPlanePosition = pInteractOrigin
+				
+				if DEMath.fabs(up * pInteractAxis) < 0.707 // roughly 45 degrees
+					pPlaneNormal = (up % pInteractAxis).normalize()
+					
+				else
+					pPlaneNormal = (pInteractAxis % right).normalize()
+				end
+			end
+			
+			pEditor.getPreview().getInteractionPanel().captureMouse()
+		end
+		
+		public func void onMouseMove(MouseEvent event)
+			if pHandle == null or pPlanePosition == null
+				return
+			end
+			
+			// calculate intersecton of view ray with interaction plane
+			var ECBPreviewCoordSystem.Instance previewCoordSystem = pEditor.getPreviewCoordSystem()
+			var Matrix matrix = previewCoordSystem.getMatrix().toMatrix()
+			
+			var Vector rayOrigin = pViewMatrix.getPosition()
+			var Vector rayDirection = pEditor.getPreview().viewRayDirection(event.getPosition())
+			
+			var float denom = rayDirection * pPlaneNormal
+			if denom == 0
+				return
+			end
+			
+			var float lambda = ((pPlanePosition - rayOrigin) * pPlaneNormal) / denom
+			var Vector hitPoint = rayOrigin + rayDirection * lambda
+			
+			var float difference = 0
+			
+			// apply interaction
+			if pInteractAxis != null
+				difference = pInteractAxis * (hitPoint - pInteractOrigin)
+			end
+			
+			select pHandle
+			case ECBPreviewCoordSystem.Handle.moveX
+				pEditor.getEditPosition().setVector(pOriginPosition + pCSMatrix.getRightVector() * difference)
+				
+			case ECBPreviewCoordSystem.Handle.moveY
+				pEditor.getEditPosition().setVector(pOriginPosition + pCSMatrix.getUpVector() * difference)
+				
+			case ECBPreviewCoordSystem.Handle.moveZ
+				pEditor.getEditPosition().setVector(pOriginPosition + pCSMatrix.getViewVector() * difference)
+			end
+		end
+		
+		public func void onButtonRelease(MouseEvent event)
+			if pHandle == null or event.getButton() != InputEventMouseButton.left
+				return
+			end
+			
+			pHandle = null
+			pPlanePosition = null
+			pPlaneNormal = null
+			pInteractOrigin = null
+			pInteractAxis = null
+			pOriginPosition = null
+			
+			pEditor.getPreview().getInteractionPanel().releaseMouse()
+		end
+	end
+	
+	
+	
+	private var EditVector pEditPosition
+	private var EditVector pEditRotation
+	private var ComboBox pCBBone
+	private var InteractHandleListener pInteractHandleListener
+	
+	
+	
+	/** Create character preview editor. */
+	public func new(WidgetCharacterPreview preview, EditVector position, EditVector rotation,\
+	ComboBox bone) super(preview)
+		if position == null
+			throw ENullPointer.new("position")
+		end
+		pEditPosition = position
+		pEditRotation = rotation
+		pCBBone = bone
+		
+		position.addFocusListener(ReceiveFocusActivateEditor.new(this))
+		position.addActionListener(UpdateOnAction.new(this))
+	end
+	
+	
+	
+	/** Edit position widget. */
+	public func EditVector getEditPosition()
+		return pEditPosition
+	end
+	
+	/** Edit rotation widget or null. */
+	public func EditVector getEditRotation()
+		return pEditRotation
+	end
+	
+	/** Bone combo box or null. */
+	public func ComboBox getComboBoxBone()
+		return pCBBone
+	end
+	
+	
+	
+	/** Editor has been activated. */
+	public func void onActivate()
+		showCoordSystem()
+		updateCoordSystem()
+		
+		pInteractHandleListener = InteractHandleListener.new(this)
+		getPreview().getInteractionPanel().addMouseListener(pInteractHandleListener)
+	end
+	
+	/** Editor has been deactivated. */
+	public func void onDeactivate()
+		if pInteractHandleListener != null
+			getPreview().getInteractionPanel().removeMouseListener(pInteractHandleListener)
+			pInteractHandleListener = null
+		end
+		
+		hideCoordSystem()
+	end
+	
+	/** Model value changed. */
+	public func void onModelValueChanged()
+		if isActive()
+			updateCoordSystem()
+		end
+	end
+	
+	
+	
+	/** Show coordinate system. */
+	protected func void showCoordSystem()
+		var ECBPreviewCoordSystem.Instance coordSystem = getPreviewCoordSystem()
+		if coordSystem == null
+			return
+		end
+		
+		coordSystem.setVisibleMove(true)
+	end
+	
+	/** Hide coordinate system. */
+	protected func void hideCoordSystem()
+		var ECBPreviewCoordSystem.Instance coordSystem = getPreviewCoordSystem()
+		if coordSystem == null
+			return
+		end
+		
+		coordSystem.setVisibleMove(false)
+	end
+	
+	/** Update coordinate system. */
+	protected func void updateCoordSystem()
+		var ECBPreviewCoordSystem.Instance coordSystem = getPreviewCoordSystem()
+		if coordSystem == null
+			return
+		end
+		
+		coordSystem.setPosition(pEditPosition.getVector())
+		
+		if pEditRotation != null
+			coordSystem.setOrientation(Quaternion.newFromEuler(pEditRotation.getVector()))
+			
+		else
+			coordSystem.setOrientation(Quaternion.new())
+		end
+		
+		if pCBBone != null
+			if pCBBone.getEditor() != null
+				coordSystem.setBone(pCBBone.getEditor().getEditorValue() cast String)
+				
+			elif pCBBone.getSelectedElement() != -1
+				coordSystem.setBone(pCBBone.getModel().getAt(pCBBone.getSelectedElement()) cast String)
+				
+			else
+				coordSystem.setBone("")
+			end
+			
+		else
+			coordSystem.setBone("")
+		end
+	end
+end

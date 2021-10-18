@@ -1,0 +1,184 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior applying preview animation.
+ */
+class ECBPreviewAnimation extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBPreviewAnimation pECBehavior
+		private var ECBehaviorComponent.Instance pComponent
+		private var Animation pAnimation
+		private var AnimatorInstance pAnimatorInstance
+		private var String pMove
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBPreviewAnimation ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pMove = ""
+			pComponent = ecbehavior.getComponent().instance(element)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pComponent = null
+			super.dispose()
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			var ElementClass eclass = getElement().getClass()
+			
+			pAnimatorInstance = AnimatorInstance.new()
+			pAnimatorInstance.setComponent(pComponent.getComponent())
+			
+			pAnimation = pECBehavior.getAnimation().getAnimation(stub, eclass)
+			
+			recreateAnimator()
+			pAnimatorInstance.apply()
+		end
+		
+		
+		
+		/** Animation. */
+		public func Animation getAnimation()
+			return pAnimation
+		end
+		
+		/** Move to play. */
+		public func String getMove()
+			return pMove
+		end
+		
+		/** Set move to play. */
+		public func void setMove(String move)
+			if move.equals(pMove)
+				return
+			end
+			
+			pMove = move
+			recreateAnimator()
+			pAnimatorInstance.apply()
+		end
+		
+		
+		
+		/** Recreate animator. */
+		protected func void recreateAnimator()
+			pAnimatorInstance.setAnimator(null)
+			
+			var Animator animator = Animator.new()
+			animator.setAnimation(pAnimation)
+			if pComponent.getComponent() != null
+				animator.setRig(pComponent.getComponent().getRig())
+			end
+			
+			if not pMove.empty()
+				var ARAnimation rule = ARAnimation.new()
+				rule.setMoveName(pMove)
+				animator.addRule(rule)
+			end
+			
+			pAnimatorInstance.setAnimator(animator)
+		end
+	end
+	
+	
+	
+	private var ECBehaviorComponent pComponent
+	private var ECPAnimation pAnimation
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorComponent component) super(eclass)
+		if component == null
+			throw ENullPointer.new("component")
+		end
+		
+		var String prefix = "previewAnimation."
+		
+		pComponent = component
+		
+		pAnimation = ECPAnimation.new(prefix + "animation", "")
+		eclass.addProperty(pAnimation)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pComponent = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Component behavior. */
+	public func ECBehaviorComponent getComponent()
+		return pComponent
+	end
+	
+	/** Animation. */
+	public func ECPAnimation getAnimation()
+		return pAnimation
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance for element or null. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBPreviewAnimation getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBPreviewAnimation each
+			return true
+		end) cast ECBPreviewAnimation
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

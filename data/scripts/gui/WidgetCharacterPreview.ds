@@ -127,25 +127,15 @@ class WidgetCharacterPreview extends Panel
 		end
 	end
 	
-	class ElementClicked extends ClickedActionListener
-		private var WidgetCharacterPreview pWidget
-		
-		public func new(WidgetCharacterPreview widget)
-			pWidget = widget
-		end
-		
-		public func void onAction()
-			pWidget.onElementClicked()
-		end
-	end
-	
 	class HitResult
 		private var Object pObject
 		private var float pDistance
+		private var DVector pHitPoint
 		
-		public func new(Object object, float distance)
+		public func new(Object object, float distance, DVector hitPoint)
 			pObject = object
 			pDistance = distance
+			pHitPoint = hitPoint
 		end
 		
 		public func Object getObject()
@@ -154,6 +144,10 @@ class WidgetCharacterPreview extends Panel
 		
 		public func float getDistance()
 			return pDistance
+		end
+		
+		public func DVector getHitPoint()
+			return pHitPoint
 		end
 		
 		public func int compare(Object obj)
@@ -168,9 +162,13 @@ class WidgetCharacterPreview extends Panel
 	
 	class CollectHits implements ColliderListener
 		private var Array pHits
+		private var DVector pRayOrigin
+		private var DVector pRayDirection
 		
-		public func new(Array hits)
+		public func new(Array hits, DVector rayOrigin, Vector rayDirection)
 			pHits = hits
+			pRayOrigin = rayOrigin
+			pRayDirection = DVector.new(rayDirection)
 		end
 		
 		public func bool canHitCollider(Collider owner, Collider collider)
@@ -180,7 +178,8 @@ class WidgetCharacterPreview extends Panel
 		public func void collisionResponse(Collider owner, CollisionInfo info)
 			var Collider collider = info.getCollider()
 			if collider != null and collider.getOwner() != null
-				pHits.add(HitResult.new(collider.getOwner(), info.getDistance()))
+				pHits.add(HitResult.new(collider.getOwner(), info.getDistance(),\
+					pRayOrigin + pRayDirection * info.getDistance()))
 			end
 		end
 		
@@ -230,6 +229,7 @@ class WidgetCharacterPreview extends Panel
 	public func void dispose()
 		pListeners = null
 		
+		setEditor(null)
 		stopFrameUpdater()
 		
 		if pCharacterPreview != null
@@ -240,7 +240,6 @@ class WidgetCharacterPreview extends Panel
 		pWorldRenderer = null
 		pPanelHud = null
 		pPreviewPreloader = null
-		pEditor = null
 		
 		super.dispose()
 	end
@@ -329,17 +328,31 @@ class WidgetCharacterPreview extends Panel
 		end
 	end
 	
+	/** Top most panel to add interaction listeners to. */
+	public func Panel getInteractionPanel()
+		return pPanelHud
+	end
 	
+	
+	
+	/** Ray direction. */
+	public func Vector viewRayDirection(Point point)
+		return pCameraDirector.getCamera().backProject(pWorldRenderer.getSize(), point)
+	end
 	
 	/** Detect collisions along view direction. Stores sorted HitResult into list. */
 	public func void viewRayCollisions(Array list)
+		viewRayCollisions(list, getDesktop().getMouseLocation() - pWorldRenderer.getDesktopPosition())
+	end
+	
+	/** Detect collisions along view direction. Stores sorted HitResult into list. */
+	public func void viewRayCollisions(Array list, Point point)
 		var CollisionFilter collisionFilter = CollisionFilter.new(LayerMask.newWith(0))
-		var CollectHits listener = CollectHits.new(list)
 		var DVector rayOrigin = pCameraDirector.getCamera().getPosition()
-		var Vector rayDirection = pCameraDirector.getCamera().backProject(pWorldRenderer.getSize(), \
-			getDesktop().getMouseLocation() - pWorldRenderer.getDesktopPosition())
+		var Vector rayDirection = pCameraDirector.getCamera().backProject(pWorldRenderer.getSize(), point) * 100
+		var CollectHits listener = CollectHits.new(list, rayOrigin, rayDirection)
 		
-		pGameWorld.getWorld().rayHits(rayOrigin, rayDirection * 100, listener, collisionFilter)
+		pGameWorld.getWorld().rayHits(rayOrigin, rayDirection, listener, collisionFilter)
 		list.sort()
 	end
 	
@@ -382,23 +395,40 @@ class WidgetCharacterPreview extends Panel
 		// regular game updates
 		pCameraDirector.update(elapsed)
 		pGameWorld.update(elapsed)
-		
-		// tool tip update
-		updateToolTip()
 	end
 	
-	/** Element clicked. */
-	public func void onElementClicked()
-		if pEditor == null
-			return
-		end
+	/**
+	 * Create styled text definition for tool tip.
+	 * 
+	 * Adds styles:
+	 * - "default": Default text using "Label.WindowToolTip" widget designer as base
+	 * - "selected": Based on "default" using red color
+	 * - "chain": Based on "default" using cyan color
+	 * 
+	 * Default style is "default"
+	 */
+	public func StyledTextDefinition createToolTipStyledTextDefinition()
+		var StyledTextDefinition std = StyledTextDefinition.new()
+		var GuiTheme guiTheme = getGuiTheme()
 		
-		var Array hits = Array.new()
-		viewRayCollisions(hits)
+		// page width indicates the maximum width to use before breaking words.
+		// here we use a huge size to avoid line breaking
+		std.setPageSize(Point.new(300, 100000))
 		
-		if hits.getCount() > 0
-			pEditor.selectElement(hits)
-		end
+		var STDStyle baseStyle = STDStyle.new("default", (guiTheme.getWidgetDesigner("Label.WindowToolTip") \
+			cast DefaultLabelDesigner).getLabelDesignNormal())
+		std.addStyle(baseStyle)
+		std.setDefaultStyle(baseStyle)
+		
+		var STDStyle styleSelected = STDStyle.new("selected", baseStyle)
+		styleSelected.setTextColor(Color.red)
+		std.addStyle(styleSelected)
+		
+		var STDStyle styleChain = STDStyle.new("chain", baseStyle)
+		styleChain.setTextColor(Color.new(0, 1, 1))
+		std.addStyle(styleChain)
+		
+		return std
 	end
 	
 	
@@ -455,8 +485,6 @@ class WidgetCharacterPreview extends Panel
 			p.addMouseListener(ZoomCameraMouseListener.new(\
 				pCameraDirector, InputEventMouseButton.right, InputEventModifier.control))
 			
-			p.addMouseListener(ElementClicked.new(this))
-			
 			image = DisplayImage.new(Image.new("/content/gui/images/icon_help_48.png"), "TouchField")
 			image.addMouseListener(ShowHelpClicked.new(this))
 			image.setToolTip("Help")
@@ -494,81 +522,10 @@ class WidgetCharacterPreview extends Panel
 		stub.setPropertyValueFor("component.model", pPreviewPreloader.pathModel)
 		stub.setPropertyValueFor("component.skin", pPreviewPreloader.pathSkin)
 		stub.setPropertyValueFor("component.rig", pPreviewPreloader.pathRig)
+		stub.setPropertyValueFor("previewAnimation.animation", pPreviewPreloader.pathAnimation)
 		
 		pCharacterPreview = stub.createElement() cast BehaviorElement
 		pGameWorld.addElement(pCharacterPreview)
-	end
-	
-	/** Update tool tip. */
-	protected func void updateToolTip()
-		var Array hits = Array.new()
-		viewRayCollisions(hits)
-		
-		var StyledTextDefinition std = createToolTipStyledTextDefinition()
-		var ECBPreviewBones.Instance.Bone bone
-		var STDNText nodeText
-		
-		hits.forEach(block WidgetCharacterPreview.HitResult each
-			if each.getObject() castable ECBPreviewBones.Instance.Bone
-				bone = each.getObject() cast ECBPreviewBones.Instance.Bone
-				
-				nodeText = STDNText.new()
-				
-				if bone.color.equals(CharacterPreviewEditor.previewBoneColorSelected)
-					nodeText.setStyle("selected")
-					
-				elif bone.color.equals(CharacterPreviewEditor.previewBoneColorChain)
-					nodeText.setStyle("chain")
-					
-				else
-					nodeText.setStyle("default")
-				end
-				
-				nodeText.addSpan(STDNTextSpan.new("- " + bone.name))
-				std.addNode(nodeText)
-			end
-		end)
-		
-		if std.getNodeCount() > 0
-			setToolTip(std)
-			
-		else
-			setToolTip(null)
-		end
-	end
-	
-	/**
-	 * Create styled text definition for tool tip.
-	 * 
-	 * Adds styles:
-	 * - "default": Default text using "Label.WindowToolTip" widget designer as base
-	 * - "selected": Based on "default" using red color
-	 * - "chain": Based on "default" using cyan color
-	 * 
-	 * Default style is "default"
-	 */
-	protected func StyledTextDefinition createToolTipStyledTextDefinition()
-		var StyledTextDefinition std = StyledTextDefinition.new()
-		var GuiTheme guiTheme = getGuiTheme()
-		
-		// page width indicates the maximum width to use before breaking words.
-		// here we use a huge size to avoid line breaking
-		std.setPageSize(Point.new(300, 100000))
-		
-		var STDStyle baseStyle = STDStyle.new("default", (guiTheme.getWidgetDesigner("Label.WindowToolTip") \
-			cast DefaultLabelDesigner).getLabelDesignNormal())
-		std.addStyle(baseStyle)
-		std.setDefaultStyle(baseStyle)
-		
-		var STDStyle styleSelected = STDStyle.new("selected", baseStyle)
-		styleSelected.setTextColor(Color.red)
-		std.addStyle(styleSelected)
-		
-		var STDStyle styleChain = STDStyle.new("chain", baseStyle)
-		styleChain.setTextColor(Color.new(0, 1, 1))
-		std.addStyle(styleChain)
-		
-		return std
 	end
 	
 	/** Clear editor changes. */
@@ -581,5 +538,7 @@ class WidgetCharacterPreview extends Panel
 		if previewBones != null
 			previewBones.setAllBoneColor(CharacterPreviewEditor.previewBoneColorDefault)
 		end
+		
+		setToolTip(null)
 	end
 end

@@ -1,0 +1,360 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior displaying coordinate system in character preview.
+ */
+class ECBPreviewCoordSystem extends DefaultECBehavior
+	/** Handle. */
+	enum Handle
+		moveX
+		moveY
+		moveZ
+		rotateX
+		rotateY
+		rotateZ
+		scaleX
+		scaleY
+		scaleZ
+	end
+	
+	
+	
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBPreviewCoordSystem pECBehavior
+		private var ECBehaviorComponent.Instance pComponent
+		private var Model pModel
+		private var DebugDrawer pDebugDrawerMove
+		private var DebugDrawer pDebugDrawerRotate
+		private var DebugDrawer pDebugDrawerScale
+		private var ColliderVolume pColliderMoveX
+		private var ColliderVolume pColliderMoveY
+		private var ColliderVolume pColliderMoveZ
+		private var String pBone
+		private var Vector pPosition
+		private var Quaternion pOrientation
+		private var bool pVisibleMove
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBPreviewCoordSystem ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pBone = ""
+			pPosition = Vector.new()
+			pOrientation = Quaternion.new()
+			pVisibleMove = false
+			
+			pComponent = ecbehavior.getComponent().instance(element)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pComponent = null
+			super.dispose()
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			var ElementClass eclass = getElement().getClass()
+			
+			pModel = pECBehavior.getModel().getModel(stub, eclass)
+			
+			pDebugDrawerMove = DebugDrawer.new()
+			pDebugDrawerMove.setPosition(stub.getPosition())
+			pDebugDrawerMove.setOrientation(Quaternion.newFromEuler(stub.getRotation()))
+			
+			createCoordSystem()
+		end
+		
+		
+		
+		/** Debug drawer. */
+		public func DebugDrawer getDebugDrawerMove()
+			return pDebugDrawerMove
+		end
+		
+		/** Model. */
+		public func Model getModel()
+			return pModel
+		end
+		
+		/** Set move coordinate system visibility. */
+		public func void setVisibleMove(bool visible)
+			if visible == pVisibleMove
+				return
+			end
+			pVisibleMove = visible
+			updateCoordSystemVisibility()
+		end
+		
+		/** Bone name or empty string. */
+		public func String getBone()
+			return pBone
+		end
+		
+		/** Set bone name or empty string. */
+		public func void setBone(String bone)
+			if bone.equals(pBone)
+				return
+			end
+			pBone = bone
+			updateCoordSystemGeometry()
+		end
+		
+		/** Position relative to element. */
+		public func Vector getPosition()
+			return pPosition
+		end
+		
+		/** Set position relative to element. */
+		public func void setPosition(Vector position)
+			if position.equals(pPosition)
+				return
+			end
+			pPosition = position
+			updateCoordSystemGeometry()
+		end
+		
+		/** Orientation relative to element. */
+		public func Quaternion getOrientation()
+			return pOrientation
+		end
+		
+		/** Set orientation relative to element. */
+		public func void setOrientation(Quaternion orientation)
+			if orientation.equals(pOrientation)
+				return
+			end
+			pOrientation = orientation
+			updateCoordSystemGeometry()
+		end
+		
+		/** Get world coordinate system matrix. */
+		public func DMatrix getMatrix()
+			var DMatrix matrix = Matrix.newWorld(pPosition, pOrientation).toDMatrix()
+			if not pBone.empty()
+				matrix = matrix * pComponent.getComponent().getBoneMatrix(pBone).toDMatrix()
+			end
+			return matrix * getElement().getElementMatrix()
+		end
+		
+		
+		
+		/** Element has been added to game world. */
+		public func void addToGameWorld()
+			var World world = getElement().getGameWorld().getWorld()
+			
+			updateCoordSystemShapes()
+			updateCoordSystemGeometry()
+			updateCoordSystemVisibility()
+			
+			world.addDebugDrawer(pDebugDrawerMove)
+			
+			world.addCollider(pColliderMoveX)
+			world.addCollider(pColliderMoveY)
+			world.addCollider(pColliderMoveZ)
+		end
+		
+		/** Element is removed from game world. */
+		public func void removeFromGameWorld()
+			var World world = getElement().getGameWorld().getWorld()
+			
+			world.removeDebugDrawer(pDebugDrawerMove)
+			
+			world.removeCollider(pColliderMoveX)
+			world.removeCollider(pColliderMoveY)
+			world.removeCollider(pColliderMoveZ)
+		end
+		
+		/** Element position, orientation or scale changed. */
+		public func void geometryChanged()
+			updateCoordSystemGeometry()
+		end
+		
+		/** Element state changed. */
+		public func void stateChanged()
+			updateCoordSystemVisibility()
+		end
+		
+		
+		
+		/** Create coordinate system. */
+		protected func void createCoordSystem()
+			pDebugDrawerMove.setXRay(true)
+			pDebugDrawerMove.setShapeCount(3)
+			
+			pDebugDrawerMove.shapeSetEdgeColor(0, Color.red)
+			pDebugDrawerMove.shapeSetFillColor(0, Color.new(Color.red, 0.25))
+			
+			pDebugDrawerMove.shapeSetEdgeColor(1, Color.green)
+			pDebugDrawerMove.shapeSetFillColor(1, Color.new(Color.green, 0.25))
+			
+			pDebugDrawerMove.shapeSetEdgeColor(2, Color.blue)
+			pDebugDrawerMove.shapeSetFillColor(2, Color.new(Color.blue, 0.25))
+			
+			pColliderMoveX = createCoordSystemCollider()
+			pColliderMoveX.setOwner(Handle.moveX)
+			
+			pColliderMoveY = createCoordSystemCollider()
+			pColliderMoveY.setOwner(Handle.moveY)
+			
+			pColliderMoveZ = createCoordSystemCollider()
+			pColliderMoveZ.setOwner(Handle.moveZ)
+		end
+		
+		/** Create coordinate system collider. */
+		protected func ColliderVolume createCoordSystemCollider()
+			var ColliderVolume collider = ColliderVolume.new()
+			collider.setCollisionFilter(CollisionFilter.new(LayerMask.newWith(0)))
+			collider.setResponseType(CollisionResponse.none)
+			collider.setUseLocalGravity(true)
+			return collider
+		end
+		
+		/** Update coordinate system shapes. */
+		protected func void updateCoordSystemShapes()
+			var ShapeList shape = ShapeList.new()
+			var float scale = 0.1
+			
+			var Matrix matrix = Matrix.newScaling(0.1, 0.1, 0.1)
+			pDebugDrawerMove.shapeSetFacesFromModel(0, pModel, "move x", matrix)
+			pDebugDrawerMove.shapeSetFacesFromModel(1, pModel, "move y", matrix)
+			pDebugDrawerMove.shapeSetFacesFromModel(2, pModel, "move z", matrix)
+			
+			shape.addBox(Vector.new(0.25 * scale, 0, 0), Vector.new(0.25, 0.05, 0.05) * scale)
+			pColliderMoveX.setShape(shape)
+			shape.removeAllShapes()
+			
+			shape.addBox(Vector.new(0, 0.25 * scale, 0), Vector.new(0.05, 0.25, 0.05) * scale)
+			pColliderMoveY.setShape(shape)
+			shape.removeAllShapes()
+			
+			shape.addBox(Vector.new(0, 0, 0.25 * scale), Vector.new(0.05, 0.05, 0.25) * scale)
+			pColliderMoveZ.setShape(shape)
+			shape.removeAllShapes()
+		end
+		
+		/** Update coordinate system geometry. */
+		protected func void updateCoordSystemGeometry()
+			var DMatrix matrix = getMatrix()
+			var DVector position = matrix.getPosition()
+			var Quaternion orientation = matrix.toQuaternion()
+			
+			pDebugDrawerMove.setPosition(position)
+			pDebugDrawerMove.setOrientation(orientation)
+			
+			pColliderMoveX.setGeometry(position, orientation)
+			pColliderMoveY.setGeometry(position, orientation)
+			pColliderMoveZ.setGeometry(position, orientation)
+		end
+		
+		/** Update coordinate system visibility. */
+		protected func void updateCoordSystemVisibility()
+			var bool visible = getElement().getVisible()
+			
+			var bool visibleMove = visible and pVisibleMove
+			pDebugDrawerMove.setVisible(visibleMove)
+			pColliderMoveX.setEnabled(visibleMove)
+			pColliderMoveY.setEnabled(visibleMove)
+			pColliderMoveZ.setEnabled(visibleMove)
+		end
+	end
+	
+	
+	
+	private var ECBehaviorComponent pComponent
+	private var ECPModel pModel
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorComponent component) super(eclass)
+		if component == null
+			throw ENullPointer.new("component")
+		end
+		
+		var String prefix = "previewCoordSystem."
+		
+		pComponent = component
+		
+		pModel = ECPModel.new(prefix + "model", "/content/models/coordSystem/coordSystem.demodel")
+		eclass.addProperty(pModel)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pComponent = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Component behavior. */
+	public func ECBehaviorComponent getComponent()
+		return pComponent
+	end
+	
+	/** Model. */
+	public func ECPModel getModel()
+		return pModel
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance for element or null. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBPreviewCoordSystem getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBPreviewCoordSystem each
+			return true
+		end) cast ECBPreviewCoordSystem
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
