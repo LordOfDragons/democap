@@ -1,0 +1,219 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer bend panel.
+ */
+class WCCPMTBend extends WCCPanelMotionTransfer
+	private var DefaultListModel pModelListTargetBone
+	private var DefaultTextModel pModelTextTargetBone
+	private var DefaultListModel pModelListBaseBone
+	private var DefaultTextModel pModelTextBaseBone
+	private var DefaultListModel pModelListTipBone
+	private var DefaultTextModel pModelTextTipBone
+	private var DefaultTextModel pModelBoneCount
+	private var WCCPMTTracker pEditTargetTracker
+	private var WCCPMTTracker pEditBaseTracker
+	private var EditVector2 pEditScaleRotation
+	
+	
+	
+	/** Create window. */
+	public func new(WindowCharacterConfiguration window) super(window)
+		pModelTypeName.setText("Bend")
+		
+		pModelListTargetBone = DefaultListModel.new()
+		pModelTextTargetBone = DefaultTextModel.new()
+		pModelListBaseBone = DefaultListModel.new()
+		pModelTextBaseBone = DefaultTextModel.new()
+		pModelListTipBone = DefaultListModel.new()
+		pModelTextTipBone = DefaultTextModel.new()
+		pModelBoneCount = DefaultTextModel.new()
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		super.dispose()
+		
+		pModelListTargetBone = null
+		pModelTextTargetBone = null
+		pModelListBaseBone = null
+		pModelTextBaseBone = null
+		pModelListTipBone = null
+		pModelTextTipBone = null
+		pModelBoneCount = null
+		pEditTargetTracker = null
+		pEditBaseTracker = null
+		pEditScaleRotation = null
+	end
+	
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	public func void loadValues()
+		super.loadValues()
+		
+		if pMotionTransfer != null
+			var MotionTransferBend mtb = pMotionTransfer cast MotionTransferBend
+			pModelTextTargetBone.setText(mtb.getTargetBone())
+			pModelTextBaseBone.setText(mtb.getBaseBone())
+			pModelTextTipBone.setText(mtb.getTipBone())
+			pModelBoneCount.setText(mtb.getBoneCount().toString())
+			pEditTargetTracker.setTracker(mtb.getTargetTracker())
+			pEditTargetTracker.loadValues()
+			pEditBaseTracker.setTracker(mtb.getBaseTracker())
+			pEditBaseTracker.loadValues()
+			pEditScaleRotation.setVector2(mtb.getScaleRotation())
+			
+		else
+			pModelTextTargetBone.setText("")
+			pModelTextBaseBone.setText("")
+			pModelTextTipBone.setText("")
+			pModelBoneCount.setText("")
+			pEditTargetTracker.setTracker(null)
+			pEditBaseTracker.setTracker(null)
+			pEditScaleRotation.setVector2(Vector2.new())
+		end
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	public func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		super.saveValues()
+		
+		var MotionTransferBend mtb = pMotionTransfer cast MotionTransferBend
+		
+		mtb.setTargetBone(pModelTextTargetBone.getText())
+		mtb.setBaseBone(pModelTextBaseBone.getText())
+		mtb.setTipBone(pModelTextTipBone.getText())
+		mtb.setBoneCount(pModelBoneCount.getText().toInt())
+		pEditTargetTracker.saveValues()
+		pEditBaseTracker.saveValues()
+		mtb.setScaleRotation(pEditScaleRotation.getVector2())
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferBend
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var TextField textField
+		var ComboBox comboBox
+		var Button button
+		var ListBox listBox
+		
+		super.createContent()
+		
+		// target bone
+		pPanelForm.addWidget(Label.new("Target Bone:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelListTargetBone, DefaultComboBoxEditor.new(pModelTextTargetBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Target bone not part of chain. Bending angle is calculate between target and base bone.")
+		pPanelForm.addWidget(comboBox)
+		
+		// base bone
+		pPanelForm.addWidget(Label.new("Base Bone:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelListBaseBone, DefaultComboBoxEditor.new(pModelTextBaseBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Base bone not part of the chain. Bending angle is calculate between target and base bone.")
+		pPanelForm.addWidget(comboBox)
+		
+		// tip bone
+		pPanelForm.addWidget(Label.new("Tip Bone:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelListTipBone, DefaultComboBoxEditor.new(pModelTextTipBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Tip of bone chain.")
+		pPanelForm.addWidget(comboBox)
+		
+		// bone count
+		pPanelForm.addWidget(Label.new("Bone Count:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelBoneCount, 4)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
+		textField.setToolTip("Count of bones in chain starting at Tip Bone moving along parent bones.")
+		pPanelForm.addWidget(textField)
+		
+		// scale rotation
+		pPanelForm.addWidget(Label.new("Scale Rotation:", "Label.FormCaption"))
+		
+		pEditScaleRotation = EditVector2.new()
+		pEditScaleRotation.setToolTip("Per component scaling to apply to bending angle before modifying chain")
+		pPanelForm.addWidget(pEditScaleRotation)
+		
+		// trackers
+		pEditTargetTracker = WCCPMTTracker.new(this)
+		pEditTargetTracker.setDesignerSelector("Panel.WMPanelConfiguration.MotionTransferTracker.Target")
+		addWidget(pEditTargetTracker)
+		
+		pEditBaseTracker = WCCPMTTracker.new(this)
+		pEditBaseTracker.setDesignerSelector("Panel.WMPanelConfiguration.MotionTransferTracker.Base")
+		addWidget(pEditBaseTracker)
+	end
+	
+	/** Update bone lists. */
+	public func void updateBoneLists(Array bones)
+		pModelListTargetBone.setContent(bones)
+		pModelListBaseBone.setContent(bones)
+		pModelListTipBone.setContent(bones)
+	end
+	
+	/** Update slot lists. */
+	public func void updateSlotLists(Array slots)
+		pEditTargetTracker.updateSlotLists(slots)
+		pEditBaseTracker.updateSlotLists(slots)
+	end
+	
+	/** Motion transfer changed. */
+	protected func void onMotionTransferChanged()
+		if pEditTargetTracker != null
+			pEditTargetTracker.setTracker(null)
+		end
+		if pEditBaseTracker != null
+			pEditBaseTracker.setTracker(null)
+		end
+	end
+end

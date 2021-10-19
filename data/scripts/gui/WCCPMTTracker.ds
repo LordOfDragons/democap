@@ -1,0 +1,176 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer tracker panel.
+ */
+class WCCPMTTracker extends Panel
+	private var WCCPanelMotionTransfer pPanelMotionTransfer
+	private var MotionTransferTracker pTracker
+	
+	private var DefaultListModel pModelListSlot
+	private var DefaultTextModel pModelTextSlot
+	private var EditVector pEditOffsetPosition
+	private var EditVector pEditOffsetRotation
+	private var DefaultListModel pModelAutoTransform
+	
+	
+	
+	/** Create window. */
+	public func new(WCCPanelMotionTransfer panelMotionTransfer)
+		pPanelMotionTransfer = panelMotionTransfer
+		
+		pModelListSlot = DefaultListModel.new()
+		pModelTextSlot = DefaultTextModel.new()
+		pModelAutoTransform = DefaultListModel.new(MotionTransferTracker.AutoTransform.all().toArray().sorted())
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		setTracker(null)
+		
+		pModelListSlot = null
+		pModelTextSlot = null
+		pEditOffsetPosition = null
+		pEditOffsetRotation = null
+		pModelAutoTransform = null
+		
+		pPanelMotionTransfer = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Tracker or null. */
+	public func MotionTransferTracker getTracker()
+		return pTracker
+	end
+	
+	/** Set tracker or null. */
+	public func void setTracker(MotionTransferTracker tracker)
+		if tracker == pTracker
+			return
+		end
+		
+		saveValues()
+		pTracker = tracker
+		loadValues()
+	end
+	
+	
+	
+	/** Load values from tracker object if present into edit widgets. */
+	public func void loadValues()
+		if pTracker != null
+			pModelTextSlot.setText(pTracker.getSlot())
+			pEditOffsetPosition.setVector(pTracker.getOffsetPosition())
+			pEditOffsetRotation.setVector(pTracker.getOffsetRotation())
+			pModelAutoTransform.setSelected(pModelAutoTransform.indexOf(pTracker.getAutoTransform()))
+			
+		else
+			pModelTextSlot.setText("")
+			pEditOffsetPosition.setVector(Vector.new())
+			pEditOffsetRotation.setVector(Vector.new())
+			pModelAutoTransform.setSelected(pModelAutoTransform.indexOf(MotionTransferTracker.AutoTransform.full))
+		end
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	public func void saveValues()
+		if pTracker == null
+			return
+		end
+		
+		pTracker.setSlot(pModelTextSlot.getText())
+		pTracker.setOffsetPosition(pEditOffsetPosition.getVector())
+		pTracker.setOffsetRotation(pEditOffsetRotation.getVector())
+		pTracker.setAutoTransform(pModelAutoTransform.getAt(pModelAutoTransform.getSelected())\
+			cast MotionTransferTracker.AutoTransform)
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var WidgetCharacterPreview preview = pPanelMotionTransfer.getWindowCharacterConfiguration().getCharacterPreview()
+		var TextField textField
+		var ComboBox comboBox
+		var Button button
+		var ListBox listBox
+		
+		setLayout(FormLayout.new(true, 10, 2))
+		
+		// slot
+		addWidget(Label.new("Slot:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelListSlot, DefaultComboBoxEditor.new(pModelTextSlot))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Tracker slot to use.")
+		addWidget(comboBox)
+		
+		// position
+		var Label labelPosition = Label.new("Position:", "Label.FormCaption")
+		addWidget(labelPosition)
+		
+		pEditOffsetPosition = EditVector.new()
+		pEditOffsetPosition.setToolTip("Position relative to slot.")
+		addWidget(pEditOffsetPosition)
+		
+		// rotation
+		var Label labelRotation = Label.new("Rotation:", "Label.FormCaption")
+		addWidget(labelRotation)
+		
+		pEditOffsetRotation = EditVector.new()
+		pEditOffsetRotation.setToolTip("Rotation in degrees relative to slot.")
+		addWidget(pEditOffsetRotation)
+		
+// 		CPECoordinateSystem.new(preview, labelPosition, pEditOffsetPosition, labelRotation, pEditOffsetRotation, null)
+		
+		// auto transform
+		addWidget(Label.new("Auto Transform:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelAutoTransform)
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("How to apply the offsets. Apply position and rotation (full), "\
+			+ "only rotation (orientation) or none at all (none).")
+		addWidget(comboBox)
+	end
+	
+	/** Update slot lists. */
+	public func void updateSlotLists(Array slots)
+		pModelListSlot.setContent(slots)
+	end
+end

@@ -263,6 +263,8 @@ class WindowCharacterConfiguration extends WindowDialog
 		show(window, false, WindowModal.Placement.desktop)
 		
 		pCharacterPreview.setEditor(null)
+		
+		updateTrackerSlotLists()
 	end
 	
 	/** Dispose of window. */
@@ -479,6 +481,7 @@ class WindowCharacterConfiguration extends WindowDialog
 				p2.addWidget(switcher)
 				
 				pPanelsMotionTransfer.add(WCCPMTAnimation.new(this))
+				pPanelsMotionTransfer.add(WCCPMTBend.new(this))
 				
 				switcher.addWidget(Panel.new()) // empty
 				pPanelsMotionTransfer.forEach(block WCCPanelMotionTransfer each
@@ -522,6 +525,10 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 		
 		pModelListCameraBone.setContent(bones)
+		
+		pPanelsMotionTransfer.forEach(block WCCPanelMotionTransfer each
+			each.updateBoneLists(bones)
+		end)
 	end
 	
 	/** Update move lists. */
@@ -611,6 +618,7 @@ class WindowCharacterConfiguration extends WindowDialog
 						pModelTrackerSlots.add(slot)
 						pModelTrackerSlots.sort()
 						pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(slot))
+						updateTrackerSlotLists()
 					end
 				end
 			end))
@@ -638,6 +646,7 @@ class WindowCharacterConfiguration extends WindowDialog
 						pModelTrackerSlots.add(slot)
 						pModelTrackerSlots.sort()
 						pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(slot))
+						updateTrackerSlotLists()
 					end
 				end
 			end))
@@ -657,6 +666,7 @@ class WindowCharacterConfiguration extends WindowDialog
 			WindowDialog.BlockResultListener.new(block bool result
 				if result
 					pModelTrackerSlots.remove(slot)
+					updateTrackerSlotLists()
 				end
 			end))
 	end
@@ -680,7 +690,19 @@ class WindowCharacterConfiguration extends WindowDialog
 		var int index = pModelTrackerSlots.indexOf(getTrackerSlot())
 		if index != -1
 			pModelTrackerSlots.notifyContentChanged(index, index)
+			updateTrackerSlotLists()
 		end
+	end
+	
+	/** Update tracker slot lists. */
+	public func void updateTrackerSlotLists()
+		var Array slots = pModelTrackerSlots.getContent().map(block CharacterTrackerSlot each
+			return each.getName()
+		end)
+		
+		pPanelsMotionTransfer.forEach(block WCCPanelMotionTransfer each
+			each.updateSlotLists(slots)
+		end)
 	end
 	
 	

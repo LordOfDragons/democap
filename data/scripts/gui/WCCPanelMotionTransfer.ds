@@ -59,6 +59,7 @@ class WCCPanelMotionTransfer extends Panel
 	protected var MotionTransfer pMotionTransfer
 	protected var DefaultTextModel pModelTypeName
 	protected var DefaultTextModel pModelName
+	protected var Panel pPanelForm
 	
 	
 	
@@ -75,6 +76,7 @@ class WCCPanelMotionTransfer extends Panel
 		pModelTypeName = null
 		pModelName = null
 		pWindowCharacterConfiguration = null
+		pPanelForm = null
 		super.dispose()
 	end
 	
@@ -95,7 +97,10 @@ class WCCPanelMotionTransfer extends Panel
 		if motionTransfer == pMotionTransfer
 			return
 		end
+		
 		pMotionTransfer = motionTransfer
+		onMotionTransferChanged()
+		
 		loadValues()
 	end
 	
@@ -129,23 +134,36 @@ class WCCPanelMotionTransfer extends Panel
 	public func void updateMoveLists(Array moves)
 	end
 	
+	/** Update bone lists. */
+	public func void updateBoneLists(Array bones)
+	end
+	
+	/** Update slot lists. */
+	public func void updateSlotLists(Array slots)
+	end
+	
 	
 	
 	/** Create window content. */
 	protected func void createContent()
-		setLayout(FormLayout.new(true, 10, 2))
+		setLayout(FlowLayout.new(LayoutAxis.y, 5))
 		
-		// type
-		addWidget(Label.new("", "Label.FormCaption"))
 		addWidget(Label.new(pModelTypeName, "Label.FormCaption"))
 		
-		// name
-		addWidget(Label.new("Name:", "Label.FormCaption"))
-		
-		var TextField textField = TextField.new(pModelName, 15)
-		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-		textField.setToolTip("Motion transfer name. Not required to be unique.")
-		textField.addFocusListener(NameChangedListener.new(this, pModelName))
-		addWidget(textField)
+		pPanelForm = Panel.new(FormLayout.new(true, 10, 2), block Panel p
+			// name
+			p.addWidget(Label.new("Name:", "Label.FormCaption"))
+			
+			var TextField textField = TextField.new(pModelName, 15)
+			textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+			textField.setToolTip("Motion transfer name. Not required to be unique.")
+			textField.addFocusListener(NameChangedListener.new(this, pModelName))
+			p.addWidget(textField)
+		end)
+		addWidget(pPanelForm)
+	end
+	
+	/** Motion transfer changed. */
+	protected func void onMotionTransferChanged()
 	end
 end
