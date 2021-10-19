@@ -69,6 +69,7 @@ class CharacterTrackerSlot
 		pPosition = Vector.new()
 		pRotation = Vector.new()
 		pMatrix = Matrix.new()
+		pInputDeviceType = InputDeviceType.vrTracker
 		pInputDeviceID = ""
 		pOffsetPosition = Vector.new()
 		pOffsetRotation = Vector.new()
@@ -180,6 +181,9 @@ class CharacterTrackerSlot
 	
 	/** Set input device type to auto-assign or null. */
 	public func void setInputDeviceType(InputDeviceType type)
+		if type == null
+			throw ENullPointer.new("type")
+		end
 		pInputDeviceType = type
 	end
 	
@@ -391,10 +395,13 @@ class CharacterTrackerSlot
 		else
 			pCalibrateMatrix = behavior.getMatrixCharacter()
 			
-			if pForceCalibrateRotation != null
+// 			if pForceCalibrateRotation != null
+			select pInputDeviceType
+			case pInputDeviceType.vrHMD
 				var Vector position = pCalibrateMatrix.getPosition()
 				pCalibrateMatrix = Matrix.newTranslation(position)
-				behavior.setMatrixCharacter(position, pForceCalibrateRotation)
+// 				behavior.setMatrixCharacter(position, pForceCalibrateRotation)
+				behavior.setMatrixCharacter(position, Vector.new())
 			end
 			
 			pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()

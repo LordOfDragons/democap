@@ -112,6 +112,18 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 	end
 	
+	class TrackerSlotSelected extends DefaultListModelListener
+		private var WindowCharacterConfiguration pWindow
+		
+		public func new(WindowCharacterConfiguration window)
+			pWindow = window
+		end
+		
+		public func void selectionChanged(ListModel listModel)
+			pWindow.selectTrackerSlot()
+		end
+	end
+	
 	class MotionTransferPopupAction extends DefaultActionListener
 		private var WindowCharacterConfiguration pWindow
 		
@@ -164,6 +176,7 @@ class WindowCharacterConfiguration extends WindowDialog
 	private var DefaultListModel pModelMotionTransfers
 	private var DefaultRangeModel pModelMotionTransferPanel
 	private var WidgetCharacterPreview pCharacterPreview
+	private var WCCPTrackerSlot pPanelTrackerSlot
 	
 	
 	
@@ -180,8 +193,17 @@ class WindowCharacterConfiguration extends WindowDialog
 		pModelListCameraBone = DefaultListModel.new()
 		pModelListCameraBone.setAutoSelect(false)
 		pModelTextCameraBone = DefaultTextModel.new(config.getCameraBone())
-		pModelTrackerSlots = DefaultListModel.new(config.getTrackerSlots().toArray().sorted())
-		pModelMotionTransfers = DefaultListModel.new(config.getMotionTransfers().toArray())
+		
+		pModelTrackerSlots = DefaultListModel.new(config.getTrackerSlots().toArray().map(\
+			block CharacterTrackerSlot each
+				return CharacterTrackerSlot.new(config, each)
+			end).sorted())
+		
+		pModelMotionTransfers = DefaultListModel.new(config.getMotionTransfers().toArray().map(\
+			block MotionTransfer each
+				return each.createCopy()
+			end))
+		
 		pModelMotionTransferPanel = DefaultRangeModel.new()
 		
 		runWhileBlockingLayout(block
@@ -195,6 +217,9 @@ class WindowCharacterConfiguration extends WindowDialog
 			pEditCameraPosition.setVector(config.getCameraPosition())
 			pEditCameraRotation.setVector(config.getCameraRotation())
 		end)
+		
+		pModelTrackerSlots.addListener(TrackerSlotSelected.new(this))
+		selectTrackerSlot()
 		
 		var CharacterAppearance appearance = config.getProfile().getAppearance()
 		pCharacterPreview.setPathModel(appearance.getPathModel())
@@ -211,6 +236,7 @@ class WindowCharacterConfiguration extends WindowDialog
 	
 	/** Dispose of window. */
 	public func void dispose()
+		pPanelTrackerSlot = null
 		pModelConfigName = null
 		pModelScaleMode = null
 		pModelShoulderLevel = null
@@ -225,6 +251,23 @@ class WindowCharacterConfiguration extends WindowDialog
 		pModelMotionTransferPanel = null
 		
 		super.dispose()
+	end
+	
+	
+	
+	/** Character configuration. */
+	public func CharacterConfiguration getCharacterConfiguration()
+		return pCharacterConfiguration
+	end
+	
+	/** Character preview widget. */
+	public func WidgetCharacterPreview getCharacterPreview()
+		return pCharacterPreview
+	end
+	
+	/** Tracker slot panel. */
+	public func WCCPTrackerSlot getPanelTrackerSlot()
+		return pPanelTrackerSlot
 	end
 	
 	
@@ -252,6 +295,10 @@ class WindowCharacterConfiguration extends WindowDialog
 			end
 		end
 		
+		if not pPanelTrackerSlot.saveValues()
+			return
+		end
+		
 		// save changes
 		pCharacterConfiguration.setName(configName)
 		pCharacterConfiguration.setScaleMode(pModelScaleMode.getAt(\
@@ -261,6 +308,11 @@ class WindowCharacterConfiguration extends WindowDialog
 		pCharacterConfiguration.setCameraPosition(pEditCameraPosition.getVector())
 		pCharacterConfiguration.setCameraRotation(pEditCameraRotation.getVector())
 		
+		pCharacterConfiguration.getTrackerSlots().removeAll()
+		pModelTrackerSlots.forEach(block CharacterTrackerSlot each
+			pCharacterConfiguration.getTrackerSlots().add(each)
+		end)
+		
 		pCharacterConfiguration.getProfile().save()
 		
 		// finish and close window
@@ -268,6 +320,23 @@ class WindowCharacterConfiguration extends WindowDialog
 		close()
 	end
 	
+	/** Select tracker slot. */
+	public func void selectTrackerSlot()
+		if pPanelTrackerSlot.saveValues()
+			if pModelTrackerSlots.getSelected() != -1
+				pPanelTrackerSlot.setTrackerSlot(pModelTrackerSlots.getAt(\
+					pModelTrackerSlots.getSelected()) cast CharacterTrackerSlot)
+				
+			else
+				pPanelTrackerSlot.setTrackerSlot(null)
+			end
+			
+		else
+			pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(pPanelTrackerSlot.getTrackerSlot()))
+		end
+		
+		pPanelTrackerSlot.setEnabled(pModelTrackerSlots.getSelected() != -1)
+	end
 	
 	
 	/** Create window content. */
@@ -283,7 +352,7 @@ class WindowCharacterConfiguration extends WindowDialog
 		addWidget(pCharacterPreview, BorderLayout.Area.content)
 		
 		// properties
-		addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+		addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
 			// global parameters
 			p.addWidget(Panel.new(FormLayout.new(true, 10, 2), block Panel p2
 				p2.setDesignerSelector("Panel.WMPanelConfiguration.Configuration")
@@ -329,35 +398,39 @@ class WindowCharacterConfiguration extends WindowDialog
 				p2.setDesignerSelector("Panel.WMPanelConfiguration.Camera")
 				
 				// camera bone
-				p2.addWidget(Label.new("Bone:", "Label.FormCaption"))
+				var Label labelBone = Label.new("Bone:", "Label.FormCaption")
+				p2.addWidget(labelBone)
 				
 				var ComboBox cbCameraBone = ComboBox.new(pModelListCameraBone, DefaultComboBoxEditor.new(pModelTextCameraBone))
 				cbCameraBone.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 				cbCameraBone.setToolTip("Bone to attach VR Camera to. If empty string use HMD.")
 				p2.addWidget(cbCameraBone)
 				
-				CPEBone.new(pCharacterPreview, cbCameraBone)
+				CPEBone.new(pCharacterPreview, labelBone, cbCameraBone)
 				
 				// camera position
-				p2.addWidget(Label.new("Position:", "Label.FormCaption"))
+				var Label labelPosition = Label.new("Position:", "Label.FormCaption")
+				p2.addWidget(labelPosition)
 				
 				pEditCameraPosition = EditVector.new(pCharacterConfiguration.getCameraPosition())
 				pEditCameraPosition.setToolTip("Attach position of camera relative to bone. Not used if bone is empty string.")
 				p2.addWidget(pEditCameraPosition)
 				
 				// camera rotation
-				p2.addWidget(Label.new("Rotation:", "Label.FormCaption"))
+				var Label labelRotation = Label.new("Rotation:", "Label.FormCaption")
+				p2.addWidget(labelRotation)
 				
 				pEditCameraRotation = EditVector.new(pCharacterConfiguration.getCameraRotation())
 				pEditCameraRotation.setToolTip("Attach rotation in degrees of camera relative to bone. Not used if bone is empty string.")
 				p2.addWidget(pEditCameraRotation)
 				
 				// camera coordinate system
-				CPECoordinateSystem.new(pCharacterPreview, pEditCameraPosition, pEditCameraRotation, cbCameraBone)
+				CPECoordinateSystem.new(pCharacterPreview, labelPosition,\
+					pEditCameraPosition, labelRotation, pEditCameraRotation, cbCameraBone)
 			end))
 			
 			// tracker slots
-			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p2
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
 				p2.setDesignerSelector("Panel.WMPanelConfiguration.TrackerSlots")
 				
 				p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p3
@@ -368,9 +441,8 @@ class WindowCharacterConfiguration extends WindowDialog
 					p3.addWidget(button)
 				end))
 				
-				p2.addWidget(Panel.new(FormLayout.new(true, 10, 2), block Panel p3
-					// TODO
-				end))
+				pPanelTrackerSlot = WCCPTrackerSlot.new(this)
+				p2.addWidget(pPanelTrackerSlot)
 			end))
 			
 			// motion transfers
@@ -390,7 +462,7 @@ class WindowCharacterConfiguration extends WindowDialog
 				
 				// TODO
 			end))
-		end), BorderLayout.Area.right)
+		end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.visible), BorderLayout.Area.right)
 		
 		// button line
 		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x), block Panel p
@@ -485,17 +557,64 @@ class WindowCharacterConfiguration extends WindowDialog
 	
 	/** Add tracker slot. */
 	public func void addTrackerSlot()
-		// TODO
+		WindowDialog.input(this, "Add Tracker Slot", "Slot Name:", null, "Slot",\
+			null, null, WindowDialog.BlockResultListener.new(block String result
+				if pModelTrackerSlots.find(block CharacterTrackerSlot each
+					return each.getName().compareNoCase(result) == 0
+				end) != null
+					WindowDialog.message(this, "Add Tracker Slot", "Slot '"\
+						+ result + "' exists already", null, null, null)
+					
+				else
+					var CharacterTrackerSlot slot = CharacterTrackerSlot.new(pCharacterConfiguration, result)
+					pModelTrackerSlots.add(slot)
+					pModelTrackerSlots.sort()
+					pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(slot))
+				end
+			end))
 	end
 	
 	/** Duplicate tracker slot. */
 	public func void duplicateTrackerSlot()
-		// TODO
+		var CharacterTrackerSlot slot = getTrackerSlot()
+		if slot == null
+			return
+		end
+		
+		WindowDialog.input(this, "Duplicate Tracker Slot", "Slot Name:", null, slot.getName(),\
+			null, null, WindowDialog.BlockResultListener.new(block String result
+				if pModelTrackerSlots.find(block CharacterTrackerSlot each
+					return each.getName().compareNoCase(result) == 0
+				end) != null
+					WindowDialog.message(this, "Duplicate Tracker Slot", "Slot '"\
+						+ result + "' exists already", null, null, null)
+					
+				else
+					slot = CharacterTrackerSlot.new(pCharacterConfiguration, slot)
+					slot.setName(result)
+					pModelTrackerSlots.add(slot)
+					pModelTrackerSlots.sort()
+					pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(slot))
+				end
+			end))
 	end
 	
 	/** Remove tracker slot. */
 	public func void removeTrackerSlot()
-		// TODO
+		var CharacterTrackerSlot slot = getTrackerSlot()
+		if slot == null
+			return
+		end
+		
+		WindowDialog.question(this, "Remove Tracker Slot",\
+			"Do you really want to remove slot '" + slot.getName() + "'?",\
+			null, Array.newWith(WindowDialog.ButtonConfiguration.new("Remove", true), \
+				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					pModelTrackerSlots.remove(slot)
+				end
+			end))
 	end
 	
 	

@@ -60,6 +60,32 @@ class CharacterPreviewEditor
 		end
 	end
 	
+	/** Activate editor if widget is clicked. */
+	class ClickedActivateEditor extends ClickedActionListener
+		private var CharacterPreviewEditor pEditor
+		private var Widget pFocusWidget
+		
+		public func new(CharacterPreviewEditor editor, Widget focusWidget)
+			if editor == null
+				throw ENullPointer.new("editor")
+			end
+			pEditor = editor
+			pFocusWidget = focusWidget
+		end
+		
+		public func void onAction()
+			pEditor.getPreview().setEditor(pEditor)
+			
+			if pFocusWidget != null
+				pFocusWidget.grabFocus()
+				
+				if pFocusWidget castable ComboBox
+					(pFocusWidget cast ComboBox).rollUp()
+				end
+			end
+		end
+	end
+	
 	/** Update editor if model changed. */
 	class UpdateOnTextChanged extends DefaultTextModelListener
 		private var CharacterPreviewEditor pEditor

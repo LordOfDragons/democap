@@ -226,6 +226,8 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 	
 	
 	
+	private var Label pLabelPosition
+	private var Label pLabelRotation
 	private var EditVector pEditPosition
 	private var EditVector pEditRotation
 	private var ComboBox pCBBone
@@ -234,21 +236,30 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 	
 	
 	/** Create character preview editor. */
-	public func new(WidgetCharacterPreview preview, EditVector position, EditVector rotation,\
-	ComboBox bone) super(preview)
-		if position == null
-			throw ENullPointer.new("position")
+	public func new(WidgetCharacterPreview preview, Label labelPosition, EditVector editPosition,\
+	Label labelRotation, EditVector editRotation, ComboBox cbBone) super(preview)
+		if editPosition == null
+			throw ENullPointer.new("editPosition")
 		end
-		pEditPosition = position
-		pEditRotation = rotation
-		pCBBone = bone
+		pLabelPosition = labelPosition
+		pLabelRotation = labelRotation
+		pEditPosition = editPosition
+		pEditRotation = editRotation
+		pCBBone = cbBone
 		
-		position.addFocusListener(ReceiveFocusActivateEditor.new(this))
-		position.addActionListener(UpdateOnAction.new(this))
+		if labelPosition != null
+			labelPosition.addMouseListener(ClickedActivateEditor.new(this, editPosition.getEditX()))
+		end
+		if labelRotation != null
+			labelRotation.addMouseListener(ClickedActivateEditor.new(this, editRotation.getEditX()))
+		end
 		
-		if rotation != null
-			rotation.addFocusListener(ReceiveFocusActivateEditor.new(this))
-			rotation.addActionListener(UpdateOnAction.new(this))
+		editPosition.addFocusListener(ReceiveFocusActivateEditor.new(this))
+		editPosition.addActionListener(UpdateOnAction.new(this))
+		
+		if editRotation != null
+			editRotation.addFocusListener(ReceiveFocusActivateEditor.new(this))
+			editRotation.addActionListener(UpdateOnAction.new(this))
 		end
 	end
 	
@@ -278,6 +289,13 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 		
 		pInteractHandleListener = InteractHandleListener.new(this)
 		getPreview().getInteractionPanel().addMouseListener(pInteractHandleListener)
+		
+		if pLabelPosition != null
+			pLabelPosition.setDesignerSelector("Label.FormCaption.Hilight")
+		end
+		if pLabelRotation != null
+			pLabelRotation.setDesignerSelector("Label.FormCaption.Hilight")
+		end
 	end
 	
 	/** Editor has been deactivated. */
@@ -288,6 +306,13 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 		end
 		
 		hideCoordSystem()
+		
+		if pLabelPosition != null
+			pLabelPosition.setDesignerSelector("Label.FormCaption")
+		end
+		if pLabelRotation != null
+			pLabelRotation.setDesignerSelector("Label.FormCaption")
+		end
 	end
 	
 	/** Model value changed. */

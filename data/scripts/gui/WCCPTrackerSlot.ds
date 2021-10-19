@@ -1,0 +1,216 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Characters
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window tracker slot panel.
+ */
+class WCCPTrackerSlot extends Panel
+	private var WindowCharacterConfiguration pWindowCharacterConfiguration
+	private var CharacterTrackerSlot pTrackerSlot
+	
+	private var DefaultTextModel pModelName
+	private var EditVector pEditPosition
+	private var EditVector pEditRotation
+	private var DefaultListModel pModelInputDeviceType
+	private var EditVector pEditOffsetPosition
+	private var EditVector pEditOffsetRotation
+	
+	
+	
+	/** Create window. */
+	public func new(WindowCharacterConfiguration windowCharacterConfiguration)
+		pWindowCharacterConfiguration = windowCharacterConfiguration
+		
+		pModelName = DefaultTextModel.new()
+		pModelInputDeviceType = DefaultListModel.new(InputDeviceType.all().toArray().sorted())
+		
+		runWhileBlockingLayout(block
+			createContent()
+			setEnabled(false)
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		setTrackerSlot(null)
+		
+		pModelName = null
+		pEditPosition = null
+		pEditRotation = null
+		pModelInputDeviceType = null
+		pEditOffsetPosition = null
+		pEditOffsetRotation = null
+		
+		pWindowCharacterConfiguration = null
+		
+		super.dispose()
+	end
+	
+	
+	
+	/** Window character configuration. */
+	public func WindowCharacterConfiguration getWindowCC()
+		return pWindowCharacterConfiguration
+	end
+	
+	/** Character tracker slot or null. */
+	public func CharacterTrackerSlot getTrackerSlot()
+		return pTrackerSlot
+	end
+	
+	/** Set character tracker slot or null. */
+	public func void setTrackerSlot(CharacterTrackerSlot trackerSlot)
+		if trackerSlot == pTrackerSlot
+			return
+		end
+		
+		pTrackerSlot = trackerSlot
+		
+		loadValues()
+	end
+	
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	public func void loadValues()
+		if pTrackerSlot != null
+			pModelName.setText(pTrackerSlot.getName())
+			pEditPosition.setVector(pTrackerSlot.getPosition())
+			pEditRotation.setVector(pTrackerSlot.getRotation())
+			pModelInputDeviceType.setSelected(pModelInputDeviceType.indexOf(pTrackerSlot.getInputDeviceType()))
+			pEditOffsetPosition.setVector(pTrackerSlot.getOffsetPosition())
+			pEditOffsetRotation.setVector(pTrackerSlot.getOffsetRotation())
+			
+		else
+			pModelName.setText("")
+			pEditPosition.setVector(Vector.new())
+			pEditRotation.setVector(Vector.new())
+			pModelInputDeviceType.setSelected(pModelInputDeviceType.indexOf(InputDeviceType.vrTracker))
+			pEditOffsetPosition.setVector(Vector.new())
+			pEditOffsetRotation.setVector(Vector.new())
+		end
+	end
+	
+	/**
+	 * Save value from edit widgets to tracker slot object if present. Returns true if
+	 * the values have been saved or false if invalid values have been found.
+	 */
+	public func bool saveValues()
+		if pTrackerSlot == null
+			return true
+		end
+		
+		// verify input
+		var String slotName = pModelName.getText()
+		
+		if slotName.compareNoCase(pTrackerSlot.getName()) != 0
+			if slotName.empty()
+				WindowDialog.message(pWindowCharacterConfiguration, \
+					"Save Configuration", "Slot name can not be empty", null, null, null)
+				return false
+			end
+			if pWindowCharacterConfiguration.getCharacterConfiguration().getTrackerSlots().hasNamed(slotName)
+				WindowDialog.message(pWindowCharacterConfiguration, \
+					"Save Configuration", "Slot with same name exists", null, null, null)
+				return false
+			end
+		end
+		
+		// save changes
+		pTrackerSlot.setName(slotName)
+		pTrackerSlot.setPosition(pEditPosition.getVector())
+		pTrackerSlot.setRotation(pEditRotation.getVector())
+		pTrackerSlot.setInputDeviceType(pModelInputDeviceType.getAt(pModelInputDeviceType.getSelected()) cast InputDeviceType)
+		pTrackerSlot.setOffsetPosition(pEditOffsetPosition.getVector())
+		pTrackerSlot.setOffsetRotation(pEditOffsetRotation.getVector())
+		
+		return true
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var TextField textField
+		var ComboBox comboBox
+		
+		setLayout(FormLayout.new(true, 10, 2))
+		
+		// name
+		addWidget(Label.new("Name:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelName, 15)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setToolTip("Unique slot name")
+		addWidget(textField)
+		
+		// position
+		var Label labelPosition = Label.new("Position:", "Label.FormCaption")
+		addWidget(labelPosition)
+		
+		pEditPosition = EditVector.new()
+		pEditPosition.setToolTip("Position to use if no input device is attached.")
+		addWidget(pEditPosition)
+		
+		// rotation
+		var Label labelRotation = Label.new("Rotation:", "Label.FormCaption")
+		addWidget(labelRotation)
+		
+		pEditRotation = EditVector.new()
+		pEditRotation.setToolTip("Rotation in degrees to use if no input device is attached.")
+		addWidget(pEditRotation)
+		
+		CPECoordinateSystem.new(preview, labelPosition, pEditPosition, labelRotation, pEditRotation, null)
+		
+		// input device type
+		addWidget(Label.new("Device Type:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelInputDeviceType)
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Type of input device valid for this slot.")
+		addWidget(comboBox)
+		
+		// offset position
+		addWidget(Label.new("Track Position:", "Label.FormCaption"))
+		
+		pEditOffsetPosition = EditVector.new()
+		pEditOffsetPosition.setToolTip("Controller track position offset. For hand controllers "\
+			+ " typically at controller tip (-0.11)" )
+		addWidget(pEditOffsetPosition)
+		
+		// offset rotation
+		addWidget(Label.new("Track Rotation:", "Label.FormCaption"))
+		
+		pEditOffsetRotation = EditVector.new()
+		pEditOffsetRotation.setToolTip("Controller track rotation offset in degrees.")
+		addWidget(pEditOffsetRotation)
+	end
+end

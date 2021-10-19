@@ -78,18 +78,23 @@ class CPEBone extends CharacterPreviewEditor
 	
 	
 	
-	
+	private var Label pLabelBone
 	private var ComboBox pCBBone
 	private var ElementClicked pElementClicked
 	
 	
 	
 	/** Create character preview editor. */
-	public func new(WidgetCharacterPreview preview, ComboBox cbBone) super(preview)
+	public func new(WidgetCharacterPreview preview, Label labelBone, ComboBox cbBone) super(preview)
 		if cbBone == null
 			throw ENullPointer.new("cbBone")
 		end
 		pCBBone = cbBone
+		pLabelBone = labelBone
+		
+		if labelBone != null
+			labelBone.addMouseListener(ClickedActivateEditor.new(this, cbBone))
+		end
 		
 		if cbBone.getEditor() != null
 			cbBone.getEditor().getWidget().addFocusListener(ReceiveFocusActivateEditor.new(this))
@@ -116,6 +121,10 @@ class CPEBone extends CharacterPreviewEditor
 		
 		pElementClicked = ElementClicked.new(this)
 		getPreview().getInteractionPanel().addMouseListener(pElementClicked)
+		
+		if pLabelBone != null
+			pLabelBone.setDesignerSelector("Label.FormCaption.Hilight")
+		end
 	end
 	
 	/** Editor has been deactivated. */
@@ -128,6 +137,10 @@ class CPEBone extends CharacterPreviewEditor
 		var ECBPreviewBones.Instance bones = getPreviewBones()
 		if bones != null
 			bones.setAllBoneColor(previewBoneColorDefault)
+		end
+		
+		if pLabelBone != null
+			pLabelBone.setDesignerSelector("Label.FormCaption")
 		end
 	end
 	

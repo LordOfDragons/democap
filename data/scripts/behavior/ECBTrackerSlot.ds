@@ -362,6 +362,10 @@ class ECBTrackerSlot extends DefaultECBehavior
 			var CharacterTrackerSlot slot = pECBehavior.getTrackerSlot()
 			var CharacterConfiguration config = slot.getConfiguration()
 			
+			// some notes:
+			// - pComponentMatrix is the real VR device location in actor space.
+			// - pMatrix is the slot location in character space.
+			// - getOffsetMatrix() applies only to real VR devices to obtain pMatrix.
 			if pInputDevice != null
 				pComponentMatrix = pInputDevice.getDevicePoseMatrix()
 				pMatrix = pComponentMatrix * config.getMatrixCalibrate() * config.getMatrixScale()
@@ -373,8 +377,8 @@ class ECBTrackerSlot extends DefaultECBehavior
 				pMatrix = slot.getOffsetMatrix() * pMatrix
 				
 			else
-				pComponentMatrix = slot.getMatrix()
-				pMatrix = slot.getOffsetMatrix() * slot.getMatrix()
+				pMatrix = slot.getMatrix()
+				pComponentMatrix = pMatrix * slot.getOffsetMatrix().getInverse()
 				
 				if config.getScaleMode() == CharacterConfiguration.ScaleMode.character
 					pComponentMatrix = pComponentMatrix * config.getMatrixScaleInverse()
