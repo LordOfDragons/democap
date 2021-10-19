@@ -1,0 +1,151 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer animation panel.
+ */
+class WCCPanelMotionTransfer extends Panel
+	class NameChangedListener extends DefaultFocusListener
+		private var WCCPanelMotionTransfer pPanel
+		private var TextModel pModel
+		
+		public func new(WCCPanelMotionTransfer panel, TextModel model)
+			pPanel = panel
+			pModel = model
+		end
+		
+		public func void onFocusLost(FocusEvent event)
+			if pPanel.getMotionTransfer().getName().equals(pModel.getText())
+				return
+			end
+			
+			pPanel.getMotionTransfer().setName(pModel.getText())
+			pPanel.getWindowCharacterConfiguration().onMotionTransferNameChanged()
+		end
+	end
+	
+	
+	
+	protected var WindowCharacterConfiguration pWindowCharacterConfiguration
+	protected var MotionTransfer pMotionTransfer
+	protected var DefaultTextModel pModelTypeName
+	protected var DefaultTextModel pModelName
+	
+	
+	
+	/** Create window. */
+	public func new(WindowCharacterConfiguration window)
+		pWindowCharacterConfiguration = window
+		pModelTypeName = DefaultTextModel.new()
+		pModelName = DefaultTextModel.new()
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		setMotionTransfer(null)
+		pModelTypeName = null
+		pModelName = null
+		pWindowCharacterConfiguration = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Window character configuration. */
+	public func WindowCharacterConfiguration getWindowCharacterConfiguration()
+		return pWindowCharacterConfiguration
+	end
+	
+	/** Motion transfer or null. */
+	public func MotionTransfer getMotionTransfer()
+		return pMotionTransfer
+	end
+	
+	/** Set motion transfer or null. */
+	public func void setMotionTransfer(MotionTransfer motionTransfer)
+		if motionTransfer == pMotionTransfer
+			return
+		end
+		pMotionTransfer = motionTransfer
+		loadValues()
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return false
+	end
+	
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	public func void loadValues()
+		if pMotionTransfer != null
+			pModelName.setText(pMotionTransfer.getName())
+			
+		else
+			pModelName.setText("")
+		end
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	public func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		
+		pMotionTransfer.setName(pModelName.getText())
+	end
+	
+	/** Update move lists. */
+	public func void updateMoveLists(Array moves)
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		setLayout(FormLayout.new(true, 10, 2))
+		
+		// type
+		addWidget(Label.new("", "Label.FormCaption"))
+		addWidget(Label.new(pModelTypeName, "Label.FormCaption"))
+		
+		// name
+		addWidget(Label.new("Name:", "Label.FormCaption"))
+		
+		var TextField textField = TextField.new(pModelName, 15)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setToolTip("Motion transfer name. Not required to be unique.")
+		textField.addFocusListener(NameChangedListener.new(this, pModelName))
+		addWidget(textField)
+	end
+end

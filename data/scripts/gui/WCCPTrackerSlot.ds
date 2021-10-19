@@ -32,6 +32,39 @@ pin Dragengine.Scenery
  * Edit character config window tracker slot panel.
  */
 class WCCPTrackerSlot extends Panel
+	class NameChangedListener extends DefaultFocusListener
+		private var WCCPTrackerSlot pPanel
+		private var TextModel pModel
+		
+		public func new(WCCPTrackerSlot panel, TextModel model)
+			pPanel = panel
+			pModel = model
+		end
+		
+		public func void onFocusLost(FocusEvent event)
+			var CharacterTrackerSlot slot = pPanel.getTrackerSlot()
+			if slot == null
+				return
+			end
+			
+			var String name = pModel.getText()
+			if slot.getName().equals(name)
+				return
+			end
+			
+			if slot.getName().compareNoCase(name) != 0
+				name = pPanel.getWindowCharacterConfiguration().uniqueTrackerSlotName(name)
+			end
+			
+			slot.setName(name)
+			pModel.setText(name)  // in case it changed
+			
+			pPanel.getWindowCharacterConfiguration().onTrackerSlotNameChanged()
+		end
+	end
+	
+	
+	
 	private var WindowCharacterConfiguration pWindowCharacterConfiguration
 	private var CharacterTrackerSlot pTrackerSlot
 	
@@ -76,7 +109,7 @@ class WCCPTrackerSlot extends Panel
 	
 	
 	/** Window character configuration. */
-	public func WindowCharacterConfiguration getWindowCC()
+	public func WindowCharacterConfiguration getWindowCharacterConfiguration()
 		return pWindowCharacterConfiguration
 	end
 	
@@ -118,40 +151,25 @@ class WCCPTrackerSlot extends Panel
 		end
 	end
 	
-	/**
-	 * Save value from edit widgets to tracker slot object if present. Returns true if
-	 * the values have been saved or false if invalid values have been found.
-	 */
-	public func bool saveValues()
+	/** Save value from edit widgets to tracker slot object if present. */
+	public func void saveValues()
 		if pTrackerSlot == null
-			return true
+			return
 		end
 		
-		// verify input
 		var String slotName = pModelName.getText()
-		
-		if slotName.compareNoCase(pTrackerSlot.getName()) != 0
-			if slotName.empty()
-				WindowDialog.message(pWindowCharacterConfiguration, \
-					"Save Configuration", "Slot name can not be empty", null, null, null)
-				return false
-			end
-			if pWindowCharacterConfiguration.getCharacterConfiguration().getTrackerSlots().hasNamed(slotName)
-				WindowDialog.message(pWindowCharacterConfiguration, \
-					"Save Configuration", "Slot with same name exists", null, null, null)
-				return false
+		if not pTrackerSlot.getName().equals(slotName)
+			if pTrackerSlot.getName().compareNoCase(slotName) != 0
+				slotName = pWindowCharacterConfiguration.uniqueTrackerSlotName(slotName)
 			end
 		end
 		
-		// save changes
 		pTrackerSlot.setName(slotName)
 		pTrackerSlot.setPosition(pEditPosition.getVector())
 		pTrackerSlot.setRotation(pEditRotation.getVector())
 		pTrackerSlot.setInputDeviceType(pModelInputDeviceType.getAt(pModelInputDeviceType.getSelected()) cast InputDeviceType)
 		pTrackerSlot.setOffsetPosition(pEditOffsetPosition.getVector())
 		pTrackerSlot.setOffsetRotation(pEditOffsetRotation.getVector())
-		
-		return true
 	end
 	
 	
@@ -170,6 +188,7 @@ class WCCPTrackerSlot extends Panel
 		textField = TextField.new(pModelName, 15)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setToolTip("Unique slot name")
+		textField.addFocusListener(NameChangedListener.new(this, pModelName))
 		addWidget(textField)
 		
 		// position

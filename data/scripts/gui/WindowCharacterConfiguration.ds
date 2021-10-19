@@ -68,11 +68,36 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 		
 		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
-			var String text = String.new(' ', 20)
+			var String text = String.new('X', 20)
 			if element != null
 				text = (element cast MotionTransfer).getName()
 			end
 			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	class MotionTransferFactoryRenderer extends DefaultListElementRenderer
+		public func new()
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text = String.new('X', 20)
+			if element != null
+				text = (element cast MotionTransferFactory).displayName()
+			end
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	class TrackerSlotSelected extends DefaultListModelListener
+		private var WindowCharacterConfiguration pWindow
+		
+		public func new(WindowCharacterConfiguration window)
+			pWindow = window
+		end
+		
+		public func void selectionChanged(ListModel listModel)
+			pWindow.selectTrackerSlot()
 		end
 	end
 	
@@ -112,7 +137,7 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 	end
 	
-	class TrackerSlotSelected extends DefaultListModelListener
+	class MotionTransferSelected extends DefaultListModelListener
 		private var WindowCharacterConfiguration pWindow
 		
 		public func new(WindowCharacterConfiguration window)
@@ -120,7 +145,7 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 		
 		public func void selectionChanged(ListModel listModel)
-			pWindow.selectTrackerSlot()
+			pWindow.selectMotionTransfer()
 		end
 	end
 	
@@ -177,6 +202,7 @@ class WindowCharacterConfiguration extends WindowDialog
 	private var DefaultRangeModel pModelMotionTransferPanel
 	private var WidgetCharacterPreview pCharacterPreview
 	private var WCCPTrackerSlot pPanelTrackerSlot
+	private var Array pPanelsMotionTransfer
 	
 	
 	
@@ -206,6 +232,8 @@ class WindowCharacterConfiguration extends WindowDialog
 		
 		pModelMotionTransferPanel = DefaultRangeModel.new()
 		
+		pPanelsMotionTransfer = Array.new()
+		
 		runWhileBlockingLayout(block
 			setGuiTheme(window.getGuiTheme())
 			setTitle("Character Configuration")
@@ -220,6 +248,9 @@ class WindowCharacterConfiguration extends WindowDialog
 		
 		pModelTrackerSlots.addListener(TrackerSlotSelected.new(this))
 		selectTrackerSlot()
+		
+		pModelMotionTransfers.addListener(MotionTransferSelected.new(this))
+		selectMotionTransfer()
 		
 		var CharacterAppearance appearance = config.getProfile().getAppearance()
 		pCharacterPreview.setPathModel(appearance.getPathModel())
@@ -236,6 +267,7 @@ class WindowCharacterConfiguration extends WindowDialog
 	
 	/** Dispose of window. */
 	public func void dispose()
+		pPanelsMotionTransfer = null
 		pPanelTrackerSlot = null
 		pModelConfigName = null
 		pModelScaleMode = null
@@ -295,8 +327,11 @@ class WindowCharacterConfiguration extends WindowDialog
 			end
 		end
 		
-		if not pPanelTrackerSlot.saveValues()
-			return
+		pPanelTrackerSlot.saveValues()
+		
+		var int selection = pModelMotionTransferPanel.getValue() - 1
+		if selection >= 0
+			(pPanelsMotionTransfer.getAt(selection) cast WCCPanelMotionTransfer).saveValues()
 		end
 		
 		// save changes
@@ -320,23 +355,6 @@ class WindowCharacterConfiguration extends WindowDialog
 		close()
 	end
 	
-	/** Select tracker slot. */
-	public func void selectTrackerSlot()
-		if pPanelTrackerSlot.saveValues()
-			if pModelTrackerSlots.getSelected() != -1
-				pPanelTrackerSlot.setTrackerSlot(pModelTrackerSlots.getAt(\
-					pModelTrackerSlots.getSelected()) cast CharacterTrackerSlot)
-				
-			else
-				pPanelTrackerSlot.setTrackerSlot(null)
-			end
-			
-		else
-			pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(pPanelTrackerSlot.getTrackerSlot()))
-		end
-		
-		pPanelTrackerSlot.setEnabled(pModelTrackerSlots.getSelected() != -1)
-	end
 	
 	
 	/** Create window content. */
@@ -460,7 +478,12 @@ class WindowCharacterConfiguration extends WindowDialog
 				var SwitchPanel switcher = SwitchPanel.new(pModelMotionTransferPanel)
 				p2.addWidget(switcher)
 				
-				// TODO
+				pPanelsMotionTransfer.add(WCCPMTAnimation.new(this))
+				
+				switcher.addWidget(Panel.new()) // empty
+				pPanelsMotionTransfer.forEach(block WCCPanelMotionTransfer each
+					switcher.addWidget(each)
+				end)
 			end))
 		end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.visible), BorderLayout.Area.right)
 		
@@ -525,6 +548,10 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 		
 		pModelListMoveCalibrate.setContent(moves)
+		
+		pPanelsMotionTransfer.forEach(block WCCPanelMotionTransfer each
+			each.updateMoveLists(moves)
+		end)
 	end
 	
 	/** Update calibration move. */
@@ -555,21 +582,36 @@ class WindowCharacterConfiguration extends WindowDialog
 		return null
 	end
 	
+	/** Select tracker slot. */
+	public func void selectTrackerSlot()
+		if pModelTrackerSlots.getSelected() != -1
+			pPanelTrackerSlot.setTrackerSlot(pModelTrackerSlots.getAt(\
+				pModelTrackerSlots.getSelected()) cast CharacterTrackerSlot)
+			pPanelTrackerSlot.setEnabled(true)
+			
+		else
+			pPanelTrackerSlot.setTrackerSlot(null)
+			pPanelTrackerSlot.setEnabled(false)
+		end
+	end
+	
 	/** Add tracker slot. */
 	public func void addTrackerSlot()
 		WindowDialog.input(this, "Add Tracker Slot", "Slot Name:", null, "Slot",\
 			null, null, WindowDialog.BlockResultListener.new(block String result
-				if pModelTrackerSlots.find(block CharacterTrackerSlot each
-					return each.getName().compareNoCase(result) == 0
-				end) != null
-					WindowDialog.message(this, "Add Tracker Slot", "Slot '"\
-						+ result + "' exists already", null, null, null)
-					
-				else
-					var CharacterTrackerSlot slot = CharacterTrackerSlot.new(pCharacterConfiguration, result)
-					pModelTrackerSlots.add(slot)
-					pModelTrackerSlots.sort()
-					pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(slot))
+				if result != null
+					if pModelTrackerSlots.find(block CharacterTrackerSlot each
+						return each.getName().compareNoCase(result) == 0
+					end) != null
+						WindowDialog.message(this, "Add Tracker Slot", "Slot '"\
+							+ result + "' exists already", null, null, null)
+						
+					else
+						var CharacterTrackerSlot slot = CharacterTrackerSlot.new(pCharacterConfiguration, result)
+						pModelTrackerSlots.add(slot)
+						pModelTrackerSlots.sort()
+						pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(slot))
+					end
 				end
 			end))
 	end
@@ -583,18 +625,20 @@ class WindowCharacterConfiguration extends WindowDialog
 		
 		WindowDialog.input(this, "Duplicate Tracker Slot", "Slot Name:", null, slot.getName(),\
 			null, null, WindowDialog.BlockResultListener.new(block String result
-				if pModelTrackerSlots.find(block CharacterTrackerSlot each
-					return each.getName().compareNoCase(result) == 0
-				end) != null
-					WindowDialog.message(this, "Duplicate Tracker Slot", "Slot '"\
-						+ result + "' exists already", null, null, null)
-					
-				else
-					slot = CharacterTrackerSlot.new(pCharacterConfiguration, slot)
-					slot.setName(result)
-					pModelTrackerSlots.add(slot)
-					pModelTrackerSlots.sort()
-					pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(slot))
+				if result != null
+					if pModelTrackerSlots.find(block CharacterTrackerSlot each
+						return each.getName().compareNoCase(result) == 0
+					end) != null
+						WindowDialog.message(this, "Duplicate Tracker Slot", "Slot '"\
+							+ result + "' exists already", null, null, null)
+						
+					else
+						slot = CharacterTrackerSlot.new(pCharacterConfiguration, slot)
+						slot.setName(result)
+						pModelTrackerSlots.add(slot)
+						pModelTrackerSlots.sort()
+						pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(slot))
+					end
 				end
 			end))
 	end
@@ -617,6 +661,28 @@ class WindowCharacterConfiguration extends WindowDialog
 			end))
 	end
 	
+	/** Ensure unique tracker slot name. */
+	public func String uniqueTrackerSlotName(String name)
+		var String baseName = name
+		var int number = 2
+		
+		while pModelTrackerSlots.find(block CharacterTrackerSlot each
+			return each.getName().compareNoCase(name) == 0
+		end) != null
+			name = baseName + " #" + number++
+		end
+		
+		return name
+	end
+	
+	/** Tracker slot name changed. */
+	public func void onTrackerSlotNameChanged()
+		var int index = pModelTrackerSlots.indexOf(getTrackerSlot())
+		if index != -1
+			pModelTrackerSlots.notifyContentChanged(index, index)
+		end
+	end
+	
 	
 	
 	/** Active motion transfer. */
@@ -627,18 +693,76 @@ class WindowCharacterConfiguration extends WindowDialog
 		return null
 	end
 	
+	/** Select motion transfer. */
+	public func void selectMotionTransfer()
+		var int selection = pModelMotionTransferPanel.getValue()
+		var WCCPanelMotionTransfer panel
+		
+		if selection > 0
+			panel = pPanelsMotionTransfer.getAt(selection - 1) cast WCCPanelMotionTransfer
+			if panel != null
+				panel.saveValues()
+			end
+		end
+		
+		if pModelMotionTransfers.getSelected() != -1
+			var MotionTransfer motionTransfer = pModelMotionTransfers.getAt(\
+				pModelMotionTransfers.getSelected()) cast MotionTransfer
+			
+			panel = pPanelsMotionTransfer.find(block WCCPanelMotionTransfer each
+				return each.supports(motionTransfer)
+			end) cast WCCPanelMotionTransfer
+			
+			pModelMotionTransferPanel.setValue(pPanelsMotionTransfer.indexOf(panel) + 1)
+			
+			if panel != null
+				panel.setMotionTransfer(motionTransfer)
+			end
+			
+		else
+			pModelMotionTransferPanel.setValue(0)
+		end
+	end
+	
 	/** Add motion transfer. */
 	public func void addMotionTransfer()
-		// TODO
+		var DefaultListModel model = DefaultListModel.new(\
+			GameApp.getGameApp().getMotionTransferFactories().toArraySorted())
+		
+		WindowDialog.chooseList(this, "Add Motion Transfer", "Type:", null, model,\
+			MotionTransferFactoryRenderer.new(), null, null, WindowDialog.BlockResultListener.new(\
+			block int result
+				if result != -1
+					var MotionTransferFactory factory = model.getAt(result) cast MotionTransferFactory
+					var MotionTransfer motionTransfer = factory.createMotionTransfer()
+					motionTransfer.setName(factory.displayName())
+					pModelMotionTransfers.add(motionTransfer)
+					pModelMotionTransfers.setSelected(pModelMotionTransfers.indexOf(motionTransfer))
+				end
+			end))
 	end
 	
 	/** Duplicate motion transfer. */
 	public func void duplicateMotionTransfer()
-		// TODO
+		var MotionTransfer motionTransfer = getMotionTransfer()
+		if motionTransfer != null
+			var int index = pModelMotionTransfers.indexOf(motionTransfer)
+			motionTransfer = motionTransfer.createCopy()
+			pModelMotionTransfers.insert(index + 1, motionTransfer)
+			pModelMotionTransfers.setSelected(index + 1)
+		end
 	end
 	
 	/** Remove motion transfer. */
 	public func void removeMotionTransfer()
 		// TODO
+	end
+	
+	/** Motion transfer name changed. */
+	public func void onMotionTransferNameChanged()
+		var int index = pModelMotionTransfers.indexOf(getMotionTransfer())
+		if index != -1
+			pModelMotionTransfers.notifyContentChanged(index, index)
+		end
 	end
 end
