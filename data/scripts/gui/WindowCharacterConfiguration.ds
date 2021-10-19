@@ -24,6 +24,7 @@ namespace Democap.Gui
 pin Democap.Behaviors
 pin Democap.Characters
 pin Democap.Elements
+pin Democap.MotionTransferSystem
 
 pin Dragengine.CameraDirectors
 pin Dragengine.Gui.Layouts
@@ -62,6 +63,91 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 	end
 	
+	class MotionTransferRenderer extends DefaultListElementRenderer
+		public func new()
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text = String.new(' ', 20)
+			if element != null
+				text = (element cast MotionTransfer).getName()
+			end
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	class TrackerSlotPopupAction extends DefaultActionListener
+		private var WindowCharacterConfiguration pWindow
+		
+		public func new(WindowCharacterConfiguration window)
+			pWindow = window
+		end
+		
+		public func void onAction(ActionEvent event)
+			var Widget widget = event.getSource() cast Widget
+			var WindowPopup popup = WindowPopup.new()
+			var Button button
+			
+			button = Button.new("Add Slot...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pWindow.addTrackerSlot()
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Duplicate Slot...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pWindow.duplicateTrackerSlot()
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Remove Slot", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pWindow.removeTrackerSlot()
+			end))
+			button.setEnabled(pWindow.getTrackerSlot() != null)
+			popup.addWidget(button)
+			
+			pWindow.getDesktop().addWindow(popup)
+			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
+		end
+	end
+	
+	class MotionTransferPopupAction extends DefaultActionListener
+		private var WindowCharacterConfiguration pWindow
+		
+		public func new(WindowCharacterConfiguration window)
+			pWindow = window
+		end
+		
+		public func void onAction(ActionEvent event)
+			var Widget widget = event.getSource() cast Widget
+			var WindowPopup popup = WindowPopup.new()
+			var Button button
+			
+			button = Button.new("Add Transfer...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pWindow.addMotionTransfer()
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Duplicate Transfer...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pWindow.duplicateMotionTransfer()
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Remove Transfer", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pWindow.removeMotionTransfer()
+			end))
+			button.setEnabled(pWindow.getMotionTransfer() != null)
+			popup.addWidget(button)
+			
+			pWindow.getDesktop().addWindow(popup)
+			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
+		end
+	end
+	
 	
 	
 	private var CharacterConfiguration pCharacterConfiguration
@@ -74,6 +160,9 @@ class WindowCharacterConfiguration extends WindowDialog
 	private var DefaultTextModel pModelTextCameraBone
 	private var EditVector pEditCameraPosition
 	private var EditVector pEditCameraRotation
+	private var DefaultListModel pModelTrackerSlots
+	private var DefaultListModel pModelMotionTransfers
+	private var DefaultRangeModel pModelMotionTransferPanel
 	private var WidgetCharacterPreview pCharacterPreview
 	
 	
@@ -91,6 +180,9 @@ class WindowCharacterConfiguration extends WindowDialog
 		pModelListCameraBone = DefaultListModel.new()
 		pModelListCameraBone.setAutoSelect(false)
 		pModelTextCameraBone = DefaultTextModel.new(config.getCameraBone())
+		pModelTrackerSlots = DefaultListModel.new(config.getTrackerSlots().toArray().sorted())
+		pModelMotionTransfers = DefaultListModel.new(config.getMotionTransfers().toArray())
+		pModelMotionTransferPanel = DefaultRangeModel.new()
 		
 		runWhileBlockingLayout(block
 			setGuiTheme(window.getGuiTheme())
@@ -128,6 +220,9 @@ class WindowCharacterConfiguration extends WindowDialog
 		pModelTextCameraBone = null
 		pEditCameraPosition = null
 		pEditCameraRotation = null
+		pModelTrackerSlots = null
+		pModelMotionTransfers = null
+		pModelMotionTransferPanel = null
 		
 		super.dispose()
 	end
@@ -188,69 +283,113 @@ class WindowCharacterConfiguration extends WindowDialog
 		addWidget(pCharacterPreview, BorderLayout.Area.content)
 		
 		// properties
-		addWidget(Panel.new(FormLayout.new(true, 10, 2), block Panel p
-			// config name
-			p.addWidget(Label.new("Configuration Name:", "Label.FormCaption"))
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+			// global parameters
+			p.addWidget(Panel.new(FormLayout.new(true, 10, 2), block Panel p2
+				p2.setDesignerSelector("Panel.WMPanelConfiguration.Configuration")
+				
+				// config name
+				p2.addWidget(Label.new("Configuration Name:", "Label.FormCaption"))
+				
+				textField = TextField.new(pModelConfigName, 15)
+				textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+				textField.setToolTip("Unique configuration name")
+				p2.addWidget(textField)
+				
+				// scale mode
+				p2.addWidget(Label.new("Scale Mode:", "Label.FormCaption"))
+				
+				comboBox = ComboBox.new(pModelScaleMode)
+				comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+				comboBox.setToolTip("Scale actor or character to match the other.")
+				p2.addWidget(comboBox)
+				
+				// shoulder level
+				p2.addWidget(Label.new("Shoulder Level:", "Label.FormCaption"))
+				
+				textField = TextField.new(pModelShoulderLevel, 8)
+				textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+				textField.setToolTip("Shoulder level in meters. Use height of upper arm bone origin above ground.")
+				textField.setValidator(SimpleTextValidator.new(8, SimpleTextValidator.CharacterClass.positiveNumber))
+				p2.addWidget(textField)
+				
+				// move calibrate
+				p2.addWidget(Label.new("Move Calibrate:", "Label.FormCaption"))
+				
+				comboBox = ComboBox.new(pModelListMoveCalibrate, DefaultComboBoxEditor.new(pModelTextMoveCalibrate))
+				comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+				comboBox.setToolTip("Animation move to use for calibration. " \
+					+ "This move is also applied before the first motion transfer is applied.")
+				comboBox.getEditor().addActionListener(MoveCalibrateChanged.new(this))
+				p2.addWidget(comboBox)
+			end))
 			
-			textField = TextField.new(pModelConfigName, 15)
-			textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-			textField.setToolTip("Unique configuration name")
-			p.addWidget(textField)
+			// camera
+			p.addWidget(Panel.new(FormLayout.new(true, 10, 2), block Panel p2
+				p2.setDesignerSelector("Panel.WMPanelConfiguration.Camera")
+				
+				// camera bone
+				p2.addWidget(Label.new("Bone:", "Label.FormCaption"))
+				
+				var ComboBox cbCameraBone = ComboBox.new(pModelListCameraBone, DefaultComboBoxEditor.new(pModelTextCameraBone))
+				cbCameraBone.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+				cbCameraBone.setToolTip("Bone to attach VR Camera to. If empty string use HMD.")
+				p2.addWidget(cbCameraBone)
+				
+				CPEBone.new(pCharacterPreview, cbCameraBone)
+				
+				// camera position
+				p2.addWidget(Label.new("Position:", "Label.FormCaption"))
+				
+				pEditCameraPosition = EditVector.new(pCharacterConfiguration.getCameraPosition())
+				pEditCameraPosition.setToolTip("Attach position of camera relative to bone. Not used if bone is empty string.")
+				p2.addWidget(pEditCameraPosition)
+				
+				// camera rotation
+				p2.addWidget(Label.new("Rotation:", "Label.FormCaption"))
+				
+				pEditCameraRotation = EditVector.new(pCharacterConfiguration.getCameraRotation())
+				pEditCameraRotation.setToolTip("Attach rotation in degrees of camera relative to bone. Not used if bone is empty string.")
+				p2.addWidget(pEditCameraRotation)
+				
+				// camera coordinate system
+				CPECoordinateSystem.new(pCharacterPreview, pEditCameraPosition, pEditCameraRotation, cbCameraBone)
+			end))
 			
-			// scale mode
-			p.addWidget(Label.new("Scale Mode:", "Label.FormCaption"))
+			// tracker slots
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p2
+				p2.setDesignerSelector("Panel.WMPanelConfiguration.TrackerSlots")
+				
+				p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p3
+					comboBox = ComboBox.new(pModelTrackerSlots)
+					p3.addWidget(comboBox)
+					
+					button = Button.new("...", TrackerSlotPopupAction.new(this))
+					p3.addWidget(button)
+				end))
+				
+				p2.addWidget(Panel.new(FormLayout.new(true, 10, 2), block Panel p3
+					// TODO
+				end))
+			end))
 			
-			comboBox = ComboBox.new(pModelScaleMode)
-			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-			comboBox.setToolTip("Scale actor or character to match the other.")
-			p.addWidget(comboBox)
-			
-			// shoulder level
-			p.addWidget(Label.new("Shoulder Level:", "Label.FormCaption"))
-			
-			textField = TextField.new(pModelShoulderLevel, 8)
-			textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-			textField.setToolTip("Shoulder level in meters. Use height of upper arm bone origin above ground.")
-			textField.setValidator(SimpleTextValidator.new(8, SimpleTextValidator.CharacterClass.positiveNumber))
-			p.addWidget(textField)
-			
-			// move calibrate
-			p.addWidget(Label.new("Move Calibrate:", "Label.FormCaption"))
-			
-			comboBox = ComboBox.new(pModelListMoveCalibrate, DefaultComboBoxEditor.new(pModelTextMoveCalibrate))
-			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-			comboBox.setToolTip("Animation move to use for calibration. " \
-				+ "This move is also applied before the first motion transfer is applied.")
-			comboBox.getEditor().addActionListener(MoveCalibrateChanged.new(this))
-			p.addWidget(comboBox)
-			
-			// camera bone
-			p.addWidget(Label.new("Camera Bone:", "Label.FormCaption"))
-			
-			var ComboBox cbCameraBone = ComboBox.new(pModelListCameraBone, DefaultComboBoxEditor.new(pModelTextCameraBone))
-			cbCameraBone.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-			cbCameraBone.setToolTip("Bone to attach VR Camera to. If empty string use HMD.")
-			p.addWidget(cbCameraBone)
-			
-			CPEBone.new(pCharacterPreview, cbCameraBone)
-			
-			// camera position
-			p.addWidget(Label.new("Camera Position:", "Label.FormCaption"))
-			
-			pEditCameraPosition = EditVector.new(pCharacterConfiguration.getCameraPosition())
-			pEditCameraPosition.setToolTip("Attach position of camera relative to bone. Not used if bone is empty string.")
-			p.addWidget(pEditCameraPosition)
-			
-			// camera rotation
-			p.addWidget(Label.new("Camera Rotation:", "Label.FormCaption"))
-			
-			pEditCameraRotation = EditVector.new(pCharacterConfiguration.getCameraRotation())
-			pEditCameraRotation.setToolTip("Attach rotation in degrees of camera relative to bone. Not used if bone is empty string.")
-			p.addWidget(pEditCameraRotation)
-			
-			// camera coordinate system
-			CPECoordinateSystem.new(pCharacterPreview, pEditCameraPosition, pEditCameraRotation, cbCameraBone)
-			
+			// motion transfers
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p2
+				p2.setDesignerSelector("Panel.WMPanelConfiguration.MotionTransfers")
+				
+				p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p3
+					comboBox = ComboBox.new(pModelMotionTransfers, MotionTransferRenderer.new())
+					p3.addWidget(comboBox)
+					
+					button = Button.new("...", MotionTransferPopupAction.new(this))
+					p3.addWidget(button)
+				end))
+				
+				var SwitchPanel switcher = SwitchPanel.new(pModelMotionTransferPanel)
+				p2.addWidget(switcher)
+				
+				// TODO
+			end))
 		end), BorderLayout.Area.right)
 		
 		// button line
@@ -292,7 +431,7 @@ class WindowCharacterConfiguration extends WindowDialog
 	
 	/** Update move lists. */
 	public func void updateMoveLists()
-		var Array moves = Array.new()
+		var Array moves = Array.newWith("")
 		var Animation animation
 		
 		var BehaviorElement element = pCharacterPreview.getCharacterPreview()
@@ -332,5 +471,55 @@ class WindowCharacterConfiguration extends WindowDialog
 		if previewBones != null
 			previewBones.bonePositionChanged()
 		end
+	end
+	
+	
+	
+	/** Active tracker slot. */
+	public func CharacterTrackerSlot getTrackerSlot()
+		if pModelTrackerSlots.getSelected() != -1
+			return pModelTrackerSlots.getAt(pModelTrackerSlots.getSelected()) cast CharacterTrackerSlot
+		end
+		return null
+	end
+	
+	/** Add tracker slot. */
+	public func void addTrackerSlot()
+		// TODO
+	end
+	
+	/** Duplicate tracker slot. */
+	public func void duplicateTrackerSlot()
+		// TODO
+	end
+	
+	/** Remove tracker slot. */
+	public func void removeTrackerSlot()
+		// TODO
+	end
+	
+	
+	
+	/** Active motion transfer. */
+	public func MotionTransfer getMotionTransfer()
+		if pModelMotionTransfers.getSelected() != -1
+			return pModelMotionTransfers.getAt(pModelMotionTransfers.getSelected()) cast MotionTransfer
+		end
+		return null
+	end
+	
+	/** Add motion transfer. */
+	public func void addMotionTransfer()
+		// TODO
+	end
+	
+	/** Duplicate motion transfer. */
+	public func void duplicateMotionTransfer()
+		// TODO
+	end
+	
+	/** Remove motion transfer. */
+	public func void removeMotionTransfer()
+		// TODO
 	end
 end

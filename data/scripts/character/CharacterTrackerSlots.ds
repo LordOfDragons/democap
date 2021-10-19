@@ -29,13 +29,13 @@ pin Dragengine.Utils
  * List of character tracker slots.
  */
 class CharacterTrackerSlots
-	private var Dictionary pSlots
+	private var Array pSlots
 	
 	
 	
 	/** Create tracker slot list. */
 	public func new()
-		pSlots = Dictionary.new()
+		pSlots = Array.new()
 	end
 	
 	/** Dispose of list. */
@@ -51,26 +51,33 @@ class CharacterTrackerSlots
 	end
 	
 	/** Named tracker slot is present. */
-	public func bool has(String name)
+	public func bool hasNamed(String name)
 		return pSlots.has(name)
 	end
 	
+	/** Tracker slot at index or null if absent. */
+	public func CharacterTrackerSlot getAt(int index)
+		return pSlots.getAt(index) cast CharacterTrackerSlot
+	end
+	
 	/** Named tracker slot or null if absent. */
-	public func CharacterTrackerSlot getAt(String name)
-		return pSlots.getAt(name, null) cast CharacterTrackerSlot
+	public func CharacterTrackerSlot getNamed(String name)
+		return pSlots.find(block CharacterTrackerSlot each
+			return each.getName().compareNoCase(name) == 0
+		end) cast CharacterTrackerSlot
 	end
 	
 	/** Add tracker slot. Throws exception if named tracker slot is present. */
 	public func void add(CharacterTrackerSlot slot)
-		if pSlots.has(slot.getName())
+		if hasNamed(slot.getName())
 			throw EInvalidParam.new("named tracker slot is present: " + slot.getName())
 		end
-		pSlots.setAt(slot.getName(), slot)
+		pSlots.add(slot)
 	end
 	
 	/** Remove tracker slot. Throws exception if named tracker slot is absent. */
 	public func void remove(CharacterTrackerSlot slot)
-		pSlots.remove(slot.getName())
+		pSlots.remove(slot)
 	end
 	
 	/** Remove all tracker slots. */
@@ -82,7 +89,7 @@ class CharacterTrackerSlots
 	 * Visit tracker slots with block. Block receives as only argument CharacterTrackerSlot.
 	 */
 	public func void forEach(Block ablock)
-		pSlots.forEachValue(ablock)
+		pSlots.forEach(ablock)
 	end
 	
 	/**
@@ -90,9 +97,7 @@ class CharacterTrackerSlots
 	 * and has to return true if the matching slot is found.
 	 */
 	public func CharacterTrackerSlot find(Block ablock)
-		return pSlots.find(block String key, CharacterTrackerSlot slot
-			return ablock.run(slot)
-		end) cast CharacterTrackerSlot
+		return pSlots.find(ablock) cast CharacterTrackerSlot
 	end
 	
 	/**
@@ -101,20 +106,19 @@ class CharacterTrackerSlots
 	 * Returns Array of CharacterTrackerSlot.
 	 */
 	public func Array collect(Block ablock)
-		var Array list = Array.new()
-		pSlots.forEachValue(block CharacterTrackerSlot each
-			if ablock.run(each) cast bool
-				list.add(each)
-			end
-		end)
-		return list
+		return pSlots.collect(ablock)
+	end
+	
+	/** List of tracker slots as Array of CharacterTrackerSlot. */
+	public func Array toArray()
+		return Array.new(pSlots)
 	end
 	
 	/**
 	 * Find closest slot with matching type or null.
 	 */
 	public func CharacterTrackerSlot bestMatching(InputDeviceType type, Vector position)
-		return pSlots.injectValue(null, block CharacterTrackerSlot inject, CharacterTrackerSlot slot
+		return pSlots.inject(null, block CharacterTrackerSlot inject, CharacterTrackerSlot slot
 			if slot.getInputDeviceType() != type
 				return inject
 				
