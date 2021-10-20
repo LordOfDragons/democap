@@ -1,0 +1,145 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer child panel.
+ */
+class WCCPMTChild extends WCCPanelMotionTransfer
+	private var DefaultListModel pModelListBone
+	private var DefaultTextModel pModelTextBone
+	private var WCCPMTTracker pEditTracker
+	
+	
+	
+	/** Create window. */
+	public func new(WindowCharacterConfiguration window) super(window)
+		pModelTypeName.setText("Child Coordinate System")
+		
+		pModelListBone = DefaultListModel.new()
+		pModelTextBone = DefaultTextModel.new()
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		super.dispose()
+		
+		pModelListBone = null
+		pModelTextBone = null
+		pEditTracker = null
+	end
+	
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	public func void loadValues()
+		super.loadValues()
+		
+		if pMotionTransfer != null
+			var MotionTransferChild mt = pMotionTransfer cast MotionTransferChild
+			pModelTextBone.setText(mt.getBone())
+			pEditTracker.setTracker(mt.getTracker())
+			pEditTracker.loadValues()
+			
+		else
+			pModelTextBone.setText("")
+			pEditTracker.setTracker(null)
+		end
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	public func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		super.saveValues()
+		
+		var MotionTransferChild mt = pMotionTransfer cast MotionTransferChild
+		mt.setBone(pModelTextBone.getText())
+		pEditTracker.saveValues()
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferChild
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var TextField textField
+		var ComboBox comboBox
+		var Button button
+		var ListBox listBox
+		var Label label
+		
+		super.createContent()
+		
+		// bone
+		label = Label.new("Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		comboBox = ComboBox.new(pModelListBone, DefaultComboBoxEditor.new(pModelTextBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Bone to attach to tracker slot.")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, label, comboBox)
+		
+		// tracker
+		pEditTracker = WCCPMTTracker.new(this)
+		pEditTracker.setDesignerSelector("Panel.WMPanelConfiguration.MotionTransferTracker.Target")
+		addWidget(pEditTracker)
+	end
+	
+	/** Update bone lists. */
+	public func void updateBoneLists(Array bones)
+		pModelListBone.setContent(bones)
+	end
+	
+	/** Update slot lists. */
+	public func void updateSlotLists(Array slots)
+		pEditTracker.updateSlotLists(slots)
+	end
+	
+	/** Motion transfer changed. */
+	protected func void onMotionTransferChanged()
+		if pEditTracker != null
+			pEditTracker.setTracker(null)
+		end
+	end
+end

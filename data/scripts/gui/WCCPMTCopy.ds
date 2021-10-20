@@ -1,0 +1,250 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer copy panel.
+ */
+class WCCPMTCopy extends WCCPanelMotionTransfer
+	private var DefaultListModel pModelListSourceBone
+	private var DefaultTextModel pModelTextSourceBone
+	private var DefaultListModel pModelTargetBones
+	private var DefaultTextModel pModelScalePosition
+	private var DefaultTextModel pModelScaleRotation
+	private var DefaultToggleModel pModelCopyPosition
+	private var DefaultToggleModel pModelCopyRotation
+	private var DefaultListModel pModelCopyMode
+	private var DefaultToggleModel pModelLockX
+	private var DefaultToggleModel pModelLockY
+	private var DefaultToggleModel pModelLockZ
+	
+	
+	
+	/** Create window. */
+	public func new(WindowCharacterConfiguration window) super(window)
+		pModelTypeName.setText("Copy Bone States")
+		
+		pModelListSourceBone = DefaultListModel.new()
+		pModelTextSourceBone = DefaultTextModel.new()
+		pModelTargetBones = DefaultListModel.new()
+		pModelScalePosition = DefaultTextModel.new()
+		pModelScaleRotation = DefaultTextModel.new()
+		pModelCopyPosition = DefaultToggleModel.new()
+		pModelCopyRotation = DefaultToggleModel.new()
+		pModelCopyMode = DefaultListModel.new(MotionTransferCopy.CopyMode.all().toArray().sorted())
+		pModelLockX = DefaultToggleModel.new()
+		pModelLockY = DefaultToggleModel.new()
+		pModelLockZ = DefaultToggleModel.new()
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		super.dispose()
+		
+		pModelListSourceBone = null
+		pModelTextSourceBone = null
+		pModelTargetBones = null
+		pModelScalePosition = null
+		pModelScaleRotation = null
+		pModelCopyPosition = null
+		pModelCopyRotation = null
+		pModelCopyMode = null
+		pModelLockX = null
+		pModelLockY = null
+		pModelLockZ = null
+	end
+	
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	public func void loadValues()
+		super.loadValues()
+		
+		if pMotionTransfer != null
+			var MotionTransferCopy mt = pMotionTransfer cast MotionTransferCopy
+			pModelTextSourceBone.setText(mt.getSourceBone())
+			pModelTargetBones.setContent(mt.getTargetBones())
+			pModelScalePosition.setText(mt.getScalePosition().toString())
+			pModelScaleRotation.setText(mt.getScaleRotation().toString())
+			pModelCopyPosition.setToggled(mt.getCopyPosition())
+			pModelCopyRotation.setToggled(mt.getCopyRotation())
+			pModelCopyMode.setSelected(pModelCopyMode.indexOf(mt.getCopyMode()))
+			pModelLockX.setToggled(mt.getLockX())
+			pModelLockY.setToggled(mt.getLockY())
+			pModelLockZ.setToggled(mt.getLockZ())
+			
+		else
+			pModelTextSourceBone.setText("")
+			pModelTargetBones.removeAll()
+			pModelScalePosition.setText("")
+			pModelScaleRotation.setText("")
+			pModelCopyPosition.setToggled(false)
+			pModelCopyRotation.setToggled(false)
+			pModelCopyMode.setSelected(pModelCopyMode.indexOf(MotionTransferCopy.CopyMode.component))
+			pModelLockX.setToggled(false)
+			pModelLockY.setToggled(false)
+			pModelLockZ.setToggled(false)
+		end
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	public func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		super.saveValues()
+		
+		var MotionTransferCopy mt = pMotionTransfer cast MotionTransferCopy
+		mt.setSourceBone(pModelTextSourceBone.getText())
+		mt.getTargetBones().removeAll()
+		mt.getTargetBones().addAll(pModelTargetBones.getContent())
+		mt.setScalePosition(pModelScalePosition.getText().toFloat())
+		mt.setScaleRotation(pModelScaleRotation.getText().toFloat())
+		mt.setCopyPosition(pModelCopyPosition.getToggled())
+		mt.setCopyRotation(pModelCopyRotation.getToggled())
+		mt.setCopyMode(pModelCopyMode.getAt(pModelCopyMode.getSelected()) cast MotionTransferCopy.CopyMode)
+		mt.setLockX(pModelLockX.getToggled())
+		mt.setLockY(pModelLockY.getToggled())
+		mt.setLockZ(pModelLockZ.getToggled())
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferCopy
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var TextField textField
+		var ComboBox comboBox
+		var Button button
+		var ListBox listBox
+		var Label label
+		var CheckBox checkBox
+		
+		super.createContent()
+		
+		// source bone
+		label = Label.new("Source Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		comboBox = ComboBox.new(pModelListSourceBone, DefaultComboBoxEditor.new(pModelTextSourceBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Source bone to copy states from.")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, label, comboBox)
+		
+		// target bones
+		pPanelForm.addWidget(Label.new("Target Bones:", "Label.FormCaption"))
+		
+		listBox = ListBox.new(pModelTargetBones)
+		listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
+		listBox.setToolTip("Bones to apply copied states to.")
+		listBox.setNumberDisplayLines(5)
+		pPanelForm.addWidget(listBox)
+		
+		// scale
+		pPanelForm.addWidget(Label.new("Scale:", "Label.FormCaption"))
+		
+		pPanelForm.addWidget(Panel.new(GridLayout.new(0, 1, 5), block Panel p
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.last), block Panel p2
+				p2.addWidget(Label.new("Position"))
+				
+				textField = TextField.new(pModelScalePosition, 6)
+				textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+				textField.setValidator(SimpleTextValidator.new(6, SimpleTextValidator.CharacterClass.positiveNumber))
+				textField.setToolTip("Scaling to apply to copied position.")
+				p2.addWidget(textField)
+			end))
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.last), block Panel p2
+				p2.addWidget(Label.new("Rotation"))
+				
+				textField = TextField.new(pModelScaleRotation, 6)
+				textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+				textField.setValidator(SimpleTextValidator.new(6, SimpleTextValidator.CharacterClass.positiveNumber))
+				textField.setToolTip("Scaling to apply to copied rotations.")
+				p2.addWidget(textField)
+			end))
+		end))
+		
+		// mode
+		pPanelForm.addWidget(Label.new("Copy Mode:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelCopyMode)
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Copy mode. Copy from component space to component space (component) "\
+			+ "or bone local space to bone local space (local).")
+		pPanelForm.addWidget(comboBox)
+		
+		// restrictions
+		pPanelForm.addWidget(Label.new("Copy:", "Label.FormCaption"))
+		
+		pPanelForm.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p
+			checkBox = CheckBox.new(pModelCopyPosition, "Position")
+			checkBox.setToolTip("Copy position")
+			p.addWidget(checkBox)
+			
+			checkBox = CheckBox.new(pModelCopyRotation, "Rotation")
+			checkBox.setToolTip("Copy rotation")
+			p.addWidget(checkBox)
+		end))
+		
+		pPanelForm.addWidget(Label.new("Lock:", "Label.FormCaption"))
+		
+		pPanelForm.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p
+			checkBox = CheckBox.new(pModelLockX, "X")
+			checkBox.setToolTip("Do not modify X coordinates")
+			p.addWidget(checkBox)
+			
+			checkBox = CheckBox.new(pModelLockY, "Y")
+			checkBox.setToolTip("Do not modify Y coordinates")
+			p.addWidget(checkBox)
+			
+			checkBox = CheckBox.new(pModelLockZ, "Z")
+			checkBox.setToolTip("Do not modify Z coordinates")
+			p.addWidget(checkBox)
+		end))
+	end
+	
+	/** Update bone lists. */
+	public func void updateBoneLists(Array bones)
+		pModelListSourceBone.setContent(bones)
+	end
+end
