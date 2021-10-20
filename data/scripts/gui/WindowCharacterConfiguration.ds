@@ -339,7 +339,6 @@ class WindowCharacterConfiguration extends WindowDialog
 	public func void saveAndClose()
 		// verify input
 		var String configName = pModelConfigName.getText()
-		var float shoulderLevel
 		
 		if not configName.toLower().equals(pCharacterConfiguration.getName().toLower())
 			if configName.empty()
@@ -348,12 +347,6 @@ class WindowCharacterConfiguration extends WindowDialog
 			end
 			if pCharacterConfiguration.getProfile().getConfigurations().hasNamed(configName)
 				WindowDialog.message(this, "Save Configuration", "Configuration with same name exists", null, null, null)
-				return
-			end
-			try
-				shoulderLevel = pModelShoulderLevel.getText().toFloat()
-			catch Exception e
-				WindowDialog.message(this, "Save Configuration", "Invalid value", null, null, null)
 				return
 			end
 		end
@@ -369,7 +362,7 @@ class WindowCharacterConfiguration extends WindowDialog
 		pCharacterConfiguration.setName(configName)
 		pCharacterConfiguration.setScaleMode(pModelScaleMode.getAt(\
 			pModelScaleMode.getSelected()) cast CharacterConfiguration.ScaleMode)
-		pCharacterConfiguration.setShoulderLevel(shoulderLevel)
+		pCharacterConfiguration.setShoulderLevel(pModelShoulderLevel.getText().toFloat())
 		pCharacterConfiguration.setMoveCalibrate(pModelTextMoveCalibrate.getText())
 		pCharacterConfiguration.setCameraPosition(pEditCameraPosition.getVector())
 		pCharacterConfiguration.setCameraRotation(pEditCameraRotation.getVector())
@@ -623,6 +616,13 @@ class WindowCharacterConfiguration extends WindowDialog
 	public func CharacterTrackerSlot getTrackerSlotNamed(String name)
 		return pModelTrackerSlots.find(block CharacterTrackerSlot each
 			return each.getName().compareNoCase(name) == 0
+		end) cast CharacterTrackerSlot
+	end
+	
+	/** Tracker slot with type or null. */
+	public func CharacterTrackerSlot getTrackerSlotWithType(CharacterTrackerSlot.Type type)
+		return pModelTrackerSlots.find(block CharacterTrackerSlot each
+			return each.getType() == type
 		end) cast CharacterTrackerSlot
 	end
 	

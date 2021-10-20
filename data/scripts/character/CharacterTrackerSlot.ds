@@ -49,7 +49,6 @@ class CharacterTrackerSlot
 		leftKnee
 		rightFoot
 		leftFoot
-		custom
 	end
 	
 	
@@ -61,6 +60,9 @@ class CharacterTrackerSlot
 	private var Vector pPosition
 	private var Vector pRotation
 	private var Matrix pMatrix
+	private var Vector pTargetPosition
+	private var Vector pTargetRotation
+	private var Matrix pTargetMatrix
 	private var InputDeviceType pInputDeviceType
 	private var String pInputDeviceID
 	private var Vector pOffsetPosition
@@ -89,10 +91,13 @@ class CharacterTrackerSlot
 		pConfiguration = configuration
 		setName(name)
 		
-		pType = Type.custom
+		pType = Type.headHmd
 		pPosition = Vector.new()
 		pRotation = Vector.new()
 		pMatrix = Matrix.new()
+		pTargetPosition = Vector.new()
+		pTargetRotation = Vector.new()
+		pTargetMatrix = Matrix.new()
 		pInputDeviceType = InputDeviceType.vrTracker
 		pInputDeviceID = ""
 		pOffsetPosition = Vector.new()
@@ -121,6 +126,9 @@ class CharacterTrackerSlot
 		pPosition = slot.pPosition
 		pRotation = slot.pRotation
 		pMatrix = slot.pMatrix
+		pTargetPosition = slot.pTargetPosition
+		pTargetRotation = slot.pTargetRotation
+		pTargetMatrix = slot.pTargetMatrix
 		pInputDeviceID = slot.pInputDeviceID
 		pInputDeviceType = slot.pInputDeviceType
 		pOffsetPosition = slot.pOffsetPosition
@@ -179,12 +187,50 @@ class CharacterTrackerSlot
 		pType = type
 	end
 	
-	/** Static position. */
+	/** Type of opoosite slot or null if not possible. */
+	public func Type getOppositeType()
+		select pType
+		case Type.leftHandController
+			return Type.rightHandController
+			
+		case Type.leftHandTracker
+			return Type.rightHandTracker
+			
+		case Type.leftElbow
+			return Type.rightElbow
+			
+		case Type.leftKnee
+			return Type.rightKnee
+			
+		case Type.leftFoot
+			return Type.rightFoot
+			
+		case Type.rightHandController
+			return Type.leftHandController
+			
+		case Type.rightHandTracker
+			return Type.leftHandTracker
+			
+		case Type.rightElbow
+			return Type.leftElbow
+			
+		case Type.rightKnee
+			return Type.leftKnee
+			
+		case Type.rightFoot
+			return Type.leftFoot
+			
+		else
+			return null
+		end
+	end
+	
+	/** Actor relative position. */
 	public func Vector getPosition()
 		return pPosition
 	end
 	
-	/** Set static position. */
+	/** Set actor relative position. */
 	public func void setPosition(Vector position)
 		if position == null
 			throw ENullPointer.new("position")
@@ -193,12 +239,12 @@ class CharacterTrackerSlot
 		pMatrix = Matrix.newRT(pRotation, pPosition)
 	end
 	
-	/** Static rotation. */
+	/** Actor relative rotation. */
 	public func Vector getRotation()
 		return pRotation
 	end
 	
-	/** Set static rotation. */
+	/** Set actor relative rotation. */
 	public func void setRotation(Vector rotation)
 		if rotation == null
 			throw ENullPointer.new("rotation")
@@ -207,9 +253,42 @@ class CharacterTrackerSlot
 		pMatrix = Matrix.newRT(pRotation, pPosition)
 	end
 	
-	/** Static matrix. */
+	/** Actor relative matrix. */
 	public func Matrix getMatrix()
 		return pMatrix
+	end
+	
+	/** Character relative position. */
+	public func Vector getTargetPosition()
+		return pTargetPosition
+	end
+	
+	/** Set character relative position. */
+	public func void setTargetPosition(Vector position)
+		if position == null
+			throw ENullPointer.new("position")
+		end
+		pTargetPosition = position
+		pTargetMatrix = Matrix.newRT(pTargetRotation, pTargetPosition)
+	end
+	
+	/** Character relative rotation. */
+	public func Vector getTargetRotation()
+		return pTargetRotation
+	end
+	
+	/** Set character relative rotation. */
+	public func void setTargetRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pTargetRotation = rotation
+		pTargetMatrix = Matrix.newRT(pTargetRotation, pTargetPosition)
+	end
+	
+	/** Character relative matrix. */
+	public func Matrix getTargetMatrix()
+		return pTargetMatrix
 	end
 	
 	/** Input device type to auto-assign or null. */
@@ -361,10 +440,6 @@ class CharacterTrackerSlot
 	
 	/** Init from type. */
 	public func void initFromType(ActorProfile actorProfile)
-		if pType == Type.custom
-			return
-		end
-		
 		if actorProfile == null
 			actorProfile = GameApp.getGameApp().getDefaultActorProfile()
 		end
