@@ -1,0 +1,340 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer fingers panel.
+ */
+class WCCPMTFingers extends WCCPanelMotionTransfer
+	private var DefaultListModel pModelListThumbTipBone
+	private var DefaultTextModel pModelTextThumbTipBone
+	private var DefaultTextModel pModelThumbBoneCount
+	private var DefaultListModel pModelListIndexTipBone
+	private var DefaultTextModel pModelTextIndexTipBone
+	private var DefaultTextModel pModelIndexBoneCount
+	private var DefaultListModel pModelListMiddleTipBone
+	private var DefaultTextModel pModelTextMiddleTipBone
+	private var DefaultTextModel pModelMiddleBoneCount
+	private var DefaultListModel pModelListRingTipBone
+	private var DefaultTextModel pModelTextRingTipBone
+	private var DefaultTextModel pModelRingBoneCount
+	private var DefaultListModel pModelListPinkyTipBone
+	private var DefaultTextModel pModelTextPinkyTipBone
+	private var DefaultTextModel pModelPinkyBoneCount
+	private var DefaultListModel pModelListTrackerSlot
+	private var DefaultTextModel pModelTextTrackerSlot
+	private var DefaultTextModel pModelBendAngle
+	private var DefaultListModel pModelListMoveHandsClosed
+	private var DefaultTextModel pModelTextMoveHandsClosed
+	
+	
+	
+	/** Create window. */
+	public func new(WindowCharacterConfiguration window) super(window)
+		pModelTypeName.setText("Fingers")
+		
+		pModelListThumbTipBone = DefaultListModel.new()
+		pModelTextThumbTipBone = DefaultTextModel.new()
+		pModelThumbBoneCount = DefaultTextModel.new()
+		pModelListIndexTipBone = DefaultListModel.new()
+		pModelTextIndexTipBone = DefaultTextModel.new()
+		pModelIndexBoneCount = DefaultTextModel.new()
+		pModelListMiddleTipBone = DefaultListModel.new()
+		pModelTextMiddleTipBone = DefaultTextModel.new()
+		pModelMiddleBoneCount = DefaultTextModel.new()
+		pModelListRingTipBone = DefaultListModel.new()
+		pModelTextRingTipBone = DefaultTextModel.new()
+		pModelRingBoneCount = DefaultTextModel.new()
+		pModelListPinkyTipBone = DefaultListModel.new()
+		pModelTextPinkyTipBone = DefaultTextModel.new()
+		pModelPinkyBoneCount = DefaultTextModel.new()
+		pModelListTrackerSlot = DefaultListModel.new()
+		pModelTextTrackerSlot = DefaultTextModel.new()
+		pModelBendAngle = DefaultTextModel.new()
+		pModelListMoveHandsClosed = DefaultListModel.new()
+		pModelTextMoveHandsClosed = DefaultTextModel.new()
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		super.dispose()
+		
+		pModelListThumbTipBone = null
+		pModelTextThumbTipBone = null
+		pModelThumbBoneCount = null
+		pModelListIndexTipBone = null
+		pModelTextIndexTipBone = null
+		pModelIndexBoneCount = null
+		pModelListMiddleTipBone = null
+		pModelTextMiddleTipBone = null
+		pModelMiddleBoneCount = null
+		pModelListRingTipBone = null
+		pModelTextRingTipBone = null
+		pModelRingBoneCount = null
+		pModelListPinkyTipBone = null
+		pModelTextPinkyTipBone = null
+		pModelPinkyBoneCount = null
+		pModelListTrackerSlot = null
+		pModelTextTrackerSlot = null
+		pModelBendAngle = null
+		pModelListMoveHandsClosed = null
+		pModelTextMoveHandsClosed = null
+	end
+	
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	public func void loadValues()
+		super.loadValues()
+		
+		if pMotionTransfer != null
+			var MotionTransferFingers mt = pMotionTransfer cast MotionTransferFingers
+			pModelTextThumbTipBone.setText(mt.getThumbTipBone())
+			pModelThumbBoneCount.setText(mt.getThumbBoneCount().toString())
+			pModelTextIndexTipBone.setText(mt.getIndexTipBone())
+			pModelIndexBoneCount.setText(mt.getIndexBoneCount().toString())
+			pModelTextMiddleTipBone.setText(mt.getMiddleTipBone())
+			pModelMiddleBoneCount.setText(mt.getMiddleBoneCount().toString())
+			pModelTextRingTipBone.setText(mt.getRingTipBone())
+			pModelRingBoneCount.setText(mt.getRingBoneCount().toString())
+			pModelTextPinkyTipBone.setText(mt.getPinkyTipBone())
+			pModelPinkyBoneCount.setText(mt.getPinkyBoneCount().toString())
+			pModelTextTrackerSlot.setText(mt.getTracker())
+			pModelBendAngle.setText(mt.getBendAngle().toString())
+			pModelTextMoveHandsClosed.setText(mt.getMoveHandsClosed())
+			
+		else
+			pModelTextThumbTipBone.setText("")
+			pModelThumbBoneCount.setText("")
+			pModelTextIndexTipBone.setText("")
+			pModelIndexBoneCount.setText("")
+			pModelTextMiddleTipBone.setText("")
+			pModelMiddleBoneCount.setText("")
+			pModelTextRingTipBone.setText("")
+			pModelRingBoneCount.setText("")
+			pModelTextPinkyTipBone.setText("")
+			pModelPinkyBoneCount.setText("")
+			pModelTextTrackerSlot.setText("")
+			pModelBendAngle.setText("")
+			pModelTextMoveHandsClosed.setText("")
+		end
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	public func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		super.saveValues()
+		
+		var MotionTransferFingers mt = pMotionTransfer cast MotionTransferFingers
+		mt.setThumbTipBone(pModelTextThumbTipBone.getText())
+		mt.setThumbBoneCount(pModelThumbBoneCount.getText().toInt())
+		mt.setIndexTipBone(pModelTextIndexTipBone.getText())
+		mt.setIndexBoneCount(pModelIndexBoneCount.getText().toInt())
+		mt.setMiddleTipBone(pModelTextMiddleTipBone.getText())
+		mt.setMiddleBoneCount(pModelMiddleBoneCount.getText().toInt())
+		mt.setRingTipBone(pModelTextRingTipBone.getText())
+		mt.setRingBoneCount(pModelRingBoneCount.getText().toInt())
+		mt.setPinkyTipBone(pModelTextPinkyTipBone.getText())
+		mt.setPinkyBoneCount(pModelPinkyBoneCount.getText().toInt())
+		mt.setTracker(pModelTextTrackerSlot.getText())
+		mt.setpBendAngle(pModelBendAngle.getText().toFloat())
+		mt.setMoveHandsClosed(pModelTextMoveHandsClosed.getText())
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferFingers
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var TextField textField
+		var ComboBox comboBox
+		var Button button
+		var ListBox listBox
+		var Label label
+		
+		super.createContent()
+		
+		// thumb bone chain
+		var Label labelTip = Label.new("Thumb Tip Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelTip)
+		
+		comboBox = ComboBox.new(pModelListThumbTipBone, DefaultComboBoxEditor.new(pModelTextThumbTipBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Tip of thumb bone chain.")
+		pPanelForm.addWidget(comboBox)
+		
+		var Label labelCount = Label.new("Thumb Bone Count:", "Label.FormCaption")
+		pPanelForm.addWidget(labelCount)
+		
+		textField = TextField.new(pModelThumbBoneCount, 4)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
+		textField.setToolTip("Count of bones in thumb chain starting at Thumb Tip Bone moving along parent bones.")
+		pPanelForm.addWidget(textField)
+		
+		CPEBoneChain.new(preview, labelTip, comboBox, labelCount, textField)
+		
+		// index bone chain
+		labelTip = Label.new("Index Tip Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelTip)
+		
+		comboBox = ComboBox.new(pModelListIndexTipBone, DefaultComboBoxEditor.new(pModelTextIndexTipBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Tip of index bone chain.")
+		pPanelForm.addWidget(comboBox)
+		
+		labelCount = Label.new("Index Bone Count:", "Label.FormCaption")
+		pPanelForm.addWidget(labelCount)
+		
+		textField = TextField.new(pModelIndexBoneCount, 4)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
+		textField.setToolTip("Count of bones in index chain starting at Index Tip Bone moving along parent bones.")
+		pPanelForm.addWidget(textField)
+		
+		CPEBoneChain.new(preview, labelTip, comboBox, labelCount, textField)
+		
+		// middle bone chain
+		labelTip = Label.new("Middle Tip Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelTip)
+		
+		comboBox = ComboBox.new(pModelListMiddleTipBone, DefaultComboBoxEditor.new(pModelTextMiddleTipBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Tip of middle bone chain.")
+		pPanelForm.addWidget(comboBox)
+		
+		labelCount = Label.new("Middle Bone Count:", "Label.FormCaption")
+		pPanelForm.addWidget(labelCount)
+		
+		textField = TextField.new(pModelMiddleBoneCount, 4)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
+		textField.setToolTip("Count of bones in middle chain starting at Middle Tip Bone moving along parent bones.")
+		pPanelForm.addWidget(textField)
+		
+		CPEBoneChain.new(preview, labelTip, comboBox, labelCount, textField)
+		
+		// ring bone chain
+		labelTip = Label.new("Ring Tip Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelTip)
+		
+		comboBox = ComboBox.new(pModelListRingTipBone, DefaultComboBoxEditor.new(pModelTextRingTipBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Tip of ring bone chain.")
+		pPanelForm.addWidget(comboBox)
+		
+		labelCount = Label.new("Ring Bone Count:", "Label.FormCaption")
+		pPanelForm.addWidget(labelCount)
+		
+		textField = TextField.new(pModelRingBoneCount, 4)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
+		textField.setToolTip("Count of bones in ring chain starting at Ring Tip Bone moving along parent bones.")
+		pPanelForm.addWidget(textField)
+		
+		CPEBoneChain.new(preview, labelTip, comboBox, labelCount, textField)
+		
+		// pinky bone chain
+		labelTip = Label.new("Pinky Tip Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelTip)
+		
+		comboBox = ComboBox.new(pModelListPinkyTipBone, DefaultComboBoxEditor.new(pModelTextPinkyTipBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Tip of pinky bone chain.")
+		pPanelForm.addWidget(comboBox)
+		
+		labelCount = Label.new("Pinky Bone Count:", "Label.FormCaption")
+		pPanelForm.addWidget(labelCount)
+		
+		textField = TextField.new(pModelPinkyBoneCount, 4)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
+		textField.setToolTip("Count of bones in pinky chain starting at Pinky Tip Bone moving along parent bones.")
+		pPanelForm.addWidget(textField)
+		
+		CPEBoneChain.new(preview, labelTip, comboBox, labelCount, textField)
+		
+		// tracker slot
+		pPanelForm.addWidget(Label.new("Tracker Slot:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelListTrackerSlot, DefaultComboBoxEditor.new(pModelTextTrackerSlot))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Tracker slot to use. Requires an attached VR controller supporting finger input.")
+		pPanelForm.addWidget(comboBox)
+		
+		// bend angle
+		pPanelForm.addWidget(Label.new("Bend Angle:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelBendAngle, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(6, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("Finger bending angle in degrees. Applied to each individual finger segment.")
+		pPanelForm.addWidget(textField)
+		
+		// move
+		pPanelForm.addWidget(Label.new("Move Hands Closed:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelListMoveHandsClosed, DefaultComboBoxEditor.new(pModelTextMoveHandsClosed))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Animation move to use instead of Bend Angle. Move defines the curled finger position.")
+		pPanelForm.addWidget(comboBox)
+	end
+	
+	/** Update bone lists. */
+	public func void updateBoneLists(Array bones)
+		pModelListThumbTipBone.setContent(bones)
+		pModelListIndexTipBone.setContent(bones)
+		pModelListMiddleTipBone.setContent(bones)
+		pModelListRingTipBone.setContent(bones)
+		pModelListPinkyTipBone.setContent(bones)
+	end
+	
+	/** Update slot lists. */
+	public func void updateSlotLists(Array slots)
+		pModelListTrackerSlot.setContent(slots)
+	end
+	
+	/** Update move lists. */
+	public func void updateMoveLists(Array moves)
+		pModelListMoveHandsClosed.setContent(moves)
+	end
+end

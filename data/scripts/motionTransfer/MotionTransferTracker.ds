@@ -212,17 +212,20 @@ class MotionTransferTracker
 			return
 		end
 		
-		var Matrix boneMatrix = component.boneGetMatrix(index)
+		//var Matrix boneMatrix = component.boneGetMatrix(index)
 		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
+		var Matrix slotTargetMatrix = pRealSlot.getTargetMatrix()
 		
 		select pAutoTransform
 		case AutoTransform.full
-			pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) * boneMatrix * slotInvMatrix
+			pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) * slotTargetMatrix * slotInvMatrix
+			//pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) * boneMatrix * slotInvMatrix
 			pTransformPosition = pTransformMatrix.getPosition()
 			pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
 			
 		case AutoTransform.orientation
-			var Matrix rotMat = boneMatrix.getRotation() * slotInvMatrix.getRotation()
+			var Matrix rotMat = slotTargetMatrix.getRotation() * slotInvMatrix.getRotation()
+			//var Matrix rotMat = boneMatrix.getRotation() * slotInvMatrix.getRotation()
 			pTransformMatrix = Matrix.newRotation(pOffsetRotation) * rotMat \
 				* Matrix.newTranslation(rotMat * -pOffsetPosition)
 			pTransformPosition = pTransformMatrix.getPosition()
@@ -253,15 +256,18 @@ class MotionTransferTracker
 			return
 		end
 		
-		var Matrix boneMatrix = component.boneGetMatrix(index)
+		//var Matrix boneMatrix = component.boneGetMatrix(index)
 		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
-		var Matrix rotMat = boneMatrix.getRotation() * slotInvMatrix.getRotation()
+		var Matrix slotTargetMatrix = pRealSlot.getTargetMatrix()
+		//var Matrix rotMat = boneMatrix.getRotation() * slotInvMatrix.getRotation()
+		var Matrix rotMat = slotTargetMatrix.getRotation() * slotInvMatrix.getRotation()
 		
 		var Vector taxis = rotMat.normalize().transformNormal(axis)
 		
 		select pAutoTransform
 		case AutoTransform.full
-			var Matrix matrix = boneMatrix * slotInvMatrix
+			var Matrix matrix = slotTargetMatrix * slotInvMatrix
+			//var Matrix matrix = boneMatrix * slotInvMatrix
 			pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition ) * matrix \
 				* Matrix.newTranslation(taxis * -(taxis * matrix.getPosition()) * axisScale)
 			pTransformPosition = pTransformMatrix.getPosition()
