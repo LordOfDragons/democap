@@ -36,6 +36,7 @@ class WindowActorProfile extends WindowDialog
 	private var DefaultTextModel pModelProfileName
 	private var DefaultTextModel pModelArmLength
 	private var DefaultTextModel pModelLegLength
+	private var DefaultTextModel pModelShoulderWidth
 	
 	
 	
@@ -46,6 +47,7 @@ class WindowActorProfile extends WindowDialog
 		pModelProfileName = DefaultTextModel.new(profile.getName())
 		pModelArmLength = DefaultTextModel.new(profile.getArmLength().toString())
 		pModelLegLength = DefaultTextModel.new(profile.getLegLength().toString())
+		pModelShoulderWidth = DefaultTextModel.new(profile.getShoulderWidth().toString())
 		
 		runWhileBlockingLayout(block
 			setGuiTheme(window.getGuiTheme())
@@ -64,6 +66,7 @@ class WindowActorProfile extends WindowDialog
 		pModelProfileName = null
 		pModelArmLength = null
 		pModelLegLength = null
+		pModelShoulderWidth = null
 		
 		super.dispose()
 	end
@@ -96,6 +99,7 @@ class WindowActorProfile extends WindowDialog
 		pActorProfile.setName(profileName)
 		pActorProfile.setArmLength(pModelArmLength.getText().toFloat())
 		pActorProfile.setLegLength(pModelLegLength.getText().toFloat())
+		pActorProfile.setShoulderWidth(pModelShoulderWidth.getText().toFloat())
 		
 		pActorProfile.save()
 		
@@ -137,12 +141,22 @@ class WindowActorProfile extends WindowDialog
 			textField.setDesignerSelector("TextField.WindowActorProfile")
 			p.addWidget(textField)
 			
+			// shoulder width
+			p.addWidget(Label.new("Shoulder Width:", "Label.FormCaption"))
+			
+			textField = TextField.new(pModelShoulderWidth, 6)
+			textField.setDesignerSelector("TextField.WindowActorProfile")
+			textField.setValidator(SimpleTextValidator.new(6, SimpleTextValidator.CharacterClass.positiveNumber))
+			textField.setToolTip("Distance between left and right shoulder bone.")
+			p.addWidget(textField)
+			
 			// arm length
 			p.addWidget(Label.new("Arm Length:", "Label.FormCaption"))
 			
 			textField = TextField.new(pModelArmLength, 6)
 			textField.setDesignerSelector("TextField.WindowActorProfile")
 			textField.setValidator(SimpleTextValidator.new(6, SimpleTextValidator.CharacterClass.positiveNumber))
+			textField.setToolTip("Distance between shoulder bone and palm center.")
 			p.addWidget(textField)
 			
 			// leg length
@@ -151,6 +165,7 @@ class WindowActorProfile extends WindowDialog
 			textField = TextField.new(pModelLegLength, 6)
 			textField.setDesignerSelector("TextField.WindowActorProfile")
 			textField.setValidator(SimpleTextValidator.new(6, SimpleTextValidator.CharacterClass.positiveNumber))
+			textField.setToolTip("Distance between waist belt and floor.")
 			p.addWidget(textField)
 			
 		end), BorderLayout.Area.content)

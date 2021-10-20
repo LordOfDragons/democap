@@ -21,6 +21,7 @@
 
 namespace Democap.Gui
 
+pin Democap.Actors
 pin Democap.Behaviors
 pin Democap.Characters
 pin Democap.Elements
@@ -194,10 +195,17 @@ class WindowCharacterConfiguration extends WindowDialog
 		
 		public func Matrix getSlotMatrix(String name)
 			var CharacterTrackerSlot slot = pWindow.getTrackerSlotNamed(name)
-			if slot != null
-				return slot.getMatrix()
+			if slot == null
+				return Matrix.new()
 			end
-			return Matrix.new()
+			
+			var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
+			if actorProfile == null
+				actorProfile = GameApp.getGameApp().getDefaultActorProfile()
+			end
+			
+			var float scale = pWindow.getCharacterConfiguration().getShoulderLevel() / actorProfile.getShoulderLevel()
+			return slot.getMatrix() * Matrix.newScaling(scale, scale, scale)
 		end
 	end
 	
@@ -225,6 +233,11 @@ class WindowCharacterConfiguration extends WindowDialog
 	/** Create window. */
 	public func new(Window window, CharacterConfiguration config, ResultListener listener)
 		pCharacterConfiguration = config
+		
+		var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
+		config.getTrackerSlots().forEach(block CharacterTrackerSlot each
+			each.initFromType(actorProfile)
+		end)
 		
 		pModelConfigName = DefaultTextModel.new(config.getName())
 		pModelScaleMode = DefaultListModel.new(CharacterConfiguration.ScaleMode.all().toArray().sorted())
@@ -616,11 +629,13 @@ class WindowCharacterConfiguration extends WindowDialog
 	/** Select tracker slot. */
 	public func void selectTrackerSlot()
 		if pModelTrackerSlots.getSelected() != -1
+			pPanelTrackerSlot.saveValues()
 			pPanelTrackerSlot.setTrackerSlot(pModelTrackerSlots.getAt(\
 				pModelTrackerSlots.getSelected()) cast CharacterTrackerSlot)
 			pPanelTrackerSlot.setEnabled(true)
 			
 		else
+			pPanelTrackerSlot.saveValues()
 			pPanelTrackerSlot.setTrackerSlot(null)
 			pPanelTrackerSlot.setEnabled(false)
 		end

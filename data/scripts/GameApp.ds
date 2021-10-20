@@ -42,6 +42,7 @@ pin Dragengine.Utils
 class GameApp extends BaseGameApp
 	private var ActorProfiles pActorProfiles
 	private var ActorProfile pActiveActorProfile
+	private var ActorProfile pDefaultActorProfile
 	private var CharacterProfiles pCharacterProfiles
 	
 	private var MotionTransferFactories pMotionTransferFactories
@@ -78,6 +79,8 @@ class GameApp extends BaseGameApp
 	 */
 	public func void initGame()
 		super.initGame()
+		
+		pDefaultActorProfile = ActorProfile.new("Default")
 		
 		pMotionTransferFactories = MotionTransferFactories.new()
 		addMotionTransferFactories()
@@ -233,6 +236,12 @@ class GameApp extends BaseGameApp
 		end
 		
 		pActiveActorProfile = null
+		
+		if pDefaultActorProfile != null
+			pDefaultActorProfile.dispose()
+			pDefaultActorProfile = null
+		end
+		
 		if pActorProfiles != null
 			pActorProfiles.dispose()
 			pActorProfiles = null
@@ -275,6 +284,11 @@ class GameApp extends BaseGameApp
 	/** Set active actor profile or null. */
 	public func void setActiveActorProfile(ActorProfile profile)
 		pActiveActorProfile = profile
+	end
+	
+	/** Default actor profile or null. */
+	public func ActorProfile getDefaultActorProfile()
+		return pDefaultActorProfile
 	end
 	
 	/** Character profiles. */

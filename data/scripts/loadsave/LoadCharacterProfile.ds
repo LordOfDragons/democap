@@ -195,7 +195,10 @@ class LoadCharacterProfile extends BaseXmlLoader
 		configuration.getTrackerSlots().add(slot)
 		
 		root.forEachTag(block EasyXMLElement element, String tagName
-			if tagName.equals("position")
+			if tagName.equals("type")
+				slot.setType(CharacterTrackerSlot.Type.named(element.getFirstCData()))
+				
+			elif tagName.equals("position")
 				slot.setPosition(readVector(element))
 				
 			elif tagName.equals("rotation")
@@ -308,6 +311,7 @@ class LoadCharacterProfile extends BaseXmlLoader
 		var EasyXMLElement tag = root.addTag("trackerSlot")
 		tag.setAttribute("name", slot.getName())
 		
+		tag.addDataTag("type", slot.getType().name())
 		writeVector(tag, "position", slot.getPosition())
 		writeVector(tag, "rotation", slot.getRotation())
 		tag.addDataTag("inputDevice", slot.getInputDeviceID())

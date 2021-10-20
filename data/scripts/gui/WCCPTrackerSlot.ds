@@ -21,6 +21,7 @@
 
 namespace Democap.Gui
 
+pin Democap.Actors
 pin Democap.Characters
 
 pin Dragengine.Gui.Layouts
@@ -63,17 +64,61 @@ class WCCPTrackerSlot extends Panel
 		end
 	end
 	
+	class SlotTypeChangedListener extends DefaultListModelListener
+		private var WCCPTrackerSlot pPanel
+		
+		public func new(WCCPTrackerSlot panel)
+			pPanel = panel
+		end
+		
+		public func void selectionChanged(ListModel listModel)
+			var CharacterTrackerSlot slot = pPanel.getTrackerSlot()
+			if slot != null
+				slot.initFromType(GameApp.getGameApp().getActiveActorProfile())
+			end
+			
+			pPanel.updateCustomEnabled()
+		end
+	end
+	
+	class OffsetTemplatesAction extends DefaultActionListener
+		private var WCCPTrackerSlot pPanel
+		private var EditVector pEditOffsetPosition
+		
+		public func new(WCCPTrackerSlot panel, EditVector editOffsetPosition)
+			pPanel = panel
+			pEditOffsetPosition = editOffsetPosition
+		end
+		
+		public func void onAction(ActionEvent event)
+			var Widget widget = event.getSource() cast Widget
+			var WindowPopup popup = WindowPopup.new()
+			var Button button
+			
+			button = Button.new("Index Controller", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pEditOffsetPosition.setVector(Vector.new(0, 0, -0.11))
+			end))
+			popup.addWidget(button)
+			
+			pPanel.getDesktop().addWindow(popup)
+			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
+		end
+	end
+	
 	
 	
 	private var WindowCharacterConfiguration pWindowCharacterConfiguration
 	private var CharacterTrackerSlot pTrackerSlot
 	
 	private var DefaultTextModel pModelName
+	private var DefaultListModel pModelType
 	private var EditVector pEditPosition
 	private var EditVector pEditRotation
 	private var DefaultListModel pModelInputDeviceType
 	private var EditVector pEditOffsetPosition
 	private var EditVector pEditOffsetRotation
+	private var Array pNonCustomWidgets
 	
 	
 	
@@ -82,11 +127,17 @@ class WCCPTrackerSlot extends Panel
 		pWindowCharacterConfiguration = windowCharacterConfiguration
 		
 		pModelName = DefaultTextModel.new()
+		pModelType = DefaultListModel.new(CharacterTrackerSlot.Type.all().toArray().sorted())
 		pModelInputDeviceType = DefaultListModel.new(InputDeviceType.all().toArray().sorted())
+		pNonCustomWidgets = Array.new()
 		
 		runWhileBlockingLayout(block
 			createContent()
+			
 			setEnabled(false)
+			updateCustomEnabled()
+			
+			pModelType.addListener(SlotTypeChangedListener.new(this))
 		end)
 	end
 	
@@ -94,7 +145,9 @@ class WCCPTrackerSlot extends Panel
 	public func void dispose()
 		setTrackerSlot(null)
 		
+		pNonCustomWidgets = null
 		pModelName = null
+		pModelType = null
 		pEditPosition = null
 		pEditRotation = null
 		pModelInputDeviceType = null
@@ -134,7 +187,10 @@ class WCCPTrackerSlot extends Panel
 	/** Load values from tracker slot object if present into edit widgets. */
 	public func void loadValues()
 		if pTrackerSlot != null
+			pTrackerSlot.initFromType(GameApp.getGameApp().getActiveActorProfile())
+			
 			pModelName.setText(pTrackerSlot.getName())
+			pModelType.setSelected(pModelType.indexOf(pTrackerSlot.getType()))
 			pEditPosition.setVector(pTrackerSlot.getPosition())
 			pEditRotation.setVector(pTrackerSlot.getRotation())
 			pModelInputDeviceType.setSelected(pModelInputDeviceType.indexOf(pTrackerSlot.getInputDeviceType()))
@@ -143,6 +199,7 @@ class WCCPTrackerSlot extends Panel
 			
 		else
 			pModelName.setText("")
+			pModelType.setSelected(pModelType.indexOf(CharacterTrackerSlot.Type.custom))
 			pEditPosition.setVector(Vector.new())
 			pEditRotation.setVector(Vector.new())
 			pModelInputDeviceType.setSelected(pModelInputDeviceType.indexOf(InputDeviceType.vrTracker))
@@ -165,11 +222,23 @@ class WCCPTrackerSlot extends Panel
 		end
 		
 		pTrackerSlot.setName(slotName)
+		pTrackerSlot.setType(pModelType.getAt(pModelType.getSelected()) cast CharacterTrackerSlot.Type)
 		pTrackerSlot.setPosition(pEditPosition.getVector())
 		pTrackerSlot.setRotation(pEditRotation.getVector())
 		pTrackerSlot.setInputDeviceType(pModelInputDeviceType.getAt(pModelInputDeviceType.getSelected()) cast InputDeviceType)
 		pTrackerSlot.setOffsetPosition(pEditOffsetPosition.getVector())
 		pTrackerSlot.setOffsetRotation(pEditOffsetRotation.getVector())
+	end
+	
+	/** Update non custom enabled states. */
+	public func void updateCustomEnabled()
+		runWhileBlockingLayout(block
+			var bool enabled = pModelType.getAt(pModelType.getSelected()) == CharacterTrackerSlot.Type.custom
+			pNonCustomWidgets.forEach(block Widget each
+				each.setEnabled(enabled)
+			end)
+		end)
+		doLayoutIfBlocked()
 	end
 	
 	
@@ -179,6 +248,8 @@ class WCCPTrackerSlot extends Panel
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var TextField textField
 		var ComboBox comboBox
+		var Button button
+		var Label label
 		
 		setLayout(FormLayout.new(true, 10, 2))
 		
@@ -191,42 +262,64 @@ class WCCPTrackerSlot extends Panel
 		textField.addFocusListener(NameChangedListener.new(this, pModelName))
 		addWidget(textField)
 		
+		// type
+		addWidget(Label.new("Type:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelType)
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Type of slot. If not custom uses appropriate values derived from active actor profile.")
+		addWidget(comboBox)
+		
 		// position
 		var Label labelPosition = Label.new("Position:", "Label.FormCaption")
 		addWidget(labelPosition)
+		pNonCustomWidgets.add(labelPosition)
 		
 		pEditPosition = EditVector.new()
 		pEditPosition.setToolTip("Position to use if no input device is attached.")
 		addWidget(pEditPosition)
+		pNonCustomWidgets.add(pEditPosition)
 		
 		// rotation
 		var Label labelRotation = Label.new("Rotation:", "Label.FormCaption")
 		addWidget(labelRotation)
+		pNonCustomWidgets.add(labelRotation)
 		
 		pEditRotation = EditVector.new()
 		pEditRotation.setToolTip("Rotation in degrees to use if no input device is attached.")
 		addWidget(pEditRotation)
+		pNonCustomWidgets.add(pEditRotation)
 		
 		CPECoordinateSystem.new(preview, labelPosition, pEditPosition, labelRotation, pEditRotation, null, null)
 		
 		// input device type
-		addWidget(Label.new("Device Type:", "Label.FormCaption"))
+		label = Label.new("Device Type:", "Label.FormCaption")
+		addWidget(label)
+		pNonCustomWidgets.add(label)
 		
 		comboBox = ComboBox.new(pModelInputDeviceType)
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("Type of input device valid for this slot.")
 		addWidget(comboBox)
+		pNonCustomWidgets.add(comboBox)
 		
 		// offset position
-		addWidget(Label.new("Track Position:", "Label.FormCaption"))
+		label = Label.new("Track Position:", "Label.FormCaption")
+		addWidget(label)
 		
-		pEditOffsetPosition = EditVector.new()
-		pEditOffsetPosition.setToolTip("Controller track position offset. For hand controllers "\
-			+ " typically at controller tip (-0.11)" )
-		addWidget(pEditOffsetPosition)
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+			pEditOffsetPosition = EditVector.new()
+			pEditOffsetPosition.setToolTip("Controller track position offset. Required for hand controllers "\
+				+ " since they typically have their position at the controller tip" )
+			p.addWidget(pEditOffsetPosition)
+			
+			button = Button.new("...", OffsetTemplatesAction.new(this, pEditOffsetPosition))
+			p.addWidget(button)
+		end))
 		
 		// offset rotation
-		addWidget(Label.new("Track Rotation:", "Label.FormCaption"))
+		label = Label.new("Track Rotation:", "Label.FormCaption")
+		addWidget(label)
 		
 		pEditOffsetRotation = EditVector.new()
 		pEditOffsetRotation.setToolTip("Controller track rotation offset in degrees.")

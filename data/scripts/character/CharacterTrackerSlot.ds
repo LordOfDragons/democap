@@ -21,6 +21,7 @@
 
 namespace Democap.Characters
 
+pin Democap.Actors
 pin Democap.Behaviors
 
 pin Dragengine.Animators
@@ -32,9 +33,31 @@ pin Dragengine.Utils
  * Character configuration tracker slot.
  */
 class CharacterTrackerSlot
+	/** Type. */
+	enum Type
+		headHmd
+		headTracker
+		chest
+		rightHandController
+		rightHandTracker
+		rightElbow
+		leftHandController
+		leftHandTracker
+		leftElbow
+		waist
+		rightKnee
+		leftKnee
+		rightFoot
+		leftFoot
+		custom
+	end
+	
+	
+	
 	private var CharacterConfiguration pConfiguration
 	
 	private var String pName
+	private var Type pType
 	private var Vector pPosition
 	private var Vector pRotation
 	private var Matrix pMatrix
@@ -66,6 +89,7 @@ class CharacterTrackerSlot
 		pConfiguration = configuration
 		setName(name)
 		
+		pType = Type.custom
 		pPosition = Vector.new()
 		pRotation = Vector.new()
 		pMatrix = Matrix.new()
@@ -93,6 +117,7 @@ class CharacterTrackerSlot
 		pConfiguration = configuration
 		pName = slot.pName
 		
+		pType = slot.pType
 		pPosition = slot.pPosition
 		pRotation = slot.pRotation
 		pMatrix = slot.pMatrix
@@ -139,6 +164,19 @@ class CharacterTrackerSlot
 		end
 		
 		pName = name
+	end
+	
+	/** Type. */
+	public func Type getType()
+		return pType
+	end
+	
+	/** Set type. */
+	public func void setType(Type type)
+		if type == null
+			throw ENullPointer.new("type")
+		end
+		pType = type
 	end
 	
 	/** Static position. */
@@ -321,6 +359,85 @@ class CharacterTrackerSlot
 		end
 	end
 	
+	/** Init from type. */
+	public func void initFromType(ActorProfile actorProfile)
+		if pType == Type.custom
+			return
+		end
+		
+		if actorProfile == null
+			actorProfile = GameApp.getGameApp().getDefaultActorProfile()
+		end
+		
+		var float shoulderLevel = actorProfile.getShoulderLevel()
+		var float shoulderWidth = actorProfile.getShoulderWidth()
+		var float armLength = actorProfile.getArmLength()
+		var float legLength = actorProfile.getLegLength()
+		
+		pForceCalibrateRotation = null
+		
+		select pType
+		case Type.headHmd
+			pInputDeviceType = InputDeviceType.vrHMD
+			pPosition = Vector.new(0, shoulderLevel + 0.2, 0.1)
+			pForceCalibrateRotation = Vector.new()
+			
+		case Type.headTracker
+			pInputDeviceType = InputDeviceType.vrTracker
+			pPosition = Vector.new(0, shoulderLevel + 0.3, 0)
+			
+		case Type.chest
+			pInputDeviceType = InputDeviceType.vrTracker
+			pPosition = Vector.new(0, shoulderLevel, 0)
+			
+		case Type.rightHandController
+			pInputDeviceType = InputDeviceType.vrRightHand
+			pPosition = Vector.new(shoulderWidth * 0.5 + armLength, shoulderLevel, 0)
+			
+		case Type.rightHandTracker
+			pInputDeviceType = InputDeviceType.vrTracker
+			pPosition = Vector.new(shoulderWidth * 0.5 + armLength, shoulderLevel, 0)
+			
+		case Type.rightElbow
+			pInputDeviceType = InputDeviceType.vrTracker
+			pPosition = Vector.new(shoulderWidth * 0.5 + armLength * 0.5, shoulderLevel, 0)
+			
+		case Type.leftHandController
+			pInputDeviceType = InputDeviceType.vrLeftHand
+			pPosition = Vector.new(-(shoulderWidth * 0.5 + armLength), shoulderLevel, 0)
+			
+		case Type.leftHandTracker
+			pInputDeviceType = InputDeviceType.vrTracker
+			pPosition = Vector.new(-(shoulderWidth * 0.5 + armLength), shoulderLevel, 0)
+			
+		case Type.leftElbow
+			pInputDeviceType = InputDeviceType.vrTracker
+			pPosition = Vector.new(-(shoulderWidth * 0.5 + armLength * 0.5), shoulderLevel, 0)
+			
+		case Type.waist
+			pInputDeviceType = InputDeviceType.vrTracker
+			pPosition = Vector.new(0, legLength, 0)
+			
+		case Type.rightKnee
+			pInputDeviceType = InputDeviceType.vrTracker
+			pPosition = Vector.new(shoulderWidth * 0.5, legLength * 0.5, 0)
+			
+		case Type.leftKnee
+			pInputDeviceType = InputDeviceType.vrTracker
+			pPosition = Vector.new(-(shoulderWidth * 0.5), legLength * 0.5, 0)
+			
+		case Type.rightFoot
+			pInputDeviceType = InputDeviceType.vrTracker
+			pPosition = Vector.new(shoulderWidth * 0.5, 0.08, 0.12)
+			
+		case Type.leftFoot
+			pInputDeviceType = InputDeviceType.vrTracker
+			pPosition = Vector.new(-(shoulderWidth * 0.5), 0.08, 0.12)
+		end
+		
+		pMatrix = Matrix.newRT(pRotation, pPosition)
+	end
+	
 	
 	
 	/** Calibrate position. */
@@ -379,13 +496,14 @@ class CharacterTrackerSlot
 	end
 	
 	/** Calibrate character. */
-	public func void calibrate(BaseVRActor actor)
+	public func void calibrate(ActorProfile actorProfile, BaseVRActor actor)
 		var ECBTrackerSlot.Instance behavior = ECBTrackerSlot.getInstanceIn(actor, pName)
 		if behavior == null
 			resetCalibration()
 			return
 		end
 		
+		initFromType(actorProfile)
 		behavior.findInputDevice()
 		behavior.updateMatrix()
 		
