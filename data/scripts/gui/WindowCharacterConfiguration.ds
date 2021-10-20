@@ -185,6 +185,22 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 	end
 	
+	class PreviewDataQuery implements ECBPreviewDataQuery.DataQuery
+		private var WindowCharacterConfiguration pWindow
+		
+		public func new(WindowCharacterConfiguration window)
+			pWindow = window
+		end
+		
+		public func Matrix getSlotMatrix(String name)
+			var CharacterTrackerSlot slot = pWindow.getTrackerSlotNamed(name)
+			if slot != null
+				return slot.getMatrix()
+			end
+			return Matrix.new()
+		end
+	end
+	
 	
 	
 	private var CharacterConfiguration pCharacterConfiguration
@@ -269,6 +285,8 @@ class WindowCharacterConfiguration extends WindowDialog
 	
 	/** Dispose of window. */
 	public func void dispose()
+		super.dispose()
+		
 		pPanelsMotionTransfer = null
 		pPanelTrackerSlot = null
 		pModelConfigName = null
@@ -283,8 +301,6 @@ class WindowCharacterConfiguration extends WindowDialog
 		pModelTrackerSlots = null
 		pModelMotionTransfers = null
 		pModelMotionTransferPanel = null
-		
-		super.dispose()
 	end
 	
 	
@@ -368,6 +384,7 @@ class WindowCharacterConfiguration extends WindowDialog
 		setLayout(BorderLayout.new(20))
 		
 		pCharacterPreview = WidgetCharacterPreview.new()
+		pCharacterPreview.setDataQuery(PreviewDataQuery.new(this))
 		pCharacterPreview.addListener(UpdateListsListener.new(this))
 		addWidget(pCharacterPreview, BorderLayout.Area.content)
 		
@@ -445,8 +462,8 @@ class WindowCharacterConfiguration extends WindowDialog
 				p2.addWidget(pEditCameraRotation)
 				
 				// camera coordinate system
-				CPECoordinateSystem.new(pCharacterPreview, labelPosition,\
-					pEditCameraPosition, labelRotation, pEditCameraRotation, cbCameraBone)
+				CPECoordinateSystem.new(pCharacterPreview, labelPosition, pEditCameraPosition,\
+					labelRotation, pEditCameraRotation, cbCameraBone, null)
 			end))
 			
 			// tracker slots
@@ -587,6 +604,13 @@ class WindowCharacterConfiguration extends WindowDialog
 			return pModelTrackerSlots.getAt(pModelTrackerSlots.getSelected()) cast CharacterTrackerSlot
 		end
 		return null
+	end
+	
+	/** Named tracker slot or null. */
+	public func CharacterTrackerSlot getTrackerSlotNamed(String name)
+		return pModelTrackerSlots.find(block CharacterTrackerSlot each
+			return each.getName().compareNoCase(name) == 0
+		end) cast CharacterTrackerSlot
 	end
 	
 	/** Select tracker slot. */

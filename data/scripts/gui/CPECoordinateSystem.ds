@@ -231,13 +231,14 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 	private var EditVector pEditPosition
 	private var EditVector pEditRotation
 	private var ComboBox pCBBone
+	private var ComboBox pCBSlot
 	private var InteractHandleListener pInteractHandleListener
 	
 	
 	
 	/** Create character preview editor. */
 	public func new(WidgetCharacterPreview preview, Label labelPosition, EditVector editPosition,\
-	Label labelRotation, EditVector editRotation, ComboBox cbBone) super(preview)
+	Label labelRotation, EditVector editRotation, ComboBox cbBone, ComboBox cbSlot) super(preview)
 		if editPosition == null
 			throw ENullPointer.new("editPosition")
 		end
@@ -246,6 +247,7 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 		pEditPosition = editPosition
 		pEditRotation = editRotation
 		pCBBone = cbBone
+		pCBSlot = cbSlot
 		
 		if labelPosition != null
 			labelPosition.addMouseListener(ClickedActivateEditor.new(this, editPosition.getEditX()))
@@ -260,6 +262,20 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 		if editRotation != null
 			editRotation.addFocusListener(ReceiveFocusActivateEditor.new(this))
 			editRotation.addActionListener(UpdateOnAction.new(this))
+		end
+		
+		if cbBone != null
+			if cbBone.getEditor() != null
+				cbBone.getEditor().addActionListener(UpdateOnAction.new(this))
+			end
+			cbBone.getModel().addListener(UpdateOnListChanged.new(this))
+		end
+		
+		if cbSlot != null
+			if cbSlot.getEditor() != null
+				cbSlot.getEditor().addActionListener(UpdateOnAction.new(this))
+			end
+			cbSlot.getModel().addListener(UpdateOnListChanged.new(this))
 		end
 	end
 	
@@ -278,6 +294,11 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 	/** Bone combo box or null. */
 	public func ComboBox getComboBoxBone()
 		return pCBBone
+	end
+	
+	/** Tracker slot combo box or null. */
+	public func ComboBox getComboBoxSlot()
+		return pCBSlot
 	end
 	
 	
@@ -375,6 +396,22 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 			
 		else
 			coordSystem.setBone("")
+		end
+		
+		var String slot = ""
+		if pCBSlot != null
+			if pCBSlot.getEditor() != null
+				coordSystem.setSlot(pCBSlot.getEditor().getEditorValue() cast String)
+				
+			elif pCBSlot.getSelectedElement() != -1
+				coordSystem.setSlot(pCBSlot.getModel().getAt(pCBSlot.getSelectedElement()) cast String)
+				
+			else
+				coordSystem.setSlot(null)
+			end
+			
+		else
+			coordSystem.setSlot(null)
 		end
 	end
 end

@@ -52,6 +52,7 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		private var ECBPreviewCoordSystem pECBehavior
+		private var ECBPreviewDataQuery.Instance pDataQuery
 		private var ECBehaviorComponent.Instance pComponent
 		private var Model pModel
 		private var DebugDrawer pDebugDrawerMove
@@ -63,6 +64,7 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 		private var ColliderVolume pColliderRotateY
 		private var ColliderVolume pColliderRotateZ
 		private var String pBone
+		private var String pSlot
 		private var Vector pPosition
 		private var Vector pRotation
 		private var bool pVisibleMove
@@ -75,6 +77,7 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 		public func new(ECBPreviewCoordSystem ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pBone = ""
+			pSlot = ""
 			pPosition = Vector.new()
 			pRotation = Vector.new()
 			pVisibleMove = false
@@ -90,6 +93,7 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 			pRingRotMat.add(Matrix.newRotationX(295))
 			pRingRotMat.add(Matrix.newRotationX(325))
 			
+			pDataQuery = ecbehavior.getDataQuery().instance(element)
 			pComponent = ecbehavior.getComponent().instance(element)
 		end
 		
@@ -168,6 +172,20 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 			updateCoordSystemGeometry()
 		end
 		
+		/** Tracker slot or empty string. */
+		public func String getSlot()
+			return pSlot
+		end
+		
+		/** Set tracker slot or empty string. */
+		public func void setSlot(String slot)
+			if slot.equals(pSlot)
+				return
+			end
+			pSlot = slot
+			updateCoordSystemGeometry()
+		end
+		
 		/** Position relative to element. */
 		public func Vector getPosition()
 			return pPosition
@@ -204,9 +222,14 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 		/** Get world matrix of coordinate system parent. */
 		public func DMatrix getParentMatrix()
 			var DMatrix matrix = getElement().getElementMatrix()
+			
 			if not pBone.empty()
 				matrix = pComponent.getComponent().getBoneMatrix(pBone).toDMatrix() * matrix
+				
+			elif pSlot != null and pDataQuery.getDataQuery() != null
+				matrix = pDataQuery.getDataQuery().getSlotMatrix(pSlot).toDMatrix() * matrix
 			end
+			
 			return matrix
 		end
 		
@@ -412,19 +435,25 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 	
 	
 	
+	private var ECBPreviewDataQuery pDataQuery
 	private var ECBehaviorComponent pComponent
 	private var ECPModel pModel
 	
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBehaviorComponent component) super(eclass)
+	public func new(BehaviorElementClass eclass, ECBPreviewDataQuery dataQuery,\
+	ECBehaviorComponent component) super(eclass)
+		if dataQuery == null
+			throw ENullPointer.new("dataQuery")
+		end
 		if component == null
 			throw ENullPointer.new("component")
 		end
 		
 		var String prefix = "previewCoordSystem."
 		
+		pDataQuery = dataQuery
 		pComponent = component
 		
 		pModel = ECPModel.new(prefix + "model", "/content/models/coordSystem/coordSystem.demodel")
@@ -435,11 +464,17 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 	
 	/** Dispose of behavior. */
 	public func void dispose()
+		pDataQuery = null
 		pComponent = null
 		super.dispose()
 	end
 	
 	
+	
+	/** Data query. */
+	public func ECBPreviewDataQuery getDataQuery()
+		return pDataQuery
+	end
 	
 	/** Component behavior. */
 	public func ECBehaviorComponent getComponent()

@@ -197,6 +197,7 @@ class WidgetCharacterPreview extends Panel
 	private var BehaviorElementClass pCharacterPreviewClass
 	private var BehaviorElement pCharacterPreview
 	private var Array pListeners
+	private var ECBPreviewDataQuery.DataQuery pDataQuery
 	
 	private var String pPathModel
 	private var String pPathSkin
@@ -240,11 +241,22 @@ class WidgetCharacterPreview extends Panel
 		pWorldRenderer = null
 		pPanelHud = null
 		pPreviewPreloader = null
+		pDataQuery = null
 		
 		super.dispose()
 	end
 	
 	
+	
+	/** Data query or null. */
+	public func ECBPreviewDataQuery.DataQuery getDataQuery()
+		return pDataQuery
+	end
+	
+	/** Set data query or null. */
+	public func void setDataQuery(ECBPreviewDataQuery.DataQuery dataQuery)
+		pDataQuery = dataQuery
+	end
 	
 	/** Set model path. */
 	public func void setPathModel(String path)
@@ -526,6 +538,11 @@ class WidgetCharacterPreview extends Panel
 		
 		pCharacterPreview = stub.createElement() cast BehaviorElement
 		pGameWorld.addElement(pCharacterPreview)
+		
+		var ECBPreviewDataQuery.Instance previewDataQuery = ECBPreviewDataQuery.getInstanceIn(pCharacterPreview)
+		if previewDataQuery != null
+			previewDataQuery.setDataQuery(pDataQuery)
+		end
 	end
 	
 	/** Clear editor changes. */

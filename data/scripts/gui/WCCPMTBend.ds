@@ -141,27 +141,35 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		var ComboBox comboBox
 		var Button button
 		var ListBox listBox
+		var Label label
 		
 		super.createContent()
 		
 		// target bone
-		pPanelForm.addWidget(Label.new("Target Bone:", "Label.FormCaption"))
+		label = Label.new("Target Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
 		
 		comboBox = ComboBox.new(pModelListTargetBone, DefaultComboBoxEditor.new(pModelTextTargetBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("Target bone not part of chain. Bending angle is calculate between target and base bone.")
 		pPanelForm.addWidget(comboBox)
 		
+		CPEBone.new(preview, label, comboBox)
+		
 		// base bone
-		pPanelForm.addWidget(Label.new("Base Bone:", "Label.FormCaption"))
+		label = Label.new("Base Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
 		
 		comboBox = ComboBox.new(pModelListBaseBone, DefaultComboBoxEditor.new(pModelTextBaseBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("Base bone not part of the chain. Bending angle is calculate between target and base bone.")
 		pPanelForm.addWidget(comboBox)
 		
+		CPEBone.new(preview, label, comboBox)
+		
 		// tip bone
-		pPanelForm.addWidget(Label.new("Tip Bone:", "Label.FormCaption"))
+		var Label labelTip = Label.new("Tip Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelTip)
 		
 		comboBox = ComboBox.new(pModelListTipBone, DefaultComboBoxEditor.new(pModelTextTipBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
@@ -169,13 +177,16 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(comboBox)
 		
 		// bone count
-		pPanelForm.addWidget(Label.new("Bone Count:", "Label.FormCaption"))
+		var Label labelCount = Label.new("Bone Count:", "Label.FormCaption")
+		pPanelForm.addWidget(labelCount)
 		
 		textField = TextField.new(pModelBoneCount, 4)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
 		textField.setToolTip("Count of bones in chain starting at Tip Bone moving along parent bones.")
 		pPanelForm.addWidget(textField)
+		
+		CPEBoneChain.new(preview, labelTip, comboBox, labelCount, textField)
 		
 		// scale rotation
 		pPanelForm.addWidget(Label.new("Scale Rotation:", "Label.FormCaption"))
