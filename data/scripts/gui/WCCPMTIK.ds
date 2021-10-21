@@ -1,0 +1,331 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer ik panel.
+ */
+class WCCPMTIK extends WCCPanelMotionTransfer
+	private var DefaultListModel pModelListTargetBone
+	private var DefaultTextModel pModelTextTargetBone
+	private var DefaultTextModel pModelBoneCount
+	private var DefaultTextModel pModelBaseChainIndex
+	private var WCCPMTTracker pEditTrackerTarget
+	private var WCCPMTTracker pEditTrackerGuide
+	private var WCCPMTTracker pEditTrackerBase
+	private var DefaultListModel pModelActorReach
+	private var DefaultTextModel pModelReachLimit
+	private var DefaultToggleModel pModelAdjustPosition
+	private var DefaultListModel pModelListMoveBaseIK
+	private var DefaultTextModel pModelTextMoveBaseIK
+	private var DefaultListModel pModelListMoveRetracted
+	private var DefaultTextModel pModelTextMoveRetracted
+	private var DefaultTextModel pModelTwistPropagation
+	private var DefaultTextModel pModelTwistBoneCount
+	private var EditVector pEditTwistAxisRotation
+	
+	
+	
+	/** Create window. */
+	public func new(WindowCharacterConfiguration window) super(window)
+		pModelTypeName.setText("Inverse Kinematic")
+		
+		pModelListTargetBone = DefaultListModel.new()
+		pModelTextTargetBone = DefaultTextModel.new()
+		pModelBoneCount = DefaultTextModel.new()
+		pModelBaseChainIndex = DefaultTextModel.new()
+		pModelActorReach = DefaultListModel.new(MotionTransferIK.ActorReach.all().toArray().sorted())
+		pModelReachLimit = DefaultTextModel.new()
+		pModelAdjustPosition = DefaultToggleModel.new()
+		pModelListMoveBaseIK = DefaultListModel.new()
+		pModelTextMoveBaseIK = DefaultTextModel.new()
+		pModelListMoveRetracted = DefaultListModel.new()
+		pModelTextMoveRetracted = DefaultTextModel.new()
+		pModelTwistPropagation = DefaultTextModel.new()
+		pModelTwistBoneCount = DefaultTextModel.new()
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		super.dispose()
+		
+		pModelListTargetBone = null
+		pModelTextTargetBone = null
+		pModelBoneCount = null
+		pModelBaseChainIndex = null
+		pEditTrackerTarget = null
+		pEditTrackerGuide = null
+		pEditTrackerBase = null
+		pModelActorReach = null
+		pModelReachLimit = null
+		pModelAdjustPosition = null
+		pModelListMoveBaseIK = null
+		pModelTextMoveBaseIK = null
+		pModelListMoveRetracted = null
+		pModelTextMoveRetracted = null
+		pModelTwistPropagation = null
+		pModelTwistBoneCount = null
+		pEditTwistAxisRotation = null
+	end
+	
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	public func void loadValues()
+		runWhileBlockingLayout(block
+			super.loadValues()
+			
+			if pMotionTransfer != null
+				var MotionTransferIK mt = pMotionTransfer cast MotionTransferIK
+				pModelTextTargetBone.setText(mt.getTargetBone())
+				pModelBoneCount.setText(mt.getBoneCount().toString())
+				pModelBaseChainIndex.setText(mt.getBaseChainIndex().toString())
+				pEditTrackerTarget.setTracker(mt.getTargetTracker())
+				pEditTrackerTarget.loadValues()
+				pEditTrackerGuide.setTracker(mt.getGuideTracker())
+				pEditTrackerGuide.loadValues()
+				pEditTrackerBase.setTracker(mt.getBaseTracker())
+				pEditTrackerBase.loadValues()
+				pModelActorReach.setSelected(pModelActorReach.indexOf(mt.getActorReach()))
+				pModelReachLimit.setText(mt.getReachLimit().toString())
+				pModelAdjustPosition.setToggled(mt.getAdjustPosition())
+				pModelTextMoveBaseIK.setText(mt.getMoveBaseIK())
+				pModelTextMoveRetracted.setText(mt.getMoveRetracted())
+				pModelTwistPropagation.setText(mt.getTwistPropagation().toString())
+				pModelTwistBoneCount.setText(mt.getTwistBoneCount().toString())
+				pEditTwistAxisRotation.setVector(mt.getTwistAxisRotation())
+				
+			else
+				pModelTextTargetBone.setText("")
+				pModelBoneCount.setText("")
+				pModelBaseChainIndex.setText("")
+				pEditTrackerTarget.setTracker(null)
+				pEditTrackerGuide.setTracker(null)
+				pEditTrackerBase.setTracker(null)
+				pModelActorReach.setSelected(pModelActorReach.indexOf(MotionTransferIK.ActorReach.none))
+				pModelReachLimit.setText("")
+				pModelAdjustPosition.setToggled(false)
+				pModelTextMoveBaseIK.setText("")
+				pModelTextMoveRetracted.setText("")
+				pModelTwistPropagation.setText("")
+				pModelTwistBoneCount.setText("")
+				pEditTwistAxisRotation.setVector(Vector.new())
+			end
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	public func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		super.saveValues()
+		
+		var MotionTransferIK mt = pMotionTransfer cast MotionTransferIK
+		mt.setTargetBone(pModelTextTargetBone.getText())
+		mt.setBoneCount(pModelBoneCount.getText().toInt())
+		mt.setBaseChainIndex(pModelBaseChainIndex.getText().toInt())
+		pEditTrackerTarget.saveValues()
+		pEditTrackerGuide.saveValues()
+		pEditTrackerBase.saveValues()
+		mt.setActorReach(pModelActorReach.getAt(pModelActorReach.getSelected()) cast MotionTransferIK.ActorReach)
+		mt.setReachLimit(pModelReachLimit.getText().toFloat())
+		mt.setAdjustPosition(pModelAdjustPosition.getToggled())
+		mt.setMoveBaseIK(pModelTextMoveBaseIK.getText())
+		mt.setMoveRetracted(pModelTextMoveRetracted.getText())
+		mt.setTwistPropagation(pModelTwistPropagation.getText().toFloat())
+		mt.setTwistBoneCount(pModelTwistBoneCount.getText().toInt())
+		mt.setTwistAxisRotation(pEditTwistAxisRotation.getVector())
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferIK
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var TextField textField
+		var ComboBox comboBox
+		var Button button
+		var ListBox listBox
+		var CheckBox checkBox
+		var Label label
+		
+		super.createContent()
+		
+		// target bone
+		var Label labelBone = Label.new("Target Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelBone)
+		
+		var ComboBox cbTargetBone = ComboBox.new(pModelListTargetBone, DefaultComboBoxEditor.new(pModelTextTargetBone))
+		cbTargetBone.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		cbTargetBone.setToolTip("Tip of bone chain.")
+		pPanelForm.addWidget(cbTargetBone)
+		
+		// bone count
+		var Label labelCount = Label.new("Bone Count:", "Label.FormCaption")
+		pPanelForm.addWidget(labelCount)
+		
+		textField = TextField.new(pModelBoneCount, 4)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
+		textField.setToolTip("Count of bones in chain starting at Target Bone moving along parent bones.")
+		pPanelForm.addWidget(textField)
+		
+		CPEBoneChain.new(preview, labelBone, cbTargetBone, labelCount, textField)
+		
+		// trackers
+		pEditTrackerTarget = WCCPMTTracker.new(this)
+		pEditTrackerTarget.setDesignerSelector("Panel.WMPanelConfiguration.MotionTransferTracker.Target")
+		addWidget(pEditTrackerTarget)
+		
+		pEditTrackerGuide = WCCPMTTracker.new(this)
+		pEditTrackerGuide.setDesignerSelector("Panel.WMPanelConfiguration.MotionTransferTracker.Guide")
+		addWidget(pEditTrackerGuide)
+		
+		pEditTrackerBase = WCCPMTTracker.new(this)
+		pEditTrackerBase.setDesignerSelector("Panel.WMPanelConfiguration.MotionTransferTracker.Base")
+		addWidget(pEditTrackerBase)
+		
+		// actor reach
+		pPanelForm.addWidget(Label.new("Actor Reach:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelActorReach)
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("What actor profile parameter to use to scale reach length. "\
+			+ " Scales the reach in actor space (VR device location) to match bone chain reach.")
+		pPanelForm.addWidget(comboBox)
+		
+		// reach limit
+		pPanelForm.addWidget(Label.new("Reach Limit:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelReachLimit, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(6, SimpleTextValidator.CharacterClass.positiveNumber))
+		textField.setToolTip("Limit reach to percentage of bone chain reach. Avoids overstretching.")
+		pPanelForm.addWidget(textField)
+		
+		// adjust position
+		pPanelForm.addWidget(Label.new(""))
+		
+		checkBox = CheckBox.new(pModelAdjustPosition, "Adjust Position")
+		checkBox.setToolTip("Adjust position of Base Bone if Bone Count is 1")
+		pPanelForm.addWidget(checkBox)
+		
+		// move base ik
+		pPanelForm.addWidget(Label.new("Move Base IK:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelListMoveBaseIK, DefaultComboBoxEditor.new(pModelTextMoveBaseIK))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Animation move to use to init base IK state for better results. "\
+			+ "Applied before applying inverse kinematic.")
+		pPanelForm.addWidget(comboBox)
+		
+		// move retracted
+		pPanelForm.addWidget(Label.new("Move Retracted:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelListMoveRetracted, DefaultComboBoxEditor.new(pModelTextMoveRetracted))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Animation move to use to init retracted pose for better results. "\
+			+ "Applied after Move Base IK and before inverse kinematic. "\
+			+ "Percentage of capture bone chain length to original bone chain length is used "\
+			+ "to blend move (start=relaxed, end=retracted).")
+		pPanelForm.addWidget(comboBox)
+		
+		// twist propagation
+		pPanelForm.addWidget(Label.new("Twist Propagation:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelTwistPropagation, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(6, SimpleTextValidator.CharacterClass.positiveNumber))
+		textField.setToolTip("Percentage of Target Bone twist relative to Base Bone to propagate along bone chain.")
+		pPanelForm.addWidget(textField)
+		
+		// twist bone count
+		pPanelForm.addWidget(Label.new("Twist Bone Count:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelTwistBoneCount, 4)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
+		textField.setToolTip("Count of bones along chain to apply twist to starting at first bone after Target Bone.")
+		pPanelForm.addWidget(textField)
+		
+		// twist axis rotation
+		label = Label.new("Twist Axis Rotation:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		pEditTwistAxisRotation = EditVector.new()
+		pEditTwistAxisRotation.setToolTip("Rotation of twist axis relative to Target Bone")
+		pPanelForm.addWidget(pEditTwistAxisRotation)
+		
+		CPECoordinateSystem.new(preview, null, null, label, pEditTwistAxisRotation, null, null)
+	end
+	
+	/** Update bone lists. */
+	public func void updateBoneLists(Array bones)
+		pModelListTargetBone.setContent(bones)
+	end
+	
+	/** Update slot lists. */
+	public func void updateSlotLists(Array slots)
+		pEditTrackerTarget.updateSlotLists(slots)
+		pEditTrackerGuide.updateSlotLists(slots)
+		pEditTrackerBase.updateSlotLists(slots)
+	end
+	
+	/** Update move lists. */
+	public func void updateMoveLists(Array moves)
+		pModelListMoveBaseIK.setContent(moves)
+		pModelListMoveRetracted.setContent(moves)
+	end
+	
+	/** Motion transfer changed. */
+	protected func void onMotionTransferChanged()
+		if pEditTrackerTarget != null
+			pEditTrackerTarget.setTracker(null)
+		end
+		if pEditTrackerGuide != null
+			pEditTrackerGuide.setTracker(null)
+		end
+		if pEditTrackerBase != null
+			pEditTrackerBase.setTracker(null)
+		end
+	end
+end

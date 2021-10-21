@@ -239,9 +239,6 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 	/** Create character preview editor. */
 	public func new(WidgetCharacterPreview preview, Label labelPosition, EditVector editPosition,\
 	Label labelRotation, EditVector editRotation, ComboBox cbBone, ComboBox cbSlot) super(preview)
-		if editPosition == null
-			throw ENullPointer.new("editPosition")
-		end
 		pLabelPosition = labelPosition
 		pLabelRotation = labelRotation
 		pEditPosition = editPosition
@@ -256,9 +253,10 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 			labelRotation.addMouseListener(ClickedActivateEditor.new(this, editRotation.getEditX()))
 		end
 		
-		editPosition.addFocusListener(ReceiveFocusActivateEditor.new(this))
-		editPosition.addActionListener(UpdateOnAction.new(this))
-		
+		if editPosition != null
+			editPosition.addFocusListener(ReceiveFocusActivateEditor.new(this))
+			editPosition.addActionListener(UpdateOnAction.new(this))
+		end
 		if editRotation != null
 			editRotation.addFocusListener(ReceiveFocusActivateEditor.new(this))
 			editRotation.addActionListener(UpdateOnAction.new(this))
@@ -374,7 +372,12 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 			return
 		end
 		
-		coordSystem.setPosition(pEditPosition.getVector())
+		if pEditPosition != null
+			coordSystem.setPosition(pEditPosition.getVector())
+			
+		else
+			coordSystem.setPosition(Vector.new())
+		end
 		
 		if pEditRotation != null
 			coordSystem.setRotation(pEditRotation.getVector())
