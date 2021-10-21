@@ -31,21 +31,22 @@ pin Dragengine.Scenery
 
 
 /**
- * Edit character config window motion transfer child panel.
+ * Edit character config window motion transfer slot panel.
  */
-class WCCPMTChild extends WCCPanelMotionTransfer
-	private var DefaultListModel pModelListBone
-	private var DefaultTextModel pModelTextBone
-	private var WCCPMTTracker pEditTracker
+class WCCPMTSlot extends WCCPanelMotionTransfer
+	private var DefaultListModel pModelListTarget
+	private var DefaultTextModel pModelTextTarget
+	private var WCCPMTTracker pEditSourceTracker
+	private var EditVector pEditScaleRotation
 	
 	
 	
 	/** Create window. */
 	public func new(WindowCharacterConfiguration window) super(window)
-		pModelTypeName.setText("Child Coordinate System")
+		pModelTypeName.setText("Copy Slot State")
 		
-		pModelListBone = DefaultListModel.new()
-		pModelTextBone = DefaultTextModel.new()
+		pModelListTarget = DefaultListModel.new()
+		pModelTextTarget = DefaultTextModel.new()
 		
 		runWhileBlockingLayout(block
 			createContent()
@@ -56,9 +57,10 @@ class WCCPMTChild extends WCCPanelMotionTransfer
 	public func void dispose()
 		super.dispose()
 		
-		pModelListBone = null
-		pModelTextBone = null
-		pEditTracker = null
+		pModelListTarget = null
+		pModelTextTarget = null
+		pEditSourceTracker = null
+		pEditScaleRotation = null
 	end
 	
 	
@@ -69,14 +71,16 @@ class WCCPMTChild extends WCCPanelMotionTransfer
 			super.loadValues()
 			
 			if pMotionTransfer != null
-				var MotionTransferChild mt = pMotionTransfer cast MotionTransferChild
-				pModelTextBone.setText(mt.getBone())
-				pEditTracker.setTracker(mt.getTracker())
-				pEditTracker.loadValues()
+				var MotionTransferSlot mt = pMotionTransfer cast MotionTransferSlot
+				pModelTextTarget.setText(mt.getTarget())
+				pEditSourceTracker.setTracker(mt.getSource())
+				pEditSourceTracker.loadValues()
+				pEditScaleRotation.setVector(mt.getScaleRotation())
 				
 			else
-				pModelTextBone.setText("")
-				pEditTracker.setTracker(null)
+				pModelTextTarget.setText("")
+				pEditSourceTracker.setTracker(null)
+				pEditScaleRotation.setVector(Vector.new())
 			end
 		end)
 		doLayoutIfBlocked()
@@ -89,14 +93,16 @@ class WCCPMTChild extends WCCPanelMotionTransfer
 		end
 		super.saveValues()
 		
-		var MotionTransferChild mt = pMotionTransfer cast MotionTransferChild
-		mt.setBone(pModelTextBone.getText())
-		pEditTracker.saveValues()
+		var MotionTransferSlot mt = pMotionTransfer cast MotionTransferSlot
+		
+		mt.setTarget(pModelTextTarget.getText())
+		pEditSourceTracker.saveValues()
+		mt.setScaleRotation(pEditScaleRotation.getVector())
 	end
 	
 	/** Supports motion transfer type. */
 	public func bool supports(MotionTransfer motionTranfer)
-		return motionTranfer castable MotionTransferChild
+		return motionTranfer castable MotionTransferSlot
 	end
 	
 	
@@ -112,37 +118,38 @@ class WCCPMTChild extends WCCPanelMotionTransfer
 		
 		super.createContent()
 		
-		// bone
-		label = Label.new("Bone:", "Label.FormCaption")
+		// targe
+		label = Label.new("Target:", "Label.FormCaption")
 		pPanelForm.addWidget(label)
 		
-		comboBox = ComboBox.new(pModelListBone, DefaultComboBoxEditor.new(pModelTextBone))
+		comboBox = ComboBox.new(pModelListTarget, DefaultComboBoxEditor.new(pModelTextTarget))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Bone to attach to tracker slot.")
+		comboBox.setToolTip("Target slot to copy state to.")
 		pPanelForm.addWidget(comboBox)
 		
-		CPEBone.new(preview, label, comboBox)
+		// scale rotation
+		pPanelForm.addWidget(Label.new("Scale Rotation:", "Label.FormCaption"))
+		
+		pEditScaleRotation = EditVector.new()
+		pEditScaleRotation.setToolTip("Per component scaling to apply to copied rotation")
+		pPanelForm.addWidget(pEditScaleRotation)
 		
 		// tracker
-		pEditTracker = WCCPMTTracker.new(this)
-		pEditTracker.setDesignerSelector("Panel.WMPanelConfiguration.MotionTransferTracker.Target")
-		addWidget(pEditTracker)
-	end
-	
-	/** Update bone lists. */
-	public func void updateBoneLists(Array bones)
-		pModelListBone.setContent(bones)
+		pEditSourceTracker = WCCPMTTracker.new(this)
+		pEditSourceTracker.setDesignerSelector("Panel.WMPanelConfiguration.MotionTransferTracker.Source")
+		addWidget(pEditSourceTracker)
 	end
 	
 	/** Update slot lists. */
 	public func void updateSlotLists(Array slots)
-		pEditTracker.updateSlotLists(slots)
+		pModelListTarget.setContent(slots)
+		pEditSourceTracker.updateSlotLists(slots)
 	end
 	
 	/** Motion transfer changed. */
 	protected func void onMotionTransferChanged()
-		if pEditTracker != null
-			pEditTracker.setTracker(null)
+		if pEditSourceTracker != null
+			pEditSourceTracker.setTracker(null)
 		end
 	end
 end

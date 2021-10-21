@@ -84,29 +84,32 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	
 	/** Load values from tracker slot object if present into edit widgets. */
 	public func void loadValues()
-		super.loadValues()
-		
-		if pMotionTransfer != null
-			var MotionTransferBend mt = pMotionTransfer cast MotionTransferBend
-			pModelTextTargetBone.setText(mt.getTargetBone())
-			pModelTextBaseBone.setText(mt.getBaseBone())
-			pModelTextTipBone.setText(mt.getTipBone())
-			pModelBoneCount.setText(mt.getBoneCount().toString())
-			pEditTargetTracker.setTracker(mt.getTargetTracker())
-			pEditTargetTracker.loadValues()
-			pEditBaseTracker.setTracker(mt.getBaseTracker())
-			pEditBaseTracker.loadValues()
-			pEditScaleRotation.setVector2(mt.getScaleRotation())
+		runWhileBlockingLayout(block
+			super.loadValues()
 			
-		else
-			pModelTextTargetBone.setText("")
-			pModelTextBaseBone.setText("")
-			pModelTextTipBone.setText("")
-			pModelBoneCount.setText("")
-			pEditTargetTracker.setTracker(null)
-			pEditBaseTracker.setTracker(null)
-			pEditScaleRotation.setVector2(Vector2.new())
-		end
+			if pMotionTransfer != null
+				var MotionTransferBend mt = pMotionTransfer cast MotionTransferBend
+				pModelTextTargetBone.setText(mt.getTargetBone())
+				pModelTextBaseBone.setText(mt.getBaseBone())
+				pModelTextTipBone.setText(mt.getTipBone())
+				pModelBoneCount.setText(mt.getBoneCount().toString())
+				pEditTargetTracker.setTracker(mt.getTargetTracker())
+				pEditTargetTracker.loadValues()
+				pEditBaseTracker.setTracker(mt.getBaseTracker())
+				pEditBaseTracker.loadValues()
+				pEditScaleRotation.setVector2(mt.getScaleRotation())
+				
+			else
+				pModelTextTargetBone.setText("")
+				pModelTextBaseBone.setText("")
+				pModelTextTipBone.setText("")
+				pModelBoneCount.setText("")
+				pEditTargetTracker.setTracker(null)
+				pEditBaseTracker.setTracker(null)
+				pEditScaleRotation.setVector2(Vector2.new())
+			end
+		end)
+		doLayoutIfBlocked()
 	end
 	
 	/** Save value from edit widgets to tracker slot object if present. */

@@ -72,21 +72,24 @@ class WCCPMTAnimation extends WCCPanelMotionTransfer
 	
 	/** Load values from tracker slot object if present into edit widgets. */
 	public func void loadValues()
-		super.loadValues()
-		
-		if pMotionTransfer != null
-			var MotionTransferAnimation mt = pMotionTransfer cast MotionTransferAnimation
-			pModelTextMove.setText(mt.getMove())
-			pModelTargetBones.setContent(mt.getTargetBones())
-			pModelMode.setSelected(pModelMode.indexOf(mt.getMode()))
-			pModelPlaytime.setText(mt.getPlaytime().toString())
+		runWhileBlockingLayout(block
+			super.loadValues()
 			
-		else
-			pModelTextMove.setText("")
-			pModelTargetBones.removeAll()
-			pModelMode.setSelected(pModelMode.indexOf(MotionTransferAnimation.Mode.replace))
-			pModelPlaytime.setText((0).toString())
-		end
+			if pMotionTransfer != null
+				var MotionTransferAnimation mt = pMotionTransfer cast MotionTransferAnimation
+				pModelTextMove.setText(mt.getMove())
+				pModelTargetBones.setContent(mt.getTargetBones())
+				pModelMode.setSelected(pModelMode.indexOf(mt.getMode()))
+				pModelPlaytime.setText(mt.getPlaytime().toString())
+				
+			else
+				pModelTextMove.setText("")
+				pModelTargetBones.removeAll()
+				pModelMode.setSelected(pModelMode.indexOf(MotionTransferAnimation.Mode.replace))
+				pModelPlaytime.setText((0).toString())
+			end
+		end)
+		doLayoutIfBlocked()
 	end
 	
 	/** Save value from edit widgets to tracker slot object if present. */
