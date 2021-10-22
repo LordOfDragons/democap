@@ -1,0 +1,257 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer secondary panel.
+ */
+class WCCPMTSecondary extends WCCPanelMotionTransfer
+	private var DefaultListModel pModelListSourceBone
+	private var DefaultTextModel pModelTextSourceBone
+	private var DefaultListModel pModelParameter
+	private var DefaultTextModel pModelMinimum
+	private var DefaultTextModel pModelMaximum
+	private var DefaultListModel pModelTargetBones
+	private var DefaultListModel pModelMode
+	private var DefaultListModel pModelListMove
+	private var DefaultTextModel pModelTextMove
+	private var DefaultTextModel pModelReferenceTime
+	private var DefaultToggleModel pModelFlip
+	
+	
+	
+	/** Create window. */
+	public func new(WindowCharacterConfiguration window) super(window)
+		pModelTypeName.setText("Secondary Motion")
+		
+		pModelListSourceBone = DefaultListModel.new()
+		pModelListSourceBone.setAutoSelect(false)
+		pModelTextSourceBone = DefaultTextModel.new()
+		pModelParameter = DefaultListModel.new(MotionTransferSecondary.Parameter.all().toArray().sorted())
+		pModelMinimum = DefaultTextModel.new()
+		pModelMaximum = DefaultTextModel.new()
+		pModelTargetBones = DefaultListModel.new()
+		pModelTargetBones.setAutoSelect(false)
+		pModelMode = DefaultListModel.new(MotionTransferSecondary.Mode.all().toArray().sorted())
+		pModelListMove = DefaultListModel.new()
+		pModelListMove.setAutoSelect(false)
+		pModelTextMove = DefaultTextModel.new()
+		pModelReferenceTime = DefaultTextModel.new()
+		pModelFlip = DefaultToggleModel.new()
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		setMotionTransfer(null)
+		
+		pModelListSourceBone = null
+		pModelTextSourceBone = null
+		pModelParameter = null
+		pModelMinimum = null
+		pModelMaximum = null
+		pModelTargetBones = null
+		pModelMode = null
+		pModelListMove = null
+		pModelTextMove = null
+		pModelReferenceTime = null
+		pModelFlip = null
+		
+		super.dispose()
+	end
+	
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	public func void loadValues()
+		runWhileBlockingLayout(block
+			super.loadValues()
+			
+			if pMotionTransfer != null
+				var MotionTransferSecondary mt = pMotionTransfer cast MotionTransferSecondary
+				pModelTextSourceBone.setText(mt.getSourceBone())
+				pModelParameter.setSelected(pModelParameter.indexOf(mt.getParameter()))
+				pModelMinimum.setText(mt.getMinimum().toString())
+				pModelMaximum.setText(mt.getMaximum().toString())
+				pModelTargetBones.setContent(mt.getTargetBones())
+				pModelMode.setSelected(pModelMode.indexOf(mt.getMode()))
+				pModelTextMove.setText(mt.getMove())
+				pModelReferenceTime.setText(mt.getReferenceTime().toString())
+				pModelFlip.setToggled(mt.getFlip())
+				
+			else
+				pModelTextSourceBone.setText("")
+				pModelParameter.setSelected(pModelParameter.indexOf(MotionTransferSecondary.Parameter.rotationX))
+				pModelMinimum.setText("")
+				pModelMaximum.setText("")
+				pModelTargetBones.removeAll()
+				pModelMode.setSelected(pModelMode.indexOf(MotionTransferSecondary.Mode.replace))
+				pModelTextMove.setText("")
+				pModelReferenceTime.setText("")
+				pModelFlip.setToggled(false)
+			end
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	public func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		super.saveValues()
+		
+		var MotionTransferSecondary mt = pMotionTransfer cast MotionTransferSecondary
+		mt.setSourceBone(pModelTextSourceBone.getText())
+		mt.setParameter(pModelParameter.getAt(pModelParameter.getSelected()) cast MotionTransferSecondary.Parameter)
+		mt.setMinimum(pModelMinimum.getText().toFloat())
+		mt.setMaximum(pModelMaximum.getText().toFloat())
+		mt.getTargetBones().removeAll()
+		mt.getTargetBones().addAll(pModelTargetBones.getContent())
+		mt.setMode(pModelMode.getAt(pModelMode.getSelected()) cast MotionTransferSecondary.Mode)
+		mt.setMove(pModelTextMove.getText())
+		mt.setReferenceTime(pModelReferenceTime.getText().toFloat())
+		mt.setFlip(pModelFlip.getToggled())
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferSecondary
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var TextField textField
+		var ComboBox comboBox
+		var CheckBox checkBox
+		var ListBox listBox
+		var Label label
+		
+		super.createContent()
+		
+		// source bone
+		label = Label.new("Source Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		comboBox = ComboBox.new(pModelListSourceBone, DefaultComboBoxEditor.new(pModelTextSourceBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Source bone to query parameter off to use to drive the Target Bones.")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, label, comboBox)
+		
+		// parameter
+		pPanelForm.addWidget(Label.new("Parameter:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelParameter)
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Parameter from Source Bone to use to drive Target Bones.")
+		pPanelForm.addWidget(comboBox)
+		
+		// minimum
+		pPanelForm.addWidget(Label.new("Minimum:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelMinimum, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(6, SimpleTextValidator.CharacterClass.positiveNumber))
+		textField.setToolTip("Minimum value of Source Bone Parameter mapping to start of Move animation.")
+		pPanelForm.addWidget(textField)
+		
+		// maximum
+		pPanelForm.addWidget(Label.new("Maximum:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelMaximum, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(6, SimpleTextValidator.CharacterClass.positiveNumber))
+		textField.setToolTip("Maximum value of Source Bone Parameter mapping to end of Move animation.")
+		pPanelForm.addWidget(textField)
+		
+		// target bones
+		pPanelForm.addWidget(Label.new("Target Bones:", "Label.FormCaption"))
+		
+		listBox = ListBox.new(pModelTargetBones)
+		listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
+		listBox.setToolTip("Bones to affect by the secondary motion.")
+		listBox.setNumberDisplayLines(5)
+		pPanelForm.addWidget(listBox)
+		
+		// mode
+		pPanelForm.addWidget(Label.new("Mode:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelMode)
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Secondary application mode.")
+		pPanelForm.addWidget(comboBox)
+		
+		// move
+		pPanelForm.addWidget(Label.new("Move:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelListMove, DefaultComboBoxEditor.new(pModelTextMove))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Animation move to apply to Target Bones using mapped input from Source Bone Parameter.")
+		pPanelForm.addWidget(comboBox)
+		
+		// reference time
+		pPanelForm.addWidget(Label.new("Reference Time:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelReferenceTime, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(6, SimpleTextValidator.CharacterClass.positiveNumber))
+		textField.setToolTip("Animation frame time in seconds used as reference. "\
+			+ "Applied motion is the difference of the time mapped from the Source "\
+			+ "Bone Parameter and the reference frame. Used only for overlay mode.")
+		pPanelForm.addWidget(textField)
+		
+		// flip
+		pPanelForm.addWidget(Label.new(""))
+		
+		checkBox = CheckBox.new(pModelFlip, "Reverse Mapping")
+		checkBox.setDesignerSelector("CheckBox.WindowCharacterConfiguration")
+		checkBox.setToolTip("Reverse mapping. Maximum maps to start of animation and minimum to end.")
+		pPanelForm.addWidget(checkBox)
+	end
+	
+	/** Update bone lists. */
+	public func void updateBoneLists(Array bones)
+		pModelListSourceBone.setContent(bones)
+	end
+	
+	/** Update move lists. */
+	public func void updateMoveLists(Array moves)
+		pModelListMove.setContent(moves)
+	end
+end
