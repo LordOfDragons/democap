@@ -224,8 +224,16 @@ class AACalibrate extends AABase
 				//actorProfile.calibrate(vrActor)
 				character.calibrate(vrActor, actorProfile)
 				
-				// after this point the actor has been disposed and a new one will be created
-				//aiAction.setAction(AADefault.new())
+				// after this point the actor has been disposed and a new one will be created.
+				// this only does not happen if calibrating failed for some reason. hence check
+				// if we are still the active action. in that case someting went wrong
+				if vrActor.getAIAction().getAction() == this
+					state = State.waiting
+					calibrateElapsed = 0
+					if modelProgress != null
+						modelProgress.setValue(0)
+					end
+				end
 			end
 		end
 	end
