@@ -25,8 +25,9 @@ pin Democap.Actors
 pin Democap.Characters
 pin Democap.Commands
 pin Democap.Elements
-pin Democap.MotionTransferSystem
 pin Democap.Gui
+pin Democap.MotionTransferSystem
+pin Democap.Worlds
 
 pin Dragengine.Commands
 pin Dragengine.Gui.Layouts
@@ -44,6 +45,7 @@ class GameApp extends BaseGameApp
 	private var ActorProfile pActiveActorProfile
 	private var ActorProfile pDefaultActorProfile
 	private var CharacterProfiles pCharacterProfiles
+	private var LoadableWorlds pLoadableWorlds
 	
 	private var MotionTransferFactories pMotionTransferFactories
 	private var LoadActorProfile pLoadActorProfile
@@ -51,6 +53,8 @@ class GameApp extends BaseGameApp
 	private var MutableID pNextElementClassID
 	
 	private var WorldSpawnCharacter pWorldSpawnCharacter
+	private var Camera pVRCamera
+	private var VRCameraDirector pVRCameraDirector
 	
 	private var WindowMain pWindowMain
 	
@@ -89,8 +93,9 @@ class GameApp extends BaseGameApp
 		pLoadActorProfile = LoadActorProfile.new(getConsole())
 		pLoadCharacterProfile = LoadCharacterProfile.new(getConsole())
 		
-		pActorProfiles = ActorProfiles.new("/actors")
-		pCharacterProfiles = CharacterProfiles.new("/characters")
+		pActorProfiles = ActorProfiles.new("/content/actors")
+		pCharacterProfiles = CharacterProfiles.new("/content/characters")
+		pLoadableWorlds = LoadableWorlds.new("/content/worlds")
 		
 		pWorldSpawnCharacter = WorldSpawnCharacter.new()
 		
@@ -154,11 +159,41 @@ class GameApp extends BaseGameApp
 		end
 		
 		pCharacterProfiles.loadAll()
+		pLoadableWorlds.scanWorlds()
 		
-		// load game world
-		getConsole().addMessage("Loading world...")
-		startLoadGameWorld(StartGame.new(getWindowGameWorld(), "/content/test/scene1/scene1.deworld"))
-// 		startLoadGameWorld(StartGame.new(getWindowGameWorld(), "/content/worlds/default.deworld"))
+		// create VR camera
+		pVRCamera = Camera.new()
+		pVRCamera.setFov(80)
+		pVRCamera.setViewDistance(300)
+		pVRCamera.setLowestIntensity(20)
+		pVRCamera.setHighestIntensity(20)
+		pVRCamera.setAdaptionTime(30)
+		
+		// create VR camera director
+		pVRCameraDirector = VRCameraDirector.new()
+		pVRCameraDirector.setViewDistance(300)
+		pVRCameraDirector.setLowestIntensity(20)
+		pVRCameraDirector.setHighestIntensity(20)
+		pVRCameraDirector.setAdaptionTime(30)
+		pVRCameraDirector.setVRCamera(pVRCamera)
+		
+		// add support to navigate the view
+		var WindowGameWorld windowGameWorld = getWindowGameWorld()
+		windowGameWorld.addMouseListener(RotateCameraMouseListener.new(\
+			pVRCameraDirector, InputEventMouseButton.right, InputEventModifier.none))
+		
+		windowGameWorld.addMouseListener(PanCameraMouseListener.new(\
+			pVRCameraDirector, InputEventMouseButton.right, InputEventModifier.shift))
+		
+		windowGameWorld.addMouseListener(MoveCameraMouseListener.new(\
+			pVRCameraDirector, InputEventMouseButton.right, InputEventModifier.control))
+		
+		windowGameWorld.addMouseListener(ZoomCameraMouseListener.new(\
+			pVRCameraDirector, InputEventMouseButton.right,\
+			InputEventModifier.shift | InputEventModifier.control))
+		
+		// load default game world
+		startLoadGameWorld(StartGame.new(getWindowGameWorld(), "/content/worlds/default.deworld"))
 	end
 	
 	/**
@@ -230,6 +265,8 @@ class GameApp extends BaseGameApp
 			pWorldSpawnCharacter = null
 		end
 		
+		pLoadableWorlds = null
+		
 		if pCharacterProfiles != null
 			pCharacterProfiles.dispose()
 			pCharacterProfiles = null
@@ -249,6 +286,7 @@ class GameApp extends BaseGameApp
 		
 		pLoadCharacterProfile = null
 		pLoadActorProfile = null
+		pVRCameraDirector = null
 		
 		super.cleanUp()
 	end
@@ -256,7 +294,14 @@ class GameApp extends BaseGameApp
 	/** Finished loading game world. */
 	public func void finishLoadGameWorld()
 		super.finishLoadGameWorld()
+		
+		if pVRCamera.getParentWorld() != null
+			pVRCamera.getParentWorld().removeCamera(pVRCamera)
+		end
+		
 		pWorldSpawnCharacter.setGameWorld(getWindowGameWorld().getGameWorld())
+		
+		getWindowGameWorld().getGameWorld().getWorld().addCamera(pVRCamera)
 	end
 	
 	/** Set split input processor. */
@@ -294,6 +339,21 @@ class GameApp extends BaseGameApp
 	/** Character profiles. */
 	public func CharacterProfiles getCharacterProfiles()
 		return pCharacterProfiles
+	end
+	
+	/** Loadable worlds. */
+	public func LoadableWorlds getLoadableWorlds()
+		return pLoadableWorlds
+	end
+	
+	/** VR camera. */
+	public func Camera getVRCamera()
+		return pVRCamera
+	end
+	
+	/** VR camera director. */
+	public func VRCameraDirector getVRCameraDirector()
+		return pVRCameraDirector
 	end
 	
 	

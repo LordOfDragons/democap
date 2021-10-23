@@ -1,0 +1,87 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Worlds
+
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Loadable game world profile.
+ * 
+ * Game worlds are stored under "/worlds" directory in the user game configure directory
+ * as files of type "*.deworld" .
+ */
+class LoadableWorld
+	private var String pName
+	private var String pPath
+	private var StubGameWorld pStub
+	
+	
+	
+	/** Create loadable game world. */
+	public func new(String path)
+		if path == null
+			throw ENullPointer.new("path")
+		end
+		pPath = path
+		pName = File.new(path).getName().substring(0, -8)
+	end
+	
+	
+	
+	/** Display name. */
+	public func String getName()
+		return pName
+	end
+	
+	/** Path. */
+	public func String getPath()
+		return pPath
+	end
+	
+	/** Stub or null if not yet loaded. */
+	public func StubGameWorld getStub()
+		return pStub
+	end
+	
+	/** Set stub or null if not yet loaded. */
+	public func void setStub(StubGameWorld stub)
+		pStub = stub
+	end
+	
+	
+	
+	/** Compare loadable game world for sorting. */
+	public func int compare(Object obj)
+		if obj castable LoadableWorld
+			return pName.compare((obj cast LoadableWorld).pName)
+		end
+		return 0
+	end
+	
+	/** String representation. Returns name. */
+	public func String toString()
+		return pName
+	end
+end

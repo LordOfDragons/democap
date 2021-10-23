@@ -152,22 +152,46 @@ class WorldSpawnCharacter
 			return
 		end
 		
+		// remove the VR menu from the game world. it will be reused
 		if pVRMenu != null
 			pVRMenu.removeFromGameWorldIfPresent()
 		end
 		
+		// dispose of the actor. we could move the actor to the new game world but better
+		// start with a fresh copy
 		disposeActor()
 		pSpawnPoint = null
 		
+		// set game world
 		pGameWorld = gameWorld
 		
 		if gameWorld != null
+			// find spawn point
 			pSpawnPoint = gameWorld.getSpawnPoints().getNamed("player")
 			
+			// add VR menu creating it if required
 			if pVRMenu == null
 				pVRMenu = createVRMenu()
 			end
 			gameWorld.addElement(pVRMenu)
+			
+			// move the camera to a good starting position showing the character
+			var CameraDirector director = GameApp.getGameApp().getWindowGameWorld().getCameraDirector()
+			
+			if director != null
+				var Camera camera = director.getCamera()
+				var DMatrix matrix
+				
+				if pSpawnPoint != null
+					matrix = pSpawnPoint.getMatrix()
+					
+				else
+					matrix = DMatrix.new()
+				end
+				
+				camera.setPosition(matrix * DVector.new(0, 1.4, 1))
+				camera.setOrientation((DMatrix.newRotation(-20, 180, 0) * matrix).toQuaternion())
+			end
 		end
 		
 		pListeners.forEach(block Listener each

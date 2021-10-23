@@ -39,6 +39,8 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	protected var ECBCharacterConfiguration.Instance character
 	protected var ECBehaviorComponent.Instance component
 	
+	protected var Camera pVRCamera
+	
 	
 	
 	/** Create director. */
@@ -48,7 +50,7 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	/** Camera director has been activated. */
 	public func void activate()
 		super.activate()
-		VRSystem.setCamera(getCamera())
+		VRSystem.setCamera(pVRCamera)
 	end
 	
 	/** Camera director has been deactivated. */
@@ -76,15 +78,15 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 		component = ECBehaviorComponent.getInstanceIn(element)
 	end
 	
-	/** Set camera. */
-	public func void setCamera(Camera camera)
-		super.setCamera(camera)
-		VRSystem.setCamera(camera)
+	/** Set VR camera. */
+	public func void setVRCamera(Camera camera)
+		pVRCamera = camera
 	end
 	
 	/** Update camera. */
 	public func void updateCamera(float elapsed)
-		//getCamera().setEnableGI(false)
+		// update VR camera
+		//pVRCamera.setEnableGI(false)
 		
 		if pHMD == null or pHMD.isDetached()
 			// try finding the input device directly. this is temporary
@@ -93,30 +95,33 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 			end)
 			
 			if device != null
-				var Camera camera = getCamera()
-				camera.setPosition(DVector.new(device.getDevicePosePosition()))
-				camera.setOrientation(device.getDevicePoseOrientation())
+				pVRCamera.setPosition(DVector.new(device.getDevicePosePosition()))
+				pVRCamera.setOrientation(device.getDevicePoseOrientation())
 			end
 			
-			return
+		else
+			var DMatrix matrix = getVRCameraMatrix()
+			pVRCamera.setPosition(matrix.getPosition())
+			pVRCamera.setOrientation(matrix.toQuaternion())
 		end
 		
+		// update free moving camera
 		var DMatrix matrix = getCameraMatrix()
-		var Quaternion orientation = matrix.toQuaternion()
-		
-		var Vector angles = orientation.getEulerAngles()
-		setAzimuth(angles.getY())
-		setElevation(angles.getX())
-		
 		var Camera camera = getCamera()
 		camera.setPosition(matrix.getPosition())
-		camera.setOrientation(orientation)
+		camera.setOrientation(matrix.toQuaternion())
 	end
 	
-	/** Overrides ElementCameraDirector.getCameraMatrix() */
+	/** Calculate camera matrix. Has to ignore element in contrary to VR camera matrix. */
 	public func DMatrix getCameraMatrix()
+		return getLocalMatrix() * DMatrix.newTranslation(0, 0, -getDistance()) \
+			* DMatrix.newRotation(-getElevation(), getAzimuth(), 0) * DMatrix.newTranslation(getPivot())
+	end
+	
+	/** Calculate VR camera matrix */
+	public func DMatrix getVRCameraMatrix()
 		if pHMD == null or pHMD.isDetached()
-			return DMatrix.newWorld(getCamera().getPosition(), getCamera().getOrientation())
+			return DMatrix.newWorld(pVRCamera.getPosition(), pVRCamera.getOrientation())
 		end
 		
 		if character == null or component == null

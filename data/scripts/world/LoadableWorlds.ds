@@ -1,0 +1,160 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Worlds
+
+pin Dragengine.Utils
+
+
+/**
+ * List of loadable game worlds.
+ * 
+ * Worlds are stored under "/worlds" directory in the user game configure directory
+ * as files of type "*.deworld" .
+ */
+class LoadableWorlds
+	private var String pDirectory
+	private var Array pWorlds
+	private var Array pListeners
+	
+	
+	
+	/** Create actor list. */
+	public func new(String directory)
+		if directory == null
+			throw ENullPointer.new("directory")
+		end
+		
+		pListeners = Array.new()
+		pDirectory = directory
+		pWorlds = Array.new()
+	end
+	
+	
+	
+	/** Directory to save loadable worlds to. */
+	public func String getDirectory()
+		return pDirectory
+	end
+	
+	
+	
+	/** Count of loadable worlds. */
+	public func int getCount()
+		return pWorlds.getCount()
+	end
+	
+	/** Loadable world with path is present. */
+	public func bool hasWithPath(String path)
+		return getWithPath(path) != null
+	end
+	
+	/** Loadable world at index. */
+	public func LoadableWorld getAt(int index)
+		return pWorlds.getAt(index) cast LoadableWorld
+	end
+	
+	/** Loadable world with path or null if absent. */
+	public func LoadableWorld getWithPath(String path)
+		return pWorlds.find(block LoadableWorld each
+			return each.getPath().equals(path)
+		end) cast LoadableWorld
+	end
+	
+	/** Add loadable world. Throws exception if loadable world with path is present. */
+	public func void add(LoadableWorld world)
+		if hasWithPath(world.getPath())
+			throw EInvalidParam.new("loadable world is present")
+		end
+		pWorlds.add(world)
+		
+		pListeners.forEach(block LoadableWorldsListener each
+			each.worldAdded(this, world)
+		end)
+	end
+	
+	/** Remove loadable world. Throws exception if absent. */
+	public func void remove(LoadableWorld world)
+		pWorlds.remove(world)
+		
+		pListeners.forEach(block LoadableWorldsListener each
+			each.worldRemoved(this, world)
+		end)
+	end
+	
+	/** Remove all loadable worlds. */
+	public func void removeAll()
+		pWorlds.removeAll()
+		
+		pListeners.forEach(block LoadableWorldsListener each
+			each.allWorldsRemoved(this)
+		end)
+	end
+	
+	/**
+	 * Visit loadable worlds with block. Block receives as only argument LoadableWorld.
+	 */
+	public func void forEach(Block ablock)
+		pWorlds.forEach(ablock)
+	end
+	
+	/**
+	 * Collect loadable worlds with block. Block receives as only argument LoadableWorld and
+	 * has to return true to include or false to exclude loadable world.
+	 * Returns Array of LoadableWorld.
+	 */
+	public func Array collect(Block ablock)
+		return pWorlds.collect(ablock)
+	end
+	
+	/** List of loadable worlds as Array of LoadableWorld. */
+	public func Array toArray()
+		return Array.new(pWorlds)
+	end
+	
+	
+	
+	/** Scan for loadable worlds from directory (*.deworld). */
+	public func void scanWorlds()
+		GameApp.getGameApp().getConsole().addMessage("Scan worlds...")
+		FileSystem.searchFiles(pDirectory, true, block String each, FileType type
+			if type == FileType.file and FileSystem.pathMatchesPattern(File.new(each).getName(), "*.deworld")
+				add(LoadableWorld.new(each))
+			end
+			return true
+		end)
+	end
+	
+	
+	
+	/** Add listener. */
+	public func void addListener(LoadableWorldsListener listener)
+		if listener == null
+			throw ENullPointer.new("listener")
+		end
+		pListeners.add(listener)
+	end
+	
+	/** Remove listener. */
+	public func void removeListener(LoadableWorldsListener listener)
+		pListeners.remove(listener)
+	end
+end

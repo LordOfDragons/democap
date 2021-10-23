@@ -52,25 +52,53 @@ class StartGame extends WindowGameWorld.Loader
 		var GameApp app = BaseGameApp.getApp() cast GameApp
 		
 		// assign camera director attaching the camera to the player controlled actor
-		var VRCameraDirector director = VRCameraDirector.new()
-		director.setViewDistance(300)
-		director.setLowestIntensity(20)
-		director.setHighestIntensity(20)
-		director.setAdaptionTime(30)
-		getWindow().setCameraDirector(director)
+		getWindow().setCameraDirector(app.getVRCameraDirector())
 		
-		director.getCamera().setPosition(DVector.new(0, 1, 1))
-		director.getCamera().setOrientation(Quaternion.newFromEulerY(180))
+		// finish loading. the super call calls WindowWorldRenderer.setGameWorld() which in
+		// turn disposes of the previously set game world. usually this is fine but we want
+		// to reused elements across loading new game worlds. for this reason we first clear
+		// the previous the game world using the non-dispose version of setGameWorld().
+		// then the super call and finishLoadGameWorld() is called. afterwards the game
+		// world is disposed. this ensures elements properly transfer to the new game world
+		// without needing to know all the details
+		var GameWorld oldWorld = getWindow().getGameWorld()
 		
-		// finish loading
-		super.onLoadWorldFinished()
+		try
+			getWindow().setGameWorld(null, false)
+			super.onLoadWorldFinished()
+			app.finishLoadGameWorld()
+			
+		catch Exception e
+			app.getConsole().addError("Loading game world failed: " + getPathWorld(), e)
+			onLoadWorldFailed()
+		end
 		
-		app.finishLoadGameWorld()
+		if oldWorld != null
+			oldWorld.dispose()
+		end
 	end
 	
 	/** Loading world failed. */
 	public func void onLoadWorldFailed()
-		super.onLoadWorldFailed()
-		BaseGameApp.getApp().cancelLoadGameWorld()
+		// the super call calls WindowWorldRenderer.setGameWorld() which in turn disposes of
+		// the previously set game world. usually this is fine but we want to reused elements
+		// across loading new game worlds. for this reason we first clear the previous the
+		// game world using the non-dispose version of setGameWorld(). then the super call
+		// and cancelLoadGameWorld() is called. afterwards the game world is disposed. this
+		// ensures elements properly move out of the game world without being disposed of
+		var GameWorld oldWorld = getWindow().getGameWorld()
+		
+		try
+			getWindow().setGameWorld(null, false)
+			super.onLoadWorldFailed()
+			BaseGameApp.getApp().cancelLoadGameWorld()
+			
+		catch Exception e
+			GameApp.getGameApp().getConsole().addError("Cancel game world failed: " + getPathWorld(), e)
+		end
+		
+		if oldWorld != null
+			oldWorld.dispose()
+		end
 	end
 end

@@ -1,0 +1,222 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Actors
+pin Democap.Actions
+pin Democap.Characters
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+
+/**
+ * Main window character panel.
+ */
+class WMPanelSession extends Panel
+	/** Loadable world list element renderer. */
+	class LoadableWorldRenderer extends DefaultListElementRenderer
+		public func new()
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text = String.new(' ', 20)
+			if element != null
+				text = (element cast LoadableWorld).getName()
+			end
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	/** Loadable world selection listener. */
+	class LoadableWorldSelection extends DefaultListModelListener
+		protected var WMPanelSession pWindow
+		
+		public func new(WMPanelSession window)
+			pWindow = window
+		end
+		
+		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+			selectionChanged(model)
+		end
+		
+		public func void selectionChanged(ListModel model)
+			var int index = model.getSelected()
+			if index != -1
+				pWindow.setLoadableWorld(model.getAt(index) cast LoadableWorld)
+				
+			else
+				pWindow.setLoadableWorld(null)
+			end
+		end
+	end
+	
+	/** Loadable worlds listener. */
+	class ListenLoadableWorlds extends DefaultLoadableWorldsListener
+		protected var WMPanelSession pWindow
+		
+		public func new(WMPanelSession window)
+			pWindow = window
+		end
+		
+		public func void worldAdded(LoadableWorlds worlds, LoadableWorld world)
+			pWindow.updateLoadableWorlds()
+		end
+		
+		public func void worldRemoved(LoadableWorlds worlds, LoadableWorld world)
+			pWindow.updateLoadableWorlds()
+		end
+		
+		public func void allWorldsRemoved(LoadableWorlds worlds)
+			pWindow.updateLoadableWorlds()
+		end
+	end
+	
+	/** Loadable world popup menu. */
+	class LoadableWorldPopupAction extends DefaultActionListener
+		private var WMPanelSession pPanel
+		
+		public func new(WMPanelSession panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			var Widget widget = event.getSource() cast Widget
+			var WindowPopup popup = WindowPopup.new()
+			var Button button
+			
+			button = Button.new("Browse Worlds...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.browseLoadableWorlds()
+			end))
+			popup.addWidget(button)
+			
+			pPanel.getDesktop().addWindow(popup)
+			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
+		end
+	end
+	
+	
+	
+	protected var DefaultListModel pModelLoadableWorlds
+	protected var LoadableWorld pLoadableWorld
+	
+	
+	
+	/** Create session panel. */
+	public func new()
+		pModelLoadableWorlds = DefaultListModel.new()
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+		
+		pModelLoadableWorlds.addListener(LoadableWorldSelection.new(this))
+		
+		GameApp.getGameApp().getLoadableWorlds().addListener(ListenLoadableWorlds.new(this))
+		updateLoadableWorlds()
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		setLoadableWorld(null)
+		
+		pModelLoadableWorlds = null
+		
+		super.dispose()
+	end
+	
+	
+	
+	/** Selected loadable world or null. */
+	public func LoadableWorld getLoadableWorld()
+		return pLoadableWorld
+	end
+	
+	/** Set selected loadable world or null. */
+	public func void setLoadableWorld(LoadableWorld world)
+		if world == pLoadableWorld
+			return
+		end
+		
+		pLoadableWorld = world
+	end
+	
+	/** Update loadable worlds model. */
+	public func void updateLoadableWorlds()
+		var LoadableWorld world = pLoadableWorld
+		
+		pModelLoadableWorlds.setContent(GameApp.getGameApp().getLoadableWorlds().toArray().sorted())
+		
+		var int index = pModelLoadableWorlds.indexOf(world)
+		if index != -1
+			pModelLoadableWorlds.setSelected(index)
+			pModelLoadableWorlds.notifyContentChanged(index, index)
+		end
+	end
+	
+	/** Browse loadable worlds in overlay directory. */
+	public func void browseLoadableWorlds()
+		FileSystem.browseOverlay(GameApp.getGameApp().getLoadableWorlds().getDirectory())
+	end
+	
+	/** Activate world. */
+	public func void activateWorld()
+		var GameApp app = GameApp.getGameApp()
+		if pLoadableWorld == null or app.getGameWorldLoader() != null
+			return
+		end
+		
+		app.startLoadGameWorld(StartGame.new(app.getWindowGameWorld(), pLoadableWorld.getPath()))
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent()
+		var Button button
+		
+		setDesignerSelector("Panel.WMPanelSession.Session")
+		setLayout(BorderLayout.new(2))
+		
+		addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			p.addWidget(Label.new("World:", "Label.FormCaption"))
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
+				p2.addWidget(ComboBox.new(pModelLoadableWorlds, LoadableWorldRenderer.new()))
+				
+				button = Button.new("...", LoadableWorldPopupAction.new(this))
+				button.setDesignerSelector("Button.Popup")
+				p2.addWidget(button)
+			end))
+		end), BorderLayout.Area.content)
+		
+		addWidget(Panel.new(GridLayout.new(2, 0), block Panel p
+			p.addWidget(Button.new("Activate", BlockActionListener.new(block ActionEvent event
+				activateWorld()
+			end)))
+		end), BorderLayout.Area.bottom)
+	end
+end
