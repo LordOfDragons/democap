@@ -42,7 +42,9 @@ class ECBVRHudInfo extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		private var ECBVRHudInfo pECBehavior
-		private var Component pComponent
+		private var ECBehaviorComponent.Instance pComponent
+		private var ECBehaviorDynamicSkin.Instance pDynamicSkin
+		private var ECBehaviorRenderablePanel.Instance pRenderablePanel
 		private var float pFov
 		
 		
@@ -50,15 +52,25 @@ class ECBVRHudInfo extends DefaultECBehavior
 		/** Create instance. */
 		public func new(ECBVRHudInfo ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
-			pFov = 60 // 60% of 100 field of view. determines the size
+			pFov = 90 // 90 degrees field of view
+			
+			pComponent = ecbehavior.getComponent().instance(element)
+			pDynamicSkin = ecbehavior.getDynamicSkin().instance(element)
+			pRenderablePanel = ecbehavior.getRenderablePanel().instance(element)
 		end
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
-			pComponent = pECBehavior.getComponent().createComponent(getElement(), stub)
-			pComponent.setVisible(false)
+			pComponent.getComponent().setVisible(false)
 		end
 		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pComponent = null
+			pDynamicSkin = null
+			pRenderablePanel = null
+			super.dispose()
+		end
 		
 		
 		/** Behavior. */
@@ -67,45 +79,63 @@ class ECBVRHudInfo extends DefaultECBehavior
 		end
 		
 		/** Component. */
-		public func Component getComponent()
+		public func ECBehaviorComponent.Instance getComponent()
 			return pComponent
 		end
 		
-		/** Skin or null. */
-		public func Skin getSkin()
-			return pComponent.getSkin()
+		/** Dynamic skin. */
+		public func ECBehaviorDynamicSkin.Instance getDynamicSkin()
+			return pDynamicSkin
 		end
 		
-		/** Set skin or null. */
-		public func void setSkin(Skin skin)
-			pComponent.setSkin(skin)
-			pComponent.setVisible(skin != null)
-		end
-		
-		/** Set skin to null and hide component. */
-		public func void clearSkin()
-			setSkin(null)
+		/** Renderable panel. */
+		public func ECBehaviorRenderablePanel.Instance getRenderablePanel()
+			return pRenderablePanel
 		end
 		
 		
 		
-		/** Add component to game world. */
-		public func void addToGameWorld()
-			getElement().getGameWorld().getWorld().addComponent(pComponent)
+		/** Add panel. Shows component. */
+		public func void addPanel(Panel panel)
+			pRenderablePanel.getPanel().addWidget(panel)
+			pComponent.getComponent().setVisible(true)
 		end
 		
-		/** Remove component from game world. */
-		public func void removeFromGameWorld()
-			getElement().getGameWorld().getWorld().removeComponent(pComponent)
+		/** Remove panel without disposing of it. Hides component if content is empty. */
+		public func void removePanel(Panel panel)
+			if pRenderablePanel == null
+				return // disposed. can happen due to behavior ordering
+			end
+			
+			pRenderablePanel.getPanel().removeWidget(panel)
+			pComponent.getComponent().setVisible(pRenderablePanel.getPanel().getWidgetCount() > 0)
 		end
+		
+		/** Remove all content and hide component. */
+		public func void clear()
+			if pRenderablePanel == null
+				return // disposed. can happen due to behavior ordering
+			end
+			
+			pRenderablePanel.getPanel().removeAllWidgets()
+			pComponent.getComponent().setVisible(false)
+		end
+		
+		
 		
 		/** Place component in front of VR camera with correct size. */
 		public func void update()
-			if not pComponent.getVisible()
+			if pComponent == null
+				return // not yet inited
+			end
+			
+			var Component component = pComponent.getComponent()
+			if not component.getVisible()
 				return
 			end
 			
 			var Camera camera = GameApp.getGameApp().getVRCamera()
+				camera = GameApp.getGameApp().getVRCameraDirector().getCamera()
 			
 			// place camera 10% more than image distance along view distance.
 			// model points along positive Z axis. turn the model around to make
@@ -116,8 +146,8 @@ class ECBVRHudInfo extends DefaultECBehavior
 			
 			matrix = matrix * DMatrix.newWorld(camera.getPosition(), camera.getOrientation())
 			
-			pComponent.setPosition(matrix.getPosition())
-			pComponent.setOrientation(matrix.toQuaternion())
+			component.setPosition(matrix.getPosition())
+			component.setOrientation(matrix.toQuaternion())
 			
 			// scale the component. this depends on the FOV. we do not know what FOV the
 			// HMD has and it can potentially change. often though it is around 100
@@ -126,22 +156,35 @@ class ECBVRHudInfo extends DefaultECBehavior
 			// 
 			// the model has a size of 1m
 			var float size = DEMath.tan(pFov * 0.5) * distance * 2
-			pComponent.setScaling(Vector.new(size, size, size))
+			component.setScaling(Vector.new(size, size, size))
 		end
 	end
 	
 	
 	
-	private var ECComposeComponent pComponent
+	private var ECBehaviorComponent pComponent
+	private var ECBehaviorDynamicSkin pDynamicSkin
+	private var ECBehaviorRenderablePanel pRenderablePanel
 	
 	
 	
 	/** Create behavior element class. */
 	public func new(BehaviorElementClass eclass) super(eclass)
-		var String prefix = "vrHudInfo."
+		var String subId = "vrHudInfo"
+		var String prefix = subId + "."
 		
-		pComponent = ECComposeComponent.new(eclass, prefix + "component")
-		pComponent.getModel().setPath("/content/models/hudinfo/hudinfo.demodel")
+		pComponent = ECBehaviorComponent.new(eclass, null, subId, prefix + "component")
+		pComponent.getComponent().getModel().setPath("/content/models/hudinfo/hudinfo.demodel")
+		pComponent.getComponent().getSkin().setPath("/content/models/hudinfo/hudinfo.deskin")
+		
+		pDynamicSkin = ECBehaviorDynamicSkin.new(eclass, pComponent, subId)
+		
+		pRenderablePanel = ECBehaviorRenderablePanel.new(eclass, pDynamicSkin, subId)
+		pRenderablePanel.getGuiTheme().setPath("/content/gui/vrmain.guitheme.xml")
+		pRenderablePanel.getDesignerSelector().setValue("Panel.VRHudInfo")
+		pRenderablePanel.getRenderable().setValue("content")
+		pRenderablePanel.getRenderableSolidity().setValue("solidity")
+		pRenderablePanel.getSize().setPoint(Point.new(1024, 1024))
 		
 		eclass.addBehavior(this)
 	end
@@ -149,14 +192,26 @@ class ECBVRHudInfo extends DefaultECBehavior
 	/** Dispose of behavior. */
 	public func void dispose()
 		pComponent = null
+		pDynamicSkin = null
+		pRenderablePanel = null
 		super.dispose()
 	end
 	
 	
 	
 	/** Component. */
-	public func ECComposeComponent getComponent()
+	public func ECBehaviorComponent getComponent()
 		return pComponent
+	end
+	
+	/** Dynamic skin. */
+	public func ECBehaviorDynamicSkin getDynamicSkin()
+		return pDynamicSkin
+	end
+	
+	/** Renderable panel. */
+	public func ECBehaviorRenderablePanel getRenderablePanel()
+		return pRenderablePanel
 	end
 	
 	

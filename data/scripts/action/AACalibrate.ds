@@ -25,6 +25,7 @@ pin Democap.Actors
 pin Democap.Behaviors
 pin Democap.Characters
 
+pin Dragengine.Gui.Layouts
 pin Dragengine.LoadSave
 pin Dragengine.Preloading
 pin Dragengine.Scenery
@@ -55,14 +56,28 @@ class AACalibrate extends AABase
 		end
 	end
 	
+	enum State
+		waiting
+		calibrating
+		done
+	end
+	
 	
 	
 	protected var ECBVRHudInfo.Instance vrHudInfo
+	protected var Panel panelCalibrate
+	protected var RangeModel modelProgress
+	protected var State state
+	protected var float calibrateElapsed
+	protected var float calibrateWaitTime
+	protected var int triggerPressCount
 	
 	
 	
 	/** Create action. */
 	public func new()
+		state = State.waiting
+		calibrateWaitTime = 2
 	end
 	
 	
@@ -79,7 +94,6 @@ class AACalibrate extends AABase
 	/** Action has been activated. */
 	public func void activate(BehaviorElement actor)
 		super.activate(actor)
-		log("Enter Calibration")
 		
 		var ECBAControlDesktop.Instance acd = ECBAControlDesktop.getInstanceIn(actor)
 		if acd != null
@@ -93,16 +107,37 @@ class AACalibrate extends AABase
 		end
 		
 		if vrHudInfo != null
-			vrHudInfo.setSkin(Skin.new("/content/models/hudinfo/calibrate.deskin"))
+			modelProgress = DefaultRangeModel.new(0, 100, 1, 0, 1)
+			
+			panelCalibrate = Panel.new(StackLayout.new(), block Panel p
+				p.setDesignerSelector("Panel.HudInfo.Calibrate")
+				
+				p.addWidget(DisplayRotatingImage.new(Image.new("/content/gui/images/calibrate.png")))
+				
+				p.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.y, 0.5, 0.615), block Panel p2
+					var ProgressBar progressBar = ProgressBar.new(Orientation.horizontal, modelProgress)
+					progressBar.setDesignerSelector("ProgressBar.HudInfo.Calibrate")
+					progressBar.setShowPercentage(false)
+					p2.addWidget(progressBar)
+				end))
+			end)
+			
+			vrHudInfo.addPanel(panelCalibrate)
 		end
 	end
 	
 	/** Deactivate action. */
 	public func void deactivate()
 		if vrHudInfo != null
-			vrHudInfo.clearSkin()
+			if panelCalibrate != null
+				vrHudInfo.removePanel(panelCalibrate)
+				panelCalibrate.safeDispose()
+				panelCalibrate = null
+			end
+			modelProgress = null
 		end
 	end
+	
 	
 	
 	/** Trigger pulled. */
@@ -113,32 +148,86 @@ class AACalibrate extends AABase
 			return
 		end
 		
-		log("Calibrate")
-		var BaseVRActor vrActor = actor cast BaseVRActor
-		//actorProfile.calibrate(vrActor)
-		character.calibrate(vrActor, actorProfile)
-		
-		// TODO use a 1 second delay after pulling the trigger
-		// after this point the actor has been disposed and a new one will be created
-// 		log("Done")
-// 		aiAction.setAction(AADefault.new())
+		select state
+		case State.waiting
+			state = State.calibrating
+			triggerPressCount++
+			
+		case State.calibrating
+			triggerPressCount++
+		end
 	end
 	
 	/** Trigger released. */
 	public func void triggerRelease(bool rightHand)
+		if state != State.calibrating
+			return
+		end
+		
+		triggerPressCount--
+		
+		if triggerPressCount == 0
+			state = State.waiting
+			calibrateElapsed = 0
+			if modelProgress != null
+				modelProgress.setValue(0)
+			end
+		end
 	end
 	
 	
 	
 	/** Menu button pressed. */
 	public func void menuPress(bool rightHand)
-		log("Abort Calibration")
+		state = State.done
 		aiAction.setAction(AADefault.new())
 	end
 	
 	/** Cancel calibrate. */
 	public func void cancelCalibrate()
+		state = State.done
 		aiAction.setAction(AADefault.new())
+	end
+	
+	
+	
+	/** Frame update. */
+	public func void think(float elapsed)
+		super.think(elapsed)
+		
+		select state
+		case State.calibrating
+			// sanity check
+			var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
+			var CharacterConfiguration character = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
+			if actor == null or character == null
+				state = State.waiting
+				calibrateElapsed = 0
+				if modelProgress != null
+					modelProgress.setValue(0)
+				end
+				return
+			end
+			
+			// wait until timeout
+			calibrateElapsed += elapsed
+			
+			if modelProgress != null
+				modelProgress.setValue(DEMath.linearStep(calibrateElapsed, 0, calibrateWaitTime, 0, 100) cast int)
+			end
+			
+			// once timout elapsed calibrate and finish
+			if calibrateElapsed >= calibrateWaitTime
+				state = State.done
+				
+				var BaseVRActor vrActor = actor cast BaseVRActor
+				//actorProfile.calibrate(vrActor)
+				character.calibrate(vrActor, actorProfile)
+				
+				// after this point the actor has been disposed and a new one will be created
+				//aiAction.setAction(AADefault.new())
+			end
+		end
 	end
 	
 	
