@@ -176,21 +176,18 @@ class WorldSpawnCharacter
 			gameWorld.addElement(pVRMenu)
 			
 			// move the camera to a good starting position showing the character
-			var CameraDirector director = GameApp.getGameApp().getWindowGameWorld().getCameraDirector()
+			var VRCameraDirector director = GameApp.getGameApp().getVRCameraDirector()
 			
 			if director != null
-				var Camera camera = director.getCamera()
-				var DMatrix matrix
-				
+				var DMatrix matrix = DMatrix.new()
 				if pSpawnPoint != null
 					matrix = pSpawnPoint.getMatrix()
-					
-				else
-					matrix = DMatrix.new()
 				end
 				
-				camera.setPosition(matrix * DVector.new(0, 1.4, 1))
-				camera.setOrientation((DMatrix.newRotation(-20, 180, 0) * matrix).toQuaternion())
+				var Vector angles = (Matrix.newRotation(-20, 180, 0) * matrix.getRotation().toMatrix()).getEulerAngles()
+				director.setPivot(matrix * DVector.new(0, 1.4, 1))
+				director.setAzimuth(angles.getY())
+				director.setElevation(-angles.getX())
 			end
 		end
 		

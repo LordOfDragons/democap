@@ -21,12 +21,14 @@
 
 namespace Democap.Behaviors
 
+pin Democap.Actors
 pin Democap.Characters
 
 pin Dragengine.Gui
 pin Dragengine.Preloading
 pin Dragengine.Scenery
 pin Dragengine.Utils
+pin Dragengine.XML
 
 
 /**
@@ -39,6 +41,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var ECBehaviorActorAnimated.Instance pActorAnimated
 		private var Array pBoneIndices
 		private var CharacterAnimation pCharacterAnimation
+		private var TimeDate pTimestamp
 		private var bool pIsRecording
 		private var float pRecordTime
 		private var bool pIncrementTime
@@ -100,8 +103,11 @@ class ECBRecordAnimation extends DefaultECBehavior
 		public func void startRecording()
 			stopRecording()
 			
+			pTimestamp = TimeDate.new()
+			
 			pCharacterAnimation = CharacterAnimation.new()
-			pCharacterAnimation.setFilename("/animations/" + TimeDate.new().format("%Y-%m-%d_%H-%M-%S") + ".deanim")
+			pCharacterAnimation.setFilename("/capture/animations/"\
+				+ pTimestamp.format("%Y-%m-%d_%H-%M-%S") + ".deanim")
 			
 			pComponent = pActorAnimated.getComponent().getComponent()
 			var int index
@@ -130,10 +136,16 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pIsRecording = false
 			pComponent = null
 			
-			if pCharacterAnimation != null
-				pCharacterAnimation.createAnimation()
-				pCharacterAnimation.getAnimation().save(pCharacterAnimation.getFilename())
+			// write animation to file
+			if pCharacterAnimation == null
+				return
 			end
+			
+			pCharacterAnimation.createAnimation()
+			pCharacterAnimation.getAnimation().save(pCharacterAnimation.getFilename())
+			
+			// write capture information file
+			writeCaptureInfoFile()
 		end
 		
 		
@@ -158,6 +170,64 @@ class ECBRecordAnimation extends DefaultECBehavior
 					pComponent.boneGetPosition(each), \
 					pComponent.boneGetRotation(each))
 			end)
+		end
+		
+		/** Write capture information file. */
+		public func void writeCaptureInfoFile()
+			var GameApp app = GameApp.getGameApp()
+			var WorldSpawnCharacter wsc = app.getWorldSpawnCharacter()
+			var EasyXML document = EasyXML.new()
+			var EasyXMLElement root = document.getRootElement()
+			root.setTagName("mocapAnimation")
+			
+			// general information
+			root.addDataTag("timestamp", pTimestamp.format("%Y-%m-%dT%H:%M:%S"))
+			
+			// actor
+			var ActorProfile actorProfile = app.getActiveActorProfile()
+			if actorProfile != null
+				var EasyXMLElement tag = root.addTag("actor")
+				tag.addDataTag("profileName", actorProfile.getName())
+				tag.addDataTag("shoulderLevel", actorProfile.getShoulderLevel())
+				tag.addDataTag("shoulderWide", actorProfile.getShoulderWidth())
+				tag.addDataTag("armLength", actorProfile.getArmLength())
+				tag.addDataTag("legLength", actorProfile.getLegLength())
+			end
+			
+			// character
+			var CharacterConfiguration character = wsc.getCharacter()
+			if character != null
+				var CharacterProfile profile = character.getProfile()
+				var EasyXMLElement tag = root.addTag("character")
+				tag.addDataTag("profileName", profile.getName())
+				tag.addDataTag("configurationName", character.getName())
+				
+				tag.addDataTag("shoulderLevel", character.getShoulderLevel())
+				tag.addDataTag("scaleMode", character.getScaleMode().name())
+				tag.addDataTag("calibratedScale", character.getCalibrateScale())
+				
+				var CharacterAppearance appearance = profile.getAppearance()
+				var EasyXMLElement tagAppearance = tag.addTag("appearance")
+				tagAppearance.addDataTag("pathModel", appearance.getPathModel())
+				tagAppearance.addDataTag("pathSkin", appearance.getPathSkin())
+				tagAppearance.addDataTag("pathRig", appearance.getPathRig())
+				tagAppearance.addDataTag("pathAnimation", appearance.getPathAnimation())
+			end
+			
+			// animation
+			var EasyXMLElement tagAnimation = root.addTag("capturedAnimation")
+			tagAnimation.addDataTag("pathAnimation", pCharacterAnimation.getFilename())
+			tagAnimation.addDataTag("keyframeCount", pCharacterAnimation.getKeyframeCount())
+			tagAnimation.addDataTag("playtime", pCharacterAnimation.getPlaytime())
+			
+			var EasyXMLElement tagBones = tagAnimation.addTag("capturedBones")
+			pBoneIndices.forEach(block int each
+				tagBones.addDataTag("boneName", pComponent.boneGetName(each))
+			end)
+			
+			// write to file
+			document.writeToFile(FileWriter.new("/capture/animations/"\
+				+ pTimestamp.format("%Y-%m-%d_%H-%M-%S") + ".demca"), false)
 		end
 	end
 	
