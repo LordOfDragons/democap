@@ -38,6 +38,7 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	
 	protected var ECBCharacterConfiguration.Instance character
 	protected var ECBehaviorComponent.Instance component
+	protected var ECBVRHudInfo.Instance vrHudInfo
 	
 	protected var Camera pVRCamera
 	
@@ -76,6 +77,7 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 		super.initBehaviors(element)
 		character = ECBCharacterConfiguration.getInstanceIn(element)
 		component = ECBehaviorComponent.getInstanceIn(element)
+		vrHudInfo = ECBVRHudInfo.getInstanceIn(element)
 	end
 	
 	/** Set VR camera. */
@@ -110,6 +112,11 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 		var Camera camera = getCamera()
 		camera.setPosition(matrix.getPosition())
 		camera.setOrientation(matrix.toQuaternion())
+		
+		// if controllable actor has ECBVRHudInfo update it
+		if vrHudInfo != null
+			vrHudInfo.update()
+		end
 	end
 	
 	/** Calculate camera matrix. Has to ignore element in contrary to VR camera matrix. */

@@ -57,8 +57,21 @@ class AACalibrate extends AABase
 	
 	
 	
+	protected var ECBVRHudInfo.Instance vrHudInfo
+	
+	
+	
 	/** Create action. */
 	public func new()
+	end
+	
+	
+	
+	/** Init behaviors. */
+	protected func void initBehaviors()
+		super.initBehaviors()
+		
+		vrHudInfo = ECBVRHudInfo.getInstanceIn(actor)
 	end
 	
 	
@@ -78,8 +91,18 @@ class AACalibrate extends AABase
 		if actor != null and character != null
 			character.resetCalibration()
 		end
+		
+		if vrHudInfo != null
+			vrHudInfo.setSkin(Skin.new("/content/models/hudinfo/calibrate.deskin"))
+		end
 	end
 	
+	/** Deactivate action. */
+	public func void deactivate()
+		if vrHudInfo != null
+			vrHudInfo.clearSkin()
+		end
+	end
 	
 	
 	/** Trigger pulled. */
@@ -95,6 +118,7 @@ class AACalibrate extends AABase
 		//actorProfile.calibrate(vrActor)
 		character.calibrate(vrActor, actorProfile)
 		
+		// TODO use a 1 second delay after pulling the trigger
 		// after this point the actor has been disposed and a new one will be created
 // 		log("Done")
 // 		aiAction.setAction(AADefault.new())

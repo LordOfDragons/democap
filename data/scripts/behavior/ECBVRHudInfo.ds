@@ -1,0 +1,182 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Gui
+
+pin Dragengine.Gui
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding support to show information in VR like a HUD overlay. Has to be done using
+ * a simple square model since VR cameras can not use 2D overlays. VRCameraDirector calls
+ * update() on the behavior once the camera is updated. This can not be done during think()
+ * or postThink() since the camera director is updated right before finishing the frame update.
+ * The update call moves the component into the right position in front of the camera with the
+ * right size. The skin to show is changed at runtime. The component is shown only if a skin
+ * is assigned otherwise it is hidden.
+ */
+class ECBVRHudInfo extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBVRHudInfo pECBehavior
+		private var Component pComponent
+		private var float pFov
+		
+		
+		
+		/** Create instance. */
+		public func new(ECBVRHudInfo ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pFov = 60 // 60% of 100 field of view. determines the size
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			pComponent = pECBehavior.getComponent().createComponent(getElement(), stub)
+			pComponent.setVisible(false)
+		end
+		
+		
+		
+		/** Behavior. */
+		public func ECBVRHudInfo getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Component. */
+		public func Component getComponent()
+			return pComponent
+		end
+		
+		/** Skin or null. */
+		public func Skin getSkin()
+			return pComponent.getSkin()
+		end
+		
+		/** Set skin or null. */
+		public func void setSkin(Skin skin)
+			pComponent.setSkin(skin)
+			pComponent.setVisible(skin != null)
+		end
+		
+		/** Set skin to null and hide component. */
+		public func void clearSkin()
+			setSkin(null)
+		end
+		
+		
+		
+		/** Add component to game world. */
+		public func void addToGameWorld()
+			getElement().getGameWorld().getWorld().addComponent(pComponent)
+		end
+		
+		/** Remove component from game world. */
+		public func void removeFromGameWorld()
+			getElement().getGameWorld().getWorld().removeComponent(pComponent)
+		end
+		
+		/** Place component in front of VR camera with correct size. */
+		public func void update()
+			if not pComponent.getVisible()
+				return
+			end
+			
+			var Camera camera = GameApp.getGameApp().getVRCamera()
+			
+			// place camera 10% more than image distance along view distance.
+			// model points along positive Z axis. turn the model around to make
+			// the player look at the front side
+			var float distance = camera.getImageDistance() * 1.1
+			
+			var DMatrix matrix = DMatrix.newRT(DVector.new(0, 180, 0), DVector.new(0, 0, distance))
+			
+			matrix = matrix * DMatrix.newWorld(camera.getPosition(), camera.getOrientation())
+			
+			pComponent.setPosition(matrix.getPosition())
+			pComponent.setOrientation(matrix.toQuaternion())
+			
+			// scale the component. this depends on the FOV. we do not know what FOV the
+			// HMD has and it can potentially change. often though it is around 100
+			// degrees. for this reason we define the target FOV we want to roughly
+			// see the HUD info at. this is not exact but good enough to set the size
+			// 
+			// the model has a size of 1m
+			var float size = DEMath.tan(pFov * 0.5) * distance * 2
+			pComponent.setScaling(Vector.new(size, size, size))
+		end
+	end
+	
+	
+	
+	private var ECComposeComponent pComponent
+	
+	
+	
+	/** Create behavior element class. */
+	public func new(BehaviorElementClass eclass) super(eclass)
+		var String prefix = "vrHudInfo."
+		
+		pComponent = ECComposeComponent.new(eclass, prefix + "component")
+		pComponent.getModel().setPath("/content/models/hudinfo/hudinfo.demodel")
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pComponent = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Component. */
+	public func ECComposeComponent getComponent()
+		return pComponent
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
