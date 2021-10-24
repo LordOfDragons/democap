@@ -41,11 +41,31 @@ pin Dragengine.Utils
  * Game Application.
  */
 class GameApp extends BaseGameApp
+	/** Toggle Show VR camera listener. */
+	class ToggleShowVRCameraListener extends DefaultToggleModelListener
+		public func new()
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			var WindowGameWorld window = GameApp.getGameApp().getWindowGameWorld()
+			
+			if model.getToggled()
+				window.getWorldRenderer().setCamera(GameApp.getGameApp().getVRCamera())
+				
+			else
+				window.getWorldRenderer().setCamera(window.getCamera())
+			end
+		end
+	end
+	
+	
+	
 	private var ActorProfiles pActorProfiles
 	private var ActorProfile pActiveActorProfile
 	private var ActorProfile pDefaultActorProfile
 	private var CharacterProfiles pCharacterProfiles
 	private var LoadableWorlds pLoadableWorlds
+	private var DefaultToggleModel pModelShowVRCamera
 	
 	private var MotionTransferFactories pMotionTransferFactories
 	private var LoadActorProfile pLoadActorProfile
@@ -84,6 +104,7 @@ class GameApp extends BaseGameApp
 	public func void initGame()
 		super.initGame()
 		
+		pModelShowVRCamera = DefaultToggleModel.new(true)
 		pDefaultActorProfile = ActorProfile.new("Default")
 		
 		pMotionTransferFactories = MotionTransferFactories.new()
@@ -176,6 +197,9 @@ class GameApp extends BaseGameApp
 		pVRCameraDirector.setHighestIntensity(20)
 		pVRCameraDirector.setAdaptionTime(30)
 		pVRCameraDirector.setVRCamera(pVRCamera)
+		
+		// add model listeners
+		pModelShowVRCamera.addListener(ToggleShowVRCameraListener.new())
 		
 		// add support to navigate the view
 		var WindowGameWorld windowGameWorld = getWindowGameWorld()
@@ -286,6 +310,7 @@ class GameApp extends BaseGameApp
 		
 		pLoadCharacterProfile = null
 		pLoadActorProfile = null
+		pModelShowVRCamera = null
 		pVRCameraDirector = null
 		
 		super.cleanUp()
@@ -354,6 +379,11 @@ class GameApp extends BaseGameApp
 	/** VR camera director. */
 	public func VRCameraDirector getVRCameraDirector()
 		return pVRCameraDirector
+	end
+	
+	/** Show VR camera model. */
+	public func DefaultToggleModel getModelShowVRCamera()
+		return pModelShowVRCamera
 	end
 	
 	
