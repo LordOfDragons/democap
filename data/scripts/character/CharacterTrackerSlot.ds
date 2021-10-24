@@ -75,6 +75,8 @@ class CharacterTrackerSlot
 	private var Vector pCalibrateRotation
 	private var Matrix pCalibrateMatrix
 	private var Matrix pCalibrateMatrixInverse
+	private var Matrix pCalibrateReferenceMatrix
+	private var Matrix pCalibrateReferenceMatrixInverse
 	
 	private var ADController pADControllerPosition
 	private var ADController pADControllerRotation
@@ -110,6 +112,8 @@ class CharacterTrackerSlot
 		pCalibrateRotation = Vector.new()
 		pCalibrateMatrix = Matrix.new()
 		pCalibrateMatrixInverse = Matrix.new()
+		pCalibrateReferenceMatrix = Matrix.new()
+		pCalibrateReferenceMatrixInverse = Matrix.new()
 		
 		resetCalibration()
 	end
@@ -141,6 +145,8 @@ class CharacterTrackerSlot
 		pCalibrateRotation = slot.pCalibrateRotation
 		pCalibrateMatrix = slot.pCalibrateMatrix
 		pCalibrateMatrixInverse = slot.pCalibrateMatrixInverse
+		pCalibrateReferenceMatrix = slot.pCalibrateReferenceMatrix
+		pCalibrateReferenceMatrixInverse = slot.pCalibrateReferenceMatrixInverse
 		
 		resetCalibration()
 	end
@@ -468,6 +474,7 @@ class CharacterTrackerSlot
 		case Type.rightHandController
 			pInputDeviceType = InputDeviceType.vrRightHand
 			pPosition = Vector.new(shoulderWidth * 0.5 + armLength, shoulderLevel, 0)
+			pRotation = Vector.new(0, -90, 0)
 			
 		case Type.rightHandTracker
 			pInputDeviceType = InputDeviceType.vrTracker
@@ -480,6 +487,7 @@ class CharacterTrackerSlot
 		case Type.leftHandController
 			pInputDeviceType = InputDeviceType.vrLeftHand
 			pPosition = Vector.new(-(shoulderWidth * 0.5 + armLength), shoulderLevel, 0)
+			pRotation = Vector.new(0, 90, 0)
 			
 		case Type.leftHandTracker
 			pInputDeviceType = InputDeviceType.vrTracker
@@ -560,6 +568,25 @@ class CharacterTrackerSlot
 		pCalibrateMatrixInverse = matrix.getInverse()
 	end
 	
+	/** Calibrate reference matrix. */
+	public func Matrix getCalibrateReferenceMatrix()
+		return pCalibrateReferenceMatrix
+	end
+	
+	/** Inverse calibrate reference matrix. */
+	public func Matrix getCalibrateReferenceMatrixInverse()
+		return pCalibrateReferenceMatrixInverse
+	end
+	
+	/** Set calibrate reference matrix. */
+	public func void setCalibrateReferenceMatrix(Matrix matrix)
+		if matrix == null
+			throw ENullPointer.new("matrix")
+		end
+		pCalibrateReferenceMatrix = matrix
+		pCalibrateReferenceMatrixInverse = matrix.getInverse()
+	end
+	
 	
 	
 	/** Reset calibration. */
@@ -568,6 +595,8 @@ class CharacterTrackerSlot
 		pCalibrateRotation = pRotation
 		pCalibrateMatrix = pMatrix
 		pCalibrateMatrixInverse = pMatrix.getInverse()
+		pCalibrateReferenceMatrix = pMatrix
+		pCalibrateReferenceMatrixInverse = pMatrix.getInverse()
 	end
 	
 	/** Calibrate character. */
@@ -582,28 +611,26 @@ class CharacterTrackerSlot
 		behavior.findInputDevice()
 		behavior.updateMatrix()
 		
-		if pInputDeviceID.empty() or behavior.isDetached()
-			resetCalibration()
-			
-		else
-			pCalibrateMatrix = behavior.getMatrixCharacter()
-			
-// 			if pForceCalibrateRotation != null
-			select pInputDeviceType
-			case pInputDeviceType.vrHMD
-				var Vector position = pCalibrateMatrix.getPosition()
-				pCalibrateMatrix = Matrix.newTranslation(position)
-// 				behavior.setMatrixCharacter(position, pForceCalibrateRotation)
-				behavior.setMatrixCharacter(position, Vector.new())
-			end
-			
-			pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
-			pCalibratePosition = pCalibrateMatrix.getPosition()
-			pCalibrateRotation = pCalibrateMatrix.normalize().getEulerAngles()
-			
-// 			GameApp.getGameApp().getConsole().addMessage("CharacterTrackerSlot.calibrate: slot=" \
-// 				+ pName + " pos=" + pCalibratePosition + " rot=" + pCalibrateRotation)
+		pCalibrateReferenceMatrix = behavior.getMatrixReference()
+		pCalibrateReferenceMatrixInverse = pCalibrateReferenceMatrix.getInverse()
+		
+		pCalibrateMatrix = behavior.getMatrixCharacter()
+		
+// 		if pForceCalibrateRotation != null
+		select pInputDeviceType
+		case pInputDeviceType.vrHMD
+			var Vector position = pCalibrateMatrix.getPosition()
+			pCalibrateMatrix = Matrix.newTranslation(position)
+// 			behavior.setMatrixCharacter(position, pForceCalibrateRotation)
+			behavior.setMatrixCharacter(position, Vector.new())
 		end
+		
+		pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
+		pCalibratePosition = pCalibrateMatrix.getPosition()
+		pCalibrateRotation = pCalibrateMatrix.normalize().getEulerAngles()
+		
+//		GameApp.getGameApp().getConsole().addMessage("CharacterTrackerSlot.calibrate: slot=" \
+//			+ pName + " pos=" + pCalibratePosition + " rot=" + pCalibrateRotation)
 	end
 	
 	

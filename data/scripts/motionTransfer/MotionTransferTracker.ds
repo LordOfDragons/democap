@@ -212,31 +212,35 @@ class MotionTransferTracker
 			return
 		end
 		
-		//var Matrix boneMatrix = component.boneGetMatrix(index)
 		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
-		var Matrix slotTargetMatrix = pRealSlot.getTargetMatrix()
+		var Matrix slotTargetMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) * pRealSlot.getTargetMatrix()
+		var Matrix slotTargetMatrixInv = slotTargetMatrix.getInverse()
+		var Matrix slotRefMatrix = pRealSlot.getCalibrateReferenceMatrix()
+		var Matrix boneMatrix = component.boneGetMatrix(index)
+		
+		var Matrix customOffset = boneMatrix * slotTargetMatrixInv
+		var Matrix autoTransform = customOffset * slotRefMatrix * slotInvMatrix
 		
 		select pAutoTransform
 		case AutoTransform.full
-			pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) * slotTargetMatrix * slotInvMatrix
 			//pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) * boneMatrix * slotInvMatrix
-			pTransformPosition = pTransformMatrix.getPosition()
-			pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
+			pTransformMatrix = autoTransform
 			
 		case AutoTransform.orientation
-			var Matrix rotMat = slotTargetMatrix.getRotation() * slotInvMatrix.getRotation()
-			//var Matrix rotMat = boneMatrix.getRotation() * slotInvMatrix.getRotation()
+			/*
+			var Matrix rotMat = boneMatrix.getRotation() * slotInvMatrix.getRotation()
 			pTransformMatrix = Matrix.newRotation(pOffsetRotation) * rotMat \
 				* Matrix.newTranslation(rotMat * -pOffsetPosition)
-			pTransformPosition = pTransformMatrix.getPosition()
-			pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
+			*/
+			pTransformMatrix = autoTransform.getRotation() * Matrix.newTranslation(\
+				autoTransform.getRotation() * customOffset.getPosition())
 			
 		case AutoTransform.none
-			pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition)
-			pTransformPosition = pOffsetPosition
-			pTransformRotation = pOffsetRotation
+			pTransformMatrix = customOffset
 		end
 		
+		pTransformPosition = pTransformMatrix.getPosition()
+		pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
 		setReverseFromTransform()
 		
 // 		GameApp.getGameApp().getConsole().addMessage("setTransform " + pRealSlot.getName() + " " \
@@ -330,12 +334,6 @@ class MotionTransferTracker
 			elif tagName.equals("offsetRotation")
 				setOffsetRotation(loader.readVector(element))
 				
-			elif tagName.equals("transformPosition")
-				pTransformPosition = loader.readVector(element)
-				
-			elif tagName.equals("transformRotation")
-				pTransformRotation = loader.readVector(element)
-				
 			elif tagName.equals("autoTransform")
 				pAutoTransform = AutoTransform.named(element.getFirstCData())
 			end
@@ -364,8 +362,6 @@ class MotionTransferTracker
 		tag.addDataTag("slot", pSlot)
 		loader.writeVector(tag, "offsetPosition", pOffsetPosition)
 		loader.writeVector(tag, "offsetRotation", pOffsetRotation)
-		loader.writeVector(tag, "transformPosition", pTransformPosition)
-		loader.writeVector(tag, "transformRotation", pTransformRotation)
 		tag.addDataTag("autoTransform", pAutoTransform.name())
 	end
 	

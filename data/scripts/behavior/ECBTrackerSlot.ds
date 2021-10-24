@@ -92,6 +92,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 		private var Vector pPosition
 		private var Quaternion pOrientation
 		private var Matrix pMatrix
+		private var Matrix pReferenceMatrix
 		private var Matrix pComponentMatrix
 		private var AttachDetachListener pAttachDetachListener
 		private var DebugDrawer pDDCoordSystem
@@ -106,6 +107,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 			pPosition = Vector.new()
 			pOrientation = Quaternion.new()
 			pMatrix = Matrix.new()
+			pReferenceMatrix = Matrix.new()
 			pComponentMatrix = Matrix.new()
 			pAttachDetachListener = AttachDetachListener.new(this)
 			
@@ -237,6 +239,11 @@ class ECBTrackerSlot extends DefaultECBehavior
 			return pMatrix
 		end
 		
+		/** Character reference matrix. */
+		public func Matrix getMatrixReference()
+			return pReferenceMatrix
+		end
+		
 		/** World position. */
 		public func DVector getPosition()
 			return pVRPlayspace.getMatrix() * DVector.new(pPosition)
@@ -363,20 +370,26 @@ class ECBTrackerSlot extends DefaultECBehavior
 			var CharacterConfiguration config = slot.getConfiguration()
 			
 			// some notes:
-			// - pComponentMatrix is the real VR device location in actor space.
-			// - pMatrix is the slot location in character space.
-			// - getOffsetMatrix() applies only to real VR devices to obtain pMatrix.
+			// - pComponentMatrix is the real VR device location in VR playspace
+			// - pReferenceMatrix is the reference slot location in character space
+			// - pMatrix is the slot location in character space
+			// - getOffsetMatrix() applies only to real VR devices to obtain pMatrix
+			// - config.getMatrixCalibrate() transforms from VR playspace to actor space
+			// - config.getMatrixScale() is characterShoulderLevel / actorShoulderLevel
+			// - config.getMatrixScaleInverse() is actorShoulderLevel / characterShoulderLevel
+			pReferenceMatrix = slot.getMatrix() * config.getMatrixScale()
+			
 			if pInputDevice != null
 				pComponentMatrix = pInputDevice.getDevicePoseMatrix()
+				pMatrix = pComponentMatrix * config.getMatrixCalibrate() * config.getMatrixScale()
 				
 			else
-				pComponentMatrix = slot.getMatrix()
+				pComponentMatrix = slot.getMatrix() * config.getMatrixCalibrateInverse()
+				pMatrix = pReferenceMatrix
 			end
 			
-			pMatrix = pComponentMatrix * config.getMatrixCalibrate() * config.getMatrixScale()
-			
 			if config.getScaleMode() == CharacterConfiguration.ScaleMode.actor
-				pComponentMatrix = pMatrix
+				pComponentMatrix = pMatrix * config.getMatrixCalibrateInverse()
 			end
 			
 			if pInputDevice != null

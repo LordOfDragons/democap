@@ -112,6 +112,7 @@ class WorldSpawnCharacter
 	private var Quaternion pLastActorOrientation
 	private var BehaviorElement pVRMenu
 	private var ElementClass pMoCapActorClass
+	private var bool pRequiresRecreateCharacter
 	private var Array pListeners
 	
 	
@@ -234,7 +235,10 @@ class WorldSpawnCharacter
 	
 	/** Recreate actor. */
 	public func void recreateActor()
-		disposeActor()
+		// disposing of the character is delayed since this call can potentially happen while
+		// the mocap actor processes user input during thinking or post thinking. disposing
+		// elements during that time can have hard to debug exceptions
+		pRequiresRecreateCharacter = true
 		startUpdateCheck()
 	end
 	
@@ -284,6 +288,11 @@ class WorldSpawnCharacter
 	
 	/** Update check. */
 	public func void updateCheck()
+		if pRequiresRecreateCharacter
+			pRequiresRecreateCharacter = false
+			disposeActor()
+		end
+		
 		if pGameWorld == null or pActor != null
 			stopUpdateCheck()
 			return

@@ -77,7 +77,7 @@ class AACalibrate extends AABase
 	/** Create action. */
 	public func new()
 		state = State.waiting
-		calibrateWaitTime = 2
+		calibrateWaitTime = 1
 	end
 	
 	
@@ -167,11 +167,7 @@ class AACalibrate extends AABase
 		triggerPressCount--
 		
 		if triggerPressCount == 0
-			state = State.waiting
-			calibrateElapsed = 0
-			if modelProgress != null
-				modelProgress.setValue(0)
-			end
+			resetToWaiting()
 		end
 	end
 	
@@ -201,11 +197,7 @@ class AACalibrate extends AABase
 			var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
 			var CharacterConfiguration character = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
 			if actor == null or character == null
-				state = State.waiting
-				calibrateElapsed = 0
-				if modelProgress != null
-					modelProgress.setValue(0)
-				end
+				resetToWaiting()
 				return
 			end
 			
@@ -218,25 +210,31 @@ class AACalibrate extends AABase
 			
 			// once timout elapsed calibrate and finish
 			if calibrateElapsed >= calibrateWaitTime
-				state = State.done
+				resetToWaiting()
 				
 				var BaseVRActor vrActor = actor cast BaseVRActor
 				//actorProfile.calibrate(vrActor)
+				
 				character.calibrate(vrActor, actorProfile)
 				
-				// after this point the actor has been disposed and a new one will be created.
-				// this only does not happen if calibrating failed for some reason. hence check
-				// if we are still the active action. in that case someting went wrong
-				if vrActor.getAIAction().getAction() == this
-					state = State.waiting
-					calibrateElapsed = 0
-					if modelProgress != null
-						modelProgress.setValue(0)
-					end
+				try
+					character.getProfile().save()
+				catch Exception e
+					log(e)
 				end
 			end
 		end
 	end
+	
+	/** Reset to waiting. */
+	protected func void resetToWaiting()
+		state = State.waiting
+		calibrateElapsed = 0
+		if modelProgress != null
+			modelProgress.setValue(0)
+		end
+	end
+	
 	
 	
 	/** Name of PersistencyFactory required to load object from file. */

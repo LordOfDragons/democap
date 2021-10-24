@@ -297,6 +297,13 @@ class CharacterConfiguration
 			return true
 		end
 		pPreloadCounter = null
+		
+		// this looks strange to call loading a second time but the preloading of the element
+		// class only preloads the resources into the element class but the CharacterAppearance
+		// is still missing them. since they are loaded now calling synchronous loading finished
+		// immediately and CharacterAppearance is valid
+		pProfile.loadResourcesSync()
+		
 		return false
 	end
 	
@@ -391,6 +398,12 @@ class CharacterConfiguration
 			throw EInvalidParam.new("profile.originBone is empty")
 		end
 		
+		// ensure resources are loaded. if the element class exists already the resources
+		// are already preloaded and doing it synchronously again is fast. furthermore the
+		// resources are not unloaded if inside the element class but not yet inside
+		// CharacterAppearance
+		pProfile.loadResourcesSync()
+		
 		// drop element class. we need to create a new one
 		dropElementClass()
 		
@@ -477,7 +490,11 @@ class CharacterConfiguration
 		
 		// scale element if required
 		if pScaleMode == ScaleMode.character
-			actor.setScaling(Vector.new(1.0 / pCalibrateScale, 1.0 / pCalibrateScale, 1.0 / pCalibrateScale))
+			var float scaling = 1.0 / pCalibrateScale
+			actor.setScaling(Vector.new(scaling, scaling, scaling))
+			
+		else
+			actor.setScaling(Vector.new(1, 1, 1))
 		end
 		
 		// calibrate tracker slots

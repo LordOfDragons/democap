@@ -45,15 +45,14 @@ class ECBVRHudInfo extends DefaultECBehavior
 		private var ECBehaviorComponent.Instance pComponent
 		private var ECBehaviorDynamicSkin.Instance pDynamicSkin
 		private var ECBehaviorRenderablePanel.Instance pRenderablePanel
-		private var float pFov
+		private var float pDistance
+		private var float pSize
 		
 		
 		
 		/** Create instance. */
 		public func new(ECBVRHudInfo ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
-			pFov = 90 // 90 degrees field of view
-			
 			pComponent = ecbehavior.getComponent().instance(element)
 			pDynamicSkin = ecbehavior.getDynamicSkin().instance(element)
 			pRenderablePanel = ecbehavior.getRenderablePanel().instance(element)
@@ -62,6 +61,16 @@ class ECBVRHudInfo extends DefaultECBehavior
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
 			pComponent.getComponent().setVisible(false)
+			pDistance = pECBehavior.getDistance().getValue(stub)
+			pSize = pECBehavior.getSize().getValue(stub)
+			
+			// scale the component. this depends on the FOV. we do not know what FOV the
+			// HMD has and it can potentially change. often though it is around 100 degrees.
+			// for this reason the size is define as multiplier ontop of the distance
+			// 
+			// the model has a size of 1m
+			var float size = pDistance * DEMath.tan(pSize) * 2
+			pComponent.getComponent().setScaling(Vector.new(size, size, size))
 		end
 		
 		/** Dispose of behavior instance. */
@@ -91,6 +100,16 @@ class ECBVRHudInfo extends DefaultECBehavior
 		/** Renderable panel. */
 		public func ECBehaviorRenderablePanel.Instance getRenderablePanel()
 			return pRenderablePanel
+		end
+		
+		/** Distance in meters. */
+		public func float getDistance()
+			return pDistance
+		end
+		
+		/** Size as angle from center. */
+		public func float getSize()
+			return pSize
 		end
 		
 		
@@ -135,28 +154,12 @@ class ECBVRHudInfo extends DefaultECBehavior
 			end
 			
 			var Camera camera = GameApp.getGameApp().getVRCamera()
-				camera = GameApp.getGameApp().getVRCameraDirector().getCamera()
 			
-			// place camera 10% more than image distance along view distance.
-			// model points along positive Z axis. turn the model around to make
-			// the player look at the front side
-			var float distance = camera.getImageDistance() * 1.1
-			
-			var DMatrix matrix = DMatrix.newRT(DVector.new(0, 180, 0), DVector.new(0, 0, distance))
-			
-			matrix = matrix * DMatrix.newWorld(camera.getPosition(), camera.getOrientation())
+			var DMatrix matrix = DMatrix.newRT(DVector.new(0, 180, 0), DVector.new(0, 0, pDistance))\
+				* DMatrix.newWorld(camera.getPosition(), camera.getOrientation())
 			
 			component.setPosition(matrix.getPosition())
 			component.setOrientation(matrix.toQuaternion())
-			
-			// scale the component. this depends on the FOV. we do not know what FOV the
-			// HMD has and it can potentially change. often though it is around 100
-			// degrees. for this reason we define the target FOV we want to roughly
-			// see the HUD info at. this is not exact but good enough to set the size
-			// 
-			// the model has a size of 1m
-			var float size = DEMath.tan(pFov * 0.5) * distance * 2
-			component.setScaling(Vector.new(size, size, size))
 		end
 	end
 	
@@ -165,6 +168,8 @@ class ECBVRHudInfo extends DefaultECBehavior
 	private var ECBehaviorComponent pComponent
 	private var ECBehaviorDynamicSkin pDynamicSkin
 	private var ECBehaviorRenderablePanel pRenderablePanel
+	private var ECPFloat pDistance
+	private var ECPFloat pSize
 	
 	
 	
@@ -185,6 +190,12 @@ class ECBVRHudInfo extends DefaultECBehavior
 		pRenderablePanel.getRenderable().setValue("content")
 		pRenderablePanel.getRenderableSolidity().setValue("solidity")
 		pRenderablePanel.getSize().setPoint(Point.new(1024, 1024))
+		
+		pDistance = ECPFloat.new(prefix + "distance", 0.2, 0)
+		eclass.addProperty(pDistance)
+		
+		pSize = ECPFloat.new(prefix + "size", 45, 10, 70)
+		eclass.addProperty(pSize)
 		
 		eclass.addBehavior(this)
 	end
@@ -212,6 +223,16 @@ class ECBVRHudInfo extends DefaultECBehavior
 	/** Renderable panel. */
 	public func ECBehaviorRenderablePanel getRenderablePanel()
 		return pRenderablePanel
+	end
+	
+	/** Distance in meters. */
+	public func ECPFloat getDistance()
+		return pDistance
+	end
+	
+	/** Size as angle from center. */
+	public func ECPFloat getSize()
+		return pSize
 	end
 	
 	

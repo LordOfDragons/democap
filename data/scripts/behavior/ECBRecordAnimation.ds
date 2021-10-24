@@ -215,14 +215,19 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end
 			
 			// animation
+			var Animation animation = pCharacterAnimation.getAnimation()
+			var String moveName = animation.getMoveName(0)
+			
 			var EasyXMLElement tagAnimation = root.addTag("capturedAnimation")
 			tagAnimation.addDataTag("pathAnimation", pCharacterAnimation.getFilename())
-			tagAnimation.addDataTag("keyframeCount", pCharacterAnimation.getKeyframeCount())
-			tagAnimation.addDataTag("playtime", pCharacterAnimation.getPlaytime())
+			tagAnimation.addDataTag("moveName", moveName)
+			tagAnimation.addDataTag("playtime", animation.getMovePlaytime(moveName))
+			tagAnimation.addDataTag("frameRate", animation.getMoveFPS(moveName))
+			tagAnimation.addDataTag("boneCount", pCharacterAnimation.getBoneCount())
 			
-			var EasyXMLElement tagBones = tagAnimation.addTag("capturedBones")
-			pBoneIndices.forEach(block int each
-				tagBones.addDataTag("boneName", pComponent.boneGetName(each))
+			var EasyXMLElement tagBones = tagAnimation.addTag("bones")
+			pCharacterAnimation.forEachBone(block String each
+				tagBones.addDataTag("boneName", each)
 			end)
 			
 			// write to file
