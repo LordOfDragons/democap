@@ -69,9 +69,11 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 		
 		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
-			var String text = String.new('X', 20)
+			var String text
 			if element != null
 				text = (element cast MotionTransfer).getName()
+			else
+				text = " "
 			end
 			super.updateRenderer(listBox, renderer, text, selected, focused)
 		end
@@ -82,9 +84,11 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 		
 		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
-			var String text = String.new('X', 20)
+			var String text
 			if element != null
 				text = (element cast MotionTransferFactory).displayName()
+			else
+				text = " "
 			end
 			super.updateRenderer(listBox, renderer, text, selected, focused)
 		end
@@ -120,6 +124,64 @@ class WindowCharacterConfiguration extends WindowDialog
 			end))
 			popup.addWidget(button)
 			
+			button = Button.new("Add 3-Tracker Slots...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				var Array types = Array.new()
+				types.add(CharacterTrackerSlot.Type.headHmd)
+				types.add(CharacterTrackerSlot.Type.rightHandController)
+				types.add(CharacterTrackerSlot.Type.leftHandController)
+				pWindow.addTrackerSlotsTemplate(types)
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Add 6-Tracker Slots...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				var Array types = Array.new()
+				types.add(CharacterTrackerSlot.Type.headHmd)
+				types.add(CharacterTrackerSlot.Type.rightHandController)
+				types.add(CharacterTrackerSlot.Type.leftHandController)
+				types.add(CharacterTrackerSlot.Type.waist)
+				types.add(CharacterTrackerSlot.Type.rightFoot)
+				types.add(CharacterTrackerSlot.Type.leftFoot)
+				pWindow.addTrackerSlotsTemplate(types)
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Add 10-Tracker Slots...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				var Array types = Array.new()
+				types.add(CharacterTrackerSlot.Type.headHmd)
+				types.add(CharacterTrackerSlot.Type.rightHandController)
+				types.add(CharacterTrackerSlot.Type.rightElbow)
+				types.add(CharacterTrackerSlot.Type.leftHandController)
+				types.add(CharacterTrackerSlot.Type.leftElbow)
+				types.add(CharacterTrackerSlot.Type.waist)
+				types.add(CharacterTrackerSlot.Type.rightKnee)
+				types.add(CharacterTrackerSlot.Type.rightFoot)
+				types.add(CharacterTrackerSlot.Type.leftKnee)
+				types.add(CharacterTrackerSlot.Type.leftFoot)
+				pWindow.addTrackerSlotsTemplate(types)
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Add 11-Tracker Slots...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				var Array types = Array.new()
+				types.add(CharacterTrackerSlot.Type.headHmd)
+				types.add(CharacterTrackerSlot.Type.chest)
+				types.add(CharacterTrackerSlot.Type.rightHandController)
+				types.add(CharacterTrackerSlot.Type.rightElbow)
+				types.add(CharacterTrackerSlot.Type.leftHandController)
+				types.add(CharacterTrackerSlot.Type.leftElbow)
+				types.add(CharacterTrackerSlot.Type.waist)
+				types.add(CharacterTrackerSlot.Type.rightKnee)
+				types.add(CharacterTrackerSlot.Type.rightFoot)
+				types.add(CharacterTrackerSlot.Type.leftKnee)
+				types.add(CharacterTrackerSlot.Type.leftFoot)
+				pWindow.addTrackerSlotsTemplate(types)
+			end))
+			popup.addWidget(button)
+			
 			button = Button.new("Duplicate Slot...", BlockActionListener.new(block ActionEvent event
 				popup.popdown()
 				pWindow.duplicateTrackerSlot()
@@ -129,6 +191,13 @@ class WindowCharacterConfiguration extends WindowDialog
 			button = Button.new("Remove Slot", BlockActionListener.new(block ActionEvent event
 				popup.popdown()
 				pWindow.removeTrackerSlot()
+			end))
+			button.setEnabled(pWindow.getTrackerSlot() != null)
+			popup.addWidget(button)
+			
+			button = Button.new("Remove All Slots", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pWindow.removeAllTrackerSlots()
 			end))
 			button.setEnabled(pWindow.getTrackerSlot() != null)
 			popup.addWidget(button)
@@ -181,6 +250,13 @@ class WindowCharacterConfiguration extends WindowDialog
 			button.setEnabled(pWindow.getMotionTransfer() != null)
 			popup.addWidget(button)
 			
+			button = Button.new("Remove All Transfers", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pWindow.removeAllMotionTransfers()
+			end))
+			button.setEnabled(pWindow.getTrackerSlot() != null)
+			popup.addWidget(button)
+			
 			pWindow.getDesktop().addWindow(popup)
 			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
 		end
@@ -207,7 +283,6 @@ class WindowCharacterConfiguration extends WindowDialog
 	private var CharacterConfiguration pCharacterConfiguration
 	private var DefaultTextModel pModelConfigName
 	private var DefaultListModel pModelScaleMode
-	private var DefaultTextModel pModelShoulderLevel
 	private var DefaultListModel pModelListMoveCalibrate
 	private var DefaultTextModel pModelTextMoveCalibrate
 	private var DefaultListModel pModelListCameraBone
@@ -234,7 +309,6 @@ class WindowCharacterConfiguration extends WindowDialog
 		
 		pModelConfigName = DefaultTextModel.new(config.getName())
 		pModelScaleMode = DefaultListModel.new(CharacterConfiguration.ScaleMode.all().toArray().sorted())
-		pModelShoulderLevel = DefaultTextModel.new(config.getShoulderLevel().toString())
 		pModelListMoveCalibrate = DefaultListModel.new()
 		pModelListMoveCalibrate.setAutoSelect(false)
 		pModelTextMoveCalibrate = DefaultTextModel.new(config.getMoveCalibrate())
@@ -297,7 +371,6 @@ class WindowCharacterConfiguration extends WindowDialog
 		pPanelTrackerSlot = null
 		pModelConfigName = null
 		pModelScaleMode = null
-		pModelShoulderLevel = null
 		pModelListMoveCalibrate = null
 		pModelTextMoveCalibrate = null
 		pModelListCameraBone = null
@@ -355,7 +428,6 @@ class WindowCharacterConfiguration extends WindowDialog
 		pCharacterConfiguration.setName(configName)
 		pCharacterConfiguration.setScaleMode(pModelScaleMode.getAt(\
 			pModelScaleMode.getSelected()) cast CharacterConfiguration.ScaleMode)
-		pCharacterConfiguration.setShoulderLevel(pModelShoulderLevel.getText().toFloat())
 		pCharacterConfiguration.setMoveCalibrate(pModelTextMoveCalibrate.getText())
 		pCharacterConfiguration.setCameraPosition(pEditCameraPosition.getVector())
 		pCharacterConfiguration.setCameraRotation(pEditCameraRotation.getVector())
@@ -408,15 +480,6 @@ class WindowCharacterConfiguration extends WindowDialog
 				comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 				comboBox.setToolTip("Scale actor or character to match the other.")
 				p2.addWidget(comboBox)
-				
-				// shoulder level
-				p2.addWidget(Label.new("Shoulder Level:", "Label.FormCaption"))
-				
-				textField = TextField.new(pModelShoulderLevel, 8)
-				textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-				textField.setToolTip("Shoulder level in meters. Use height of upper arm bone origin above ground.")
-				textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
-				p2.addWidget(textField)
 				
 				// move calibrate
 				p2.addWidget(Label.new("Move Calibrate:", "Label.FormCaption"))
@@ -642,24 +705,47 @@ class WindowCharacterConfiguration extends WindowDialog
 	
 	/** Add tracker slot. */
 	public func void addTrackerSlot()
-		WindowDialog.input(this, "Add Tracker Slot", "Slot Name:", null, "Slot",\
-			null, null, WindowDialog.BlockResultListener.new(block String result
-				if result != null
-					if pModelTrackerSlots.find(block CharacterTrackerSlot each
-						return each.getName().compareNoCase(result) == 0
-					end) != null
-						WindowDialog.message(this, "Add Tracker Slot", "Slot '"\
-							+ result + "' exists already", null, null, null)
-						
-					else
-						var CharacterTrackerSlot slot = CharacterTrackerSlot.new(pCharacterConfiguration, result)
-						pModelTrackerSlots.add(slot)
-						pModelTrackerSlots.sort()
-						pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(slot))
-						updateTrackerSlotLists()
-					end
+		var DefaultListModel model = DefaultListModel.new(CharacterTrackerSlot.Type.all().toArray()\
+			.sorted(block CharacterTrackerSlot.Type a, CharacterTrackerSlot.Type b
+				return a.name().compare(b.name())
+			end))
+		var DefaultListElementRenderer renderer = DefaultListElementRenderer.new(CharacterTrackerSlot.Type.rightHandController)
+		
+		WindowDialog.chooseList(this, "Add Tracker Slot", "Slot Type:", null, model, renderer,\
+			null, null, WindowDialog.BlockResultListener.new(block int result
+				if result != -1
+					var CharacterTrackerSlot.Type type = model.getAt(result) cast CharacterTrackerSlot.Type
+					var String name = uniqueTrackerSlotName(CharacterTrackerSlot.defaultSlotNameForType(type))
+					
+					var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
+					var CharacterTrackerSlot slot = CharacterTrackerSlot.new(pCharacterConfiguration, name)
+					slot.setType(type)
+					slot.initFromType(actorProfile)
+					slot.setTargetFromActor(actorProfile)
+					pModelTrackerSlots.add(slot)
+					pModelTrackerSlots.sort()
+					pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(slot))
+					updateTrackerSlotLists()
 				end
 			end))
+	end
+	
+	/** Add template tracker slots. */
+	public func void addTrackerSlotsTemplate(Array types)
+		var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
+		
+		types.forEach(block CharacterTrackerSlot.Type type
+			var String name = uniqueTrackerSlotName(CharacterTrackerSlot.defaultSlotNameForType(type))
+			var CharacterTrackerSlot slot = CharacterTrackerSlot.new(pCharacterConfiguration, name)
+			slot.setType(type)
+			slot.initFromType(actorProfile)
+			slot.setTargetFromActor(actorProfile)
+			pModelTrackerSlots.add(slot)
+		end)
+		
+		pModelTrackerSlots.sort()
+		pModelTrackerSlots.setSelected(pModelTrackerSlots.getCount() - types.getCount())
+		updateTrackerSlotLists()
 	end
 	
 	/** Duplicate tracker slot. */
@@ -704,6 +790,24 @@ class WindowCharacterConfiguration extends WindowDialog
 			WindowDialog.BlockResultListener.new(block bool result
 				if result
 					pModelTrackerSlots.remove(slot)
+					updateTrackerSlotLists()
+				end
+			end))
+	end
+	
+	/** Remove all tracker slots. */
+	public func void removeAllTrackerSlots()
+		if pModelTrackerSlots.getCount() == 0
+			return
+		end
+		
+		WindowDialog.question(this, "Remove All Tracker Slots",\
+			"Do you really want to remove all slots?", null,\
+			Array.newWith(WindowDialog.ButtonConfiguration.new("Remove All", true), \
+				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					pModelTrackerSlots.removeAll()
 					updateTrackerSlotLists()
 				end
 			end))
@@ -815,7 +919,36 @@ class WindowCharacterConfiguration extends WindowDialog
 	
 	/** Remove motion transfer. */
 	public func void removeMotionTransfer()
-		// TODO
+		var MotionTransfer motionTransfer = getMotionTransfer()
+		if motionTransfer == null
+		end
+		
+		WindowDialog.question(this, "Remove Motion Transfer",\
+			"Do you really want to remove motion transfer '" + motionTransfer.getName() + "'?",\
+			null, Array.newWith(WindowDialog.ButtonConfiguration.new("Remove", true), \
+				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					pModelMotionTransfers.remove(motionTransfer)
+				end
+			end))
+	end
+	
+	/** Remove all motion transfers. */
+	public func void removeAllMotionTransfers()
+		if pModelMotionTransfers.getCount() == 0
+			return
+		end
+		
+		WindowDialog.question(this, "Remove All Motion Transfers",\
+			"Do you really want to remove all motion transfers?", null,\
+			Array.newWith(WindowDialog.ButtonConfiguration.new("Remove All", true), \
+				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					pModelMotionTransfers.removeAll()
+				end
+			end))
 	end
 	
 	/** Motion transfer name changed. */

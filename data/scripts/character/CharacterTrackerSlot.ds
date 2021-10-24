@@ -297,6 +297,18 @@ class CharacterTrackerSlot
 		return pTargetMatrix
 	end
 	
+	/** Set target position from actor. */
+	public func void setTargetFromActor(ActorProfile actorProfile)
+		if actorProfile == null
+			actorProfile = GameApp.getGameApp().getDefaultActorProfile()
+		end
+		
+		var float scale = pConfiguration.getProfile().getShoulderLevel() / actorProfile.getShoulderLevel()
+		pTargetMatrix = pMatrix * Matrix.newScaling(scale, scale, scale)
+		pTargetPosition = pTargetMatrix.getPosition()
+		pTargetRotation = pTargetMatrix.getEulerAngles()
+	end
+	
 	/** Input device type to auto-assign or null. */
 	public func InputDeviceType getInputDeviceType()
 		return pInputDeviceType
@@ -616,21 +628,68 @@ class CharacterTrackerSlot
 		
 		pCalibrateMatrix = behavior.getMatrixCharacter()
 		
-// 		if pForceCalibrateRotation != null
 		select pInputDeviceType
 		case pInputDeviceType.vrHMD
 			var Vector position = pCalibrateMatrix.getPosition()
 			pCalibrateMatrix = Matrix.newTranslation(position)
-// 			behavior.setMatrixCharacter(position, pForceCalibrateRotation)
 			behavior.setMatrixCharacter(position, Vector.new())
 		end
 		
 		pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
 		pCalibratePosition = pCalibrateMatrix.getPosition()
 		pCalibrateRotation = pCalibrateMatrix.normalize().getEulerAngles()
-		
-//		GameApp.getGameApp().getConsole().addMessage("CharacterTrackerSlot.calibrate: slot=" \
-//			+ pName + " pos=" + pCalibratePosition + " rot=" + pCalibrateRotation)
+	end
+	
+	
+	
+	/** Default slot name for slot type. */
+	static public func String defaultSlotNameForType(Type type)
+		select type
+		case Type.headHmd
+			return "Head HMD"
+			
+		case Type.headTracker
+			return "Head Tracker"
+			
+		case Type.chest
+			return "Chest"
+			
+		case Type.rightHandController
+			return "Right Hand Controller"
+			
+		case Type.rightHandTracker
+			return "Right Hand Tracker"
+			
+		case Type.rightElbow
+			return "Right Elbow"
+			
+		case Type.leftHandController
+			return "Left Hand Controller"
+			
+		case Type.leftHandTracker
+			return "Left Hand Tracker"
+			
+		case Type.leftElbow
+			return "Left Elbow"
+			
+		case Type.waist
+			return "Waist"
+			
+		case Type.rightKnee
+			return "Right Knee"
+			
+		case Type.leftKnee
+			return "Left Knee"
+			
+		case Type.rightFoot
+			return "Right Foot"
+			
+		case Type.leftFoot
+			return "Left Foot"
+			
+		else
+			return "Slot"
+		end
 	end
 	
 	

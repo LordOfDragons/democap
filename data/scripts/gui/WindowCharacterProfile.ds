@@ -54,6 +54,7 @@ class WindowCharacterProfile extends WindowDialog
 	private var DefaultTextModel pModelProfileName
 	private var DefaultListModel pModelListOriginBone
 	private var DefaultTextModel pModelTextOriginBone
+	private var DefaultTextModel pModelShoulderLevel
 	private var DefaultTextModel pModelPathModel
 	private var DefaultTextModel pModelPathSkin
 	private var DefaultTextModel pModelPathRig
@@ -70,6 +71,7 @@ class WindowCharacterProfile extends WindowDialog
 		pModelListOriginBone = DefaultListModel.new()
 		pModelListOriginBone.setAutoSelect(false)
 		pModelTextOriginBone = DefaultTextModel.new(profile.getOriginBone())
+		pModelShoulderLevel = DefaultTextModel.new(profile.getShoulderLevel().toString())
 		pModelPathModel = DefaultTextModel.new(profile.getAppearance().getPathModel())
 		pModelPathSkin = DefaultTextModel.new(profile.getAppearance().getPathSkin())
 		pModelPathRig = DefaultTextModel.new(profile.getAppearance().getPathRig())
@@ -98,6 +100,7 @@ class WindowCharacterProfile extends WindowDialog
 		pModelProfileName = null
 		pModelListOriginBone = null
 		pModelTextOriginBone = null
+		pModelShoulderLevel = null
 		pModelPathModel = null
 		pModelPathSkin = null
 		pModelPathRig = null
@@ -133,6 +136,7 @@ class WindowCharacterProfile extends WindowDialog
 		
 		pCharacterProfile.setName(profileName)
 		pCharacterProfile.setOriginBone(pModelTextOriginBone.getText())
+		pCharacterProfile.setShoulderLevel(pModelShoulderLevel.getText().toFloat())
 		
 		var CharacterAppearance appearance = pCharacterProfile.getAppearance()
 		appearance.setPathModel(pModelPathModel.getText())
@@ -267,6 +271,15 @@ class WindowCharacterProfile extends WindowDialog
 			p.addWidget(comboBox)
 			
 			CPEBone.new(pCharacterPreview, label, comboBox)
+			
+			// shoulder level
+			p.addWidget(Label.new("Shoulder Level:", "Label.FormCaption"))
+			
+			textField = TextField.new(pModelShoulderLevel, 8)
+			textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+			textField.setToolTip("Shoulder level in meters. Use height of upper arm bone origin above ground.")
+			textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
+			p.addWidget(textField)
 			
 		end), BorderLayout.Area.right)
 		

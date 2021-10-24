@@ -102,6 +102,9 @@ class LoadCharacterProfile extends BaseXmlLoader
 				
 			elif tagName.equals("originBone")
 				profile.setOriginBone(element.getFirstCData())
+				
+			elif tagName.equals("shoulderLevel")
+				profile.setShoulderLevel(element.getFirstCDataFloat())
 			end
 		end)
 	end
@@ -133,9 +136,6 @@ class LoadCharacterProfile extends BaseXmlLoader
 		root.forEachTag(block EasyXMLElement element, String tagName
 			if tagName.equals("scaleMode")
 				configuration.setScaleMode(CharacterConfiguration.ScaleMode.named(element.getFirstCData()))
-				
-			elif tagName.equals("shoulderLevel")
-				configuration.setShoulderLevel(element.getFirstCDataFloat())
 				
 			elif tagName.equals("cameraBone")
 				configuration.setCameraBone(element.getFirstCData())
@@ -250,11 +250,12 @@ class LoadCharacterProfile extends BaseXmlLoader
 	public func void writeCharacterProfile(EasyXMLElement root, CharacterProfile profile)
 		writeAppearance(root, profile.getAppearance())
 		
+		root.addDataTag("originBone", profile.getOriginBone())
+		root.addDataTag("shoulderLevel", profile.getShoulderLevel())
+		
 		profile.getConfigurations().forEach(block CharacterConfiguration each
 			writeConfiguration(root, each)
 		end)
-		
-		root.addDataTag("originBone", profile.getOriginBone())
 	end
 	
 	/** Write appearance. */
@@ -272,7 +273,6 @@ class LoadCharacterProfile extends BaseXmlLoader
 		tag.setAttribute("name", configuration.getName())
 		
 		tag.addDataTag("scaleMode", configuration.getScaleMode().name())
-		tag.addDataTag("shoulderLevel", configuration.getShoulderLevel())
 		tag.addDataTag("moveCalibrate", configuration.getMoveCalibrate())
 		tag.addDataTag("cameraBone", configuration.getCameraBone())
 		writeVector(tag, "cameraPosition", configuration.getCameraPosition())
