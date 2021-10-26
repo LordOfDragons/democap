@@ -25,6 +25,7 @@ pin Democap.Actors
 pin Democap.Behaviors
 pin Democap.Characters
 
+pin Dragengine.Gui.Layouts
 pin Dragengine.LoadSave
 pin Dragengine.Preloading
 pin Dragengine.Scenery
@@ -55,14 +56,32 @@ class AARecordAnimation extends AABase
 		end
 	end
 	
+	enum State
+		prepare
+		recording
+		finished
+		done
+	end
+	
 	
 	
 	protected var ECBRecordAnimation.Instance recordAnimation
+	protected var ECBVRHudInfo.Instance vrHudInfo
+	protected var Panel panelInfo
+	protected var RangeModel modelProgress
+	protected var State state
+	protected var float elapsedTime
+	protected var float waitTime
+	protected var float waitTimeFinished
 	
 	
 	
 	/** Create action. */
 	public func new()
+		state = State.prepare
+		elapsedTime = 0
+		waitTime = 3
+		waitTimeFinished = 1
 	end
 	
 	
@@ -71,8 +90,30 @@ class AARecordAnimation extends AABase
 	public func void activate(BehaviorElement actor)
 		super.activate(actor)
 		
-		log("Start recording animation")
-		recordAnimation.startRecording()
+		if vrHudInfo != null
+			modelProgress = DefaultRangeModel.new(0, 100, 1, 0, 1)
+			
+			panelInfo = Panel.new(StackLayout.new(), block Panel p
+				p.setDesignerSelector("Panel.HudInfo.Recording")
+				
+				p.addWidget(DisplayRotatingImage.new(Image.new("/content/gui/images/prepare_recording.png")))
+				
+				p.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.y, 0.5, 0.735), block Panel p2
+					var ProgressBar progressBar = ProgressBar.new(Orientation.horizontal, modelProgress)
+					progressBar.setDesignerSelector("ProgressBar.HudInfo.Recording")
+					progressBar.setShowPercentage(false)
+					p2.addWidget(progressBar)
+				end))
+			end)
+			
+			vrHudInfo.addPanel(panelInfo)
+		end
+	end
+	
+	/** Deactivate action. */
+	public func void deactivate()
+		removeHudInfoPanel()
+		modelProgress = null
 	end
 	
 	/**
@@ -82,15 +123,94 @@ class AARecordAnimation extends AABase
 		super.initBehaviors()
 		
 		recordAnimation = ECBRecordAnimation.getInstanceIn(actor)
+		vrHudInfo = ECBVRHudInfo.getInstanceIn(actor)
 	end
 	
 	
 	/** Menu button pressed. */
 	public func void menuPress(bool rightHand)
-		recordAnimation.stopRecording()
-		log("Stop recording")
+		stopRecording()
+	end
+	
+	/** Stop recording. */
+	public func void stopRecording()
+		select state
+		case State.prepare
+			removeHudInfoPanel()
+			state = State.done
+			aiAction.setAction(AADefault.new())
+			
+		case State.recording
+			elapsedTime = 0
+			state = State.finished
+			
+			recordAnimation.stopRecording()
+			
+			removeHudInfoPanel()
+			
+			if vrHudInfo != null
+				panelInfo = Panel.new(StackLayout.new(), block Panel p
+					p.setDesignerSelector("Panel.HudInfo.Recording")
+					p.addWidget(DisplayRotatingImage.new(Image.new("/content/gui/images/finished_recording.png")))
+				end)
+				
+				vrHudInfo.addPanel(panelInfo)
+			end
+		end
+	end
+	
+	
+	
+	/** Frame update. */
+	public func void think(float elapsed)
+		super.think(elapsed)
 		
-		aiAction.setAction(AADefault.new())
+		select state
+		case State.prepare
+			elapsedTime += elapsed
+			
+			if modelProgress != null
+				modelProgress.setValue(DEMath.linearStep(elapsedTime, 0, waitTime, 0, 100) cast int)
+			end
+			
+			if elapsedTime >= waitTime
+				removeHudInfoPanel()
+				
+				if vrHudInfo != null
+					panelInfo = Panel.new(StackLayout.new(), block Panel p
+						p.setDesignerSelector("Panel.HudInfo.Recording")
+						
+						p.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.y, 0.8, 0.3), block Panel p2
+							p2.addWidget(DisplayImage.new(Image.new("/content/gui/images/recording.png")))
+						end))
+					end)
+					vrHudInfo.addPanel(panelInfo)
+				end
+				
+				state = State.recording
+				recordAnimation.startRecording()
+			end
+			
+		case State.finished
+			elapsedTime += elapsed
+			
+			if elapsedTime >= waitTimeFinished
+				removeHudInfoPanel()
+				state = State.done
+				aiAction.setAction(AADefault.new())
+			end
+		end
+	end
+	
+	
+	
+	/** Remove and dispose hud info panel if present. */
+	protected func void removeHudInfoPanel()
+		if vrHudInfo != null and panelInfo != null
+			vrHudInfo.removePanel(panelInfo)
+			panelInfo.safeDispose()
+			panelInfo = null
+		end
 	end
 	
 	

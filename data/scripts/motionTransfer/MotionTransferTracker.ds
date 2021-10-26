@@ -219,7 +219,8 @@ class MotionTransferTracker
 		var Matrix boneMatrix = component.boneGetMatrix(index)
 		
 		var Matrix customOffset = boneMatrix * slotTargetMatrixInv
-		var Matrix autoTransform = customOffset * slotRefMatrix * slotInvMatrix
+		var Matrix referenceOffset = slotRefMatrix * slotInvMatrix
+		var Matrix autoTransform = customOffset * referenceOffset
 		
 		select pAutoTransform
 		case AutoTransform.full
@@ -233,7 +234,7 @@ class MotionTransferTracker
 				* Matrix.newTranslation(rotMat * -pOffsetPosition)
 			*/
 			pTransformMatrix = autoTransform.getRotation() * Matrix.newTranslation(\
-				autoTransform.getRotation() * customOffset.getPosition())
+				referenceOffset.getRotation() * customOffset.getPosition())
 			
 		case AutoTransform.none
 			pTransformMatrix = customOffset
@@ -248,7 +249,7 @@ class MotionTransferTracker
 // 			+ pReverseTransformPosition + " " + pReverseTransformRotation)
 	end
 	
-	public func void setTransformTrackTo(Component component, String bone, Vector axis, float axisScale)
+	public func void setTransformTrackTo(Component component, String bone, Vector axis)
 		if pRealSlot == null
 			resetTransform()
 			return
@@ -260,35 +261,49 @@ class MotionTransferTracker
 			return
 		end
 		
-		//var Matrix boneMatrix = component.boneGetMatrix(index)
 		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
-		var Matrix slotTargetMatrix = pRealSlot.getTargetMatrix()
-		//var Matrix rotMat = boneMatrix.getRotation() * slotInvMatrix.getRotation()
-		var Matrix rotMat = slotTargetMatrix.getRotation() * slotInvMatrix.getRotation()
+		var Matrix slotTargetMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) * pRealSlot.getTargetMatrix()
+		var Matrix slotTargetMatrixInv = slotTargetMatrix.getInverse()
+		var Matrix slotRefMatrix = pRealSlot.getCalibrateReferenceMatrix()
+		var Matrix boneMatrix = component.boneGetMatrix(index)
 		
-		var Vector taxis = rotMat.normalize().transformNormal(axis)
+		var Matrix customOffset = boneMatrix * slotTargetMatrixInv
+		
+		var Vector taxis = customOffset.normalize().transformNormal(axis)
+		var float tdistance = -(taxis * customOffset.getPosition())
+		customOffset = customOffset * Matrix.newTranslation(taxis * tdistance)
+		
+		var Matrix referenceOffset = slotRefMatrix * slotInvMatrix
+		var Matrix autoTransform = customOffset * referenceOffset
 		
 		select pAutoTransform
 		case AutoTransform.full
+			/*
 			var Matrix matrix = slotTargetMatrix * slotInvMatrix
 			//var Matrix matrix = boneMatrix * slotInvMatrix
 			pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition ) * matrix \
 				* Matrix.newTranslation(taxis * -(taxis * matrix.getPosition()) * axisScale)
 			pTransformPosition = pTransformMatrix.getPosition()
 			pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
+			*/
+			pTransformMatrix = autoTransform
 			
 		case AutoTransform.orientation
+			/*
 			pTransformMatrix = Matrix.newRotation(pOffsetRotation) * rotMat \
 				* Matrix.newTranslation(taxis * -(taxis * (rotMat * -pOffsetPosition)) * axisScale)
 			pTransformPosition = pTransformMatrix.getPosition()
 			pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
+			*/
+			pTransformMatrix = autoTransform.getRotation() * Matrix.newTranslation(\
+				referenceOffset.getRotation() * customOffset.getPosition())
 			
 		case AutoTransform.none
-			pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition)
-			pTransformPosition = pOffsetPosition
-			pTransformRotation = pOffsetRotation
+			pTransformMatrix = customOffset
 		end
 		
+		pTransformPosition = pTransformMatrix.getPosition()
+		pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
 		setReverseFromTransform()
 		
 // 		GameApp.getGameApp().getConsole().addMessage("setTransformTrackTo " + pRealSlot.getName() + " " \
