@@ -60,11 +60,13 @@ class WindowCharacterProfile extends WindowDialog
 	private var DefaultTextModel pModelPathRig
 	private var DefaultTextModel pModelPathAnimation
 	private var WidgetCharacterPreview pCharacterPreview
+	private var bool pInVR
 	
 	
 	
 	/** Create window. */
-	public func new(Window window, CharacterProfile profile, ResultListener listener)
+	public func new(Window window, bool inVR, CharacterProfile profile, ResultListener listener)
+		pInVR = inVR
 		pCharacterProfile = profile
 		
 		pModelProfileName = DefaultTextModel.new(profile.getName())
@@ -89,7 +91,15 @@ class WindowCharacterProfile extends WindowDialog
 		reloadCharacterPreview()
 		
 		setResultListener(listener)
-		show(window, false, WindowModal.Placement.desktop)
+		
+		if inVR
+			setPosition(Point.new())
+			setSize(window.getDesktop().getSize())
+			show(window, false, WindowModal.Placement.none)
+			
+		else
+			show(window, false, WindowModal.Placement.desktop)
+		end
 		
 		pCharacterPreview.setEditor(null)
 	end

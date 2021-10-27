@@ -32,6 +32,21 @@ pin Dragengine.Scenery
  * panel. Content panel is shown/hidden if group header is clicked.
  */
 class CollapsibleGroup extends Panel implements ToggleModelListener
+	/** Clicked toggle visibility listener. */
+	class ClickedToggleVisibility extends ClickedActionListener
+		private var CollapsibleGroup pGroup
+		
+		public func new(CollapsibleGroup group)
+			pGroup = group
+		end
+		
+		public func void onAction()
+			pGroup.getModel().setToggled(not pGroup.getModel().getToggled())
+		end
+	end
+	
+	
+	
 	private var DisplayRotatingImage pArrow
 	private var Label pLabel
 	private var ToggleModel pModel
@@ -76,6 +91,8 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 			
 			pModel = model
 			model.addListener(this)
+			
+			pPanelHeader.addMouseListener(ClickedToggleVisibility.new(this))
 			
 			updateWidgets()
 		end)
@@ -163,13 +180,6 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 		pArrow.setDesignerSelector("Image." + selector)
 		pLabel.setDesignerSelector("Label." + selector)
 		pPanelContent.setDesignerSelector("Panel." + selector + ".Content")
-	end
-	
-	/** Mouse button pressed. Toggles model if left mouse button. */
-	public func void onButtonPress(MouseEvent event)
-		if event.getButton() == InputEventMouseButton.left
-			pModel.setToggled(not pModel.getToggled())
-		end
 	end
 	
 	

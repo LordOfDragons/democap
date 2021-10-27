@@ -1,0 +1,165 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding support to toggle visibility of element and to reposition it. Positions
+ * element in front of HMD, hand point-at or custom origin matrix at fixed distance facing
+ * the actor. Optionally the up axis can be locked.
+ */
+class ECBToggleVisibility extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBToggleVisibility pECBehavior
+		private var Vector pLockUpAxis
+		private var float pDistance
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBToggleVisibility ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			var CodecPropertyString codec = getElement().getClass().getCodecPropertyString()
+			pLockUpAxis = pECBehavior.getLockUpAxis().getVector(stub, codec)
+			pDistance = pECBehavior.getDistance().getValue(stub)
+		end
+		
+		
+		
+		/** Lock up axis or null value. */
+		public func Vector getLockUpAxis()
+			return pLockUpAxis
+		end
+		
+		/** Distance in front of camera to position element. */
+		public func float getDistance()
+			return pDistance
+		end
+		
+		
+		
+		/** Element is visible. */
+		public func bool getVisible()
+			return getElement().getVisible()
+		end
+		
+		/** Show/hide element. */
+		public func void setVisible(bool visible)
+			getElement().setVisible(visible)
+		end
+		
+		/** Reposition element in front of VR camera. */
+		public func void repositionHmd()
+			var Camera camera = GameApp.getGameApp().getVRCamera()
+			reposition(DMatrix.newWorld(camera.getPosition(), camera.getOrientation()))
+		end
+		
+		/** Reposition element along point-at direction. */
+		public func void reposition(ECBehaviorVRHandPointAt.Instance pointAt)
+			reposition(pointAt.calcTestMatrix())
+		end
+		
+		/** Reposition element. */
+		public func void reposition(DMatrix matrix)
+			matrix = DMatrix.newRotationY(180) * DMatrix.newTranslation(0, 0, pDistance) * matrix
+			
+			if pLockUpAxis != null
+				var DVector lockUp = DVector.new(pLockUpAxis)
+				var DVector view = matrix.getViewVector()
+				
+				if DEMath.fabs(view * lockUp) > 0.707 // 45 degrees
+					view = matrix.getRightVector() % lockUp
+				end
+				
+				matrix = DMatrix.newWorld(matrix.getPosition(), view, lockUp)
+			end
+			
+			getElement().setGeometry(matrix.getPosition(), matrix.toQuaternion())
+		end
+	end
+	
+	
+	
+	private var ECPVector pLockUpAxis
+	private var ECPFloat pDistance
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass) super(eclass)
+		var String prefix = "toggleVisibility."
+		
+		pLockUpAxis = ECPVector.new(prefix + "lockUpAxis", null)
+		eclass.addProperty(pLockUpAxis)
+		
+		pDistance = ECPFloat.new(prefix + "distance", 0.5, 0)
+		eclass.addProperty(pDistance)
+		
+		eclass.addBehavior(this)
+	end
+	
+	
+	
+	/** Lock up axis or null value. */
+	public func ECPVector getLockUpAxis()
+		return pLockUpAxis
+	end
+	
+	/** Distance in front of camera to position element. */
+	public func ECPFloat getDistance()
+		return pDistance
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(this.getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

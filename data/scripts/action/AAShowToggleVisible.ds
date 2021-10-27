@@ -1,0 +1,97 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Actions
+
+pin Democap.Behaviors
+
+pin Dragengine.Scenery
+
+
+/**
+ * BaseVRActor action showing ECBToggleVisibility allowing actor to reposition it while until
+ * releasing the button having initiated the process.
+ */
+class AAShowToggleVisible extends AABase
+	enum Button
+		menu
+		trigger
+	end
+	
+	
+	
+	protected var ECBToggleVisibility.Instance toggleVisibility
+	protected var ECBehaviorVRHandPointAt.Instance vrPointAt
+	protected var bool rightHand
+	protected var Button button
+	
+	
+	
+	/** Create action. */
+	public func new(ECBToggleVisibility.Instance toggleVisibility, bool rightHand, Button button)
+		this.toggleVisibility = toggleVisibility
+		this.rightHand = rightHand
+		this.button = button
+	end
+	
+	
+	
+	/** Action has been activated. */
+	public func void activate(BehaviorElement actor)
+		super.activate(actor)
+		
+		// behavior instance present only after initBehaviors() has been called,
+		// hence not during constructor
+		vrPointAt = rightHand if vrRightHandPointAt else vrLeftHandPointAt
+		
+		toggleVisibility.reposition(vrPointAt)
+		toggleVisibility.setVisible(true)
+	end
+	
+	
+	
+	/** Trigger released. */
+	public func void triggerRelease(bool rightHand)
+		if rightHand == this.rightHand and button == Button.trigger
+			finish()
+		end
+	end
+	
+	/** Menu button pressed. */
+	public func void menuRelease(bool rightHand)
+		if rightHand == this.rightHand and button == Button.menu
+			finish()
+		end
+	end
+	
+	
+	
+	/** Frame update. */
+	public func void think(float elapsed)
+		super.think(elapsed)
+		toggleVisibility.reposition(vrPointAt)
+	end
+	
+	/** Finish. */
+	protected func void finish()
+		aiAction.setAction(AADefault.new())
+	end
+end

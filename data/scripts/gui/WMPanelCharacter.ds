@@ -360,11 +360,13 @@ class WMPanelCharacter extends CollapsibleGroup
 	protected var ActorProfile pActorProfile
 	protected var CharacterProfile pCharacterProfile
 	protected var CharacterConfiguration pCharacterConfiguration
+	protected var bool pInVR
 	
 	
 	
 	/** Create character panel. */
-	public func new() super("Character Selection")
+	public func new(bool inVR) super("Character Selection")
+		pInVR = inVR
 		pModelActorProfiles = DefaultListModel.new()
 		pModelCharacterProfiles = DefaultListModel.new()
 		pModelCharacterConfigurations = DefaultListModel.new()
@@ -396,6 +398,13 @@ class WMPanelCharacter extends CollapsibleGroup
 		pListenCharacterConfigurations = null
 		
 		super.dispose()
+	end
+	
+	
+	
+	/** Shown in VR. */
+	public func bool getInVR()
+		return pInVR
 	end
 	
 	
@@ -498,12 +507,14 @@ class WMPanelCharacter extends CollapsibleGroup
 	
 	/** Edit actor profile. */
 	public func void editActorProfile()
-		if pActorProfile != null
-			WindowActorProfile.new(getWindow(), pActorProfile, \
-				WindowDialog.BlockResultListener.new(block bool accepted
-					updateActorProfiles()
-				end))
+		if pActorProfile == null
+			return
 		end
+		
+		WindowActorProfile.new(getWindow(), pInVR, pActorProfile, \
+			WindowDialog.BlockResultListener.new(block bool accepted
+				updateActorProfiles()
+			end))
 	end
 	
 	/** Browse actor profiles in overlay directory. */
@@ -553,18 +564,20 @@ class WMPanelCharacter extends CollapsibleGroup
 	public func void addCharacterProfile()
 		WindowDialog.input(getWindow(), "Add Character Profile", "Profile Name:", null, "Character",\
 			null, null, WindowDialog.BlockResultListener.new(block String result
-				var CharacterProfiles profiles = GameApp.getGameApp().getCharacterProfiles()
-				
-				if profiles.hasNamed(result)
-					WindowDialog.message(getWindow(), "Add Character Profile", "Character profile '"\
-						+ result + "' exists already", null, null, null)
+				if result != null
+					var CharacterProfiles profiles = GameApp.getGameApp().getCharacterProfiles()
 					
-				else
-					var CharacterProfile profile = CharacterProfile.new(result)
-					profile.save()
-					profiles.add(profile)
-					pModelCharacterProfiles.setSelected(pModelCharacterProfiles.indexOf(profile))
-					editCharacterProfile()
+					if profiles.hasNamed(result)
+						WindowDialog.message(getWindow(), "Add Character Profile", "Character profile '"\
+							+ result + "' exists already", null, null, null)
+						
+					else
+						var CharacterProfile profile = CharacterProfile.new(result)
+						profile.save()
+						profiles.add(profile)
+						pModelCharacterProfiles.setSelected(pModelCharacterProfiles.indexOf(profile))
+						editCharacterProfile()
+					end
 				end
 			end))
 	end
@@ -619,7 +632,7 @@ class WMPanelCharacter extends CollapsibleGroup
 	/** Edit character profile. */
 	public func void editCharacterProfile()
 		if pCharacterProfile != null
-			WindowCharacterProfile.new(getWindow(), pCharacterProfile, \
+			WindowCharacterProfile.new(getWindow(), pInVR, pCharacterProfile, \
 				WindowDialog.BlockResultListener.new(block bool accepted
 					updateCharacterProfiles()
 				end))
@@ -681,18 +694,20 @@ class WMPanelCharacter extends CollapsibleGroup
 		
 		WindowDialog.input(getWindow(), "Add Character Configuration", "Configuration Name:", null, "Configuration",\
 			null, null, WindowDialog.BlockResultListener.new(block String result
-				var CharacterConfigurations configurations = pCharacterProfile.getConfigurations()
-				
-				if configurations.hasNamed(result)
-					WindowDialog.message(getWindow(), "Add Character Configuration", "Character configuration '"\
-						+ result + "' exists already", null, null, null)
+				if result != null
+					var CharacterConfigurations configurations = pCharacterProfile.getConfigurations()
 					
-				else
-					var CharacterConfiguration configuration = CharacterConfiguration.new(pCharacterProfile, result)
-					configurations.add(configuration)
-					pCharacterProfile.save()
-					pModelCharacterConfigurations.setSelected(pModelCharacterConfigurations.indexOf(configuration))
-					editCharacterConfiguration()
+					if configurations.hasNamed(result)
+						WindowDialog.message(getWindow(), "Add Character Configuration", "Character configuration '"\
+							+ result + "' exists already", null, null, null)
+						
+					else
+						var CharacterConfiguration configuration = CharacterConfiguration.new(pCharacterProfile, result)
+						configurations.add(configuration)
+						pCharacterProfile.save()
+						pModelCharacterConfigurations.setSelected(pModelCharacterConfigurations.indexOf(configuration))
+						editCharacterConfiguration()
+					end
 				end
 			end))
 	end
@@ -747,7 +762,7 @@ class WMPanelCharacter extends CollapsibleGroup
 	/** Edit character configuration. */
 	public func void editCharacterConfiguration()
 		if pCharacterConfiguration != null and pCharacterProfile !=  null
-			WindowCharacterConfiguration.new(getWindow(), pCharacterConfiguration, \
+			WindowCharacterConfiguration.new(getWindow(), pInVR, pCharacterConfiguration, \
 				WindowDialog.BlockResultListener.new(block bool accepted
 					updateCharacterConfigurations()
 				end))

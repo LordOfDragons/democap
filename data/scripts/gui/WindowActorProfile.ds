@@ -37,11 +37,13 @@ class WindowActorProfile extends WindowDialog
 	private var DefaultTextModel pModelArmLength
 	private var DefaultTextModel pModelLegLength
 	private var DefaultTextModel pModelShoulderWidth
+	private var bool pInVR
 	
 	
 	
 	/** Create window. */
-	public func new(Window window, ActorProfile profile, ResultListener listener)
+	public func new(Window window, bool inVR, ActorProfile profile, ResultListener listener)
+		pInVR = inVR
 		pActorProfile = profile
 		
 		pModelProfileName = DefaultTextModel.new(profile.getName())
@@ -58,7 +60,15 @@ class WindowActorProfile extends WindowDialog
 		end)
 		
 		setResultListener(listener)
-		show(window, true, WindowModal.Placement.desktop)
+		
+		if inVR
+			setPosition(Point.new())
+			setSize(window.getDesktop().getSize())
+			show(window, false, WindowModal.Placement.none)
+			
+		else
+			show(window, true, WindowModal.Placement.desktop)
+		end
 	end
 	
 	/** Dispose of window. */

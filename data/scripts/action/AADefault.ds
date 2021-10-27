@@ -108,7 +108,23 @@ class AADefault extends AABase
 	
 	/** Menu button pressed. */
 	public func void menuPress(bool rightHand)
-		// TODO: show/hide VR menu along respective hand controller direction at fixed distance
+		var BehaviorElement vrmenu = GameApp.getGameApp().getWorldSpawnCharacter().getVRMenu()
+		if vrmenu == null
+			return
+		end
+		
+		var ECBToggleVisibility.Instance toggleVisibility = ECBToggleVisibility.getInstanceIn(vrmenu)
+		if toggleVisibility == null
+			return
+		end
+		
+		if toggleVisibility.getVisible()
+			toggleVisibility.setVisible(false)
+			
+		else
+			aiAction.setAction(AAShowToggleVisible.new(toggleVisibility,\
+				rightHand, AAShowToggleVisible.Button.menu))
+		end
 	end
 	
 	/** Menu button released. */

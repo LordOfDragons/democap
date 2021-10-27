@@ -32,12 +32,14 @@ pin Dragengine.Scenery
 class WindowMain extends Window
 	private var bool pQuitOnClose
 	private var DMCWindowConsole pWindowConsole
+	private var bool pInVR
 	
 	
 	
 	/** Create main window */
-	public func new(Desktop desktop)
+	public func new(Desktop desktop, bool inVR)
 		pQuitOnClose = false
+		pInVR = inVR
 		
 		runWhileBlockingLayout(block
 			setTitle("DEMoCap")
@@ -75,6 +77,11 @@ class WindowMain extends Window
 		return pWindowConsole
 	end
 	
+	/** Window is shown in VR. */
+	public func bool getInVR()
+		return pInVR
+	end
+	
 	
 	
 	/** Closing window closes application. */
@@ -108,10 +115,10 @@ class WindowMain extends Window
 			end)))
 			
 			// characters panel
-			p.addWidget(WMPanelCharacter.new())
+			p.addWidget(WMPanelCharacter.new(pInVR))
 			
 			// session panel
-			p.addWidget(WMPanelSession.new())
+			p.addWidget(WMPanelSession.new(pInVR))
 		end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.visible), BorderLayout.Area.content)
 		
 		// button bar at bottom

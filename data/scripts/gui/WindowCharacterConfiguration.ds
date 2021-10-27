@@ -295,11 +295,13 @@ class WindowCharacterConfiguration extends WindowDialog
 	private var WidgetCharacterPreview pCharacterPreview
 	private var WCCPTrackerSlot pPanelTrackerSlot
 	private var Array pPanelsMotionTransfer
+	private var bool pInVR
 	
 	
 	
 	/** Create window. */
-	public func new(Window window, CharacterConfiguration config, ResultListener listener)
+	public func new(Window window, bool inVR, CharacterConfiguration config, ResultListener listener)
+		pInVR = inVR
 		pCharacterConfiguration = config
 		
 		var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
@@ -356,7 +358,15 @@ class WindowCharacterConfiguration extends WindowDialog
 		pCharacterPreview.reloadCharacterPreview()
 		
 		setResultListener(listener)
-		show(window, false, WindowModal.Placement.desktop)
+		
+		if inVR
+			setPosition(Point.new())
+			setSize(window.getDesktop().getSize())
+			show(window, false, WindowModal.Placement.none)
+			
+		else
+			show(window, false, WindowModal.Placement.desktop)
+		end
 		
 		pCharacterPreview.setEditor(null)
 		
