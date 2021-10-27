@@ -459,10 +459,16 @@ class WindowCharacterConfiguration extends WindowDialog
 		close()
 	end
 	
+	/** UI options prefix. */
+	static public func String prefixUIOptions(bool inVR)
+		return inVR if "UI/VR/WindowCharacterConfiguration" else "UI/WindowCharacterConfiguration"
+	end
+	
 	
 	
 	/** Create window content. */
 	protected func void createContent()
+		var String uioptPrefix = prefixUIOptions(pInVR)
 		var TextField textField
 		var ComboBox comboBox
 		var Button button
@@ -477,7 +483,9 @@ class WindowCharacterConfiguration extends WindowDialog
 		// properties
 		addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p
 			// global parameters
-			p.addWidget(CollapsibleGroup.new("Character Configuration", FormLayout.new(true, 10, 2), block Panel p2
+			p.addWidget(CollapsibleGroup.new("Character Configuration",\
+			CollapsibleGroup.persistModel(uioptPrefix + "/GroupCharacter"),\
+			FormLayout.new(true, 10, 2), block Panel p2
 				// config name
 				p2.addWidget(Label.new("Configuration Name:", "Label.FormCaption"))
 				
@@ -506,7 +514,9 @@ class WindowCharacterConfiguration extends WindowDialog
 			end))
 			
 			// camera
-			p.addWidget(CollapsibleGroup.new("Camera Parameters", FormLayout.new(true, 10, 2), block Panel p2
+			p.addWidget(CollapsibleGroup.new("Camera Parameters",\
+			CollapsibleGroup.persistModel(uioptPrefix + "/GroupCamera"),\
+			FormLayout.new(true, 10, 2), block Panel p2
 				// camera bone
 				var Label labelBone = Label.new("Bone:", "Label.FormCaption")
 				p2.addWidget(labelBone)
@@ -540,7 +550,9 @@ class WindowCharacterConfiguration extends WindowDialog
 			end))
 			
 			// tracker slots
-			p.addWidget(CollapsibleGroup.new("Tracker Slots", FlowLayout.new(LayoutAxis.y, 5), block Panel p2
+			p.addWidget(CollapsibleGroup.new("Tracker Slots",\
+			CollapsibleGroup.persistModel(uioptPrefix + "/GroupSlots"),\
+			FlowLayout.new(LayoutAxis.y, 5), block Panel p2
 				p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p3
 					comboBox = ComboBox.new(pModelTrackerSlots)
 					p3.addWidget(comboBox)
@@ -555,7 +567,9 @@ class WindowCharacterConfiguration extends WindowDialog
 			end))
 			
 			// motion transfers
-			p.addWidget(CollapsibleGroup.new("Motion Transfers", FlowLayout.new(LayoutAxis.y), block Panel p2
+			p.addWidget(CollapsibleGroup.new("Motion Transfers",\
+			CollapsibleGroup.persistModel(uioptPrefix + "/GroupTransfers"),\
+			FlowLayout.new(LayoutAxis.y), block Panel p2
 				p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p3
 					comboBox = ComboBox.new(pModelMotionTransfers, MotionTransferRenderer.new())
 					p3.addWidget(comboBox)
@@ -569,12 +583,12 @@ class WindowCharacterConfiguration extends WindowDialog
 				p2.addWidget(switcher)
 				
 				pPanelsMotionTransfer.add(WCCPMTAnimation.new(this))
-				pPanelsMotionTransfer.add(WCCPMTBend.new(this))
-				pPanelsMotionTransfer.add(WCCPMTChild.new(this))
+				pPanelsMotionTransfer.add(WCCPMTBend.new(this, uioptPrefix + "/MTBend"))
+				pPanelsMotionTransfer.add(WCCPMTChild.new(this, uioptPrefix + "/MTChild"))
 				pPanelsMotionTransfer.add(WCCPMTCopy.new(this))
 				pPanelsMotionTransfer.add(WCCPMTFingers.new(this))
-				pPanelsMotionTransfer.add(WCCPMTIK.new(this))
-				pPanelsMotionTransfer.add(WCCPMTSlot.new(this))
+				pPanelsMotionTransfer.add(WCCPMTIK.new(this, uioptPrefix + "/MTIK"))
+				pPanelsMotionTransfer.add(WCCPMTSlot.new(this, uioptPrefix + "/MTSlot"))
 				pPanelsMotionTransfer.add(WCCPMTSecondary.new(this))
 				
 				switcher.addWidget(Panel.new()) // empty

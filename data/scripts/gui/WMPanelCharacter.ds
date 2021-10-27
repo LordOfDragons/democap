@@ -363,10 +363,10 @@ class WMPanelCharacter extends CollapsibleGroup
 	protected var bool pInVR
 	
 	
-	
 	/** Create character panel. */
-	public func new(bool inVR) super("Character Selection")
+	public func new(bool inVR) super("Character Selection", CollapsibleGroup.persistModel(prefixUIOptions(inVR)))
 		pInVR = inVR
+		
 		pModelActorProfiles = DefaultListModel.new()
 		pModelCharacterProfiles = DefaultListModel.new()
 		pModelCharacterConfigurations = DefaultListModel.new()
@@ -398,6 +398,11 @@ class WMPanelCharacter extends CollapsibleGroup
 		pListenCharacterConfigurations = null
 		
 		super.dispose()
+	end
+	
+	/** UI options prefix. */
+	static public func String prefixUIOptions(bool inVR)
+		return inVR if "UI/VR/WMPanelCharacter" else "UI/WMPanelCharacter"
 	end
 	
 	
@@ -511,7 +516,7 @@ class WMPanelCharacter extends CollapsibleGroup
 			return
 		end
 		
-		WindowActorProfile.new(getWindow(), pInVR, pActorProfile, \
+		WindowActorProfile.new(getWindow(), pInVR, pActorProfile,\
 			WindowDialog.BlockResultListener.new(block bool accepted
 				updateActorProfiles()
 			end))
@@ -632,7 +637,7 @@ class WMPanelCharacter extends CollapsibleGroup
 	/** Edit character profile. */
 	public func void editCharacterProfile()
 		if pCharacterProfile != null
-			WindowCharacterProfile.new(getWindow(), pInVR, pCharacterProfile, \
+			WindowCharacterProfile.new(getWindow(), pInVR, pCharacterProfile,\
 				WindowDialog.BlockResultListener.new(block bool accepted
 					updateCharacterProfiles()
 				end))
@@ -762,7 +767,7 @@ class WMPanelCharacter extends CollapsibleGroup
 	/** Edit character configuration. */
 	public func void editCharacterConfiguration()
 		if pCharacterConfiguration != null and pCharacterProfile !=  null
-			WindowCharacterConfiguration.new(getWindow(), pInVR, pCharacterConfiguration, \
+			WindowCharacterConfiguration.new(getWindow(), pInVR, pCharacterConfiguration,\
 				WindowDialog.BlockResultListener.new(block bool accepted
 					updateCharacterConfigurations()
 				end))

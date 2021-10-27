@@ -45,6 +45,19 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 		end
 	end
 	
+	/** Persist state using parameter table. */
+	class PersistStateParamTable extends DefaultToggleModelListener
+		private var String pPath
+		
+		public func new(String path)
+			pPath = path
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			GameApp.getGameApp().getSettings().setAt(pPath, model.getToggled())
+		end
+	end
+	
 	
 	
 	private var DisplayRotatingImage pArrow
@@ -122,6 +135,19 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 		end)
 	end
 	
+	/** Create toggle model persisting to settings. */
+	static public func ToggleModel persistModel(String path)
+		return persistModel(path, true)
+	end
+	
+	/** Create toggle model persisting to settings. */
+	static public func ToggleModel persistModel(String path, bool toggled)
+		var DefaultToggleModel model = DefaultToggleModel.new(\
+			GameApp.getGameApp().getSettings().getBoolAt(path, toggled))
+		model.addListener(PersistStateParamTable.new(path))
+		return model
+	end
+	
 	/** Dispose of window. */
 	public func void dispose()
 		if pModel != null
@@ -152,6 +178,22 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 	/** Model. */
 	public func ToggleModel getModel()
 		return pModel
+	end
+	
+	/** Set model. */
+	public func void setModel(ToggleModel model)
+		if model == null
+			throw ENullPointer.new("model")
+		end
+		
+		if model == pModel
+			return
+		end
+		
+		pModel.removeListener(this)
+		pModel = model
+		model.addListener(this)
+		toggledChanged(model)
 	end
 	
 	/** Header panel. */
