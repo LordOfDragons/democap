@@ -35,7 +35,7 @@ pin Dragengine.Scenery
 /**
  * Main window character panel.
  */
-class WMPanelSession extends Panel
+class WMPanelSession extends CollapsibleGroup
 	/** Loadable world list element renderer. */
 	class LoadableWorldRenderer extends DefaultListElementRenderer
 		public func new()
@@ -126,11 +126,11 @@ class WMPanelSession extends Panel
 	
 	
 	/** Create session panel. */
-	public func new()
+	public func new() super("Session")
 		pModelLoadableWorlds = DefaultListModel.new()
 		
-		runWhileBlockingLayout(block
-			createContent()
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
 		end)
 		
 		pModelLoadableWorlds.addListener(LoadableWorldSelection.new(this))
@@ -223,14 +223,13 @@ class WMPanelSession extends Panel
 	
 	
 	/** Create panel content. */
-	protected func void createContent()
+	protected func void createContent(Panel content)
 		var CheckBox checkBox
 		var Button button
 		
-		setDesignerSelector("Panel.WMPanelSession.Session")
-		setLayout(BorderLayout.new(2))
+		content.setLayout(BorderLayout.new(2))
 		
-		addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
 			p.addWidget(Label.new("World:", "Label.FormCaption"))
 			
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
@@ -242,7 +241,7 @@ class WMPanelSession extends Panel
 			end))
 		end), BorderLayout.Area.content)
 		
-		addWidget(Panel.new(GridLayout.new(2, 0), block Panel p
+		content.addWidget(Panel.new(GridLayout.new(2, 0), block Panel p
 			p.addWidget(Button.new("Activate", BlockActionListener.new(block ActionEvent event
 				activateWorld()
 			end)))

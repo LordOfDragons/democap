@@ -177,10 +177,12 @@ class MotionTransferTracker
 	
 	/** Reset transform. */
 	public func void resetTransform()
-		pTransformPosition = pOffsetPosition
-		pTransformRotation = pOffsetRotation
-		pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition)
-		setReverseFromTransform()
+		pTransformPosition = Vector.new()
+		pTransformRotation = Vector.new()
+		pTransformMatrix = Matrix.new()
+		pReverseTransformPosition = Vector.new()
+		pReverseTransformRotation = Vector.new()
+		pReverseTransformMatrix = Matrix.new()
 	end
 	
 	/** Set transform (both directions). */
@@ -224,15 +226,9 @@ class MotionTransferTracker
 		
 		select pAutoTransform
 		case AutoTransform.full
-			//pTransformMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) * boneMatrix * slotInvMatrix
 			pTransformMatrix = autoTransform
 			
 		case AutoTransform.orientation
-			/*
-			var Matrix rotMat = boneMatrix.getRotation() * slotInvMatrix.getRotation()
-			pTransformMatrix = Matrix.newRotation(pOffsetRotation) * rotMat \
-				* Matrix.newTranslation(rotMat * -pOffsetPosition)
-			*/
 			pTransformMatrix = autoTransform.getRotation() * Matrix.newTranslation(\
 				referenceOffset.getRotation() * customOffset.getPosition())
 			
@@ -243,10 +239,6 @@ class MotionTransferTracker
 		pTransformPosition = pTransformMatrix.getPosition()
 		pTransformRotation = pTransformMatrix.normalize().getEulerAngles()
 		setReverseFromTransform()
-		
-// 		GameApp.getGameApp().getConsole().addMessage("setTransform " + pRealSlot.getName() + " " \
-// 			+ bone + " " + pTransformPosition + " " + pTransformRotation + " , "\
-// 			+ pReverseTransformPosition + " " + pReverseTransformRotation)
 	end
 	
 	public func void setTransformTrackTo(Component component, String bone, Vector axis)

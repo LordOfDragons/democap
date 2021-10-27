@@ -33,7 +33,7 @@ pin Dragengine.Scenery
 /**
  * Edit character config window motion transfer tracker panel.
  */
-class WCCPMTTracker extends Panel
+class WCCPMTTracker extends CollapsibleGroup
 	private var WCCPanelMotionTransfer pPanelMotionTransfer
 	private var MotionTransferTracker pTracker
 	
@@ -46,7 +46,7 @@ class WCCPMTTracker extends Panel
 	
 	
 	/** Create window. */
-	public func new(WCCPanelMotionTransfer panelMotionTransfer)
+	public func new(WCCPanelMotionTransfer panelMotionTransfer, String label, bool toggled) super(label, toggled)
 		pPanelMotionTransfer = panelMotionTransfer
 		
 		pModelListSlot = DefaultListModel.new()
@@ -54,8 +54,8 @@ class WCCPMTTracker extends Panel
 		pModelTextSlot = DefaultTextModel.new()
 		pModelAutoTransform = DefaultListModel.new(MotionTransferTracker.AutoTransform.all().toArray())
 		
-		runWhileBlockingLayout(block
-			createContent()
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
 		end)
 	end
 	
@@ -128,50 +128,50 @@ class WCCPMTTracker extends Panel
 	
 	
 	/** Create window content. */
-	protected func void createContent()
+	protected func void createContent(Panel content)
 		var WidgetCharacterPreview preview = pPanelMotionTransfer.getWindowCharacterConfiguration().getCharacterPreview()
 		var TextField textField
 		var ComboBox comboBox
 		var Button button
 		var ListBox listBox
 		
-		setLayout(FormLayout.new(true, 10, 2))
+		content.setLayout(FormLayout.new(true, 10, 2))
 		
 		// slot
-		addWidget(Label.new("Slot:", "Label.FormCaption"))
+		content.addWidget(Label.new("Slot:", "Label.FormCaption"))
 		
 		comboBox = ComboBox.new(pModelListSlot, DefaultComboBoxEditor.new(pModelTextSlot))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("Tracker slot to use.")
-		addWidget(comboBox)
+		content.addWidget(comboBox)
 		
 		// position
 		var Label labelPosition = Label.new("Position:", "Label.FormCaption")
-		addWidget(labelPosition)
+		content.addWidget(labelPosition)
 		
 		pEditOffsetPosition = EditVector.new()
 		pEditOffsetPosition.setToolTip("Position relative to slot.")
-		addWidget(pEditOffsetPosition)
+		content.addWidget(pEditOffsetPosition)
 		
 		// rotation
 		var Label labelRotation = Label.new("Rotation:", "Label.FormCaption")
-		addWidget(labelRotation)
+		content.addWidget(labelRotation)
 		
 		pEditOffsetRotation = EditVector.new()
 		pEditOffsetRotation.setToolTip("Rotation in degrees relative to slot.")
-		addWidget(pEditOffsetRotation)
+		content.addWidget(pEditOffsetRotation)
 		
 		CPECoordinateSystem.new(preview, labelPosition, pEditOffsetPosition, \
 			labelRotation, pEditOffsetRotation, null, comboBox)
 		
 		// auto transform
-		addWidget(Label.new("Auto Transform:", "Label.FormCaption"))
+		content.addWidget(Label.new("Auto Transform:", "Label.FormCaption"))
 		
 		comboBox = ComboBox.new(pModelAutoTransform)
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("What parts of the transform calculated from trackers to use. "\
 			+ "Apply position and rotation (full), only rotation (orientation) or none at all (none).")
-		addWidget(comboBox)
+		content.addWidget(comboBox)
 	end
 	
 	/** Update slot lists. */

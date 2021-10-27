@@ -1,0 +1,188 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Group (un-)collapsing panel if clicked. Group header shows an arrow and text. The arrow
+ * points to the right if collapsed and down if uncollapsed. Content is added to content
+ * panel. Content panel is shown/hidden if group header is clicked.
+ */
+class CollapsibleGroup extends Panel implements ToggleModelListener
+	private var DisplayRotatingImage pArrow
+	private var Label pLabel
+	private var ToggleModel pModel
+	private var Panel pPanelHeader
+	private var Panel pPanelContent
+	
+	
+	
+	/** Create widget. */
+	public func new(String label) this(label, true)
+	end
+	
+	/** Create widget. */
+	public func new(String label, bool toggled) this(label, DefaultToggleModel.new(toggled))
+	end
+	
+	/** Create widget. */
+	public func new(String label, ToggleModel model)
+		if label == null
+			throw ENullPointer.new("label")
+		end
+		if model == null
+			throw ENullPointer.new("model")
+		end
+		
+		runWhileBlockingLayout(block
+			setLayout(BorderLayout.new())
+			
+			pPanelHeader = Panel.new(FlowLayout.new(LayoutAxis.x, 5, FlowLayout.Stretch.last), block Panel p
+				pArrow = DisplayRotatingImage.new(Image.new("/content/gui/images/group_arrow.png"))
+				p.addWidget(pArrow)
+				
+				pLabel = Label.new(label)
+				p.addWidget(pLabel)
+			end)
+			addWidget(pPanelHeader, BorderLayout.Area.top)
+			
+			pPanelContent = Panel.new(FlowLayout.new(LayoutAxis.y))
+			addWidget(pPanelContent, BorderLayout.Area.content)
+			
+			setDesignerSelector("CollapsibleGroup")
+			
+			pModel = model
+			model.addListener(this)
+			
+			updateWidgets()
+		end)
+	end
+	
+	/** Create widget. */
+	public func new(String label, Layout layout, Block addContent) this(label)
+		pPanelContent.runWhileBlockingLayout(block
+			pPanelContent.setLayout(layout)
+			addContent.run(pPanelContent)
+		end)
+	end
+	
+	/** Create widget. */
+	public func new(String label, bool toggled, Layout layout, Block addContent) this(label, toggled)
+		pPanelContent.runWhileBlockingLayout(block
+			pPanelContent.setLayout(layout)
+			addContent.run(pPanelContent)
+		end)
+	end
+	
+	/** Create widget. */
+	public func new(String label, ToggleModel model, Layout layout, Block addContent) this(label, model)
+		pPanelContent.runWhileBlockingLayout(block
+			pPanelContent.setLayout(layout)
+			addContent.run(pPanelContent)
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		if pModel != null
+			pModel.removeListener(this)
+			pModel = null
+		end
+		
+		pArrow = null
+		pLabel = null
+		pPanelHeader = null
+		pPanelContent = null
+		
+		super.dispose()
+	end
+	
+	
+	
+	/** Arrow display image. */
+	public func DisplayRotatingImage getArrow()
+		return pArrow
+	end
+	
+	/** Label. */
+	public func Label getLabel()
+		return pLabel
+	end
+	
+	/** Model. */
+	public func ToggleModel getModel()
+		return pModel
+	end
+	
+	/** Header panel. */
+	public func Panel getPanelHeader()
+		return pPanelHeader
+	end
+	
+	/** Content panel. */
+	public func Panel getPanelContent()
+		return pPanelContent
+	end
+	
+	
+	
+	/** Toggle changed. Shows or hides toggle panel. */
+	public func void toggledChanged(ToggleModel model)
+		updateWidgets()
+	end
+	
+	
+	
+	/** Set designer selector. */
+	public func void setDesignerSelector(String selector)
+		super.setDesignerSelector(selector)
+		pPanelHeader.setDesignerSelector("Panel." + selector + ".Header")
+		pArrow.setDesignerSelector("Image." + selector)
+		pLabel.setDesignerSelector("Label." + selector)
+		pPanelContent.setDesignerSelector("Panel." + selector + ".Content")
+	end
+	
+	/** Mouse button pressed. Toggles model if left mouse button. */
+	public func void onButtonPress(MouseEvent event)
+		if event.getButton() == InputEventMouseButton.left
+			pModel.setToggled(not pModel.getToggled())
+		end
+	end
+	
+	
+	
+	/** Update widgets depending on toggled state. */
+	protected func void updateWidgets()
+		if pModel.getToggled()
+			pArrow.setRotation(0)
+			pPanelContent.setVisible(true)
+			
+		else
+			pArrow.setRotation(-90)
+			pPanelContent.setVisible(false)
+		end
+	end
+end
