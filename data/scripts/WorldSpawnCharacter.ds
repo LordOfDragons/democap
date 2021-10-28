@@ -111,6 +111,7 @@ class WorldSpawnCharacter
 	private var DVector pLastActorPosition
 	private var Quaternion pLastActorOrientation
 	private var BehaviorElement pVRMenu
+	private var BehaviorElement pMirrorLarge
 	private var ElementClass pMoCapActorClass
 	private var bool pRequiresRecreateCharacter
 	private var Array pListeners
@@ -131,6 +132,10 @@ class WorldSpawnCharacter
 		if pVRMenu != null
 			pVRMenu.safeDispose()
 			pVRMenu = null
+		end
+		if pMirrorLarge != null
+			pMirrorLarge.safeDispose()
+			pMirrorLarge = null
 		end
 		
 		pListeners.removeAll()
@@ -153,9 +158,14 @@ class WorldSpawnCharacter
 			return
 		end
 		
-		// remove the VR menu from the game world. it will be reused
+		// remove VR menu from game world. it will be reused
 		if pVRMenu != null
 			pVRMenu.removeFromGameWorldIfPresent()
+		end
+		
+		// remove large mirror from game world. it will be reused
+		if pMirrorLarge != null
+			pMirrorLarge.removeFromGameWorldIfPresent()
 		end
 		
 		// dispose of the actor. we could move the actor to the new game world but better
@@ -176,6 +186,13 @@ class WorldSpawnCharacter
 			end
 			pVRMenu.setVisible(false)
 			gameWorld.addElement(pVRMenu)
+			
+			// add large mirror creating it if required
+			if pMirrorLarge == null
+				pMirrorLarge = createMirrorLarge()
+			end
+			pMirrorLarge.setVisible(false)
+			gameWorld.addElement(pMirrorLarge)
 			
 			// move the camera to a good starting position showing the character
 			var VRCameraDirector director = GameApp.getGameApp().getVRCameraDirector()
@@ -253,6 +270,11 @@ class WorldSpawnCharacter
 	/** VR Menu or null if not created yet. */
 	public func BehaviorElement getVRMenu()
 		return pVRMenu
+	end
+	
+	/** Large mirror or null if not created yet. */
+	public func BehaviorElement getMirrorLarge()
+		return pMirrorLarge
 	end
 	
 	
@@ -365,6 +387,16 @@ class WorldSpawnCharacter
 	/** Create VR menu. */
 	protected func BehaviorElement createVRMenu()
 		var ElementClass eclass = GameApp.getGameApp().getElementClassList().getNamed("VRMenu")
+		var StubElement stub = StubElement.new(eclass, GameApp.getGameApp().getIDGenerator().nextID())
+		
+		// add properties if required
+		
+		return stub.createElement() cast BehaviorElement
+	end
+	
+	/** Create large mirror. */
+	protected func BehaviorElement createMirrorLarge()
+		var ElementClass eclass = GameApp.getGameApp().getElementClassList().getNamed("MirrorLarge")
 		var StubElement stub = StubElement.new(eclass, GameApp.getGameApp().getIDGenerator().nextID())
 		
 		// add properties if required

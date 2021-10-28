@@ -35,6 +35,37 @@ pin Dragengine.XML
  * Behavior adding support to record animations.
  */
 class ECBRecordAnimation extends DefaultECBehavior
+	/** Listener. */
+	interface Listener
+		/** Prepare recording. Called when recording delays starts. */
+		func void prepareRecording(Instance instance)
+		
+		/** Recording starts. Called when recording delay ends. */
+		func void startRecording(Instance instance)
+		
+		/** Recording stopped. */
+		func void stopRecording(Instance instance)
+	end
+	
+	/** Default listener implementation. */
+	class DefaultListener implements Listener
+		/** Create listener. */
+		public func new()
+		end
+		
+		/** Prepare recording. Called when recording delays starts. */
+		public func void prepareRecording(Instance instance)
+		end
+		
+		/** Recording starts. Called when recording delay ends. */
+		public func void startRecording(Instance instance)
+		end
+		
+		/** Recording stopped. */
+		public func void stopRecording(Instance instance)
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		private var ECBRecordAnimation pECBehavior
@@ -42,24 +73,27 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var Array pBoneIndices
 		private var CharacterAnimation pCharacterAnimation
 		private var TimeDate pTimestamp
+		private var bool pIsPreparing
 		private var bool pIsRecording
 		private var float pRecordTime
 		private var bool pIncrementTime
 		private var Component pComponent
+		private var Array pListeners
 		
 		
 		
 		/** Create instance. */
 		public func new(ECBRecordAnimation ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
-			pIsRecording = false
 			pBoneIndices = Array.new()
+			pListeners = Array.new()
 			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
 			setRequiresThink(true)
 		end
 		
 		/** Dispose of instance. */
 		public func void dispose()
+			pListeners = null
 			pActorAnimated = null
 			super.dispose()
 		end
@@ -94,15 +128,32 @@ class ECBRecordAnimation extends DefaultECBehavior
 		
 		
 		
+		/** Is preparing to record. */
+		public func bool isPreparing()
+			return pIsPreparing
+		end
+		
 		/** Is recording animation. */
 		public func bool isRecording()
 			return pIsRecording
 		end
 		
+		/** Prepare to record. */
+		public func void prepareRecording()
+			stopRecording()
+			pIsPreparing = true
+			pListeners.forEach(block Listener each
+				each.prepareRecording(this)
+			end)
+		end
+		
 		/** Start recording animation. */
 		public func void startRecording()
-			stopRecording()
+			if not pIsPreparing
+				prepareRecording()
+			end
 			
+			pIsPreparing = false
 			pTimestamp = TimeDate.new()
 			
 			pCharacterAnimation = CharacterAnimation.new()
@@ -125,27 +176,51 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pIsRecording = true
 			pRecordTime = 0
 			pIncrementTime = false
+			
+			pListeners.forEach(block Listener each
+				each.startRecording(this)
+			end)
 		end
 		
 		/** Stop recording animation. */
 		public func void stopRecording()
-			if not pIsRecording
+			if pIsRecording
+				pIsRecording = false
+				pComponent = null
+				
+				// write animation to file
+				if pCharacterAnimation == null
+					return
+				end
+				
+				pCharacterAnimation.createAnimation()
+				pCharacterAnimation.getAnimation().save(pCharacterAnimation.getFilename())
+				
+				// write capture information file
+				writeCaptureInfoFile()
+				
+			elif pIsPreparing
+				pIsPreparing = false
+				
+			else
 				return
 			end
 			
-			pIsRecording = false
-			pComponent = null
-			
-			// write animation to file
-			if pCharacterAnimation == null
-				return
-			end
-			
-			pCharacterAnimation.createAnimation()
-			pCharacterAnimation.getAnimation().save(pCharacterAnimation.getFilename())
-			
-			// write capture information file
-			writeCaptureInfoFile()
+			pListeners.forEach(block Listener each
+				each.stopRecording(this)
+			end)
+		end
+		
+		
+		
+		/** Add listener. */
+		public func void addListener(Listener listener)
+			pListeners.add(listener)
+		end
+		
+		/** Remove listener. */
+		public func void removeListener(Listener listener)
+			pListeners.remove(listener)
 		end
 		
 		

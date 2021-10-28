@@ -23,6 +23,7 @@ namespace Democap.Gui
 
 pin Democap.Actors
 pin Democap.Actions
+pin Democap.Behaviors
 pin Democap.Characters
 pin Democap.Worlds
 
@@ -207,6 +208,32 @@ class WMPanelSession extends CollapsibleGroup
 		app.startLoadGameWorld(StartGame.new(app.getWindowGameWorld(), pLoadableWorld.getPath()))
 	end
 	
+	/** Toggle large mirror. */
+	public func void toggleLargeMirror()
+		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+		if actor == null
+			return
+		end
+		
+		var BehaviorElement mirror = GameApp.getGameApp().getWorldSpawnCharacter().getMirrorLarge()
+		if mirror == null
+			return
+		end
+		
+		var ECBToggleVisibility.Instance toggleVisibility = ECBToggleVisibility.getInstanceIn(mirror)
+		if toggleVisibility == null
+			return
+		end
+		
+		if toggleVisibility.getVisible()
+			toggleVisibility.setVisible(false)
+			
+		else
+			toggleVisibility.repositionHmd(Vector.new(0.35, -0.5, 0.35))
+			toggleVisibility.setVisible(true)
+		end
+	end
+	
 	
 	
 	/** Start recording. */
@@ -265,6 +292,12 @@ class WMPanelSession extends CollapsibleGroup
 			checkBox.setToolTip("Show VR Camera or Free Camera in 3D View. "\
 				+ "Showing VR Camera is faster. Use Free Camera to set up scene.")
 			p.addWidget(checkBox)
+			
+			p.addWidget(Button.new("Mirror", BlockActionListener.new(block ActionEvent event
+				toggleLargeMirror()
+			end)))
+			
+			p.addWidget(Widget.new()) // placeholder
 			
 			p.addWidget(Button.new("Record", BlockActionListener.new(block ActionEvent event
 				startRecording()
