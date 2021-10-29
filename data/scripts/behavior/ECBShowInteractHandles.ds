@@ -1,0 +1,225 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+
+
+/**
+ * Behavior showing interaction handles.
+ */
+class ECBShowInteractHandles extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Show handles listener. */
+		class ShowHandlesListener extends ECBSelectable.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void selected(ECBSelectable.Instance instance)
+				pInstance.show()
+			end
+			
+			public func void deselected(ECBSelectable.Instance instance)
+				pInstance.hide()
+			end
+		end
+		
+		
+		
+		private var ECBShowInteractHandles pECBehavior
+		private var ECBSelectable.Instance pSelectable
+		private var Array pHandleClasses
+		private var Array pHandleElements
+		private var bool pVisible
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBShowInteractHandles ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pHandleClasses = Array.new()
+			pHandleElements = Array.new()
+			
+			pSelectable = ecbehavior.getSelectable().instance(element)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pHandleElements = null
+			pHandleClasses = null
+			pSelectable = null
+			super.dispose()
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			pHandleClasses = pECBehavior.getHandleClasses().getElementClasses(\
+				stub, getElement().getClass().getCodecPropertyString())
+			
+			pSelectable.addListener(ShowHandlesListener.new(this))
+		end
+		
+		
+		
+		/** Behavior. */
+		public func ECBShowInteractHandles getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Selectable behavior instance. */
+		public func ECBSelectable.Instance getSelectable()
+			return pSelectable
+		end
+		
+		
+		
+		/** Handles are visible. */
+		public func bool getVisible()
+			return pVisible
+		end
+		
+		/** Show handles if hidden. */
+		public func void show()
+			if pVisible
+				return
+			end
+			
+			var BehaviorElement element = getElement()
+			var GameWorld gameWorld = element.getGameWorld()
+			if gameWorld == null
+				return
+			end
+			
+			pVisible = true
+			
+			var MutableID idgen = GameApp.getGameApp().getIDGenerator()
+			var BehaviorElement handleElement
+			var StubElement handleStub
+			
+			pHandleClasses.forEach(block ElementClass handleClass
+				handleStub = StubElement.new(handleClass, idgen.nextID())
+				
+				handleElement = handleStub.createElement() cast BehaviorElement
+				pHandleElements.add(handleElement)
+				
+				gameWorld.addElement(handleElement)
+				
+				handleElement.attachToParent(element)
+			end)
+		end
+		
+		/** Hide handles if visible. */
+		public func void hide()
+			if not pVisible
+				return
+			end
+			
+			pVisible = false
+			
+			pHandleElements.forEach(block BehaviorElement each
+				each.safeDispose()
+			end)
+			pHandleElements.removeAll()
+		end
+		
+		
+		
+		/** Element is removed from game world. */
+		public func void removeFromGameWorld()
+			hide()
+		end
+	end
+	
+	
+	
+	private var ECBSelectable pSelectable
+	private var ECPElementClassList pHandleClasses
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBSelectable selectable) super(eclass)
+		if selectable == null
+			throw ENullPointer.new("selectable")
+		end
+		
+		var String prefix = "showInteractHandles."
+		
+		pSelectable = selectable
+		
+		pHandleClasses = ECPElementClassList.new(prefix + "handles", GameApp.getGameApp().getECListHandles())
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pHandleClasses = null
+		pSelectable = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Selectable behavior. */
+	public func ECBSelectable getSelectable()
+		return pSelectable
+	end
+	
+	/** Element class list. */
+	public func ECPElementClassList getHandleClasses()
+		return pHandleClasses
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBShowInteractHandles getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBShowInteractHandles each
+			return true
+		end) cast ECBShowInteractHandles
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

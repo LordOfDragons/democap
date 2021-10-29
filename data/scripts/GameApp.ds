@@ -22,6 +22,7 @@
 namespace Democap
 
 pin Democap.Actors
+pin Democap.Behaviors
 pin Democap.Characters
 pin Democap.Commands
 pin Democap.Elements
@@ -75,6 +76,8 @@ class GameApp extends BaseGameApp
 	private var WorldSpawnCharacter pWorldSpawnCharacter
 	private var Camera pVRCamera
 	private var VRCameraDirector pVRCameraDirector
+	private var ElementClassList pECListHandles
+	private var ECBSelectable.Tracker pSelectionTracker
 	
 	private var WindowMain pWindowMain
 	
@@ -102,7 +105,13 @@ class GameApp extends BaseGameApp
 	 * Initialize game.
 	 */
 	public func void initGame()
+		// has to come before super call since createAndAddElementClasses() uses it
+		pECListHandles = ElementClassList.new()
+		
 		super.initGame()
+		
+		// has to come after super call since class list is filled not earlier
+		addECListHandles()
 		
 		pModelShowVRCamera = DefaultToggleModel.new(true)
 		pDefaultActorProfile = ActorProfile.new("Default")
@@ -113,6 +122,7 @@ class GameApp extends BaseGameApp
 		pNextElementClassID = MutableID.new(1)
 		pLoadActorProfile = LoadActorProfile.new(getConsole())
 		pLoadCharacterProfile = LoadCharacterProfile.new(getConsole())
+		pSelectionTracker = ECBSelectable.Tracker.new()
 		
 		pActorProfiles = ActorProfiles.new("/content/actors")
 		pCharacterProfiles = CharacterProfiles.new("/content/characters")
@@ -216,13 +226,13 @@ class GameApp extends BaseGameApp
 			pVRCameraDirector, InputEventMouseButton.right,\
 			InputEventModifier.shift | InputEventModifier.control))
 		
+		windowGameWorld.addMouseListener(InteractMouseListener.new())
+		
 		// load default game world
 		startLoadGameWorld(StartGame.new(getWindowGameWorld(), "/content/worlds/default.deworld"))
 	end
 	
-	/**
-	 * Create element classes and add them to element class list.
-	 */
+	/** Create element classes and add them to element class list. */
 	protected func void createAndAddElementClasses()
 		super.createAndAddElementClasses()
 		
@@ -233,6 +243,12 @@ class GameApp extends BaseGameApp
 		eclist.add(CharacterPreviewClass.new())
 		
 		getLoaders().getElementClass().addXmlElementClasses(eclist, "/content/models", true)
+	end
+	
+	/** Add handle element classes. */
+	protected func void addECListHandles()
+		var ElementClassList eclist = getElementClassList()
+// 		pECListHandles.add(eclist.getNamed("HandleMoveX"))
 	end
 	
 	/** Add commands. */
@@ -311,10 +327,12 @@ class GameApp extends BaseGameApp
 			pActorProfiles = null
 		end
 		
+		pSelectionTracker = null
 		pLoadCharacterProfile = null
 		pLoadActorProfile = null
 		pModelShowVRCamera = null
 		pVRCameraDirector = null
+		pECListHandles = null
 		
 		super.cleanUp()
 	end
@@ -414,5 +432,15 @@ class GameApp extends BaseGameApp
 	/** World spawn character. */
 	public func WorldSpawnCharacter getWorldSpawnCharacter()
 		return pWorldSpawnCharacter
+	end
+	
+	/** Handles element class list. */
+	public func ElementClassList getECListHandles()
+		return pECListHandles
+	end
+	
+	/** Selection tracker. */
+	public func ECBSelectable.Tracker getSelectionTracker()
+		return pSelectionTracker
 	end
 end

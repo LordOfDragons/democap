@@ -1,0 +1,220 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+
+pin Dragengine.CameraDirectors
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Interact mouse listener. For use by operator on WindowGameWorld and only if VR camera
+ * is not enabled.
+ */
+class InteractMouseListener extends DefaultMouseListener
+	/** Hit result. */
+	class HitResult
+		private var BehaviorElement pElement
+		private var float pDistance
+		private var DVector pHitPoint
+		
+		public func new(BehaviorElement element, float distance, DVector hitPoint)
+			pElement = element
+			pDistance = distance
+			pHitPoint = hitPoint
+		end
+		
+		public func BehaviorElement getElement()
+			return pElement
+		end
+		
+		public func float getDistance()
+			return pDistance
+		end
+		
+		public func DVector getHitPoint()
+			return pHitPoint
+		end
+		
+		public func int compare(Object obj)
+			if obj castable HitResult
+				return pDistance.compare((obj cast HitResult).pDistance)
+				
+			else
+				return 0
+			end
+		end
+	end
+	
+	/**
+	 * Collect hits. Includes only BehaviorElement.
+	 */
+	class CollectHits implements ColliderListener
+		protected var Array pHits
+		protected var DVector pRayOrigin
+		protected var DVector pRayDirection
+		
+		
+		public func new(Array hits, DVector rayOrigin, Vector rayDirection)
+			pHits = hits
+			pRayOrigin = rayOrigin
+			pRayDirection = DVector.new(rayDirection)
+		end
+		
+		
+		public func bool canHitCollider(Collider owner, Collider collider)
+			return true
+		end
+		
+		public func void collisionResponse(Collider owner, CollisionInfo info)
+			var Collider collider = info.getCollider()
+			if collider == null
+				return
+			end
+			
+			var Object hitOwner = collider.getOwner()
+			if hitOwner == null or not hitOwner castable BehaviorElement
+				return
+			end
+			
+			pHits.add(HitResult.new(hitOwner cast BehaviorElement, info.getDistance(),\
+				pRayOrigin + pRayDirection * info.getDistance()))
+		end
+		
+		public func void colliderChanged(Collider owner)
+		end
+	end
+	
+	
+	
+	protected var CollisionFilter pCollisionFilter
+	protected var float pRayDistance
+	protected var ECBInteractHandle.Instance pHandle
+	
+	
+	
+	/** Create mouse listener. */
+	public func new()
+		var LayerMask cfCategory = LayerMask.newWith(BaseGameApp.CollisionFilterBit.dynamic)
+		
+		var LayerMask cfFilter = LayerMask.new()
+		cfFilter.setBit(BaseGameApp.CollisionFilterBit.geometry)
+		cfFilter.setBit(BaseGameApp.CollisionFilterBit.dynamic)
+		cfFilter.setBit(BaseGameApp.CollisionFilterBit.actor)
+		
+		pCollisionFilter = CollisionFilter.new(cfCategory, cfFilter)
+		pRayDistance = 100
+	end
+	
+	/** Create mouse listener. */
+	public func new(CollisionFilter collisionFilter, float rayDistance)
+		pCollisionFilter = collisionFilter
+		pRayDistance = rayDistance
+	end
+	
+	
+	
+	/** Mouse button pressed. */
+	public func void onButtonPress(MouseEvent event)
+		// already interacting with a handle
+		if pHandle != null
+			return
+		end
+		
+		// requires left mouse button, no VR camera shown and camera director to be present
+		if event.getButton() != InputEventMouseButton.left
+			return
+		end
+		
+		var GameApp app = GameApp.getGameApp()
+		if app.getModelShowVRCamera().getToggled()
+			return
+		end
+		
+		var WindowGameWorld window = app.getWindowGameWorld()
+		var CameraDirector director = window.getCameraDirector()
+		if director == null
+			return
+		end
+		
+		// ray cast to find all hit elements sorted by distance
+		var Widget widget = event.getSource() cast Widget
+		var Point position = widget.getDesktopPosition() + event.getPosition()
+		var Point size = window.getSize()
+		
+		var Camera camera = director.getCamera()
+		var DVector rayOrigin = camera.getPosition()
+		var Vector rayDirection = camera.backProject(size, position) * pRayDistance
+		
+		var Array hits = Array.new()
+		var CollectHits listener = CollectHits.new(hits, rayOrigin, rayDirection)
+		
+		window.getGameWorld().getWorld().rayHits(rayOrigin, rayDirection, listener, pCollisionFilter)
+		hits.sort()
+		
+		// find the closest hit object supporting handle or selectable interaction
+		var ObjectReference refHandle = ObjectReference.new()
+		var ObjectReference refSelectable = ObjectReference.new()
+		
+		hits.find(block HitResult each
+			var BehaviorElement element = each.getElement()
+			
+			var ECBInteractHandle.Instance handle = ECBInteractHandle.getInstanceIn(element)
+			if handle != null
+				refHandle.set(handle)
+				return true
+			end
+			
+			var ECBSelectable.Instance selectable = ECBSelectable.getInstanceIn(element)
+			if selectable != null
+				refSelectable.set(selectable)
+				return true
+			end
+			
+			return false
+		end)
+		
+		// if object supports ECBInteractHandle interact with the handle
+		if refHandle.get() != null
+			pHandle = refHandle.get() cast ECBInteractHandle.Instance
+			pHandle.startInteract()
+			
+		// if object supports ECBSelectable select object
+		elif refSelectable.get() != null
+			app.getSelectionTracker().setElement(refSelectable.get() cast ECBSelectable.Instance)
+			
+		// nothing hit. clear selection
+		else
+			app.getSelectionTracker().setElement(null)
+		end
+	end
+	
+	/** Mouse button released. */
+	public func void onButtonRelease(MouseEvent event)
+		if pHandle != null
+			pHandle.stopInteract()
+			pHandle = null
+		end
+	end
+end

@@ -40,7 +40,9 @@ class ECBToggleVisibility extends DefaultECBehavior
 	class Instance extends DefaultECBehaviorInstance
 		private var ECBToggleVisibility pECBehavior
 		private var Vector pLockUpAxis
+		private var Vector pPivot
 		private var float pDistance
+		private var bool pLockZRotation
 		
 		
 		
@@ -53,7 +55,9 @@ class ECBToggleVisibility extends DefaultECBehavior
 		public func void init(StubElement stub)
 			var CodecPropertyString codec = getElement().getClass().getCodecPropertyString()
 			pLockUpAxis = pECBehavior.getLockUpAxis().getVector(stub, codec)
+			pPivot = pECBehavior.getPivot().getVector(stub, codec)
 			pDistance = pECBehavior.getDistance().getValue(stub)
+			pLockZRotation = pECBehavior.getLockZRotation().getValue(stub)
 		end
 		
 		
@@ -63,9 +67,19 @@ class ECBToggleVisibility extends DefaultECBehavior
 			return pLockUpAxis
 		end
 		
+		/** Pivot offset or null value. */
+		public func Vector getPivot()
+			return pPivot
+		end
+		
 		/** Distance in front of camera to position element. */
 		public func float getDistance()
 			return pDistance
+		end
+		
+		/** Lock Z rotation. */
+		public func bool getLockZRotation()
+			return pLockZRotation
 		end
 		
 		
@@ -81,16 +95,23 @@ class ECBToggleVisibility extends DefaultECBehavior
 		end
 		
 		/** Reposition element in front of VR camera. */
-		public func void repositionHmd()
-			var Camera camera = GameApp.getGameApp().getVRCamera()
-			reposition(DMatrix.newWorld(camera.getPosition(), camera.getOrientation()))
+		public func void repositionHmd(BaseVRActor actor)
+			repositionHmd(actor, Vector.new())
 		end
 		
 		/** Reposition element relative to VR camera. */
-		public func void repositionHmd(Vector position)
+		public func void repositionHmd(BaseVRActor actor, Vector position)
 			var Camera camera = GameApp.getGameApp().getVRCamera()
-			reposition(DMatrix.newTranslation(DVector.new(position))\
-				* DMatrix.newWorld(camera.getPosition(), camera.getOrientation()))
+			
+			if pPivot != null
+				reposition(DMatrix.newTranslation(DVector.new(position))\
+					* DMatrix.newWorld(actor.getPosition() + DVector.new(pPivot),\
+						camera.getOrientation()))
+				
+			else
+				reposition(DMatrix.newTranslation(DVector.new(position))\
+					* DMatrix.newWorld(camera.getPosition(), camera.getOrientation()))
+			end
 		end
 		
 		/** Reposition element along point-at direction. */
@@ -100,6 +121,10 @@ class ECBToggleVisibility extends DefaultECBehavior
 		
 		/** Reposition element. */
 		public func void reposition(DMatrix matrix)
+			if pLockZRotation
+				matrix = DMatrix.newRT(matrix.getEulerAngles().compSelect(true, true, false), matrix.getPosition())
+			end
+			
 			matrix = DMatrix.newRotationY(180) * DMatrix.newTranslation(0, 0, pDistance) * matrix
 			
 			if pLockUpAxis != null
@@ -120,7 +145,9 @@ class ECBToggleVisibility extends DefaultECBehavior
 	
 	
 	private var ECPVector pLockUpAxis
+	private var ECPVector pPivot
 	private var ECPFloat pDistance
+	private var ECPBoolean pLockZRotation
 	
 	
 	
@@ -131,8 +158,14 @@ class ECBToggleVisibility extends DefaultECBehavior
 		pLockUpAxis = ECPVector.new(prefix + "lockUpAxis", null)
 		eclass.addProperty(pLockUpAxis)
 		
+		pPivot = ECPVector.new(prefix + "pivot", null)
+		eclass.addProperty(pPivot)
+		
 		pDistance = ECPFloat.new(prefix + "distance", 0.5, 0)
 		eclass.addProperty(pDistance)
+		
+		pLockZRotation = ECPBoolean.new(prefix + "lockZRotation", false)
+		eclass.addProperty(pLockZRotation)
 		
 		eclass.addBehavior(this)
 	end
@@ -144,9 +177,19 @@ class ECBToggleVisibility extends DefaultECBehavior
 		return pLockUpAxis
 	end
 	
+	/** Pivot offset or null value. */
+	public func ECPVector getPivot()
+		return pPivot
+	end
+	
 	/** Distance in front of camera to position element. */
 	public func ECPFloat getDistance()
 		return pDistance
+	end
+	
+	/** Lock Z rotation. */
+	public func ECPBoolean getLockZRotation()
+		return pLockZRotation
 	end
 	
 	
