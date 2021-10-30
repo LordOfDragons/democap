@@ -1,0 +1,173 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding support to rotate object using handle.
+ */
+class ECBInteractRotate extends ECBInteractHandle
+	/** Behavior instance. */
+	class Instance extends ECBInteractHandle.Instance
+		protected var ECBInteractRotate pECBehavior
+		protected var Vector pAxis
+		protected var Quaternion pInteractOrientation
+		protected var DVector pInteractOrigin
+		protected var Vector pInteractAxis
+		protected var DVector pPlanePosition
+		protected var Vector pPlaneNormal
+		protected var Vector pPlaneX
+		protected var Vector pPlaneY
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBInteractRotate ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			var CodecPropertyString codec = getElement().getClass().getCodecPropertyString()
+			pAxis = pECBehavior.getAxis().getVector(stub, codec)
+		end
+		
+		
+		
+		/** Behavior. */
+		public func ECBInteractRotate getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Rotatement axis. */
+		public func Vector getAxis()
+			return pAxis
+		end
+		
+		
+		
+		/** Start interacting. */
+		public func void startInteract(Matrix viewMatrix, DVector rayOrigin, Vector rayDirection, DVector hitPoint)
+			var Element element = getElement().getParent()
+			if element == null
+				return
+			end
+			
+			pInteractOrientation = element.getOrientation()
+			pInteractOrigin = hitPoint
+			pInteractAxis = Matrix.newFromQuaternion(pInteractOrientation).transformNormal(pAxis)
+			
+			pPlanePosition = element.getPosition()
+			pPlaneNormal = pInteractAxis
+			
+			// the direction towards the interaction point is used as X axis. the Y axis is
+			// then the X axis crossed with the plane normal. this allows to use the plane
+			// normal as rotation axis and DEMath.atan2() to calculate the rotation angle
+			
+			// ensure the interaction point is on the plane. this prevents the rotation
+			// jumping after the first mouse move due to the hit point being slightly
+			// outside the plane
+			var float denom = rayDirection * pPlaneNormal
+			if denom != 0
+				var float lambda = ((pPlanePosition - rayOrigin).toVector() * pPlaneNormal) / denom
+				var DVector hp = rayOrigin + DVector.new(rayDirection) * lambda
+				pPlaneX = (hp - pPlanePosition).toVector().normalize()
+				
+			else
+				pPlaneX = (pInteractOrigin - pPlanePosition).toVector().normalize()
+			end
+			
+			pPlaneY = (pPlaneNormal % pPlaneX).normalize()
+		end
+		
+		/** Update interacting. */
+		public func void updateInteract(Matrix viewMatrix, DVector rayOrigin, Vector rayDirection)
+			if pInteractOrigin == null
+				return
+			end
+			
+			// calculate intersecton of view ray with interaction plane
+			var Element element = getElement().getParent()
+			var DMatrix matrix = element.getElementMatrix()
+			
+			var float denom = rayDirection * pPlaneNormal
+			if denom == 0
+				return
+			end
+			
+			var float lambda = ((pPlanePosition - rayOrigin).toVector() * pPlaneNormal) / denom
+			var DVector hp = rayOrigin + DVector.new(rayDirection) * lambda
+			
+			// apply interaction
+			var Vector v = (hp - pPlanePosition).toVector()
+			if v.getLength() < 0.001
+				return
+			end
+			
+			var float angle = DEMath.normalize(DEMath.atan2(pPlaneY * v, pPlaneX * v), -180.0, 180.0)
+			element.setOrientation(pInteractOrientation * Quaternion.newFromAxis(pPlaneNormal, angle))
+		end
+		
+		/** Stop interacting. */
+		public func void stopInteract()
+			pInteractOrientation = null
+			pInteractOrigin = null
+			pInteractAxis = null
+			pPlanePosition = null
+			pPlaneNormal = null
+		end
+	end
+	
+	
+	
+	private var ECPVector pAxis
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass) super(eclass)
+		var String prefix = "interactRotate."
+		
+		pAxis = ECPVector.new(prefix + "axis", Vector.new(1, 0, 0))
+		eclass.addProperty(pAxis)
+		
+		eclass.addBehavior(this)
+	end
+	
+	
+	
+	/** Rotatement axis. */
+	public func ECPVector getAxis()
+		return pAxis
+	end
+	
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
