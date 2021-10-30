@@ -1,0 +1,161 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding support to move object using handle.
+ */
+class ECBInteractMove extends ECBInteractHandle
+	/** Behavior instance. */
+	class Instance extends ECBInteractHandle.Instance
+		protected var ECBInteractMove pECBehavior
+		protected var Vector pAxis
+		protected var Matrix pInteractMatrix
+		protected var DVector pInteractOrigin
+		protected var Vector pInteractAxis
+		protected var DVector pOriginPosition
+		protected var DVector pPlanePosition
+		protected var Vector pPlaneNormal
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBInteractMove ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			var CodecPropertyString codec = getElement().getClass().getCodecPropertyString()
+			pAxis = pECBehavior.getAxis().getVector(stub, codec)
+		end
+		
+		
+		
+		/** Behavior. */
+		public func ECBInteractMove getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Movement axis. */
+		public func Vector getAxis()
+			return pAxis
+		end
+		
+		
+		
+		/** Start interacting. */
+		public func void startInteract(Matrix viewMatrix, DVector rayOrigin, Vector rayDirection, DVector hitPoint)
+			var Element element = getElement().getParent()
+			if element == null
+				return
+			end
+			
+			pInteractMatrix = Matrix.newFromQuaternion(element.getOrientation())
+			pInteractOrigin = hitPoint
+			pInteractAxis = pInteractMatrix.transformNormal(pAxis)
+			
+			pOriginPosition = element.getPosition()
+			
+			viewMatrix = viewMatrix.normalize()
+			var Vector up = viewMatrix.getUpVector()
+			var Vector right = viewMatrix.getRightVector()
+			
+			pPlanePosition = pInteractOrigin
+			
+			if DEMath.fabs(up * pInteractAxis) < 0.707 // roughly 45 degrees
+				pPlaneNormal = (up % pInteractAxis).normalize()
+				
+			else
+				pPlaneNormal = (pInteractAxis % right).normalize()
+			end
+		end
+		
+		/** Update interacting. */
+		public func void updateInteract(Matrix viewMatrix, DVector rayOrigin, Vector rayDirection)
+			if pInteractOrigin == null
+				return
+			end
+			
+			// calculate intersecton of view ray with interaction plane
+			var Element element = getElement().getParent()
+			var DMatrix matrix = element.getElementMatrix()
+			
+			var float denom = rayDirection * pPlaneNormal
+			if denom == 0
+				return
+			end
+			
+			var float lambda = ((pPlanePosition - rayOrigin).toVector() * pPlaneNormal) / denom
+			var DVector hitPoint = rayOrigin + DVector.new(rayDirection) * lambda
+			
+			// apply interaction
+			var float distance = pInteractAxis * (hitPoint - pInteractOrigin).toVector()
+			element.setPosition(pOriginPosition + DVector.new(pInteractAxis) * distance)
+		end
+		
+		/** Stop interacting. */
+		public func void stopInteract()
+			pInteractMatrix = null
+			pInteractOrigin = null
+			pInteractAxis = null
+			pOriginPosition = null
+			pPlanePosition = null
+			pPlaneNormal = null
+		end
+	end
+	
+	
+	
+	private var ECPVector pAxis
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass) super(eclass)
+		var String prefix = "interactMove."
+		
+		pAxis = ECPVector.new(prefix + "axis", Vector.new(1, 0, 0))
+		eclass.addProperty(pAxis)
+		
+		eclass.addBehavior(this)
+	end
+	
+	
+	
+	/** Movement axis. */
+	public func ECPVector getAxis()
+		return pAxis
+	end
+	
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

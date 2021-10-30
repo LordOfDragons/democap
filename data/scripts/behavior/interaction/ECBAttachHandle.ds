@@ -1,0 +1,208 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior attaching handle to parent. Calculates the position to attach to using position
+ * vector which indicates position for each axis individual using 0 for center, positive value
+ * for positive axis and negative value for negative axis. Position vector is multiplied
+ * with half-size of parent. Resizes element relative to size of parent.
+ */
+class ECBAttachHandle extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBAttachHandle pECBehavior
+		private var Vector pPosition
+		private var Vector pRotation
+		private var float pScale
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBAttachHandle ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			var CodecPropertyString codec = getElement().getClass().getCodecPropertyString()
+			
+			pPosition = pECBehavior.getPosition().getVector(stub, codec)
+			pRotation = pECBehavior.getRotation().getVector(stub, codec)
+			pScale = pECBehavior.getScale().getValue(stub)
+		end
+		
+		
+		
+		/**
+		 * Position for each axis relative to parent element. Uses 0 for center, positive value
+		 * for positive axis and negative value for negative axis. Position vector is multiplied
+		 * by half-size of parent.
+		 */
+		public func Vector getPosition()
+			return pPosition
+		end
+		
+		/** Rotation relative to parent element. */
+		public func Vector getRotation()
+			return pRotation
+		end
+		
+		/** Resizes element relative to size of parent. */
+		public func float getScale()
+			return pScale
+		end
+		
+		
+		
+		/** Attach to parent. */
+		public func void attachToParent(Element parent)
+			var BehaviorElement beparent = parent cast BehaviorElement
+			var Collider parentCollider = ECBehaviorCollider.getInstanceIn(beparent).getCollider()
+			if parentCollider == null
+				return
+			end
+			
+			var Component parentComponent = ECBehaviorComponent.getInstanceIn(beparent).getComponent()
+			if parentComponent == null
+				return
+			end
+			
+			var Model parentModel = parentComponent.getModel()
+			if parentModel == null
+				return
+			end
+			
+			// scale element
+			var Vector parentMinExtend = parentModel.getMinimumExtend()
+			var Vector parentMaxExtend = parentModel.getMaximumExtend()
+			var Vector parentSize = parentMaxExtend - parentMinExtend
+			var float refParentSize = (parentSize.getX() + parentSize.getY() + parentSize.getZ()) / 3
+			var Vector parentCenter = (parentMinExtend + parentMaxExtend) / 2
+			var Vector parentHalfSize = parentSize / 2
+			var float scaleValue = refParentSize * pScale
+			var Vector scale = Vector.new(scaleValue, scaleValue, scaleValue)
+			
+			// position and rotation
+			var Matrix offset = Matrix.newRT(pRotation, parentCenter + parentHalfSize.compMultiply(pPosition))
+			var DMatrix matrix = offset.toDMatrix() * parentComponent.getMatrix()
+			var DVector position = matrix.getPosition()
+			var Quaternion orientation = matrix.toQuaternion()
+			
+			// attach element. requires first positioning the element then attaching it
+			// statically using relative attachment. we could also use absolute attaching
+			// but using relative we do not need to deal with offsets of the component
+			var BehaviorElement element = getElement()
+			element.setGeometry(position, orientation, scale)
+			
+			var Collider collider = pECBehavior.getAttachable().instance(element).getCollider().getCollider()
+			parentCollider.attachStatic(collider)
+			
+			element.setParent(parent)
+		end
+	end
+	
+	
+	
+	protected var ECBehaviorAttachable pAttachable
+	protected var ECPVector pPosition
+	protected var ECPVector pRotation
+	protected var ECPFloat pScale
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorAttachable attachable) super(eclass)
+		if attachable == null
+			throw ENullPointer.new("attachable")
+		end
+		
+		var String prefix = "attachHandle."
+		pAttachable = attachable
+		
+		pPosition = ECPVector.new(prefix + "position", Vector.new())
+		eclass.addProperty(pPosition)
+		
+		pRotation = ECPVector.new(prefix + "rotation", Vector.new())
+		eclass.addProperty(pRotation)
+		
+		pScale = ECPFloat.new(prefix + "scale", 1, 0)
+		eclass.addProperty(pScale)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pAttachable = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Attachable behavior. */
+	public func ECBehaviorAttachable getAttachable()
+		return pAttachable
+	end
+	
+	/**
+	 * Position for each axis relative to parent element. Uses 0 for center, positive value
+	 * for positive axis and negative value for negative axis. Position vector is multiplied
+	 * by half-size of parent.
+	 */
+	public func ECPVector getPosition()
+		return pPosition
+	end
+	
+	/** Rotation relative to parent element. */
+	public func ECPVector getRotation()
+		return pRotation
+	end
+	
+	/** Resizes element relative to size of parent. */
+	public func ECPFloat getScale()
+		return pScale
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

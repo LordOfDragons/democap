@@ -42,6 +42,12 @@ pin Dragengine.Utils
  * Game Application.
  */
 class GameApp extends BaseGameApp
+	/** Collision filter bits. Extends BaseGameApp.CollisionFilterBit. */
+	class CollisionFilterBit extends BaseGameApp.CollisionFilterBit
+		/** Interaction. */
+		public static fixed var int interaction = custom
+	end
+	
 	/** Toggle Show VR camera listener. */
 	class ToggleShowVRCameraListener extends DefaultToggleModelListener
 		public func new()
@@ -241,14 +247,18 @@ class GameApp extends BaseGameApp
 		eclist.add(VRMenuClass.new())
 		eclist.add(MirrorLargeClass.new())
 		eclist.add(CharacterPreviewClass.new())
+		eclist.add(InteractHandleMoveClass.new())
 		
 		getLoaders().getElementClass().addXmlElementClasses(eclist, "/content/models", true)
 	end
 	
 	/** Add handle element classes. */
 	protected func void addECListHandles()
-		var ElementClassList eclist = getElementClassList()
-// 		pECListHandles.add(eclist.getNamed("HandleMoveX"))
+		getElementClassList().forEachCastable(block BehaviorElementClass each
+			if ECBInteractHandle.getBehaviorIn(each) != null
+				pECListHandles.add(each)
+			end
+		end)
 	end
 	
 	/** Add commands. */

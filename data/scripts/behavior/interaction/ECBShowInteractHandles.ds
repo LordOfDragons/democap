@@ -40,11 +40,45 @@ class ECBShowInteractHandles extends DefaultECBehavior
 			end
 			
 			public func void selected(ECBSelectable.Instance instance)
-				pInstance.show()
+				pInstance.updateVisibility()
 			end
 			
 			public func void deselected(ECBSelectable.Instance instance)
-				pInstance.hide()
+				pInstance.updateVisibility()
+			end
+		end
+		
+		/** Attach to record animation behavior. */
+		class AttachRecordAnimation extends ECBehaviorPlayerControllable.Tracker.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void activeActorChanged(ECBehaviorPlayerControllable.Tracker tracker)
+				if tracker.getActor() != null
+					pInstance.setRecordAnimation(ECBRecordAnimation.getInstanceIn(tracker.getActor().getElement()))
+					
+				else
+					pInstance.setRecordAnimation(null)
+				end
+			end
+		end
+		
+		class RecordingStateChanged extends ECBRecordAnimation.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void prepareRecording(ECBRecordAnimation.Instance instance)
+				pInstance.updateVisibility()
+			end
+			
+			public func void stopRecording(ECBRecordAnimation.Instance instance)
+				pInstance.updateVisibility()
 			end
 		end
 		
@@ -52,6 +86,9 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		
 		private var ECBShowInteractHandles pECBehavior
 		private var ECBSelectable.Instance pSelectable
+		private var ECBRecordAnimation.Instance pRecordAnimation
+		private var AttachRecordAnimation pAttachRecordAnimation
+		private var RecordingStateChanged pRecordingStateChanged
 		private var Array pHandleClasses
 		private var Array pHandleElements
 		private var bool pVisible
@@ -63,6 +100,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 			pECBehavior = ecbehavior
 			pHandleClasses = Array.new()
 			pHandleElements = Array.new()
+			pRecordingStateChanged = RecordingStateChanged.new(this)
 			
 			pSelectable = ecbehavior.getSelectable().instance(element)
 		end
@@ -71,6 +109,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		public func void dispose()
 			pHandleElements = null
 			pHandleClasses = null
+			pRecordingStateChanged = null
 			pSelectable = null
 			super.dispose()
 		end
@@ -148,8 +187,59 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		
 		
 		
-		/** Element is removed from game world. */
+		/** Record animation or null. */
+		public func ECBRecordAnimation.Instance getRecordAnimation()
+			return pRecordAnimation
+		end
+		
+		/** Set record animation or null. */
+		public func void setRecordAnimation(ECBRecordAnimation.Instance recordAnimation)
+			if recordAnimation == pRecordAnimation
+				return
+			end
+			
+			if pRecordAnimation != null
+				pRecordAnimation.removeListener(pRecordingStateChanged)
+			end
+			
+			pRecordAnimation = recordAnimation
+			
+			if recordAnimation != null
+				recordAnimation.addListener(pRecordingStateChanged)
+			end
+			
+			updateVisibility()
+		end
+		
+		
+		
+		/** Update visibility. */
+		public func void updateVisibility()
+			if pSelectable != null and pSelectable.isSelected()\
+			and (pRecordAnimation == null or pRecordAnimation.isNotRecording())
+				show()
+				
+			else
+				hide()
+			end
+		end
+		
+		
+		
+		/** Added to game world. */
+		public func void addToGameWorld()
+			pAttachRecordAnimation = AttachRecordAnimation.new(this)
+			GameApp.getGameApp().getPlayerControlledActor().addListener(pAttachRecordAnimation)
+			pAttachRecordAnimation.activeActorChanged(GameApp.getGameApp().getPlayerControlledActor())
+		end
+		
+		/** Remove from game world. */
 		public func void removeFromGameWorld()
+			setRecordAnimation(null)
+			GameApp.getGameApp().getPlayerControlledActor().removeListener(pAttachRecordAnimation)
+			pAttachRecordAnimation = null
+			
+			// just to make sure
 			hide()
 		end
 	end
@@ -172,6 +262,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		pSelectable = selectable
 		
 		pHandleClasses = ECPElementClassList.new(prefix + "handles", GameApp.getGameApp().getECListHandles())
+		eclass.addProperty(pHandleClasses)
 		
 		eclass.addBehavior(this)
 	end

@@ -116,14 +116,7 @@ class InteractMouseListener extends DefaultMouseListener
 	
 	/** Create mouse listener. */
 	public func new()
-		var LayerMask cfCategory = LayerMask.newWith(BaseGameApp.CollisionFilterBit.dynamic)
-		
-		var LayerMask cfFilter = LayerMask.new()
-		cfFilter.setBit(BaseGameApp.CollisionFilterBit.geometry)
-		cfFilter.setBit(BaseGameApp.CollisionFilterBit.dynamic)
-		cfFilter.setBit(BaseGameApp.CollisionFilterBit.actor)
-		
-		pCollisionFilter = CollisionFilter.new(cfCategory, cfFilter)
+		pCollisionFilter = CollisionFilter.new(LayerMask.newWith(GameApp.CollisionFilterBit.interaction))
 		pRayDistance = 100
 	end
 	
@@ -159,13 +152,9 @@ class InteractMouseListener extends DefaultMouseListener
 		end
 		
 		// ray cast to find all hit elements sorted by distance
-		var Widget widget = event.getSource() cast Widget
-		var Point position = widget.getDesktopPosition() + event.getPosition()
-		var Point size = window.getSize()
-		
 		var Camera camera = director.getCamera()
 		var DVector rayOrigin = camera.getPosition()
-		var Vector rayDirection = camera.backProject(size, position) * pRayDistance
+		var Vector rayDirection = window.backProject(event) * pRayDistance
 		
 		var Array hits = Array.new()
 		var CollectHits listener = CollectHits.new(hits, rayOrigin, rayDirection)
@@ -173,48 +162,66 @@ class InteractMouseListener extends DefaultMouseListener
 		window.getGameWorld().getWorld().rayHits(rayOrigin, rayDirection, listener, pCollisionFilter)
 		hits.sort()
 		
-		// find the closest hit object supporting handle or selectable interaction
-		var ObjectReference refHandle = ObjectReference.new()
-		var ObjectReference refSelectable = ObjectReference.new()
-		
-		hits.find(block HitResult each
+		// find the closest hit object supporting handle or selectable interaction and use it
+		if hits.find(block HitResult each
 			var BehaviorElement element = each.getElement()
 			
-			var ECBInteractHandle.Instance handle = ECBInteractHandle.getInstanceIn(element)
-			if handle != null
-				refHandle.set(handle)
+			pHandle = ECBInteractHandle.getInstanceIn(element)
+			if pHandle != null
+				pHandle.startInteract(Matrix.newFromQuaternion(camera.getOrientation()),\
+					rayOrigin, rayDirection, each.getHitPoint())
 				return true
 			end
 			
 			var ECBSelectable.Instance selectable = ECBSelectable.getInstanceIn(element)
 			if selectable != null
-				refSelectable.set(selectable)
+				app.getSelectionTracker().setElement(selectable)
 				return true
 			end
 			
 			return false
-		end)
-		
-		// if object supports ECBInteractHandle interact with the handle
-		if refHandle.get() != null
-			pHandle = refHandle.get() cast ECBInteractHandle.Instance
-			pHandle.startInteract()
-			
-		// if object supports ECBSelectable select object
-		elif refSelectable.get() != null
-			app.getSelectionTracker().setElement(refSelectable.get() cast ECBSelectable.Instance)
-			
-		// nothing hit. clear selection
-		else
+		end) == null
+			// nothing hit. clear selection
 			app.getSelectionTracker().setElement(null)
 		end
 	end
 	
-	/** Mouse button released. */
-	public func void onButtonRelease(MouseEvent event)
-		if pHandle != null
+	/** Mouse moved. */
+	public func void onMouseMove(MouseEvent event)
+		if pHandle == null
+			return
+		end
+		
+		var GameApp app = GameApp.getGameApp()
+		if app.getModelShowVRCamera().getToggled()
+			pHandle.stopInteract()
+			pHandle = null
+			return
+		end
+		
+		var WindowGameWorld window = app.getWindowGameWorld()
+		var CameraDirector director = window.getCameraDirector()
+		if director == null
 			pHandle.stopInteract()
 			pHandle = null
 		end
+		
+		var Camera camera = director.getCamera()
+		pHandle.updateInteract(Matrix.newFromQuaternion(camera.getOrientation()),\
+			camera.getPosition(), window.backProject(event) * pRayDistance)
+	end
+	
+	/** Mouse button released. */
+	public func void onButtonRelease(MouseEvent event)
+		if event.getButton() != InputEventMouseButton.left
+			return
+		end
+		
+		if pHandle == null
+			return
+		end
+		
+		pHandle.stopInteract()
+		pHandle = null
 	end
 end

@@ -30,31 +30,25 @@ pin Dragengine.Scenery
 
 
 /**
- * Base class for interaction handles.
+ * Handle move element class.
  */
-class InteractHandleClass extends BehaviorElementClass
-	public var ECBehaviorComponent component
-	public var ECBehaviorCollider collider
-	public var ECBehaviorAttachable attachable
-	public var ECBAttachHandle attachHandle
-	public var ECBehaviorVRHandPointedAt vrHandPointedAt
+class InteractHandleMoveClass extends InteractHandleClass
+	protected var ECBInteractMove interactMove
 	
 	
 	
 	/** Create element class. */
+	public func new() this("InteractHandleMove")
+	end
+	
 	public func new(String name) super(name)
-		component = ECBehaviorComponent.new(this, null)
-		
-		collider = ECBehaviorCollider.new(this, component)
-		collider.getCollider().getPhysicsType().setEnumeration(CollisionResponse.kinematic)
-		collider.getCollider().getLocalGravity().setVector(Vector.new())
-		
-		collider.getCollider().setCollisionFilter(CollisionFilter.new(\
-			LayerMask.newWith(GameApp.CollisionFilterBit.interaction)))
-		
-		attachable = ECBehaviorAttachable.new(this, collider)
-		attachHandle = ECBAttachHandle.new(this, attachable)
-		
-		vrHandPointedAt = ECBehaviorVRHandPointedAt.new(this)
+		interactMove = ECBInteractMove.new(this)
+	end
+	
+	
+	
+	/** Create copy of element class with new name. Required for XML subclassing. */
+	public func ElementClass duplicateNamed(String classname)
+		return InteractHandleMoveClass.new(classname)
 	end
 end
