@@ -262,6 +262,11 @@ class WMPanelSession extends CollapsibleGroup
 		end
 	end
 	
+	/** Browse captured animations in overlay directory. */
+	public func void browseCapturedAnimations()
+		FileSystem.browseCapture(GameApp.getGameApp().getPathCaptureAnimations())
+	end
+	
 	
 	
 	/** Create panel content. */
@@ -293,19 +298,29 @@ class WMPanelSession extends CollapsibleGroup
 				+ "Showing VR Camera is faster. Use Free Camera to set up scene.")
 			p.addWidget(checkBox)
 			
-			p.addWidget(Button.new("Mirror", BlockActionListener.new(block ActionEvent event
+			button = Button.new("Mirror", BlockActionListener.new(block ActionEvent event
 				toggleLargeMirror()
-			end)))
+			end))
+			button.setToolTip("Show/hide large VR mirror")
+			p.addWidget(button)
 			
-			p.addWidget(Widget.new()) // placeholder
+			button = Button.new("Captured", BlockActionListener.new(block ActionEvent event
+				browseCapturedAnimations()
+			end))
+			button.setToolTip("Browse motion captured animations")
+			p.addWidget(button)
 			
-			p.addWidget(Button.new("Record", BlockActionListener.new(block ActionEvent event
+			button = Button.new("Record", BlockActionListener.new(block ActionEvent event
 				startRecording()
-			end)))
+			end))
+			button.setToolTip("Start motion capturing")
+			p.addWidget(button)
 			
-			p.addWidget(Button.new("Stop", BlockActionListener.new(block ActionEvent event
+			button = Button.new("Stop", BlockActionListener.new(block ActionEvent event
 				stopRecording()
-			end)))
+			end))
+			button.setToolTip("Stop motion capturing writing animation to overlay directory")
+			p.addWidget(button)
 		end), BorderLayout.Area.bottom)
 	end
 end
