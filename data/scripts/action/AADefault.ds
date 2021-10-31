@@ -57,6 +57,8 @@ class AADefault extends AABase
 	
 	
 	protected var ECBAControlDesktop.Instance controlDesktop
+	protected var ECBAInteractHandle.Instance interactHandle
+	protected var ECBASelectable.Instance selectable
 	protected var ECBVRHudInfo.Instance vrHudInfo
 	
 	
@@ -72,6 +74,8 @@ class AADefault extends AABase
 		super.initBehaviors()
 		
 		controlDesktop = ECBAControlDesktop.getInstanceIn(actor)
+		interactHandle = ECBAInteractHandle.getInstanceIn(actor)
+		selectable = ECBASelectable.getInstanceIn(actor)
 		vrHudInfo = ECBVRHudInfo.getInstanceIn(actor)
 	end
 	
@@ -159,11 +163,17 @@ class AADefault extends AABase
 			if controlDesktop != null and controlDesktop.getPointAt() == vrRightHandPointAt
 				controlDesktop.cancel()
 			end
+			if interactHandle != null and interactHandle.getPointAt() == vrRightHandPointAt
+				interactHandle.cancel()
+			end
 			vrRightHandPointAt.setEnabled(false)
 			
 		else
 			if controlDesktop != null and controlDesktop.getPointAt() == vrLeftHandPointAt
 				controlDesktop.cancel()
+			end
+			if interactHandle != null and interactHandle.getPointAt() == vrLeftHandPointAt
+				interactHandle.cancel()
 			end
 			vrLeftHandPointAt.setEnabled(false)
 		end
@@ -176,6 +186,9 @@ class AADefault extends AABase
 		if controlDesktop != null and controlDesktop.pointAt(behavior)
 			return
 		end
+		if interactHandle != null and interactHandle.pointAt(behavior)
+			return
+		end
 	end
 	
 	/** Pull trigger on pointed at element. */
@@ -183,11 +196,20 @@ class AADefault extends AABase
 		if controlDesktop != null and controlDesktop.pointAtPull(behavior)
 			return
 		end
+		if interactHandle != null and interactHandle.pointAtPull(behavior)
+			return
+		end
+		if selectable != null and selectable.pointAtPull(behavior)
+			return
+		end
 	end
 	
 	/** Release trigger on pointed at element. */
 	public func void pointAtRelease(ECBehaviorVRHandPointAt.Instance behavior)
 		if controlDesktop != null and controlDesktop.pointAtRelease(behavior)
+			return
+		end
+		if interactHandle != null and interactHandle.pointAtRelease(behavior)
 			return
 		end
 	end

@@ -41,6 +41,7 @@ class ECBAttachHandle extends DefaultECBehavior
 	class Instance extends DefaultECBehaviorInstance
 		private var ECBAttachHandle pECBehavior
 		private var Vector pPosition
+		private var Vector pOffset
 		private var Vector pRotation
 		private var float pScale
 		
@@ -56,6 +57,7 @@ class ECBAttachHandle extends DefaultECBehavior
 			var CodecPropertyString codec = getElement().getClass().getCodecPropertyString()
 			
 			pPosition = pECBehavior.getPosition().getVector(stub, codec)
+			pOffset = pECBehavior.getOffset().getVector(stub, codec)
 			pRotation = pECBehavior.getRotation().getVector(stub, codec)
 			pScale = pECBehavior.getScale().getValue(stub)
 		end
@@ -69,6 +71,13 @@ class ECBAttachHandle extends DefaultECBehavior
 		 */
 		public func Vector getPosition()
 			return pPosition
+		end
+		
+		/**
+		 * Offset relative to position affected by scaling but not parent element size.
+		 */
+		public func Vector getOffset()
+			return pOffset
 		end
 		
 		/** Rotation relative to parent element. */
@@ -112,7 +121,8 @@ class ECBAttachHandle extends DefaultECBehavior
 			var Vector scale = Vector.new(scaleValue, scaleValue, scaleValue)
 			
 			// position and rotation
-			var Matrix offset = Matrix.newRT(pRotation, parentCenter + parentHalfSize.compMultiply(pPosition))
+			var Matrix offset = Matrix.newRT(pRotation, parentCenter \
+				+ parentHalfSize.compMultiply(pPosition) + pOffset * scaleValue)
 			var DMatrix matrix = offset.toDMatrix() * parentComponent.getMatrix()
 			var DVector position = matrix.getPosition()
 			var Quaternion orientation = matrix.toQuaternion()
@@ -134,6 +144,7 @@ class ECBAttachHandle extends DefaultECBehavior
 	
 	protected var ECBehaviorAttachable pAttachable
 	protected var ECPVector pPosition
+	protected var ECPVector pOffset
 	protected var ECPVector pRotation
 	protected var ECPFloat pScale
 	
@@ -150,6 +161,9 @@ class ECBAttachHandle extends DefaultECBehavior
 		
 		pPosition = ECPVector.new(prefix + "position", Vector.new())
 		eclass.addProperty(pPosition)
+		
+		pOffset = ECPVector.new(prefix + "offset", Vector.new())
+		eclass.addProperty(pOffset)
 		
 		pRotation = ECPVector.new(prefix + "rotation", Vector.new())
 		eclass.addProperty(pRotation)
@@ -180,6 +194,13 @@ class ECBAttachHandle extends DefaultECBehavior
 	 */
 	public func ECPVector getPosition()
 		return pPosition
+	end
+	
+	/**
+	 * Offset relative to position affected by scaling but not parent element size.
+	 */
+	public func ECPVector getOffset()
+		return pOffset
 	end
 	
 	/** Rotation relative to parent element. */

@@ -27,97 +27,94 @@ pin Dragengine.Utils
 
 
 /**
- * Behavior adding support to rotate object using handle.
+ * Behavior adding support to move object relative to HMD using handle. Requires object to
+ * support ECBToggleVisibility.
  */
-class ECBInteractRotate extends ECBInteractHandle
+class ECBInteractMoveHMD extends ECBInteractHandle
 	/** Behavior instance. */
 	class Instance extends ECBInteractHandle.Instance
-		protected var ECBInteractRotate pECBehavior
-		protected var Vector pAxis
-		protected var Quaternion pInteractOrientation
-		protected var DVector pInteractOrigin
-		protected var Vector pInteractAxis
+		protected var ECBInteractMoveHMD pECBehavior
+		protected var ECBToggleVisibility.Instance pToggleVisibility
+		protected var DMatrix pInteractMatrix
 		protected var DVector pPlanePosition
-		protected var Vector pPlaneNormal
+		protected var DVector pPlaneOffset
 		protected var Vector pPlaneX
 		protected var Vector pPlaneY
 		
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBInteractRotate ecbehavior, BehaviorElement element) super(element)
+		public func new(ECBInteractMoveHMD ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 		end
 		
-		/** Init behavior instance. */
-		public func void init(StubElement stub)
-			var CodecPropertyString codec = getElement().getClass().getCodecPropertyString()
-			pAxis = pECBehavior.getAxis().getVector(stub, codec)
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pToggleVisibility = null
+			super.dispose()
 		end
 		
 		
 		
 		/** Behavior. */
-		public func ECBInteractRotate getECBehavior()
+		public func ECBInteractMoveHMD getECBehavior()
 			return pECBehavior
-		end
-		
-		/** Rotatement axis. */
-		public func Vector getAxis()
-			return pAxis
 		end
 		
 		
 		
 		/** Start interacting. */
 		public func void startInteract(Matrix viewMatrix, DVector rayOrigin, Vector rayDirection, DVector hitPoint)
-			var Element element = getElement().getParent()
+			var BehaviorElement element = getElement().getParent() cast BehaviorElement
 			if element == null
 				return
 			end
 			
-			pInteractOrientation = element.getOrientation()
-			pInteractOrigin = hitPoint
-			pInteractAxis = Matrix.newFromQuaternion(pInteractOrientation).transformNormal(pAxis)
+			pToggleVisibility = ECBToggleVisibility.getInstanceIn(element)
+			if pToggleVisibility == null or not pToggleVisibility.getVisible()
+				return
+			end
 			
-			var DVector position = element.getPosition()
-			pPlanePosition = position + DVector.new(pInteractAxis)\
-				* ((pInteractOrigin - position) * DVector.new(pInteractAxis))
-			pPlaneNormal = pInteractAxis
+			var ECBehaviorPlayerControllable.Instance player = \
+				GameApp.getGameApp().getPlayerControlledActor().getActor()
+			if player == null
+				return
+			end
 			
-			// the direction towards the interaction point is used as X axis. the Y axis is
-			// then the X axis crossed with the plane normal. this allows to use the plane
-			// normal as rotation axis and DEMath.atan2() to calculate the rotation angle
+			var BaseVRActor actor = player.getElement() cast BaseVRActor
+			var DVector actorPosition = actor.getPosition()
 			
-			// ensure the interaction point is on the plane. this prevents the rotation
-			// jumping after the first mouse move due to the hit point being slightly
-			// outside the plane
-			var float denom = rayDirection * pPlaneNormal
+			pInteractMatrix = element.getElementMatrix()
+			
+			pPlanePosition = actorPosition.combine(hitPoint, true, false, true)
+			pPlaneOffset = pPlanePosition - actorPosition
+			
+			var float denom = rayDirection.getY()
 			if denom != 0
-				var float lambda = ((pPlanePosition - rayOrigin).toVector() * pPlaneNormal) / denom
+				var float lambda = (pPlanePosition - rayOrigin).getY() / denom
 				var DVector hp = rayOrigin + DVector.new(rayDirection) * lambda
 				pPlaneX = (hp - pPlanePosition).toVector().normalize()
 				
 			else
-				pPlaneX = (pInteractOrigin - pPlanePosition).toVector().normalize()
+				pPlaneX = (hitPoint - pPlanePosition).toVector().normalize()
 			end
 			
-			pPlaneY = (pPlaneNormal % pPlaneX).normalize()
+			pPlaneY = (Vector.new(0, 1, 0) % pPlaneX).normalize()
 		end
 		
 		/** Update interacting. */
 		public func void updateInteract(Matrix viewMatrix, DVector rayOrigin, Vector rayDirection)
-			if pInteractOrigin == null
+			if pInteractMatrix == null
 				return
 			end
 			
 			// calculate intersecton of view ray with interaction plane
-			var float denom = rayDirection * pPlaneNormal
+			var float denom = rayDirection.getY()
 			if denom == 0
 				return
 			end
 			
-			var float lambda = ((pPlanePosition - rayOrigin).toVector() * pPlaneNormal) / denom
+			var float lambda = (pPlanePosition - rayOrigin).getY() / denom
 			var DVector hp = rayOrigin + DVector.new(rayDirection) * lambda
 			
 			// apply interaction
@@ -138,40 +135,25 @@ class ECBInteractRotate extends ECBInteractHandle
 			
 			angle = DEMath.normalize(angle, -180.0, 180.0)
 			
-			getElement().getParent().setOrientation(pInteractOrientation * Quaternion.newFromAxis(pPlaneNormal, angle))
+			var DMatrix matrix = pInteractMatrix * DMatrix.newTranslation(-pPlanePosition)\
+				* DMatrix.newRotationY(-angle) * DMatrix.newTranslation(pPlanePosition)
+			
+			getElement().getParent().setGeometry(matrix.getPosition(), matrix.toQuaternion())
 		end
 		
 		/** Stop interacting. */
 		public func void stopInteract()
-			pInteractOrientation = null
-			pInteractOrigin = null
-			pInteractAxis = null
+			pInteractMatrix = null
 			pPlanePosition = null
-			pPlaneNormal = null
+			pToggleVisibility = null
 		end
 	end
-	
-	
-	
-	private var ECPVector pAxis
 	
 	
 	
 	/** Create behavior and add it to element class. */
 	public func new(BehaviorElementClass eclass) super(eclass)
-		var String prefix = "interactRotate."
-		
-		pAxis = ECPVector.new(prefix + "axis", Vector.new(1, 0, 0))
-		eclass.addProperty(pAxis)
-		
 		eclass.addBehavior(this)
-	end
-	
-	
-	
-	/** Rotatement axis. */
-	public func ECPVector getAxis()
-		return pAxis
 	end
 	
 	

@@ -198,7 +198,19 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 				if v.getLength() < 0.001
 					return
 				end
-				var float angle = DEMath.normalize(DEMath.atan2(pPlaneY * v, pPlaneX * v), -180.0, 180.0)
+				
+				var float angle = DEMath.atan2(pPlaneY * v, pPlaneX * v)
+				
+				if lambda < 0
+					// lambda is negative if the ray points away from the plane. in this case the
+					// hit point is at the opposite direction causing angle to be 180 degrees off.
+					// it does not matter in what direction the 180 degrees are corrected since
+					// the angle is normalized anyway
+					angle -= 180
+				end
+				
+				angle = DEMath.normalize(angle, -180.0, 180.0)
+				
 				var Matrix matrix = pCSMatrix * Matrix.newRotationAxis(pPlaneNormal, angle) * pInvCSParentMatrix
 				pEditor.getEditRotation().setVector(matrix.getEulerAngles())
 			end

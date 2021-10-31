@@ -102,16 +102,36 @@ class ECBToggleVisibility extends DefaultECBehavior
 		/** Reposition element relative to VR camera. */
 		public func void repositionHmd(BaseVRActor actor, Vector position)
 			var Camera camera = GameApp.getGameApp().getVRCamera()
+			var DMatrix matrix = DMatrix.newTranslation(DVector.new(position))
+			var Quaternion corient = camera.getOrientation()
+			var DVector cpos = camera.getPosition()
 			
 			if pPivot != null
-				reposition(DMatrix.newTranslation(DVector.new(position))\
-					* DMatrix.newWorld(actor.getPosition() + DVector.new(pPivot),\
-						camera.getOrientation()))
+				matrix = matrix * DMatrix.newWorld(actor.getPosition() + DVector.new(pPivot), corient)
 				
 			else
-				reposition(DMatrix.newTranslation(DVector.new(position))\
-					* DMatrix.newWorld(camera.getPosition(), camera.getOrientation()))
+				matrix = matrix * DMatrix.newWorld(cpos, corient)
 			end
+			
+			// make object face HMD. keep in mind reposition() expects the matrix to point
+			// away from the camera so "mpos - cpos" is used not "cpos - mpos".
+			var DVector mpos = matrix.getPosition()
+			
+			matrix = DMatrix.newWorld(mpos, (mpos - cpos).normalize(),\
+				DMatrix.newFromQuaternion(corient).getUpVector())
+			
+			if pLockUpAxis != null
+				var DVector lockUp = DVector.new(pLockUpAxis)
+				var DVector view = matrix.getViewVector()
+				
+				if DEMath.fabs(view * lockUp) > 0.707 // 45 degrees
+					view = matrix.getRightVector() % lockUp
+				end
+				
+				matrix = DMatrix.newWorld(mpos, view, lockUp)
+			end
+			
+			reposition(matrix)
 		end
 		
 		/** Reposition element along point-at direction. */
