@@ -257,6 +257,20 @@ class WindowCharacterConfiguration extends WindowDialog
 			button.setEnabled(pWindow.getTrackerSlot() != null)
 			popup.addWidget(button)
 			
+			button = Button.new("Move Transfer Up", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pWindow.moveMotionTransferUp()
+			end))
+			button.setEnabled(pWindow.getMotionTransfer() != null)
+			popup.addWidget(button)
+			
+			button = Button.new("Move Transfer Down", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pWindow.moveMotionTransferDown()
+			end))
+			button.setEnabled(pWindow.getMotionTransfer() != null)
+			popup.addWidget(button)
+			
 			pWindow.getDesktop().addWindow(popup)
 			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
 		end
@@ -945,6 +959,7 @@ class WindowCharacterConfiguration extends WindowDialog
 	public func void removeMotionTransfer()
 		var MotionTransfer motionTransfer = getMotionTransfer()
 		if motionTransfer == null
+			return
 		end
 		
 		WindowDialog.question(this, "Remove Motion Transfer",\
@@ -973,6 +988,42 @@ class WindowCharacterConfiguration extends WindowDialog
 					pModelMotionTransfers.removeAll()
 				end
 			end))
+	end
+	
+	/** Move motion transfer up. */
+	public func void moveMotionTransferUp()
+		var MotionTransfer motionTransfer = getMotionTransfer()
+		if motionTransfer == null
+			return
+		end
+		
+		var Array content = pModelMotionTransfers.getContent()
+		var int index = content.indexOf(motionTransfer)
+		if index < 1
+			return
+		end
+		
+		content.move(index, index - 1)
+		pModelMotionTransfers.setAll(content)
+		pModelMotionTransfers.setSelected(index - 1)
+	end
+	
+	/** Move motion transfer down. */
+	public func void moveMotionTransferDown()
+		var MotionTransfer motionTransfer = getMotionTransfer()
+		if motionTransfer == null
+			return
+		end
+		
+		var Array content = pModelMotionTransfers.getContent()
+		var int index = content.indexOf(motionTransfer)
+		if index < 0 or index > content.getCount() - 2
+			return
+		end
+		
+		content.move(index, index + 1)
+		pModelMotionTransfers.setAll(content)
+		pModelMotionTransfers.setSelected(index + 1)
 	end
 	
 	/** Motion transfer name changed. */
