@@ -79,36 +79,38 @@ class ECBAInteractHandle extends DefaultECBehavior
 			var BehaviorElement element = behavior.getPointAtBehaviorElement()
 			
 			if pInteractHandle != null
-				if behavior == pPointAt
-					if pTriggerPulled
-						updateInteraction()
-						return true
-						
-					elif element != null
-						return true
-						
-					else
-						pInteractHandle = null
-						pPointAt = null
-						return false
-					end
-					
-				else
+				if behavior != pPointAt
 					return false
 				end
-			end
-			
-			if element != null
-				pInteractHandle = ECBInteractHandle.getInstanceIn(element)
-			end
-			
-			if pInteractHandle != null
-				pPointAt = behavior
-				return true
+				
+				if pTriggerPulled
+					if pInteractHandle != null and pPointAt != null
+						pInteractHandle.updateInteract(pPointAt)
+					end
+					return true
+					
+				elif element != null and not element.isDisposed()
+					return true
+					
+				else
+					pInteractHandle = null
+					pPointAt = null
+					return false
+				end
 				
 			else
-				pPointAt = null
-				return false
+				if element != null and not element.isDisposed()
+					pInteractHandle = ECBInteractHandle.getInstanceIn(element)
+				end
+				
+				if pInteractHandle != null
+					pPointAt = behavior
+					return true
+					
+				else
+					pPointAt = null
+					return false
+				end
 			end
 		end
 		
@@ -118,7 +120,7 @@ class ECBAInteractHandle extends DefaultECBehavior
 				return false
 			end
 			
-			startInteraction()
+			pInteractHandle.startInteract(pPointAt)
 			
 			pTriggerPulled = true
 			return true
@@ -141,35 +143,6 @@ class ECBAInteractHandle extends DefaultECBehavior
 		/** Cancel triggering pointAtRelease if point at is present. */
 		public func void cancel()
 			pointAtRelease(pPointAt)
-		end
-		
-		
-		
-		/** Start interaction. */
-		protected func void startInteraction()
-			var DVector rayOrigin = pPointAt.getPointAtOrigin()
-			var Vector rayDirection = pPointAt.getPointAtDirection().toVector().normalize()
-			var DVector hitPoint = pPointAt.getPointAtHitPoint()
-			var Matrix viewMatrix = pPointAt.calcTestMatrix().getRotation().toMatrix()
-			
-			pInteractHandle.startInteract(viewMatrix, rayOrigin, rayDirection, hitPoint)
-		end
-		
-		/** Update interaction. */
-		protected func void updateInteraction()
-			if pInteractHandle == null or pPointAt == null
-				return
-			end
-			
-			var DVector rayOrigin = pPointAt.getPointAtOrigin()
-			var Vector rayDirection = pPointAt.getPointAtDirection().toVector().normalize()
-			var Matrix viewMatrix = pPointAt.calcTestMatrix().getRotation().toMatrix()
-			
-			if rayOrigin == null or rayDirection == null or viewMatrix == null
-				return
-			end
-			
-			pInteractHandle.updateInteract(viewMatrix, rayOrigin, rayDirection)
 		end
 	end
 	

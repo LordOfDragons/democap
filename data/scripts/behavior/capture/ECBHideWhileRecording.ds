@@ -105,7 +105,9 @@ class ECBHideWhileRecording extends DefaultECBehavior
 			if pRecordAnimation != null
 				show()
 				
-				pRecordAnimation.removeListener(pRecordingStateChanged)
+				if pRecordAnimation.getElement() != null // not disposed
+					pRecordAnimation.removeListener(pRecordingStateChanged)
+				end
 			end
 			
 			pRecordAnimation = recordAnimation
@@ -127,8 +129,11 @@ class ECBHideWhileRecording extends DefaultECBehavior
 				return
 			end
 			
-			pRestoreVisibility = Boolean.new(getElement().getVisible())
-			getElement().setVisible(false)
+			var BehaviorElement element = getElement()
+			
+			pRestoreVisibility = Boolean.new(element.getVisible())
+			element.setVisible(false)
+			element.setTouchable(false)
 		end
 		
 		/** Show element. */
@@ -137,8 +142,12 @@ class ECBHideWhileRecording extends DefaultECBehavior
 				return
 			end
 			
-			getElement().setVisible(pRestoreVisibility.value())
+			var bool visible = pRestoreVisibility.value()
 			pRestoreVisibility = null
+			
+			var BehaviorElement element = getElement()
+			element.setVisible(visible)
+			element.setTouchable(visible)
 		end
 		
 		

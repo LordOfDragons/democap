@@ -40,6 +40,7 @@ class ECBInteractMoveHMD extends ECBInteractHandle
 		protected var DVector pPlaneOffset
 		protected var Vector pPlaneX
 		protected var Vector pPlaneY
+		protected var float pSphereRadius
 		
 		
 		
@@ -102,6 +103,45 @@ class ECBInteractMoveHMD extends ECBInteractHandle
 			pPlaneY = (Vector.new(0, 1, 0) % pPlaneX).normalize()
 		end
 		
+		/** Start interacting. */
+		public func void startInteract(ECBehaviorVRHandPointAt.Instance pointAt)
+			var BehaviorElement element = getElement().getParent() cast BehaviorElement
+			if element == null
+				return
+			end
+			
+			pToggleVisibility = ECBToggleVisibility.getInstanceIn(element)
+			if pToggleVisibility == null or not pToggleVisibility.getVisible()
+				return
+			end
+			
+			var ECBehaviorPlayerControllable.Instance player = \
+				GameApp.getGameApp().getPlayerControlledActor().getActor()
+			if player == null
+				return
+			end
+			
+			var BaseVRActor actor = player.getElement() cast BaseVRActor
+			var DVector actorPosition = actor.getPosition()
+			
+			pInteractMatrix = element.getElementMatrix()
+			
+			var DVector hitPoint = pointAt.getPointAtHitPoint()
+			var DVector rayOrigin = pointAt.getPointAtOrigin()
+			var Vector rayDirection = pointAt.getPointAtDirection().toVector().normalize()
+			
+			pPlanePosition = actorPosition.combine(hitPoint, true, false, true)
+			pPlaneOffset = pPlanePosition - actorPosition
+			
+			pSphereRadius = (hitPoint - pPlanePosition).getLength() + 2
+			
+			var DVector hpsphere = raySphere(rayOrigin, rayDirection)
+			var DVector hp = hpsphere.combine(pPlanePosition, true, false, true)
+			
+			pPlaneX = (hp - pPlanePosition).toVector().normalize()
+			pPlaneY = (Vector.new(0, 1, 0) % pPlaneX).normalize()
+		end
+		
 		/** Update interacting. */
 		public func void updateInteract(Matrix viewMatrix, DVector rayOrigin, Vector rayDirection)
 			if pInteractMatrix == null
@@ -141,11 +181,59 @@ class ECBInteractMoveHMD extends ECBInteractHandle
 			getElement().getParent().setGeometry(matrix.getPosition(), matrix.toQuaternion())
 		end
 		
+		/** Update interacting. */
+		public func void updateInteract(ECBehaviorVRHandPointAt.Instance pointAt)
+			if pInteractMatrix == null
+				return
+			end
+			
+			// calculate intersecton of view ray with interaction plane
+			var DMatrix matrix = pointAt.calcTestMatrix()
+			
+			var DVector rayOrigin = matrix.getPosition()
+			var Vector rayDirection = matrix.getViewVector().toVector()
+			var Matrix viewMatrix = matrix.getRotation().toMatrix()
+			
+			var DVector hpsphere = raySphere(rayOrigin, rayDirection)
+			var DVector hp = hpsphere.combine(pPlanePosition, true, false, true)
+			
+			// apply interaction
+			var Vector v = (hp - pPlanePosition).toVector()
+			if v.getLength() < 0.001
+				return
+			end
+			
+			var float angle = DEMath.normalize(DEMath.atan2(pPlaneY * v, pPlaneX * v), -180.0, 180.0)
+			
+			matrix = pInteractMatrix * DMatrix.newTranslation(-pPlanePosition)\
+				* DMatrix.newRotationY(-angle) * DMatrix.newTranslation(pPlanePosition)
+			
+			getElement().getParent().setGeometry(matrix.getPosition(), matrix.toQuaternion())
+		end
+		
 		/** Stop interacting. */
 		public func void stopInteract()
 			pInteractMatrix = null
 			pPlanePosition = null
 			pToggleVisibility = null
+		end
+		
+		/** Ray-sphere intersection. */
+		protected func DVector raySphere(DVector rayOrigin, Vector rayDirection)
+			var float a = rayDirection.getLengthSquared()
+			var float b = rayDirection * ( rayOrigin - pPlanePosition ).toVector()
+			var float c = rayOrigin.getLengthSquared() + pPlanePosition.getLengthSquared()\
+				- ( rayOrigin * pPlanePosition ) * 2 - pSphereRadius * pSphereRadius
+			var float disc = b * b - a * c
+			if disc < 0
+				return null
+			end
+			disc = DEMath.sqrt( disc )
+			var float lambda = -b - disc
+			if lambda < 0
+				lambda = -b + disc
+			end
+			return rayOrigin + DVector.new(rayDirection) * (lambda / a)
 		end
 	end
 	

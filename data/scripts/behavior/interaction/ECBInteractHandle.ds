@@ -39,8 +39,33 @@ class ECBInteractHandle extends DefaultECBehavior
 		public func void startInteract(Matrix viewMatrix, DVector rayOrigin, Vector rayDirection, DVector hitPoint)
 		end
 		
+		/** Start interacting. */
+		public func void startInteract(ECBehaviorVRHandPointAt.Instance pointAt)
+			var DVector hitPoint = pointAt.getPointAtHitPoint()
+			if hitPoint == null
+				return
+			end
+			
+			var DVector rayOrigin = pointAt.getPointAtOrigin()
+			var Vector rayDirection = pointAt.getPointAtDirection().toVector().normalize()
+			var Matrix viewMatrix = pointAt.calcTestMatrix().getRotation().toMatrix()
+			
+			startInteract(viewMatrix, rayOrigin, rayDirection, hitPoint)
+		end
+		
 		/** Update interacting. */
 		public func void updateInteract(Matrix viewMatrix, DVector rayOrigin, Vector rayDirection)
+		end
+		
+		/** Update interacting. */
+		public func void updateInteract(ECBehaviorVRHandPointAt.Instance pointAt)
+			var DMatrix matrix = pointAt.calcTestMatrix()
+			
+			var DVector rayOrigin = matrix.getPosition()
+			var Vector rayDirection = matrix.getViewVector().toVector()
+			var Matrix viewMatrix = matrix.getRotation().toMatrix()
+			
+			updateInteract(viewMatrix, rayOrigin, rayDirection)
 		end
 		
 		/** Stop interacting. */

@@ -97,14 +97,10 @@ class AADefault extends AABase
 	/** Trigger released. */
 	public func void triggerRelease(bool rightHand)
 		if rightHand
-			if vrRightHandPointAt.hasVRHandPointAtElement()
-				pointAtRelease(vrRightHandPointAt)
-			end
+			pointAtRelease(vrRightHandPointAt)
 			
 		else
-			if vrLeftHandPointAt.hasVRHandPointAtElement()
-				pointAtRelease(vrLeftHandPointAt)
-			end
+			pointAtRelease(vrLeftHandPointAt)
 		end
 	end
 	
@@ -183,6 +179,17 @@ class AADefault extends AABase
 	
 	/** Pointing at element. */
 	public func void pointAt(ECBehaviorVRHandPointAt.Instance behavior)
+		// pulled trigger locks action to be used
+		if controlDesktop != null and controlDesktop.getTriggerPulled()
+			controlDesktop.pointAt(behavior)
+			return
+		end
+		if interactHandle != null and interactHandle.getTriggerPulled()
+			interactHandle.pointAt(behavior)
+			return
+		end
+		
+		// try all actions
 		if controlDesktop != null and controlDesktop.pointAt(behavior)
 			return
 		end
