@@ -1,0 +1,292 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior displaying level in character preview.
+ */
+class ECBPreviewLevel extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBPreviewLevel pECBehavior
+		private var ECBPreviewDataQuery.Instance pDataQuery
+		private var ECBehaviorComponent.Instance pComponent
+		private var Model pModel
+		private var DebugDrawer pDebugDrawer
+		private var ColliderVolume pCollider
+		private var float pLevel
+		private var bool pVisible
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBPreviewLevel ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pLevel = 0
+			pVisible = false
+			
+			pDataQuery = ecbehavior.getDataQuery().instance(element)
+			pComponent = ecbehavior.getComponent().instance(element)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pComponent = null
+			super.dispose()
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			var ElementClass eclass = getElement().getClass()
+			
+			pModel = pECBehavior.getModel().getModel(stub, eclass)
+			
+			pDebugDrawer = DebugDrawer.new()
+			pDebugDrawer.setPosition(stub.getPosition())
+			pDebugDrawer.setOrientation(Quaternion.newFromEuler(stub.getRotation()))
+			
+			createLevel()
+		end
+		
+		
+		
+		/** Debug drawer. */
+		public func DebugDrawer getDebugDrawer()
+			return pDebugDrawer
+		end
+		
+		/** Model. */
+		public func Model getModel()
+			return pModel
+		end
+		
+		/** Set visibility. */
+		public func void setVisible(bool visible)
+			if visible == pVisible
+				return
+			end
+			pVisible = visible
+			updateLevelVisibility()
+		end
+		
+		/** Level. */
+		public func float getLevel()
+			return pLevel
+		end
+		
+		/** Set level. */
+		public func void setLevel(float level)
+			if DEMath.fabs( level - pLevel ) < 0.0001
+				return
+			end
+			pLevel = level
+			updateLevelGeometry()
+		end
+		
+		/** Get world level matrix. */
+		public func DMatrix getMatrix()
+			return DMatrix.newTranslation(0, pLevel, 0) * getParentMatrix()
+		end
+		
+		/** Get world matrix of level parent. */
+		public func DMatrix getParentMatrix()
+			return getElement().getElementMatrix()
+		end
+		
+		
+		
+		/** Element has been added to game world. */
+		public func void addToGameWorld()
+			var World world = getElement().getGameWorld().getWorld()
+			
+			updateLevelShapes()
+			updateLevelGeometry()
+			updateLevelVisibility()
+			
+			world.addDebugDrawer(pDebugDrawer)
+			world.addCollider(pCollider)
+		end
+		
+		/** Element is removed from game world. */
+		public func void removeFromGameWorld()
+			var World world = getElement().getGameWorld().getWorld()
+			
+			world.removeDebugDrawer(pDebugDrawer)
+			world.removeCollider(pCollider)
+		end
+		
+		/** Element position, orientation or scale changed. */
+		public func void geometryChanged()
+			updateLevelGeometry()
+		end
+		
+		/** Element state changed. */
+		public func void stateChanged()
+			updateLevelVisibility()
+		end
+		
+		
+		
+		/** Create level. */
+		protected func void createLevel()
+			var float transparency = 0.6
+			
+			pDebugDrawer.setXRay(true)
+			pDebugDrawer.setShapeCount(1)
+			
+			pDebugDrawer.shapeSetEdgeColor(0, Color.transparent)
+			pDebugDrawer.shapeSetFillColor(0, Color.new(Color.red, transparency))
+			
+			pCollider = createLevelCollider()
+			pCollider.setOwner(this)
+		end
+		
+		/** Create level collider. */
+		protected func ColliderVolume createLevelCollider()
+			var ColliderVolume collider = ColliderVolume.new()
+			collider.setCollisionFilter(CollisionFilter.new(LayerMask.newWith(0)))
+			collider.setResponseType(CollisionResponse.none)
+			collider.setUseLocalGravity(true)
+			return collider
+		end
+		
+		/** Update level shapes. */
+		protected func void updateLevelShapes()
+			var ShapeList shape = ShapeList.new()
+			var float scale = 0.2
+			
+			var Matrix matrix = Matrix.newScaling(scale, scale, scale)
+			
+			pDebugDrawer.shapeSetFacesFromModel(0, pModel, "level", matrix)
+			
+			shape.addBox(Vector.new(0, 0.45 * scale, 0), Vector.new(0.1, 0.4, 0.1) * scale)
+			pCollider.setShape(shape)
+		end
+		
+		/** Update level geometry. */
+		protected func void updateLevelGeometry()
+			var DMatrix matrix = getMatrix()
+			var DVector position = matrix.getPosition()
+			var Quaternion orientation = matrix.toQuaternion()
+			
+			pDebugDrawer.setPosition(position)
+			pDebugDrawer.setOrientation(orientation)
+			
+			pCollider.setGeometry(position, orientation)
+		end
+		
+		/** Update level visibility. */
+		protected func void updateLevelVisibility()
+			var bool visible = getElement().getVisible() and pVisible
+			pDebugDrawer.setVisible(visible)
+			pCollider.setEnabled(visible)
+		end
+	end
+	
+	
+	
+	private var ECBPreviewDataQuery pDataQuery
+	private var ECBehaviorComponent pComponent
+	private var ECPModel pModel
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBPreviewDataQuery dataQuery,\
+	ECBehaviorComponent component) super(eclass)
+		if dataQuery == null
+			throw ENullPointer.new("dataQuery")
+		end
+		if component == null
+			throw ENullPointer.new("component")
+		end
+		
+		var String prefix = "previewLevel."
+		
+		pDataQuery = dataQuery
+		pComponent = component
+		
+		pModel = ECPModel.new(prefix + "model", "/content/models/coordSystem/level.demodel")
+		eclass.addProperty(pModel)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pDataQuery = null
+		pComponent = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Data query. */
+	public func ECBPreviewDataQuery getDataQuery()
+		return pDataQuery
+	end
+	
+	/** Component behavior. */
+	public func ECBehaviorComponent getComponent()
+		return pComponent
+	end
+	
+	/** Model. */
+	public func ECPModel getModel()
+		return pModel
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance for element or null. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBPreviewLevel getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBPreviewLevel each
+			return true
+		end) cast ECBPreviewLevel
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

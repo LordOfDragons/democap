@@ -1,0 +1,248 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+
+pin Dragengine.Gui.Events
+pin Dragengine.Gui.Layouts
+pin Dragengine.Scenery
+pin Dragengine.Utils.StyledText.Definition
+pin Dragengine.Utils.StyledText.Definition.Nodes
+
+
+/**
+ * Character preview editor to edit level.
+ */
+class CPELevel extends CharacterPreviewEditor
+	/** Interact handle listener. */
+	class InteractHandleListener extends DefaultMouseListener
+		private var CPELevel pEditor
+		private var ECBPreviewLevel.Instance pPreviewLevel
+		private var Matrix pViewMatrix
+		private var Matrix pCSMatrix
+		private var Matrix pInvCSParentMatrix
+		private var Vector pPlanePosition
+		private var Vector pPlaneNormal
+		private var Vector pPlaneX
+		private var Vector pPlaneY
+		private var Vector pInteractOrigin
+		private var Vector pInteractAxis
+		private var float pOriginLevel
+		
+		
+		
+		public func new(CPELevel editor)
+			pEditor = editor
+		end
+		
+		public func void onButtonPress(MouseEvent event)
+			if pPreviewLevel != null or event.getButton() != InputEventMouseButton.left
+				return
+			end
+			
+			var Array hits = Array.new()
+			pEditor.getPreview().viewRayCollisions(hits, event.getPosition())
+			
+			var WidgetCharacterPreview.HitResult hit = hits.findCastable(block WidgetCharacterPreview.HitResult each
+				return each.getObject() castable ECBPreviewLevel.Instance
+			end) cast WidgetCharacterPreview.HitResult
+			
+			if hit == null
+				return
+			end
+			
+			var ECBPreviewLevel.Instance previewLevel = pEditor.getPreviewLevel()
+			
+			pPreviewLevel = hit.getObject() cast ECBPreviewLevel.Instance
+			pCSMatrix = previewLevel.getMatrix().toMatrix()
+			pInvCSParentMatrix = previewLevel.getParentMatrix().getInverse().toMatrix()
+			
+			pInteractOrigin = hit.getHitPoint().toVector()
+			
+			pOriginLevel = previewLevel.getLevel()
+			
+			pInteractAxis = pCSMatrix.getUpVector().normalize()
+			
+			pViewMatrix = pEditor.getPreview().getCameraDirector().getCameraMatrix().toMatrix().normalize()
+			
+			var Vector up = pViewMatrix.getUpVector()
+			var Vector right = pViewMatrix.getRightVector()
+			
+			pPlanePosition = pInteractOrigin
+			
+			if DEMath.fabs(up * pInteractAxis) < 0.707 // roughly 45 degrees
+				pPlaneNormal = (up % pInteractAxis).normalize()
+				
+			else
+				pPlaneNormal = (pInteractAxis % right).normalize()
+			end
+			
+			pEditor.getPreview().getInteractionPanel().captureMouse()
+		end
+		
+		public func void onMouseMove(MouseEvent event)
+			if pPreviewLevel == null or pInteractAxis == null
+				return
+			end
+			
+			// calculate intersecton of view ray with interaction plane
+			var ECBPreviewLevel.Instance previewLevel = pEditor.getPreviewLevel()
+			var Matrix matrix = previewLevel.getMatrix().toMatrix()
+			
+			var Vector rayOrigin = pViewMatrix.getPosition()
+			var Vector rayDirection = pEditor.getPreview().viewRayDirection(event.getPosition())
+			
+			var float denom = rayDirection * pPlaneNormal
+			if denom == 0
+				return
+			end
+			
+			var float lambda = ((pPlanePosition - rayOrigin) * pPlaneNormal) / denom
+			var Vector hitPoint = rayOrigin + rayDirection * lambda
+			
+			// apply interaction
+			var float distance = pInteractAxis * (hitPoint - pInteractOrigin)
+			var float level = pOriginLevel + pCSMatrix.getUpVector().getY() * distance
+			
+			pEditor.getEditLevel().setText(level.toString())
+		end
+		
+		public func void onButtonRelease(MouseEvent event)
+			if pPreviewLevel == null or event.getButton() != InputEventMouseButton.left
+				return
+			end
+			
+			pPreviewLevel = null
+			pPlanePosition = null
+			pPlaneNormal = null
+			pPlaneX = null
+			pPlaneY = null
+			pInteractOrigin = null
+			pInteractAxis = null
+			
+			pEditor.getPreview().getInteractionPanel().releaseMouse()
+		end
+	end
+	
+	
+	
+	private var Label pLabelLevel
+	private var TextField pEditLevel
+	private var InteractHandleListener pInteractHandleListener
+	
+	
+	
+	/** Create character preview editor. */
+	public func new(WidgetCharacterPreview preview, Label labelLevel, TextField textField) super(preview)
+		pLabelLevel = labelLevel
+		pEditLevel = textField
+		
+		if labelLevel != null
+			labelLevel.addMouseListener(ClickedActivateEditor.new(this, textField))
+		end
+		if textField != null
+			textField.addFocusListener(ReceiveFocusActivateEditor.new(this))
+			textField.getModel().addListener(UpdateOnTextChanged.new(this))
+		end
+	end
+	
+	
+	
+	/** Edit level widget. */
+	public func TextField getEditLevel()
+		return pEditLevel
+	end
+	
+	
+	
+	/** Editor has been activated. */
+	public func void onActivate()
+		showLevel()
+		updateLevel()
+		
+		pInteractHandleListener = InteractHandleListener.new(this)
+		getPreview().getInteractionPanel().addMouseListener(pInteractHandleListener)
+		
+		if pLabelLevel != null
+			pLabelLevel.setDesignerSelector("Label.FormCaption.Hilight")
+		end
+	end
+	
+	/** Editor has been deactivated. */
+	public func void onDeactivate()
+		if pInteractHandleListener != null
+			getPreview().getInteractionPanel().removeMouseListener(pInteractHandleListener)
+			pInteractHandleListener = null
+		end
+		
+		hideLevel()
+		
+		if pLabelLevel != null
+			pLabelLevel.setDesignerSelector("Label.FormCaption")
+		end
+	end
+	
+	/** Model value changed. */
+	public func void onModelValueChanged()
+		if isActive()
+			updateLevel()
+		end
+	end
+	
+	
+	
+	/** Show coordinate system. */
+	protected func void showLevel()
+		var ECBPreviewLevel.Instance level = getPreviewLevel()
+		if level == null
+			return
+		end
+		
+		level.setVisible(true)
+	end
+	
+	/** Hide coordinate system. */
+	protected func void hideLevel()
+		var ECBPreviewLevel.Instance level = getPreviewLevel()
+		if level == null
+			return
+		end
+		
+		level.setVisible(false)
+	end
+	
+	/** Update coordinate system. */
+	protected func void updateLevel()
+		var ECBPreviewLevel.Instance level = getPreviewLevel()
+		if level == null
+			return
+		end
+		
+		if pEditLevel != null
+			level.setLevel(pEditLevel.getText().toFloat())
+			
+		else
+			level.setLevel(0)
+		end
+	end
+end
