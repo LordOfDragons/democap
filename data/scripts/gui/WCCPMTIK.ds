@@ -34,11 +34,13 @@ pin Dragengine.Scenery
  * Edit character config window motion transfer ik panel.
  */
 class WCCPMTIK extends WCCPanelMotionTransfer
-	private var DefaultListModel pModelListTargetBone
-	private var DefaultTextModel pModelTextTargetBone
-	private var DefaultTextModel pModelBoneCount
-	private var DefaultTextModel pModelBaseChainIndex
-	private var WCCPMTTracker pEditTrackerTarget
+	private var DefaultListModel pModelListTipBone
+	private var DefaultTextModel pModelTextTipBone
+	private var DefaultListModel pModelListBaseBone
+	private var DefaultTextModel pModelTextBaseBone
+	private var DefaultListModel pModelListGuideBone
+	private var DefaultTextModel pModelTextGuideBone
+	private var WCCPMTTracker pEditTrackerTip
 	private var WCCPMTTracker pEditTrackerGuide
 	private var WCCPMTTracker pEditTrackerBase
 	private var DefaultListModel pModelActorReach
@@ -58,11 +60,18 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	public func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
 		pModelTypeName.setText("Inverse Kinematic")
 		
-		pModelListTargetBone = DefaultListModel.new()
-		pModelListTargetBone.setAutoSelect(false)
-		pModelTextTargetBone = DefaultTextModel.new()
-		pModelBoneCount = DefaultTextModel.new()
-		pModelBaseChainIndex = DefaultTextModel.new()
+		pModelListTipBone = DefaultListModel.new()
+		pModelListTipBone.setAutoSelect(false)
+		pModelTextTipBone = DefaultTextModel.new()
+		
+		pModelListBaseBone = DefaultListModel.new()
+		pModelListBaseBone.setAutoSelect(false)
+		pModelTextBaseBone = DefaultTextModel.new()
+		
+		pModelListGuideBone = DefaultListModel.new()
+		pModelListGuideBone.setAutoSelect(false)
+		pModelTextGuideBone = DefaultTextModel.new()
+		
 		pModelActorReach = DefaultListModel.new(MotionTransferIK.ActorReach.all().toArray())
 		pModelReachLimit = DefaultTextModel.new()
 		pModelAdjustPosition = DefaultToggleModel.new()
@@ -82,12 +91,14 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	
 	/** Dispose of window. */
 	public func void dispose()
-		pModelListTargetBone = null
-		pModelTextTargetBone = null
-		pModelBoneCount = null
-		pModelBaseChainIndex = null
-		pEditTrackerTarget.setTracker(null)
-		pEditTrackerTarget = null
+		pModelListTipBone = null
+		pModelTextTipBone = null
+		pModelListBaseBone = null
+		pModelTextBaseBone = null
+		pModelListGuideBone = null
+		pModelTextGuideBone = null
+		pEditTrackerTip.setTracker(null)
+		pEditTrackerTip = null
 		pEditTrackerGuide.setTracker(null)
 		pEditTrackerGuide = null
 		pEditTrackerBase.setTracker(null)
@@ -114,11 +125,11 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 			
 			if pMotionTransfer != null
 				var MotionTransferIK mt = pMotionTransfer cast MotionTransferIK
-				pModelTextTargetBone.setText(mt.getTargetBone())
-				pModelBoneCount.setText(mt.getBoneCount().toString())
-				pModelBaseChainIndex.setText(mt.getBaseChainIndex().toString())
-				pEditTrackerTarget.setTracker(mt.getTargetTracker())
-				pEditTrackerTarget.loadValues()
+				pModelTextTipBone.setText(mt.getTipBone())
+				pModelTextBaseBone.setText(mt.getBaseBone())
+				pModelTextGuideBone.setText(mt.getGuideBone())
+				pEditTrackerTip.setTracker(mt.getTipTracker())
+				pEditTrackerTip.loadValues()
 				pEditTrackerGuide.setTracker(mt.getGuideTracker())
 				pEditTrackerGuide.loadValues()
 				pEditTrackerBase.setTracker(mt.getBaseTracker())
@@ -133,10 +144,10 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pEditTwistAxisRotation.setVector(mt.getTwistAxisRotation())
 				
 			else
-				pModelTextTargetBone.setText("")
-				pModelBoneCount.setText("")
-				pModelBaseChainIndex.setText("")
-				pEditTrackerTarget.setTracker(null)
+				pModelTextTipBone.setText("")
+				pModelTextBaseBone.setText("")
+				pModelTextGuideBone.setText("")
+				pEditTrackerTip.setTracker(null)
 				pEditTrackerGuide.setTracker(null)
 				pEditTrackerBase.setTracker(null)
 				pModelActorReach.setSelected(pModelActorReach.indexOf(MotionTransferIK.ActorReach.none))
@@ -160,10 +171,10 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		super.saveValues()
 		
 		var MotionTransferIK mt = pMotionTransfer cast MotionTransferIK
-		mt.setTargetBone(pModelTextTargetBone.getText())
-		mt.setBoneCount(pModelBoneCount.getText().toInt())
-		mt.setBaseChainIndex(pModelBaseChainIndex.getText().toInt())
-		pEditTrackerTarget.saveValues()
+		mt.setTipBone(pModelTextTipBone.getText())
+		mt.setBaseBone(pModelTextBaseBone.getText())
+		mt.setGuideBone(pModelTextGuideBone.getText())
+		pEditTrackerTip.saveValues()
 		pEditTrackerGuide.saveValues()
 		pEditTrackerBase.saveValues()
 		mt.setActorReach(pModelActorReach.getAt(pModelActorReach.getSelected()) cast MotionTransferIK.ActorReach)
@@ -186,39 +197,49 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	/** Create window content. */
 	protected func void createContent(String optionPrefix)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var ComboBox comboBox, comboBoxTip, comboBoxBase
+		var Label label, labelTip, labelBase
 		var TextField textField
-		var ComboBox comboBox
 		var Button button
 		var ListBox listBox
 		var CheckBox checkBox
-		var Label label
 		
 		super.createContent()
 		
-		// target bone
-		var Label labelBone = Label.new("Target Bone:", "Label.FormCaption")
-		pPanelForm.addWidget(labelBone)
+		// bone chain
+		labelTip = Label.new("Tip Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelTip)
 		
-		var ComboBox cbTargetBone = ComboBox.new(pModelListTargetBone, DefaultComboBoxEditor.new(pModelTextTargetBone))
-		cbTargetBone.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		cbTargetBone.setToolTip("Tip of bone chain.")
-		pPanelForm.addWidget(cbTargetBone)
+		comboBoxTip = ComboBox.new(pModelListTipBone, DefaultComboBoxEditor.new(pModelTextTipBone))
+		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxTip.setToolTip("Tip of bone chain.")
+		pPanelForm.addWidget(comboBoxTip)
 		
-		// bone count
-		var Label labelCount = Label.new("Bone Count:", "Label.FormCaption")
-		pPanelForm.addWidget(labelCount)
+		labelBase = Label.new("Base Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelBase)
 		
-		textField = TextField.new(pModelBoneCount, 4)
-		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
-		textField.setToolTip("Count of bones in chain starting at Target Bone moving along parent bones.")
-		pPanelForm.addWidget(textField)
+		comboBoxBase = ComboBox.new(pModelListBaseBone, DefaultComboBoxEditor.new(pModelTextBaseBone))
+		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxBase.setToolTip("Base bone not part of the chain. Bending angle is calculate between target and base bone.")
+		pPanelForm.addWidget(comboBoxBase)
 		
-		CPEBoneChainCount.new(preview, labelBone, cbTargetBone, labelCount, textField)
+		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
+		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
+		
+		// guide bone
+		label = Label.new("Guide Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		comboBox = ComboBox.new(pModelListGuideBone, DefaultComboBoxEditor.new(pModelTextGuideBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Guide of bone chain. This is the bone near the base of the chain to point at the guide tracker.")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, label, comboBox)
 		
 		// trackers
-		pEditTrackerTarget = WCCPMTTracker.new(optionPrefix + "/TargetTracker", this, "Target Tracker", false)
-		addWidget(pEditTrackerTarget)
+		pEditTrackerTip = WCCPMTTracker.new(optionPrefix + "/TipTracker", this, "Tip Tracker", false)
+		addWidget(pEditTrackerTip)
 		
 		pEditTrackerGuide = WCCPMTTracker.new(optionPrefix + "/GuideTracker", this, "Guide Tracker", false)
 		addWidget(pEditTrackerGuide)
@@ -277,7 +298,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		textField = TextField.new(pModelTwistPropagation, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
-		textField.setToolTip("Percentage of Target Bone twist relative to Base Bone to propagate along bone chain.")
+		textField.setToolTip("Percentage of Tip Bone twist relative to Base Bone to propagate along bone chain.")
 		pPanelForm.addWidget(textField)
 		
 		// twist bone count
@@ -286,7 +307,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		textField = TextField.new(pModelTwistBoneCount, 4)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
-		textField.setToolTip("Count of bones along chain to apply twist to starting at first bone after Target Bone.")
+		textField.setToolTip("Count of bones along chain to apply twist to starting at first bone after Tip Bone.")
 		pPanelForm.addWidget(textField)
 		
 		// twist axis rotation
@@ -294,7 +315,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(label)
 		
 		pEditTwistAxisRotation = EditVector.new()
-		pEditTwistAxisRotation.setToolTip("Rotation of twist axis relative to Target Bone")
+		pEditTwistAxisRotation.setToolTip("Rotation of twist axis relative to Tip Bone")
 		pPanelForm.addWidget(pEditTwistAxisRotation)
 		
 		CPECoordinateSystem.new(preview, null, null, label, pEditTwistAxisRotation, null, null)
@@ -302,12 +323,14 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	
 	/** Update bone lists. */
 	public func void updateBoneLists(Array bones)
-		pModelListTargetBone.setContent(bones)
+		pModelListTipBone.setContent(bones)
+		pModelListGuideBone.setContent(bones)
+		pModelListBaseBone.setContent(bones)
 	end
 	
 	/** Update slot lists. */
 	public func void updateSlotLists(Array slots)
-		pEditTrackerTarget.updateSlotLists(slots)
+		pEditTrackerTip.updateSlotLists(slots)
 		pEditTrackerGuide.updateSlotLists(slots)
 		pEditTrackerBase.updateSlotLists(slots)
 	end
@@ -320,8 +343,8 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	
 	/** Motion transfer changed. */
 	protected func void onMotionTransferChanged()
-		if pEditTrackerTarget != null
-			pEditTrackerTarget.setTracker(null)
+		if pEditTrackerTip != null
+			pEditTrackerTip.setTracker(null)
 		end
 		if pEditTrackerGuide != null
 			pEditTrackerGuide.setTracker(null)

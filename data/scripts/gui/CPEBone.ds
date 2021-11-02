@@ -40,6 +40,7 @@ class CPEBone extends CharacterPreviewEditor
 	 */
 	class SelectBoneRenderer extends DefaultListElementRenderer
 		public func new()
+			setDefaultMinimumSize(Point.new(250, 0))
 		end
 		
 		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
@@ -57,6 +58,9 @@ class CPEBone extends CharacterPreviewEditor
 				
 			elif bone.color.equals(CharacterPreviewEditor.previewBoneColorChain)
 				text = text + " [Chain]"
+				
+			elif bone.color.equals(CharacterPreviewEditor.previewBoneColorEnd)
+				text = text + " [Chain End]"
 			end
 			
 			super.updateRenderer(listBox, renderer, text, selected, focused)
@@ -81,6 +85,7 @@ class CPEBone extends CharacterPreviewEditor
 	protected var Label pLabelBone
 	protected var ComboBox pCBBone
 	protected var ElementClicked pElementClicked
+	protected var SelectBoneRenderer pSelectBoneRenderer
 	
 	
 	
@@ -96,6 +101,7 @@ class CPEBone extends CharacterPreviewEditor
 		end
 		pCBBone = cbBone
 		pLabelBone = labelBone
+		pSelectBoneRenderer = SelectBoneRenderer.new()
 		
 		if addListeners
 			if labelBone != null
@@ -214,6 +220,9 @@ class CPEBone extends CharacterPreviewEditor
 				elif bone.color.equals(CharacterPreviewEditor.previewBoneColorChain)
 					nodeText.setStyle("chain")
 					
+				elif bone.color.equals(CharacterPreviewEditor.previewBoneColorEnd)
+					nodeText.setStyle("chainEnd")
+					
 				else
 					nodeText.setStyle("default")
 				end
@@ -269,7 +278,7 @@ class CPEBone extends CharacterPreviewEditor
 			
 			// show dialog to make user choose bone
 			WindowDialog.chooseList(getPreview().getWindow(), "Select Bone", "Choose bone to select",\
-				null, model, SelectBoneRenderer.new(), null, null, \
+				null, model, pSelectBoneRenderer, null, null, \
 				WindowDialog.BlockResultListener.new(block int result
 					if result != -1
 						selectElement(Array.newWith(hits.getAt(result)))
