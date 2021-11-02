@@ -85,25 +85,32 @@ class CPEBone extends CharacterPreviewEditor
 	
 	
 	/** Create character preview editor. */
-	public func new(WidgetCharacterPreview preview, Label labelBone, ComboBox cbBone) super(preview)
+	public func new(WidgetCharacterPreview preview, Label labelBone, ComboBox cbBone)\
+	this(preview, labelBone, cbBone, true)
+	end
+	
+	protected func new(WidgetCharacterPreview preview, Label labelBone, ComboBox cbBone,\
+	bool addListeners) super(preview)
 		if cbBone == null
 			throw ENullPointer.new("cbBone")
 		end
 		pCBBone = cbBone
 		pLabelBone = labelBone
 		
-		if labelBone != null
-			labelBone.addMouseListener(ClickedActivateEditor.new(this, cbBone))
-		end
-		
-		if cbBone.getEditor() != null
-			cbBone.getEditor().getWidget().addFocusListener(ReceiveFocusActivateEditor.new(this))
-			cbBone.getEditor().addActionListener(UpdateOnAction.new(this))
+		if addListeners
+			if labelBone != null
+				labelBone.addMouseListener(ClickedActivateEditor.new(this, cbBone))
+			end
 			
-		else
-			cbBone.addFocusListener(ReceiveFocusActivateEditor.new(this))
+			if cbBone.getEditor() != null
+				cbBone.getEditor().getWidget().addFocusListener(ReceiveFocusActivateEditor.new(this))
+				cbBone.getEditor().addActionListener(UpdateOnAction.new(this))
+				
+			else
+				cbBone.addFocusListener(ReceiveFocusActivateEditor.new(this))
+			end
+			cbBone.getModel().addListener(UpdateOnListChanged.new(this))
 		end
-		cbBone.getModel().addListener(UpdateOnListChanged.new(this))
 	end
 	
 	
@@ -243,11 +250,11 @@ class CPEBone extends CharacterPreviewEditor
 			// select selected bone if possible
 			var String selectedName
 			
-			if pCBBone.getEditor() != null
-				selectedName = pCBBone.getEditor().getEditorValue() cast String
+			if getEditComboBox().getEditor() != null
+				selectedName = getEditComboBox().getEditor().getEditorValue() cast String
 				
-			elif pCBBone.getSelectedElement() != -1
-				selectedName = pCBBone.getModel().getAt(pCBBone.getSelectedElement()) cast String
+			elif getEditComboBox().getSelectedElement() != -1
+				selectedName = getEditComboBox().getModel().getAt(getEditComboBox().getSelectedElement()) cast String
 			end
 			
 			if selectedName != null
@@ -278,7 +285,12 @@ class CPEBone extends CharacterPreviewEditor
 			var WidgetCharacterPreview.HitResult hit = hits.getAt(0) cast WidgetCharacterPreview.HitResult
 			var ECBPreviewBones.Instance.Bone bone = hit.getObject() cast ECBPreviewBones.Instance.Bone
 			
-			pCBBone.getEditor().setEditorValue(bone.name)
+			getEditComboBox().getEditor().setEditorValue(bone.name)
 		end
+	end
+	
+	/** Edit combo box. */
+	protected func ComboBox getEditComboBox()
+		return pCBBone
 	end
 end

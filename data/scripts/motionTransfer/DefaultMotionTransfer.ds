@@ -94,4 +94,38 @@ abstract class DefaultMotionTransfer implements MotionTransfer
 	/** Save to XML. */
 	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
 	end
+	
+	
+	
+	/** Find bone chain. */
+	protected func void findBoneChain(Rig rig, String tipBone, String baseBone, Array bones)
+		bones.removeAll()
+		
+		var int indexTarget = rig.indexOfBoneNamed(tipBone)
+		var int indexBase = rig.indexOfBoneNamed(baseBone)
+		if indexTarget == -1 or indexBase == -1
+			return
+		end
+		
+		var int indexBone = indexTarget
+		while indexBone != -1 and indexBone != indexBase
+			bones.add(rig.boneGetName(indexBone))
+			indexBone = rig.boneGetParent(indexBone)
+		end
+		
+		if indexBone != indexBase
+			bones.removeAll() // invalid chain
+		end
+	end
+	
+	/** Find bone chain. */
+	protected func void findBoneChain(Rig rig, String tipBone, int boneCount, Array bones)
+		bones.removeAll()
+		
+		var int index = rig.indexOfBoneNamed(tipBone)
+		while index != -1 and boneCount-- > 0
+			bones.add(rig.boneGetName(index))
+			index = rig.boneGetParent(index)
+		end
+	end
 end

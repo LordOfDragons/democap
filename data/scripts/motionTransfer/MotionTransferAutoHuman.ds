@@ -1,0 +1,579 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Democap.Actors
+pin Democap.Behaviors
+pin Democap.Characters
+
+pin Dragengine.Animators
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+/**
+ * Motion transfer automatic human.
+ * 
+ * Uses various child motion transfers configured by a few key parameters for simplicity.
+ */
+class MotionTransferAutoHuman extends DefaultMotionTransfer
+	/** Factory. */
+	class Factory implements MotionTransferFactory
+		public func new()
+		end
+		
+		public func String factoryID()
+			return "autoHuman"
+		end
+		
+		public func MotionTransfer createMotionTransfer()
+			return MotionTransferAutoHuman.new(factoryID())
+		end
+		
+		public func String displayName()
+			return "Automatic Human"
+		end
+	end
+	
+	
+	
+	private var String pBoneHead
+	private var String pBoneChest
+	private var String pBoneHandRight
+	private var String pBoneShoulderRight
+	private var String pBoneHandLeft
+	private var String pBoneShoulderLeft
+	private var String pBoneHip
+	private var String pBoneFootRight
+	private var String pBoneFootLeft
+	private var String pMoveBaseIK
+	private var String pMoveCrouch
+	
+	private var MotionTransferChild pTransferWaist
+	private var MotionTransferIK pTransferSpineHead
+	private var MotionTransferIK pTransferArmRight
+	private var MotionTransferIK pTransferArmLeft
+	private var MotionTransferIK pTransferLegRight
+	private var MotionTransferIK pTransferLegLeft
+	
+	
+	
+	/** Create motion transfer. */
+	public func new(String factoryID) super(factoryID)
+		pBoneHead = ""
+		pBoneChest = ""
+		pBoneHandRight = ""
+		pBoneShoulderRight = ""
+		pBoneHandLeft = ""
+		pBoneShoulderLeft = ""
+		pBoneHip = ""
+		pBoneFootRight = ""
+		pBoneFootLeft = ""
+		pMoveBaseIK = ""
+		pMoveCrouch = ""
+		
+		// create child motion transfers
+		var MotionTransferChild.Factory factoryChild = MotionTransferChild.Factory.new()
+		var MotionTransferIK.Factory factoryIK = MotionTransferIK.Factory.new()
+		
+		pTransferWaist = MotionTransferChild.new(factoryChild.factoryID())
+		pTransferWaist.setName("AutoHuman: Waist")
+		
+		pTransferSpineHead = MotionTransferIK.new(factoryIK.factoryID())
+		pTransferSpineHead.setName("AutoHuman: SpineHead")
+		pTransferSpineHead.setTwistAxisRotation(Vector.new(90, 0, 0))
+		
+		pTransferArmRight = MotionTransferIK.new(factoryIK.factoryID())
+		pTransferArmRight.setName("AutoHuman: ArmRight")
+		pTransferArmRight.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+		pTransferArmRight.setActorReach(MotionTransferIK.ActorReach.arm)
+		pTransferArmRight.setTwistPropagation(0.5)
+		pTransferArmRight.setTwistAxisRotation(Vector.new(0, -90, 0))
+		pTransferArmRight.setTwistBoneCount(1)
+		
+		pTransferArmLeft = MotionTransferIK.new(factoryIK.factoryID())
+		pTransferArmLeft.setName("AutoHuman: ArmLeft")
+		pTransferArmLeft.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+		pTransferArmLeft.setActorReach(MotionTransferIK.ActorReach.arm)
+		pTransferArmLeft.setTwistPropagation(0.5)
+		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))
+		pTransferArmLeft.setTwistBoneCount(1)
+		
+		pTransferLegRight = MotionTransferIK.new(factoryIK.factoryID())
+		pTransferLegRight.setName("AutoHuman: LegRight")
+		pTransferLegRight.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+		pTransferLegRight.setActorReach(MotionTransferIK.ActorReach.leg)
+		pTransferLegRight.setTwistPropagation(0.5)
+		
+		pTransferLegLeft = MotionTransferIK.new(factoryIK.factoryID())
+		pTransferLegLeft.setName("AutoHuman: LegLeft")
+		pTransferLegLeft.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+		pTransferLegLeft.setActorReach(MotionTransferIK.ActorReach.leg)
+		pTransferLegLeft.setTwistPropagation(0.5)
+	end
+	
+	/** Create copy of motion transfer. */
+	public func new(MotionTransferAutoHuman transfer) super(transfer)
+		pBoneHead = transfer.pBoneHead
+		pBoneChest = transfer.pBoneChest
+		pBoneHandRight = transfer.pBoneHandRight
+		pBoneShoulderRight = transfer.pBoneShoulderRight
+		pBoneHandLeft = transfer.pBoneHandLeft
+		pBoneShoulderLeft = transfer.pBoneShoulderLeft
+		pBoneHip = transfer.pBoneHip
+		pBoneFootRight = transfer.pBoneFootRight
+		pBoneFootLeft = transfer.pBoneFootLeft
+		pMoveBaseIK = transfer.pMoveBaseIK
+		pMoveCrouch = transfer.pMoveCrouch
+		
+		pTransferWaist = MotionTransferChild.new(transfer.pTransferWaist)
+		pTransferSpineHead = MotionTransferIK.new(transfer.pTransferSpineHead)
+		pTransferArmRight = MotionTransferIK.new(transfer.pTransferArmRight)
+		pTransferArmLeft = MotionTransferIK.new(transfer.pTransferArmLeft)
+		pTransferLegRight = MotionTransferIK.new(transfer.pTransferLegRight)
+		pTransferLegLeft = MotionTransferIK.new(transfer.pTransferLegLeft)
+	end
+	
+	
+	
+	/** Head bone name. */
+	public func String getBoneHead()
+		return pBoneHead
+	end
+	
+	/** Set head bone name. */
+	public func void setBoneHead(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pBoneHead = bone
+	end
+	
+	/** Chest bone name. */
+	public func String getBoneChest()
+		return pBoneChest
+	end
+	
+	/** Set chest bone name. */
+	public func void setBoneChest(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pBoneChest = bone
+	end
+	
+	/** Right hand bone name. */
+	public func String getBoneHandRight()
+		return pBoneHandRight
+	end
+	
+	/** Set right hand bone name. */
+	public func void setBoneHandRight(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pBoneHandRight = bone
+	end
+	
+	/** Right shoulder bone name. */
+	public func String getBoneShoulderRight()
+		return pBoneShoulderRight
+	end
+	
+	/** Set right shoulder bone name. */
+	public func void setBoneShoulderRight(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pBoneShoulderRight = bone
+	end
+	
+	/** Left hand bone name. */
+	public func String getBoneHandLeft()
+		return pBoneHandLeft
+	end
+	
+	/** Set left hand bone name. */
+	public func void setBoneHandLeft(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pBoneHandLeft = bone
+	end
+	
+	/** Left shoulder bone name. */
+	public func String getBoneShoulderLeft()
+		return pBoneShoulderLeft
+	end
+	
+	/** Set left shoulder bone name. */
+	public func void setBoneShoulderLeft(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pBoneShoulderLeft = bone
+	end
+	
+	/** Hip bone name. */
+	public func String getBoneHip()
+		return pBoneHip
+	end
+	
+	/** Set hip bone name. */
+	public func void setBoneHip(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pBoneHip = bone
+	end
+	
+	/** Right foot bone name. */
+	public func String getBoneFootRight()
+		return pBoneFootRight
+	end
+	
+	/** Set right foot bone name. */
+	public func void setBoneFootRight(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pBoneFootRight = bone
+	end
+	
+	/** Left foot bone name. */
+	public func String getBoneFootLeft()
+		return pBoneFootLeft
+	end
+	
+	/** Set left foot bone name. */
+	public func void setBoneFootLeft(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pBoneFootLeft = bone
+	end
+	
+	/** Name of move to use to init base IK state for better results. */
+	public func String getMoveBaseIK()
+		return pMoveBaseIK
+	end
+	
+	/** Set name of move to use to init base IK state for better results. */
+	public func void setMoveBaseIK(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pMoveBaseIK = move
+	end
+	
+	/** Name of move to use to init crouch pose for better results. */
+	public func String getMoveCrouch()
+		return pMoveCrouch
+	end
+	
+	/** Set name of move to use to init crouch pose for better results. */
+	public func void setMoveCrouch(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pMoveCrouch = move
+	end
+	
+	
+	
+	/** Child motion transfer. */
+	public func MotionTransferChild getTransferWaist()
+		return pTransferWaist
+	end
+	
+	public func MotionTransferIK getTransferSpineHead()
+		return pTransferSpineHead
+	end
+	
+	public func MotionTransferIK getTransferArmRight()
+		return pTransferArmRight
+	end
+	
+	public func MotionTransferIK getTransferArmLeft()
+		return pTransferArmLeft
+	end
+	
+	public func MotionTransferIK getTransferLegRight()
+		return pTransferLegRight
+	end
+	
+	public func MotionTransferIK getTransferLegLeft()
+		return pTransferLegLeft
+	end
+	
+	
+	
+	/** Init element class. */
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
+		pTransferWaist.initElementClass(config, eclass)
+		pTransferSpineHead.initElementClass(config, eclass)
+		pTransferArmRight.initElementClass(config, eclass)
+		pTransferArmLeft.initElementClass(config, eclass)
+		pTransferLegRight.initElementClass(config, eclass)
+		pTransferLegLeft.initElementClass(config, eclass)
+	end
+	
+	/** Reset calibration. */
+	public func void resetCalibration()
+		pTransferWaist.resetCalibration()
+		pTransferSpineHead.resetCalibration()
+		pTransferArmRight.resetCalibration()
+		pTransferArmLeft.resetCalibration()
+		pTransferLegRight.resetCalibration()
+		pTransferLegLeft.resetCalibration()
+	end
+	
+	/** Calibrate character. */
+	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
+	BaseVRActor actor, Component component)
+		initChildTransferParams(config, actorProfile, actor, component)
+		
+		pTransferWaist.calibrate(config, actorProfile, actor, component)
+		pTransferSpineHead.calibrate(config, actorProfile, actor, component)
+		pTransferArmRight.calibrate(config, actorProfile, actor, component)
+		pTransferArmLeft.calibrate(config, actorProfile, actor, component)
+		pTransferLegRight.calibrate(config, actorProfile, actor, component)
+		pTransferLegLeft.calibrate(config, actorProfile, actor, component)
+	end
+	
+	/** Init child transfer parameters. */
+	protected func void initChildTransferParams(CharacterConfiguration config,\
+	ActorProfile actorProfile, BaseVRActor actor, Component component)
+		assignSlots(config)
+		
+		pTransferWaist.setBone(pBoneHip)
+		
+		pTransferSpineHead.setTargetBone(pBoneHead)
+// 		pTransferSpineHead.setBoneCount(pBoneCountSpine + pBoneCountHead)
+// 		pTransferSpineHead.setBaseChainIndex(0)
+		pTransferSpineHead.setMoveBaseIK(pMoveBaseIK)
+		pTransferSpineHead.setTwistBoneCount(pBoneCountSpine)
+		
+		pTransferArmRight.setTargetBone(pBoneHandRight)
+// 		pTransferArmRight.setBoneCount(pBoneCountArm)
+// 		pTransferArmRight.setBaseChainIndex(pBaseChainIndexArm)
+		pTransferArmRight.setMoveBaseIK(pMoveBaseIK)
+		pTransferArmRight.setTwistBoneCount(1)
+		
+		pTransferArmLeft.setTargetBone(pBoneHandLeft)
+// 		pTransferArmLeft.setBoneCount(pBoneCountArm)
+// 		pTransferArmLeft.setBaseChainIndex(pBaseChainIndexArm)
+		pTransferArmLeft.setMoveBaseIK(pMoveBaseIK)
+		pTransferArmLeft.setTwistBoneCount(1)
+		
+		pTransferLegRight.setTargetBone(pBoneFootLeft)
+// 		pTransferLegRight.setBoneCount(pBoneCountLeg)
+// 		pTransferLegRight.setBaseChainIndex(0)
+		pTransferLegRight.setMoveBaseIK(pMoveBaseIK)
+		pTransferLegRight.setMoveRetracted(pMoveCrouch)
+		pTransferLegRight.setTwistBoneCount(2)
+		
+		pTransferLegLeft.setTargetBone(pBoneFootLeft)
+// 		pTransferLegLeft.setBoneCount(pBoneCountLeg)
+// 		pTransferLegLeft.setBaseChainIndex(0)
+		pTransferLegLeft.setMoveBaseIK(pMoveBaseIK)
+		pTransferLegLeft.setMoveRetracted(pMoveCrouch)
+		pTransferLegLeft.setTwistBoneCount(2)
+	end
+	
+	/** Find slots and assign them to child transfers. */
+	protected func void assignSlots(CharacterConfiguration config)
+		var String slotWaist = firstSlotWithType(config, CharacterTrackerSlot.Type.waist)
+		
+		pTransferWaist.getTracker().setSlot(slotWaist)
+		
+		pTransferSpineHead.getTargetTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.headHmd))
+		pTransferSpineHead.getBaseTracker().setSlot(slotWaist)
+		
+		pTransferArmRight.getTargetTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightHandController))
+		pTransferArmRight.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightElbow))
+		pTransferArmRight.getBaseTracker().setSlot(slotWaist)
+		
+		pTransferArmLeft.getTargetTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftHandController))
+		pTransferArmLeft.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftElbow))
+		pTransferArmLeft.getBaseTracker().setSlot(slotWaist)
+		
+		pTransferLegRight.getTargetTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightFoot))
+		pTransferLegRight.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightKnee))
+		pTransferLegRight.getBaseTracker().setSlot(slotWaist)
+		
+		pTransferLegLeft.getTargetTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftFoot))
+		pTransferLegLeft.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftKnee))
+		pTransferLegLeft.getBaseTracker().setSlot(slotWaist)
+	end
+	
+	/** First slot name matching type or empty string. */
+	protected func String firstSlotWithType(CharacterConfiguration config, CharacterTrackerSlot.Type type)
+		var CharacterTrackerSlot slot = config.getTrackerSlots().firstWithType(type)
+		return slot != null if slot.getName() else ""
+	end
+	
+	/** Create copy of motion transfer. */
+	public func MotionTransfer createCopy()
+		return MotionTransferAutoHuman.new(this)
+	end
+	
+	/** Load from XML. */
+	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("name")
+				setName(element.getFirstCData())
+				
+			elif tagName.equals("boneHead")
+				setBoneHead(element.getFirstCData())
+				
+			elif tagName.equals("boneChest")
+				setBoneChest(element.getFirstCData())
+				
+			elif tagName.equals("boneHandRight")
+				setBoneHandRight(element.getFirstCData())
+				
+			elif tagName.equals("boneShoulderRight")
+				setBoneShoulderRight(element.getFirstCData())
+				
+			elif tagName.equals("boneHandLeft")
+				setBoneHandLeft(element.getFirstCData())
+				
+			elif tagName.equals("boneShoulderLeft")
+				setBoneShoulderLeft(element.getFirstCData())
+				
+			elif tagName.equals("boneHip")
+				setBoneHip(element.getFirstCData())
+				
+			elif tagName.equals("boneFootRight")
+				setBoneFootRight(element.getFirstCData())
+				
+			elif tagName.equals("boneFootLeft")
+				setBoneFootLeft(element.getFirstCData())
+				
+			elif tagName.equals("moveBaseIK")
+				setMoveBaseIK(element.getFirstCData())
+				
+			elif tagName.equals("moveCrouch")
+				setMoveCrouch(element.getFirstCData())
+				
+			elif tagName.equals("transfers")
+				loadTransfers(loader, element)
+				
+			elif tagName.equals("calibrated")
+				loadCalibrated(loader, element)
+			end
+		end)
+	end
+	
+	protected func void loadTransfers(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("waist")
+				pTransferWaist.load(loader, element)
+				
+			elif tagName.equals("spineHead")
+				pTransferSpineHead.load(loader, element)
+				
+			elif tagName.equals("armRight")
+				pTransferArmRight.load(loader, element)
+				
+			elif tagName.equals("armLeft")
+				pTransferArmLeft.load(loader, element)
+				
+			elif tagName.equals("legRight")
+				pTransferLegRight.load(loader, element)
+				
+			elif tagName.equals("legLeft")
+				pTransferLegLeft.load(loader, element)
+			end
+		end)
+	end
+	
+	protected func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("transfers")
+				loadCalibratedTransfers(loader, element)
+			end
+		end)
+	end
+	
+	protected func void loadCalibratedTransfers(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("waist")
+				pTransferWaist.loadCalibrated(loader, element)
+				
+			elif tagName.equals("spineHead")
+				pTransferSpineHead.loadCalibrated(loader, element)
+				
+			elif tagName.equals("armRight")
+				pTransferArmRight.loadCalibrated(loader, element)
+				
+			elif tagName.equals("armLeft")
+				pTransferArmLeft.loadCalibrated(loader, element)
+				
+			elif tagName.equals("legRight")
+				pTransferLegRight.loadCalibrated(loader, element)
+				
+			elif tagName.equals("legLeft")
+				pTransferLegLeft.loadCalibrated(loader, element)
+			end
+		end)
+	end
+	
+	/** Save to XML. */
+	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+		tag.addDataTag("name", getName())
+		tag.addDataTag("boneHead", pBoneHead)
+		tag.addDataTag("boneChest", pBoneChest)
+		tag.addDataTag("boneHandRight", pBoneHandRight)
+		tag.addDataTag("boneShoulderRight", pBoneShoulderRight)
+		tag.addDataTag("boneHandLeft", pBoneHandLeft)
+		tag.addDataTag("boneShoulderLeft", pBoneShoulderLeft)
+		tag.addDataTag("boneHip", pBoneHip)
+		tag.addDataTag("boneFootRight", pBoneFootRight)
+		tag.addDataTag("boneFootLeft", pBoneFootLeft)
+		tag.addDataTag("moveBaseIK", pMoveBaseIK)
+		tag.addDataTag("moveCrouch", pMoveCrouch)
+		
+		var EasyXMLElement tagTransfers = tag.addTag("transfers")
+		pTransferWaist.save(loader, tagTransfers.addTag("waist"))
+		pTransferSpineHead.save(loader, tagTransfers.addTag("spineHead"))
+		pTransferArmRight.save(loader, tagTransfers.addTag("armRight"))
+		pTransferArmLeft.save(loader, tagTransfers.addTag("armLeft"))
+		pTransferLegRight.save(loader, tagTransfers.addTag("legRight"))
+		pTransferLegLeft.save(loader, tagTransfers.addTag("legLeft"))
+		
+		saveCalibrated(loader, tag.addTag("calibrated"))
+	end
+	
+	protected func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+		var EasyXMLElement tagTransfers = tag.addTag("transfers")
+		pTransferWaist.saveCalibrated(loader, tagTransfers.addTag("waist"))
+		pTransferSpineHead.saveCalibrated(loader, tagTransfers.addTag("spineHead"))
+		pTransferArmRight.saveCalibrated(loader, tagTransfers.addTag("armRight"))
+		pTransferArmLeft.saveCalibrated(loader, tagTransfers.addTag("armLeft"))
+		pTransferLegRight.saveCalibrated(loader, tagTransfers.addTag("legRight"))
+		pTransferLegLeft.saveCalibrated(loader, tagTransfers.addTag("legLeft"))
+	end
+end

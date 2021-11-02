@@ -783,17 +783,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end
 	end
 	
-	/** Find bone chain. */
-	protected func void findBoneChain(Rig rig, String targetBone, int boneCount, Array bones)
-		bones.removeAll()
-		
-		var int index = rig.indexOfBoneNamed(targetBone)
-		while index != -1 and boneCount-- > 0
-			bones.add(rig.boneGetName(index))
-			index = rig.boneGetParent(index)
-		end
-	end
-	
 	/** Find guide track axis. */
 	protected func ARTrackToAxis findGuideTrackAxis(Rig rig, String targetBone, int boneCount)
 		if boneCount < 2
@@ -921,7 +910,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end)
 	end
 	
-	protected func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+	public func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
 		root.forEachTag(block EasyXMLElement element, String tagName
 			if tagName.equals("reach")
 				pCalibrateReach = element.getFirstCDataFloat()
@@ -983,7 +972,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
-	protected func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+	public func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("reach", pCalibrateReach)
 		tag.addDataTag("reachScale", pCalibrateReachScale)
 		loader.writeVector(tag, "targetOffset", pCalibrateTargetOffset)

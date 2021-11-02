@@ -68,9 +68,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 	
 	
 	private var String pTargetBone
-	private var String pBaseBone
 	private var String pTipBone
-	private var int pBoneCount
+	private var String pBaseBone
 	private var MotionTransferTracker pTargetTracker
 	private var MotionTransferTracker pBaseTracker
 	private var Vector2 pScaleRotation
@@ -91,9 +90,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 	/** Create motion transfer. */
 	public func new(String factoryID) super(factoryID)
 		pTargetBone = ""
-		pBaseBone = ""
 		pTipBone = ""
-		pBoneCount = 1
+		pBaseBone = ""
 		pTargetTracker = MotionTransferTracker.new()
 		pBaseTracker = MotionTransferTracker.new()
 		pScaleRotation = Vector2.new(1, 1)
@@ -104,9 +102,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 	/** Create copy of motion transfer. */
 	public func new(MotionTransferBend transfer) super(transfer)
 		pTargetBone = transfer.pTargetBone
-		pBaseBone = transfer.pBaseBone
 		pTipBone = transfer.pTipBone
-		pBoneCount = transfer.pBoneCount
+		pBaseBone = transfer.pBaseBone
 		pTargetTracker = MotionTransferTracker.new(transfer.pTargetTracker)
 		pBaseTracker = MotionTransferTracker.new(transfer.pBaseTracker)
 		pScaleRotation = transfer.pScaleRotation
@@ -128,19 +125,6 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pTargetBone = bone
 	end
 	
-	/** Base bone name. */
-	public func String getBaseBone()
-		return pBaseBone
-	end
-	
-	/** Set base bone name. */
-	public func void setBaseBone(String bone)
-		if bone == null
-			throw ENullPointer.new("bone")
-		end
-		pBaseBone = bone
-	end
-	
 	/** Tip bone name. */
 	public func String getTipBone()
 		return pTipBone
@@ -154,17 +138,17 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pTipBone = bone
 	end
 	
-	/** Count of bones in bone chain up to root bone. */
-	public func int getBoneCount()
-		return pBoneCount
+	/** Base bone name. */
+	public func String getBaseBone()
+		return pBaseBone
 	end
 	
-	/** Set of bones in bone chain up to root bone. */
-	public func void setBoneCount(int count)
-		if count < 1
-			throw ENullPointer.new("count < 1")
+	/** Set base bone name. */
+	public func void setBaseBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
 		end
-		pBoneCount = count
+		pBaseBone = bone
 	end
 	
 	/** Target tracker. */
@@ -327,7 +311,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 	/** Calibrate character. */
 	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
 	BaseVRActor actor, Component component)
-		findBoneChain(component.getRig(), pTipBone, pBoneCount, pCalibrateBones)
+		findBoneChain(component.getRig(), pTipBone, pBaseBone, pCalibrateBones)
 		
 		pTargetTracker.resolveRealSlot(config)
 		pTargetTracker.setTransform(component, pTargetBone)
@@ -361,17 +345,6 @@ class MotionTransferBend extends DefaultMotionTransfer
 		end
 	end
 	
-	/** Find bone chain. */
-	protected func void findBoneChain(Rig rig, String targetBone, int boneCount, Array bones)
-		bones.removeAll()
-		
-		var int index = rig.indexOfBoneNamed(targetBone)
-		while index != -1 and boneCount-- > 0
-			bones.add(rig.boneGetName(index))
-			index = rig.boneGetParent(index)
-		end
-	end
-	
 	/** Create copy of motion transfer. */
 	public func MotionTransfer createCopy()
 		return MotionTransferBend.new(this)
@@ -386,14 +359,11 @@ class MotionTransferBend extends DefaultMotionTransfer
 			elif tagName.equals("targetBone")
 				setTargetBone(element.getFirstCData())
 				
-			elif tagName.equals("baseBone")
-				setBaseBone(element.getFirstCData())
-				
 			elif tagName.equals("tipBone")
 				setTipBone(element.getFirstCData())
 				
-			elif tagName.equals("boneCount")
-				setBoneCount(element.getFirstCDataInt())
+			elif tagName.equals("baseBone")
+				setBaseBone(element.getFirstCData())
 				
 			elif tagName.equals("targetTracker")
 				pTargetTracker.load(loader, element)
@@ -431,9 +401,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("name", getName())
 		tag.addDataTag("targetBone", pTargetBone)
-		tag.addDataTag("baseBone", pBaseBone)
 		tag.addDataTag("tipBone", pTipBone)
-		tag.addDataTag("boneCount", pBoneCount)
+		tag.addDataTag("baseBone", pBaseBone)
 		pTargetTracker.save(loader, tag.addTag("targetTracker"))
 		pBaseTracker.save(loader, tag.addTag("baseTracker"))
 		loader.writeVector2(tag, "scaleRotation", pScaleRotation)

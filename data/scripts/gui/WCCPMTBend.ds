@@ -36,11 +36,10 @@ pin Dragengine.Scenery
 class WCCPMTBend extends WCCPanelMotionTransfer
 	private var DefaultListModel pModelListTargetBone
 	private var DefaultTextModel pModelTextTargetBone
-	private var DefaultListModel pModelListBaseBone
-	private var DefaultTextModel pModelTextBaseBone
 	private var DefaultListModel pModelListTipBone
 	private var DefaultTextModel pModelTextTipBone
-	private var DefaultTextModel pModelBoneCount
+	private var DefaultListModel pModelListBaseBone
+	private var DefaultTextModel pModelTextBaseBone
 	private var WCCPMTTracker pEditTargetTracker
 	private var WCCPMTTracker pEditBaseTracker
 	private var EditVector2 pEditScaleRotation
@@ -54,13 +53,14 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pModelListTargetBone = DefaultListModel.new()
 		pModelListTargetBone.setAutoSelect(false)
 		pModelTextTargetBone = DefaultTextModel.new()
-		pModelListBaseBone = DefaultListModel.new()
-		pModelListBaseBone.setAutoSelect(false)
-		pModelTextBaseBone = DefaultTextModel.new()
+		
 		pModelListTipBone = DefaultListModel.new()
 		pModelListTipBone.setAutoSelect(false)
 		pModelTextTipBone = DefaultTextModel.new()
-		pModelBoneCount = DefaultTextModel.new()
+		
+		pModelListBaseBone = DefaultListModel.new()
+		pModelListBaseBone.setAutoSelect(false)
+		pModelTextBaseBone = DefaultTextModel.new()
 		
 		runWhileBlockingLayout(block
 			createContent(optionPrefix)
@@ -71,15 +71,19 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	public func void dispose()
 		pModelListTargetBone = null
 		pModelTextTargetBone = null
-		pModelListBaseBone = null
-		pModelTextBaseBone = null
+		
 		pModelListTipBone = null
 		pModelTextTipBone = null
-		pModelBoneCount = null
+		
+		pModelListBaseBone = null
+		pModelTextBaseBone = null
+		
 		pEditTargetTracker.setTracker(null)
 		pEditTargetTracker = null
+		
 		pEditBaseTracker.setTracker(null)
 		pEditBaseTracker = null
+		
 		pEditScaleRotation = null
 		super.dispose()
 	end
@@ -94,9 +98,8 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 			if pMotionTransfer != null
 				var MotionTransferBend mt = pMotionTransfer cast MotionTransferBend
 				pModelTextTargetBone.setText(mt.getTargetBone())
-				pModelTextBaseBone.setText(mt.getBaseBone())
 				pModelTextTipBone.setText(mt.getTipBone())
-				pModelBoneCount.setText(mt.getBoneCount().toString())
+				pModelTextBaseBone.setText(mt.getBaseBone())
 				pEditTargetTracker.setTracker(mt.getTargetTracker())
 				pEditTargetTracker.loadValues()
 				pEditBaseTracker.setTracker(mt.getBaseTracker())
@@ -105,9 +108,8 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 				
 			else
 				pModelTextTargetBone.setText("")
-				pModelTextBaseBone.setText("")
 				pModelTextTipBone.setText("")
-				pModelBoneCount.setText("")
+				pModelTextBaseBone.setText("")
 				pEditTargetTracker.setTracker(null)
 				pEditBaseTracker.setTracker(null)
 				pEditScaleRotation.setVector2(Vector2.new())
@@ -126,9 +128,8 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		var MotionTransferBend mt = pMotionTransfer cast MotionTransferBend
 		
 		mt.setTargetBone(pModelTextTargetBone.getText())
-		mt.setBaseBone(pModelTextBaseBone.getText())
 		mt.setTipBone(pModelTextTipBone.getText())
-		mt.setBoneCount(pModelBoneCount.getText().toInt())
+		mt.setBaseBone(pModelTextBaseBone.getText())
 		pEditTargetTracker.saveValues()
 		pEditBaseTracker.saveValues()
 		mt.setScaleRotation(pEditScaleRotation.getVector2())
@@ -144,11 +145,11 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	/** Create window content. */
 	protected func void createContent(String optionPrefix)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var ComboBox comboBox, comboBoxTip, comboBoxBase
+		var Label label, labelTip, labelBase
 		var TextField textField
-		var ComboBox comboBox
 		var Button button
 		var ListBox listBox
-		var Label label
 		
 		super.createContent()
 		
@@ -163,37 +164,25 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		
 		CPEBone.new(preview, label, comboBox)
 		
-		// base bone
-		label = Label.new("Base Bone:", "Label.FormCaption")
-		pPanelForm.addWidget(label)
-		
-		comboBox = ComboBox.new(pModelListBaseBone, DefaultComboBoxEditor.new(pModelTextBaseBone))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Base bone not part of the chain. Bending angle is calculate between target and base bone.")
-		pPanelForm.addWidget(comboBox)
-		
-		CPEBone.new(preview, label, comboBox)
-		
-		// tip bone
-		var Label labelTip = Label.new("Tip Bone:", "Label.FormCaption")
+		// bone chain
+		labelTip = Label.new("Tip Bone:", "Label.FormCaption")
 		pPanelForm.addWidget(labelTip)
 		
-		comboBox = ComboBox.new(pModelListTipBone, DefaultComboBoxEditor.new(pModelTextTipBone))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Tip of bone chain.")
-		pPanelForm.addWidget(comboBox)
+		comboBoxTip = ComboBox.new(pModelListTipBone, DefaultComboBoxEditor.new(pModelTextTipBone))
+		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxTip.setToolTip("Tip of bone chain.")
+		pPanelForm.addWidget(comboBoxTip)
 		
-		// bone count
-		var Label labelCount = Label.new("Bone Count:", "Label.FormCaption")
-		pPanelForm.addWidget(labelCount)
+		labelBase = Label.new("Base Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelBase)
 		
-		textField = TextField.new(pModelBoneCount, 4)
-		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
-		textField.setToolTip("Count of bones in chain starting at Tip Bone moving along parent bones.")
-		pPanelForm.addWidget(textField)
+		comboBoxBase = ComboBox.new(pModelListBaseBone, DefaultComboBoxEditor.new(pModelTextBaseBone))
+		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxBase.setToolTip("Base bone not part of the chain. Bending angle is calculate between target and base bone.")
+		pPanelForm.addWidget(comboBoxBase)
 		
-		CPEBoneChain.new(preview, labelTip, comboBox, labelCount, textField)
+		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
+		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
 		
 		// scale rotation
 		pPanelForm.addWidget(Label.new("Scale Rotation:", "Label.FormCaption"))
@@ -213,8 +202,8 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	/** Update bone lists. */
 	public func void updateBoneLists(Array bones)
 		pModelListTargetBone.setContent(bones)
-		pModelListBaseBone.setContent(bones)
 		pModelListTipBone.setContent(bones)
+		pModelListBaseBone.setContent(bones)
 	end
 	
 	/** Update slot lists. */

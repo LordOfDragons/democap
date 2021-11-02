@@ -35,34 +35,44 @@ pin Dragengine.Utils.StyledText.Definition.Nodes
  * count to mark the length of the chain. The chain length can not be edited directly.
  */
 class CPEBoneChain extends CPEBone
-	protected var Label pLabelBoneCount
-	protected var TextField pEditBoneCount
+	protected var Label pLabelBoneBase
+	protected var ComboBox pCBBoneBase
+	protected var bool pUpdateBase
 	
 	
 	
 	/** Create character preview editor. */
 	public func new(WidgetCharacterPreview preview, Label labelBone, ComboBox cbBone,\
-	Label labelBoneCount, TextField editBoneCount) super(preview, labelBone, cbBone)
-		if labelBoneCount == null
-			throw ENullPointer.new("labelBoneCount")
+	Label labelBoneBase, ComboBox cbBoneBase, bool updateBase)\
+	super(preview, labelBone, cbBone, not updateBase)
+		if cbBoneBase == null
+			throw ENullPointer.new("cbBoneBase")
 		end
-		if editBoneCount == null
-			throw ENullPointer.new("editBoneCount")
+		pLabelBoneBase = labelBoneBase
+		pCBBoneBase = cbBoneBase
+		pUpdateBase = updateBase
+		
+		if updateBase
+			if labelBoneBase != null
+				labelBoneBase.addMouseListener(ClickedActivateEditor.new(this, cbBoneBase))
+			end
+			
+			if cbBoneBase.getEditor() != null
+				cbBoneBase.getEditor().getWidget().addFocusListener(ReceiveFocusActivateEditor.new(this))
+				cbBoneBase.getEditor().addActionListener(UpdateOnAction.new(this))
+				
+			else
+				cbBoneBase.addFocusListener(ReceiveFocusActivateEditor.new(this))
+			end
+			cbBoneBase.getModel().addListener(UpdateOnListChanged.new(this))
 		end
-		pLabelBoneCount = labelBoneCount
-		pEditBoneCount = editBoneCount
-		
-		labelBoneCount.addMouseListener(ClickedActivateEditor.new(this, editBoneCount))
-		
-		editBoneCount.addFocusListener(ReceiveFocusActivateEditor.new(this))
-		editBoneCount.getModel().addListener(UpdateOnTextChanged.new(this))
 	end
 	
 	
 	
-	/** Edit bone count. */
-	public func TextField getEditBoneCount()
-		return pEditBoneCount
+	/** Combo box bone base. */
+	public func ComboBox getComboBoxBoneBase()
+		return pCBBoneBase
 	end
 	
 	
@@ -71,14 +81,18 @@ class CPEBoneChain extends CPEBone
 	public func void onActivate()
 		super.onActivate()
 		
-		pLabelBoneCount.setDesignerSelector("Label.FormCaption.Hilight")
+		if pLabelBoneBase != null
+			pLabelBoneBase.setDesignerSelector("Label.FormCaption.Hilight")
+		end
 	end
 	
 	/** Editor has been deactivated. */
 	public func void onDeactivate()
 		super.onDeactivate()
 		
-		pLabelBoneCount.setDesignerSelector("Label.FormCaption")
+		if pLabelBoneBase != null
+			pLabelBoneBase.setDesignerSelector("Label.FormCaption")
+		end
 	end
 	
 	
@@ -92,35 +106,53 @@ class CPEBoneChain extends CPEBone
 		
 		bones.setAllBoneColor(previewBoneColorDefault)
 		
-		if pCBBone.getEditor() == null
+		if pCBBone.getEditor() == null or pCBBoneBase.getEditor() == null
 			return
 		end
 		
 		var String selected = pCBBone.getEditor().getEditorValue() cast String
-		if selected == null
+		var String selectedBase = pCBBoneBase.getEditor().getEditorValue() cast String
+		if selected == null or selectedBase == null
 			return
 		end
 		
-		bones.setBoneColor(selected, previewBoneColorSelected)
-		
-		var int boneCount = pEditBoneCount.getText().toInt()
-		if boneCount < 2
-			return
-		end
+		bones.setBoneColor(selected, pUpdateBase if previewBoneColorEnd else previewBoneColorSelected)
+		bones.setBoneColor(selectedBase, pUpdateBase if previewBoneColorSelected else previewBoneColorEnd)
 		
 		var Rig rig = bones.getComponent().getComponent().getRig()
-		var int bone = rig.indexOfBoneNamed(selected)
-		if bone == -1
+		var int indexTarget = rig.indexOfBoneNamed(selected)
+		var int indexBase = rig.indexOfBoneNamed(selectedBase)
+		if indexTarget == -1 or indexBase == -1
 			return
 		end
 		
-		bone = rig.boneGetParent(bone) // top of chain is colored already
-		boneCount--
+		var int boneCount = 1
+		var int indexBone = indexTarget
+		while indexBone != -1 and indexBone != indexBase
+			indexBone = rig.boneGetParent(indexBone)
+			boneCount++
+		end
 		
-		while boneCount > 0 and bone != -1
-			bones.setBoneColor(rig.boneGetName(bone), previewBoneColorChain)
-			bone = rig.boneGetParent(bone)
+		if indexBone != indexBase
+			return // invalid chain. color error chain?
+		end
+		
+		if boneCount < 3
+			return // further coloring only needed for bone in between
+		end
+		
+		indexBone = rig.boneGetParent(indexTarget) // chain tip is already colored
+		boneCount -= 2 // chain tip and chain base already colored
+		
+		while boneCount > 0 and indexBone != -1
+			bones.setBoneColor(rig.boneGetName(indexBone), previewBoneColorChain)
+			indexBone = rig.boneGetParent(indexBone)
 			boneCount--
 		end
+	end
+	
+	/** Edit combo box. */
+	protected func ComboBox getEditComboBox()
+		return pUpdateBase if pCBBoneBase else getComboBoxBone()
 	end
 end
