@@ -101,19 +101,22 @@ abstract class DefaultMotionTransfer implements MotionTransfer
 	protected func void findBoneChain(Rig rig, String tipBone, String baseBone, Array bones)
 		bones.removeAll()
 		
-		var int indexTarget = rig.indexOfBoneNamed(tipBone)
+		var int indexTip = rig.indexOfBoneNamed(tipBone)
 		var int indexBase = rig.indexOfBoneNamed(baseBone)
-		if indexTarget == -1 or indexBase == -1
+		if indexTip == -1 or indexBase == -1
 			return
 		end
 		
-		var int indexBone = indexTarget
+		var int indexBone = indexTip
 		while indexBone != -1 and indexBone != indexBase
 			bones.add(rig.boneGetName(indexBone))
 			indexBone = rig.boneGetParent(indexBone)
 		end
 		
-		if indexBone != indexBase
+		if indexBone == indexBase
+			bones.add(rig.boneGetName(indexBase))
+			
+		else
 			bones.removeAll() // invalid chain
 		end
 	end

@@ -61,9 +61,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	private var String pBoneHead
 	private var String pBoneChest
 	private var String pBoneHandRight
-	private var String pBoneShoulderRight
 	private var String pBoneHandLeft
-	private var String pBoneShoulderLeft
 	private var String pBoneHip
 	private var String pBoneFootRight
 	private var String pBoneFootLeft
@@ -84,9 +82,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pBoneHead = ""
 		pBoneChest = ""
 		pBoneHandRight = ""
-		pBoneShoulderRight = ""
 		pBoneHandLeft = ""
-		pBoneShoulderLeft = ""
 		pBoneHip = ""
 		pBoneFootRight = ""
 		pBoneFootLeft = ""
@@ -102,6 +98,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		pTransferSpineHead = MotionTransferIK.new(factoryIK.factoryID())
 		pTransferSpineHead.setName("AutoHuman: SpineHead")
+		pTransferSpineHead.setTwistPropagation(1)
 		pTransferSpineHead.setTwistAxisRotation(Vector.new(90, 0, 0))
 		
 		pTransferArmRight = MotionTransferIK.new(factoryIK.factoryID())
@@ -138,9 +135,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pBoneHead = transfer.pBoneHead
 		pBoneChest = transfer.pBoneChest
 		pBoneHandRight = transfer.pBoneHandRight
-		pBoneShoulderRight = transfer.pBoneShoulderRight
 		pBoneHandLeft = transfer.pBoneHandLeft
-		pBoneShoulderLeft = transfer.pBoneShoulderLeft
 		pBoneHip = transfer.pBoneHip
 		pBoneFootRight = transfer.pBoneFootRight
 		pBoneFootLeft = transfer.pBoneFootLeft
@@ -196,19 +191,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pBoneHandRight = bone
 	end
 	
-	/** Right shoulder bone name. */
-	public func String getBoneShoulderRight()
-		return pBoneShoulderRight
-	end
-	
-	/** Set right shoulder bone name. */
-	public func void setBoneShoulderRight(String bone)
-		if bone == null
-			throw ENullPointer.new("bone")
-		end
-		pBoneShoulderRight = bone
-	end
-	
 	/** Left hand bone name. */
 	public func String getBoneHandLeft()
 		return pBoneHandLeft
@@ -220,19 +202,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			throw ENullPointer.new("bone")
 		end
 		pBoneHandLeft = bone
-	end
-	
-	/** Left shoulder bone name. */
-	public func String getBoneShoulderLeft()
-		return pBoneShoulderLeft
-	end
-	
-	/** Set left shoulder bone name. */
-	public func void setBoneShoulderLeft(String bone)
-		if bone == null
-			throw ENullPointer.new("bone")
-		end
-		pBoneShoulderLeft = bone
 	end
 	
 	/** Hip bone name. */
@@ -365,41 +334,157 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	/** Init child transfer parameters. */
 	protected func void initChildTransferParams(CharacterConfiguration config,\
 	ActorProfile actorProfile, BaseVRActor actor, Component component)
+		var Rig rig = component.getRig()
+		var Array chain = Array.new()
+		var int index
+		
 		assignSlots(config)
 		
+		// waist
 		pTransferWaist.setBone(pBoneHip)
 		
+		// spine, head. base is hip which we use to find chains but it should not be
+		// included in anything but the waist. start one bone done the chain
+		var Array chainSpine = Array.new()
+		findBoneChain(rig, pBoneChest, pBoneHip, chainSpine)
 		pTransferSpineHead.setTipBone(pBoneHead)
 		pTransferSpineHead.setGuideBone(pBoneChest)
-		pTransferSpineHead.setBaseBone(pBoneHip)
 		pTransferSpineHead.setMoveBaseIK(pMoveBaseIK)
-// 		pTransferSpineHead.setTwistBoneCount(pBoneCountSpine)
+		pTransferSpineHead.setTwistPropagation(1)
+		pTransferSpineHead.setTwistAxisRotation(Vector.new(90, 0, 0))
+		
+		if chainSpine.getCount() > 1
+			pTransferSpineHead.setBaseBone(chainSpine.getAt(-2) cast String)
+			pTransferSpineHead.setTwistBoneCount(DEMath.max(chainSpine.getCount() - 2, 0))
+			
+		else
+			pTransferSpineHead.setBaseBone("")
+			pTransferSpineHead.setTwistBoneCount(0)
+		end
+		
+		// right arm. separate guide bone is used if chain has at least 4 bones:
+		// hand, lower arm, upper arm, shoulder. with 3 bones no shoulder is assumed
+		findBoneChain(rig, pBoneHandRight, pBoneHip, chain)
+		index = firstBoneNotInChain(chain, chainSpine)
 		
 		pTransferArmRight.setTipBone(pBoneHandRight)
-// 		pTransferArmRight.setGuideBone(pBoneShoulderRight)
-		pTransferArmRight.setBaseBone(pBoneShoulderRight)
 		pTransferArmRight.setMoveBaseIK(pMoveBaseIK)
 		pTransferArmRight.setTwistBoneCount(1)
+		pTransferArmRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+		pTransferArmRight.setActorReach(MotionTransferIK.ActorReach.arm)
+		pTransferArmRight.setTwistPropagation(0.5)
+		pTransferArmRight.setTwistAxisRotation(Vector.new(0, -90, 0))
+		pTransferArmRight.setTwistBoneCount(1)
+		
+		if index > 1 // at least 3 bones
+			pTransferArmRight.setBaseBone(chain.getAt(index - 1) cast String)
+			
+		else
+			pTransferArmRight.setBaseBone("")
+		end
+		
+		if index > 2 // at least 4 bones
+			pTransferArmRight.setGuideBone(chain.getAt(index - 2) cast String)
+			
+		else
+			pTransferArmRight.setGuideBone(pTransferArmRight.getBaseBone())
+		end
+		
+		// left arm. separate guide bone is used if chain has at least 4 bones:
+		// hand, lower arm, upper arm, shoulder. with 3 bones no shoulder is assumed
+		findBoneChain(rig, pBoneHandLeft, pBoneHip, chain)
+		index = firstBoneNotInChain(chain, chainSpine)
 		
 		pTransferArmLeft.setTipBone(pBoneHandLeft)
-// 		pTransferArmLeft.setGuideBone(pBoneShoulderLeft)
-		pTransferArmLeft.setBaseBone(pBoneShoulderLeft)
 		pTransferArmLeft.setMoveBaseIK(pMoveBaseIK)
 		pTransferArmLeft.setTwistBoneCount(1)
+		pTransferArmLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+		pTransferArmLeft.setActorReach(MotionTransferIK.ActorReach.arm)
+		pTransferArmLeft.setTwistPropagation(0.5)
+		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))
+		pTransferArmLeft.setTwistBoneCount(1)
 		
-		pTransferLegRight.setTipBone(pBoneFootLeft)
-// 		pTransferLegRight.setGuideBone(pBoneHip)
-		pTransferLegRight.setBaseBone(pBoneHip)
+		if index > 1 // at least 3 bones
+			pTransferArmLeft.setBaseBone(chain.getAt(index - 1) cast String)
+			
+		else
+			pTransferArmLeft.setBaseBone("")
+		end
+		
+		if index > 2 // at least 4 bones
+			pTransferArmLeft.setGuideBone(chain.getAt(index - 2) cast String)
+			
+		else
+			pTransferArmLeft.setGuideBone(pTransferArmLeft.getBaseBone())
+		end
+		
+		// right leg
+		findBoneChain(rig, pBoneFootRight, pBoneHip, chain)
+		index = firstBoneNotInChain(chain, chainSpine)
+		
+		pTransferLegRight.setTipBone(pBoneFootRight)
 		pTransferLegRight.setMoveBaseIK(pMoveBaseIK)
 		pTransferLegRight.setMoveRetracted(pMoveCrouch)
+		pTransferLegRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+		pTransferLegRight.setActorReach(MotionTransferIK.ActorReach.leg)
 		pTransferLegRight.setTwistBoneCount(2)
+		pTransferLegRight.setTwistPropagation(0.5)
+		
+		if index > 1
+			pTransferLegRight.setBaseBone(chain.getAt(index - 1) cast String)
+			
+		else
+			pTransferLegRight.setBaseBone("")
+		end
+		
+		pTransferLegRight.setGuideBone(pTransferLegRight.getBaseBone())
+		
+		// left leg
+		findBoneChain(rig, pBoneFootLeft, pBoneHip, chain)
+		index = firstBoneNotInChain(chain, chainSpine)
 		
 		pTransferLegLeft.setTipBone(pBoneFootLeft)
-// 		pTransferLegLeft.setGuideBone(pBoneHip)
-		pTransferLegLeft.setBaseBone(pBoneHip)
 		pTransferLegLeft.setMoveBaseIK(pMoveBaseIK)
 		pTransferLegLeft.setMoveRetracted(pMoveCrouch)
+		pTransferLegLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+		pTransferLegLeft.setActorReach(MotionTransferIK.ActorReach.leg)
 		pTransferLegLeft.setTwistBoneCount(2)
+		pTransferLegLeft.setTwistPropagation(0.5)
+		
+		if index > 1
+			pTransferLegLeft.setBaseBone(chain.getAt(index - 1) cast String)
+			
+		else
+			pTransferLegLeft.setBaseBone("")
+		end
+		
+		pTransferLegLeft.setGuideBone(pTransferLegLeft.getBaseBone())
+	end
+	
+	/** Find guide bone or empty string. */
+	protected func String findBoneBeforeBase(Rig rig, String tipBone, String baseBone)
+		if tipBone.empty() or baseBone.empty()
+			return ""
+		end
+		
+		var Array chain = Array.new()
+		findBoneChain(rig, tipBone, baseBone, chain)
+		if chain.getCount() < 3
+			return ""
+		end
+		
+		return chain.getAt( -2 ) cast String
+	end
+	
+	/** Index of first bone not in another chain or chain.getCount(). */
+	protected func int firstBoneNotInChain(Array chain, Array otherChain)
+		var int index, count = chain.getCount()
+		for index = 0 to count
+			if otherChain.has(chain.getAt(index))
+				break
+			end
+		end
+		return index
 	end
 	
 	/** Find slots and assign them to child transfers. */
@@ -454,14 +539,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			elif tagName.equals("boneHandRight")
 				setBoneHandRight(element.getFirstCData())
 				
-			elif tagName.equals("boneShoulderRight")
-				setBoneShoulderRight(element.getFirstCData())
-				
 			elif tagName.equals("boneHandLeft")
 				setBoneHandLeft(element.getFirstCData())
-				
-			elif tagName.equals("boneShoulderLeft")
-				setBoneShoulderLeft(element.getFirstCData())
 				
 			elif tagName.equals("boneHip")
 				setBoneHip(element.getFirstCData())
@@ -547,9 +626,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		tag.addDataTag("boneHead", pBoneHead)
 		tag.addDataTag("boneChest", pBoneChest)
 		tag.addDataTag("boneHandRight", pBoneHandRight)
-		tag.addDataTag("boneShoulderRight", pBoneShoulderRight)
 		tag.addDataTag("boneHandLeft", pBoneHandLeft)
-		tag.addDataTag("boneShoulderLeft", pBoneShoulderLeft)
 		tag.addDataTag("boneHip", pBoneHip)
 		tag.addDataTag("boneFootRight", pBoneFootRight)
 		tag.addDataTag("boneFootLeft", pBoneFootLeft)

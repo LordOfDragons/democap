@@ -1,0 +1,318 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer auto human panel.
+ */
+class WCCPMTAutoHuman extends WCCPanelMotionTransfer
+	private var DefaultListModel pModelListBoneHead
+	private var DefaultTextModel pModelTextBoneHead
+	private var DefaultListModel pModelListBoneChest
+	private var DefaultTextModel pModelTextBoneChest
+	private var DefaultListModel pModelListBoneHandRight
+	private var DefaultTextModel pModelTextBoneHandRight
+	private var DefaultListModel pModelListBoneHandLeft
+	private var DefaultTextModel pModelTextBoneHandLeft
+	private var DefaultListModel pModelListBoneHip
+	private var DefaultTextModel pModelTextBoneHip
+	private var DefaultListModel pModelListBoneFootRight
+	private var DefaultTextModel pModelTextBoneFootRight
+	private var DefaultListModel pModelListBoneFootLeft
+	private var DefaultTextModel pModelTextBoneFootLeft
+	private var DefaultListModel pModelListMoveBaseIK
+	private var DefaultTextModel pModelTextMoveBaseIK
+	private var DefaultListModel pModelListMoveCrouch
+	private var DefaultTextModel pModelTextMoveCrouch
+	
+	
+	
+	/** Create window. */
+	public func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
+		pModelTypeName.setText("AutoHuman Coordinate System")
+		
+		pModelListBoneHead = DefaultListModel.new()
+		pModelListBoneHead.setAutoSelect(false)
+		pModelTextBoneHead = DefaultTextModel.new()
+		
+		pModelListBoneChest = DefaultListModel.new()
+		pModelListBoneChest.setAutoSelect(false)
+		pModelTextBoneChest = DefaultTextModel.new()
+		
+		pModelListBoneHandRight = DefaultListModel.new()
+		pModelListBoneHandRight.setAutoSelect(false)
+		pModelTextBoneHandRight = DefaultTextModel.new()
+		
+		pModelListBoneHandLeft = DefaultListModel.new()
+		pModelListBoneHandLeft.setAutoSelect(false)
+		pModelTextBoneHandLeft= DefaultTextModel.new()
+		
+		pModelListBoneHip = DefaultListModel.new()
+		pModelListBoneHip.setAutoSelect(false)
+		pModelTextBoneHip = DefaultTextModel.new()
+		
+		pModelListBoneFootRight = DefaultListModel.new()
+		pModelListBoneFootRight.setAutoSelect(false)
+		pModelTextBoneFootRight = DefaultTextModel.new()
+		
+		pModelListBoneFootLeft = DefaultListModel.new()
+		pModelListBoneFootLeft.setAutoSelect(false)
+		pModelTextBoneFootLeft = DefaultTextModel.new()
+		
+		pModelListMoveBaseIK = DefaultListModel.new()
+		pModelListMoveBaseIK.setAutoSelect(false)
+		pModelTextMoveBaseIK = DefaultTextModel.new()
+		
+		pModelListMoveCrouch = DefaultListModel.new()
+		pModelListMoveCrouch.setAutoSelect(false)
+		pModelTextMoveCrouch = DefaultTextModel.new()
+		
+		runWhileBlockingLayout(block
+			createContent(optionPrefix)
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		pModelListBoneHead = null
+		pModelTextBoneHead = null
+		
+		pModelListBoneChest = null
+		pModelTextBoneChest = null
+		
+		pModelListBoneHandRight = null
+		pModelTextBoneHandRight = null
+		
+		pModelListBoneHandLeft = null
+		pModelTextBoneHandLeft = null
+		
+		pModelListBoneHip = null
+		pModelTextBoneHip = null
+		
+		pModelListBoneFootRight = null
+		pModelTextBoneFootRight = null
+		
+		pModelListBoneFootLeft = null
+		pModelTextBoneFootLeft = null
+		
+		pModelListMoveBaseIK = null
+		pModelTextMoveBaseIK = null
+		
+		pModelListMoveCrouch = null
+		pModelTextMoveCrouch = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	public func void loadValues()
+		runWhileBlockingLayout(block
+			super.loadValues()
+			
+			if pMotionTransfer != null
+				var MotionTransferAutoHuman mt = pMotionTransfer cast MotionTransferAutoHuman
+				pModelTextBoneHead.setText(mt.getBoneHead())
+				pModelTextBoneChest.setText(mt.getBoneChest())
+				pModelTextBoneHandRight.setText(mt.getBoneHandRight())
+				pModelTextBoneHandLeft.setText(mt.getBoneHandLeft())
+				pModelTextBoneHip.setText(mt.getBoneHip())
+				pModelTextBoneFootRight.setText(mt.getBoneFootRight())
+				pModelTextBoneFootLeft.setText(mt.getBoneFootLeft())
+				pModelTextMoveBaseIK.setText(mt.getMoveBaseIK())
+				pModelTextMoveCrouch.setText(mt.getMoveCrouch())
+				
+			else
+				pModelTextBoneHead.setText("")
+				pModelTextBoneChest.setText("")
+				pModelTextBoneHandRight.setText("")
+				pModelTextBoneHandLeft.setText("")
+				pModelTextBoneHip.setText("")
+				pModelTextBoneFootRight.setText("")
+				pModelTextBoneFootLeft.setText("")
+				pModelTextMoveBaseIK.setText("")
+				pModelTextMoveCrouch.setText("")
+			end
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	public func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		super.saveValues()
+		
+		var MotionTransferAutoHuman mt = pMotionTransfer cast MotionTransferAutoHuman
+		mt.setBoneHead(pModelTextBoneHead.getText())
+		mt.setBoneChest(pModelTextBoneChest.getText())
+		mt.setBoneHandRight(pModelTextBoneHandRight.getText())
+		mt.setBoneHandLeft(pModelTextBoneHandLeft.getText())
+		mt.setBoneHip(pModelTextBoneHip.getText())
+		mt.setBoneFootRight(pModelTextBoneFootRight.getText())
+		mt.setBoneFootLeft(pModelTextBoneFootLeft.getText())
+		mt.setMoveBaseIK(pModelTextMoveBaseIK.getText())
+		mt.setMoveCrouch(pModelTextMoveCrouch.getText())
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferAutoHuman
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent(String optionPrefix)
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var TextField textField
+		var ComboBox comboBox
+		var Button button
+		var ListBox listBox
+		var Label label
+		
+		super.createContent()
+		
+		// head bone
+		label = Label.new("Head:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		comboBox = ComboBox.new(pModelListBoneHead, DefaultComboBoxEditor.new(pModelTextBoneHead))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Head bone.")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, label, comboBox)
+		
+		// chest bone
+		label = Label.new("Chest:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		comboBox = ComboBox.new(pModelListBoneChest, DefaultComboBoxEditor.new(pModelTextBoneChest))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Chest bone where neck and arms are attached to.")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, label, comboBox)
+		
+		// right hand bone
+		label = Label.new("Right Hand:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		comboBox = ComboBox.new(pModelListBoneHandRight, DefaultComboBoxEditor.new(pModelTextBoneHandRight))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Right hand bone.")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, label, comboBox)
+		
+		// left hand bone
+		label = Label.new("Left Hand:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		comboBox = ComboBox.new(pModelListBoneHandLeft, DefaultComboBoxEditor.new(pModelTextBoneHandLeft))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Left hand bone.")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, label, comboBox)
+		
+		// hip bone
+		label = Label.new("Hip:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		comboBox = ComboBox.new(pModelListBoneHip, DefaultComboBoxEditor.new(pModelTextBoneHip))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Hip bone where spine and legs are attached to.")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, label, comboBox)
+		
+		// right foot bone
+		label = Label.new("Right Foot:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		comboBox = ComboBox.new(pModelListBoneFootRight, DefaultComboBoxEditor.new(pModelTextBoneFootRight))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Right foot bone.")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, label, comboBox)
+		
+		// left foot bone
+		label = Label.new("Left Foot:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		comboBox = ComboBox.new(pModelListBoneFootLeft, DefaultComboBoxEditor.new(pModelTextBoneFootLeft))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Left foot bone.")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, label, comboBox)
+		
+		// base ik move
+		pPanelForm.addWidget(Label.new("Move Base IK:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelListMoveBaseIK, DefaultComboBoxEditor.new(pModelTextMoveBaseIK))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Animation move to use to init base IK state for better results. "\
+			+ "Applied before applying inverse kinematic")
+		pPanelForm.addWidget(comboBox)
+		
+		// crouch move
+		pPanelForm.addWidget(Label.new("Move Crouch:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelListMoveCrouch, DefaultComboBoxEditor.new(pModelTextMoveCrouch))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Animation move to use to init crouch pose for better results. "\
+			+ "Applied after Move Base IK and before inverse kinematics. "\
+			+ "Percentage of capture bone chain length to original bone chain length is used "\
+			+ "to blend move (start=relaxed, end=retracted).")
+		pPanelForm.addWidget(comboBox)
+	end
+	
+	/** Update bone lists. */
+	public func void updateBoneLists(Array bones)
+		pModelListBoneHead.setContent(bones)
+		pModelListBoneHandRight.setContent(bones)
+		pModelListBoneHandLeft.setContent(bones)
+		pModelListBoneHip.setContent(bones)
+		pModelListBoneFootRight.setContent(bones)
+		pModelListBoneFootLeft.setContent(bones)
+	end
+	
+	/** Update move lists. */
+	public func void updateMoveLists(Array moves)
+		pModelListMoveBaseIK.setContent(moves)
+		pModelListMoveCrouch.setContent(moves)
+	end
+end
