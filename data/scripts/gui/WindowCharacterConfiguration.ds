@@ -272,6 +272,13 @@ class WindowCharacterConfiguration extends WindowDialog
 			button.setEnabled(pWindow.getMotionTransfer() != null)
 			popup.addWidget(button)
 			
+			button = Button.new("Decompose Transfer", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pWindow.decomposeMotionTransfer()
+			end))
+			button.setEnabled(pWindow.getMotionTransfer() != null)
+			popup.addWidget(button)
+			
 			pWindow.getDesktop().addWindow(popup)
 			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
 		end
@@ -1026,6 +1033,36 @@ class WindowCharacterConfiguration extends WindowDialog
 		content.move(index, index + 1)
 		pModelMotionTransfers.setAll(content)
 		pModelMotionTransfers.setSelected(index + 1)
+	end
+	
+	/** Decompose motion transfer. */
+	public func void decomposeMotionTransfer()
+		var MotionTransfer motionTransfer = getMotionTransfer()
+		if motionTransfer == null
+			return
+		end
+		
+		var String message = "Do you really want to decompose motion transfer '"\
+			+ motionTransfer.getName() + "'?"
+		
+		if not pCharacterConfiguration.isCalibrated()
+			message = "Character is not calibrated.\n\n" + message
+		end
+		
+		WindowDialog.question(this, "Decompose Motion Transfer", message,\
+			null, Array.newWith(WindowDialog.ButtonConfiguration.new("Decompose", true), \
+				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					var Array list = motionTransfer.decompose()
+					if list.getCount() > 0
+						var int index = pModelMotionTransfers.indexOf(motionTransfer)
+						pModelMotionTransfers.remove(motionTransfer)
+						pModelMotionTransfers.insertAll(index, list)
+						pModelMotionTransfers.setSelected(index)
+					end
+				end
+			end))
 	end
 	
 	/** Motion transfer name changed. */

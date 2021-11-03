@@ -461,67 +461,21 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegLeft.setGuideBone(pTransferLegLeft.getBaseBone())
 	end
 	
-	/** Find guide bone or empty string. */
-	protected func String findBoneBeforeBase(Rig rig, String tipBone, String baseBone)
-		if tipBone.empty() or baseBone.empty()
-			return ""
-		end
-		
-		var Array chain = Array.new()
-		findBoneChain(rig, tipBone, baseBone, chain)
-		if chain.getCount() < 3
-			return ""
-		end
-		
-		return chain.getAt( -2 ) cast String
-	end
-	
-	/** Index of first bone not in another chain or chain.getCount(). */
-	protected func int firstBoneNotInChain(Array chain, Array otherChain)
-		var int index, count = chain.getCount()
-		for index = 0 to count
-			if otherChain.has(chain.getAt(index))
-				break
-			end
-		end
-		return index
-	end
-	
-	/** Find slots and assign them to child transfers. */
-	protected func void assignSlots(CharacterConfiguration config)
-		var String slotWaist = firstSlotWithType(config, CharacterTrackerSlot.Type.waist)
-		
-		pTransferWaist.getTracker().setSlot(slotWaist)
-		
-		pTransferSpineHead.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.headHmd))
-		pTransferSpineHead.getBaseTracker().setSlot(slotWaist)
-		
-		pTransferArmRight.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightHandController))
-		pTransferArmRight.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightElbow))
-		pTransferArmRight.getBaseTracker().setSlot(slotWaist)
-		
-		pTransferArmLeft.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftHandController))
-		pTransferArmLeft.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftElbow))
-		pTransferArmLeft.getBaseTracker().setSlot(slotWaist)
-		
-		pTransferLegRight.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightFoot))
-		pTransferLegRight.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightKnee))
-		pTransferLegRight.getBaseTracker().setSlot(slotWaist)
-		
-		pTransferLegLeft.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftFoot))
-		pTransferLegLeft.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftKnee))
-		pTransferLegLeft.getBaseTracker().setSlot(slotWaist)
-	end
-	
-	/** First slot name matching type or empty string. */
-	protected func String firstSlotWithType(CharacterConfiguration config, CharacterTrackerSlot.Type type)
-		var CharacterTrackerSlot slot = config.getTrackerSlots().firstWithType(type)
-		return slot != null if slot.getName() else ""
-	end
-	
 	/** Create copy of motion transfer. */
 	public func MotionTransfer createCopy()
 		return MotionTransferAutoHuman.new(this)
+	end
+	
+	/** Decompose motion transfer. Returns Array of MotionTranfer or empty list if not supported. */
+	public func Array decompose()
+		var Array list = Array.new()
+		list.add(pTransferWaist.createCopy())
+		list.add(pTransferSpineHead.createCopy())
+		list.add(pTransferArmRight.createCopy())
+		list.add(pTransferArmLeft.createCopy())
+		list.add(pTransferLegRight.createCopy())
+		list.add(pTransferLegLeft.createCopy())
+		return list
 	end
 	
 	/** Load from XML. */
@@ -589,7 +543,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		end)
 	end
 	
-	protected func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+	public func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
 		root.forEachTag(block EasyXMLElement element, String tagName
 			if tagName.equals("transfers")
 				loadCalibratedTransfers(loader, element)
@@ -644,7 +598,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
-	protected func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+	public func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
 		pTransferWaist.saveCalibrated(loader, tagTransfers.addTag("waist"))
 		pTransferSpineHead.saveCalibrated(loader, tagTransfers.addTag("spineHead"))
@@ -652,5 +606,65 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.saveCalibrated(loader, tagTransfers.addTag("armLeft"))
 		pTransferLegRight.saveCalibrated(loader, tagTransfers.addTag("legRight"))
 		pTransferLegLeft.saveCalibrated(loader, tagTransfers.addTag("legLeft"))
+	end
+	
+	
+	
+	/** Find guide bone or empty string. */
+	protected func String findBoneBeforeBase(Rig rig, String tipBone, String baseBone)
+		if tipBone.empty() or baseBone.empty()
+			return ""
+		end
+		
+		var Array chain = Array.new()
+		findBoneChain(rig, tipBone, baseBone, chain)
+		if chain.getCount() < 3
+			return ""
+		end
+		
+		return chain.getAt( -2 ) cast String
+	end
+	
+	/** Index of first bone not in another chain or chain.getCount(). */
+	protected func int firstBoneNotInChain(Array chain, Array otherChain)
+		var int index, count = chain.getCount()
+		for index = 0 to count
+			if otherChain.has(chain.getAt(index))
+				break
+			end
+		end
+		return index
+	end
+	
+	/** Find slots and assign them to child transfers. */
+	protected func void assignSlots(CharacterConfiguration config)
+		var String slotWaist = firstSlotWithType(config, CharacterTrackerSlot.Type.waist)
+		
+		pTransferWaist.getTracker().setSlot(slotWaist)
+		
+		pTransferSpineHead.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.headHmd))
+		pTransferSpineHead.getBaseTracker().setSlot(slotWaist)
+		
+		pTransferArmRight.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightHandController))
+		pTransferArmRight.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightElbow))
+		pTransferArmRight.getBaseTracker().setSlot(slotWaist)
+		
+		pTransferArmLeft.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftHandController))
+		pTransferArmLeft.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftElbow))
+		pTransferArmLeft.getBaseTracker().setSlot(slotWaist)
+		
+		pTransferLegRight.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightFoot))
+		pTransferLegRight.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightKnee))
+		pTransferLegRight.getBaseTracker().setSlot(slotWaist)
+		
+		pTransferLegLeft.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftFoot))
+		pTransferLegLeft.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftKnee))
+		pTransferLegLeft.getBaseTracker().setSlot(slotWaist)
+	end
+	
+	/** First slot name matching type or empty string. */
+	protected func String firstSlotWithType(CharacterConfiguration config, CharacterTrackerSlot.Type type)
+		var CharacterTrackerSlot slot = config.getTrackerSlots().firstWithType(type)
+		return slot != null if slot.getName() else ""
 	end
 end
