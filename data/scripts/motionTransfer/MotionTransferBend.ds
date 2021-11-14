@@ -77,17 +77,14 @@ class MotionTransferBend extends DefaultMotionTransfer
 	private var int pTwistBoneCount
 	private var Vector pTwistAxisRotation
 	
-	private var ADController pADControllerRotationX
-	private var ADController pADControllerRotationY
-	private var ADController pADControllerRotationZ
+	private var ADController pADControllerBendX
+	private var ADController pADControllerBendY
 	private var ADController pADControllerTwist
-	
-	private var ADRuleBoneTransformator pADRuleRotateX
-	private var ADRuleBoneTransformator pADRuleRotateY
-	private var ADRuleBoneTransformator pADRuleRotateZ
 	
 	private var Array pCalibrateBones
 	private var Vector2 pCalibrateZeroRotation
+	private var Array pCalibrateBendAxesX
+	private var Array pCalibrateBendAxesY
 	private var Vector pCalibrateTwistRotation
 	private var Array pCalibrateTwistAxes
 	private var Vector pCalibrateTwistBoneAxisRotation
@@ -107,6 +104,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pTwistAxisRotation = Vector.new()
 		pCalibrateBones = Array.new()
 		pCalibrateZeroRotation = Vector2.new()
+		pCalibrateBendAxesX = Array.new()
+		pCalibrateBendAxesY = Array.new()
 		pCalibrateTwistRotation = Vector.new()
 		pCalibrateTwistAxes = Array.new()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
@@ -124,6 +123,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pTwistBoneCount = transfer.pTwistBoneCount
 		pTwistAxisRotation = transfer.pTwistAxisRotation
 		pCalibrateZeroRotation = transfer.pCalibrateZeroRotation
+		pCalibrateBendAxesX = Array.new(transfer.pCalibrateBendAxesX)
+		pCalibrateBendAxesY = Array.new(transfer.pCalibrateBendAxesY)
 		pCalibrateTwistRotation = transfer.pCalibrateTwistRotation
 		pCalibrateTwistAxes = Array.new(transfer.pCalibrateTwistAxes)
 		pCalibrateTwistBoneAxisRotation = transfer.pCalibrateTwistBoneAxisRotation
@@ -231,21 +232,6 @@ class MotionTransferBend extends DefaultMotionTransfer
 	
 	
 	
-	/** Animator definition rule or null. */
-	public func ADRuleBoneTransformator getADRuleRotateX()
-		return pADRuleRotateX
-	end
-	
-	public func ADRuleBoneTransformator getADRuleRotateY()
-		return pADRuleRotateY
-	end
-	
-	public func ADRuleBoneTransformator getADRuleRotateZ()
-		return pADRuleRotateZ
-	end
-	
-	
-	
 	/** Calibrate zero rotation. */
 	public func Vector2 getCalibrateZeroRotation()
 		return pCalibrateZeroRotation
@@ -265,13 +251,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 	
 	/** Init element clas. */
 	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
-		pADControllerRotationX = null
-		pADControllerRotationY = null
-		pADControllerRotationZ = null
+		pADControllerBendX = null
+		pADControllerBendY = null
 		pADControllerTwist = null
-		pADRuleRotateX = null
-		pADRuleRotateY = null
-		pADRuleRotateZ = null
 		
 		// add behavior
 		var ECBMotionTransferBend behavior = ECBMotionTransferBend.new(eclass, this)
@@ -296,76 +278,67 @@ class MotionTransferBend extends DefaultMotionTransfer
 		var float fullRotation = 180
 		var float rotationStep = fullRotation / pCalibrateBones.getCount()
 		
-		pADControllerRotationX = ADController.new()
-		pADControllerRotationX.setName(behavior.getControllerNameRotateX())
-		pADControllerRotationX.setMinimum(-fullRotation)
-		pADControllerRotationX.setMaximum(fullRotation)
-		adef.addController(pADControllerRotationX)
+		pADControllerBendX = ADController.new()
+		pADControllerBendX.setName(behavior.getControllerNameBendX())
+		pADControllerBendX.setMinimum(-fullRotation)
+		pADControllerBendX.setMaximum(fullRotation)
+		adef.addController(pADControllerBendX)
 		
-		pADControllerRotationY = ADController.new()
-		pADControllerRotationY.setName(behavior.getControllerNameRotateY())
-		pADControllerRotationY.setMinimum(-fullRotation)
-		pADControllerRotationY.setMaximum(fullRotation)
-		adef.addController(pADControllerRotationY)
+		pADControllerBendY = ADController.new()
+		pADControllerBendY.setName(behavior.getControllerNameBendY())
+		pADControllerBendY.setMinimum(-fullRotation)
+		pADControllerBendY.setMaximum(fullRotation)
+		adef.addController(pADControllerBendY)
 		
-		pADControllerRotationZ = ADController.new()
-		pADControllerRotationZ.setName(behavior.getControllerNameRotateZ())
-		pADControllerRotationZ.setMinimum(-fullRotation)
-		pADControllerRotationZ.setMaximum(fullRotation)
-		adef.addController(pADControllerRotationZ)
+		var ADLink linkBendX = ADLink.new()
+		linkBendX.setController(pADControllerBendX)
+		adef.addLink(linkBendX)
 		
-		var ADLink linkRotateX = ADLink.new()
-		linkRotateX.setController(pADControllerRotationX)
-		adef.addLink(linkRotateX)
+		var ADLink linkBendY = ADLink.new()
+		linkBendY.setController(pADControllerBendY)
+		adef.addLink(linkBendY)
 		
-		var ADLink linkRotateY = ADLink.new()
-		linkRotateY.setController(pADControllerRotationY)
-		adef.addLink(linkRotateY)
+		var int i, count, baseIndex
 		
-		var ADLink linkRotateZ = ADLink.new()
-		linkRotateZ.setController(pADControllerRotationZ)
-		adef.addLink(linkRotateZ)
+		// bending
+		count = pCalibrateBones.getCount()
+		var String nameBendX = getName() + ".bendX"
+		var String nameBendY = getName() + ".bendY"
+		baseIndex = count - 1
 		
-		pADRuleRotateZ = ADRuleBoneTransformator.new()
-		pADRuleRotateZ.setName(getName())
-		pADRuleRotateZ.setCoordinateFrame(ARBoneTransformatorCFrame.component)
-		pADRuleRotateZ.setMinimumRotation(Vector.new(0, 0, -rotationStep))
-		pADRuleRotateZ.setMaximumRotation(Vector.new(0, 0, rotationStep))
-		pADRuleRotateZ.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkRotateZ))
-		pCalibrateBones.forEach(block String each
-			pADRuleRotateZ.addBone(each)
-		end)
-		adef.addRule(pADRuleRotateZ)
-		
-		pADRuleRotateX = ADRuleBoneTransformator.new()
-		pADRuleRotateX.setName(getName())
-		pADRuleRotateX.setCoordinateFrame(ARBoneTransformatorCFrame.component)
-		pADRuleRotateX.setMinimumRotation(Vector.new(-rotationStep, 0, 0))
-		pADRuleRotateX.setMaximumRotation(Vector.new(rotationStep, 0, 0))
-		pADRuleRotateX.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkRotateX))
-		pCalibrateBones.forEach(block String each
-			pADRuleRotateX.addBone(each)
-		end)
-		adef.addRule(pADRuleRotateX)
-		
-		pADRuleRotateY = ADRuleBoneTransformator.new()
-		pADRuleRotateY.setName(getName())
-		pADRuleRotateY.setCoordinateFrame(ARBoneTransformatorCFrame.component)
-		pADRuleRotateY.setMinimumRotation(Vector.new(0, -rotationStep, 0))
-		pADRuleRotateY.setMaximumRotation(Vector.new(0, rotationStep, 0))
-		pADRuleRotateY.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkRotateY))
-		pCalibrateBones.forEach(block String each
-			pADRuleRotateY.addBone(each)
-		end)
-		adef.addRule(pADRuleRotateY)
+		for i = 0 to count
+			var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
+			var ADRuleBoneTransformator rule
+			
+			rule = ADRuleBoneTransformator.new()
+			rule.setName(nameBendX)
+			rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+			rule.setUseAxis(true)
+			rule.setAxis(pCalibrateBendAxesX.getAt(i) cast Vector)
+			rule.setMinimumAngle(-rotationStep)
+			rule.setMaximumAngle(rotationStep)
+			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkBendX))
+			rule.addBone(bone)
+			adef.addRule(rule)
+			
+			rule = ADRuleBoneTransformator.new()
+			rule.setName(nameBendY)
+			rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+			rule.setUseAxis(true)
+			rule.setAxis(pCalibrateBendAxesY.getAt(i) cast Vector)
+			rule.setMinimumAngle(-rotationStep)
+			rule.setMaximumAngle(rotationStep)
+			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkBendY))
+			rule.addBone(bone)
+			adef.addRule(rule)
+		end
 		
 		// twist
 		if pTwistBoneCount > 0 and pTwistPropagation > 0.01
-			var int count = DEMath.min(pTwistBoneCount, pCalibrateBones.getCount())
+			count = DEMath.min(pTwistBoneCount, pCalibrateBones.getCount())
 			var ADRuleBoneTransformator rule
 			var String name = getName() + ".twist"
 			var float maxAngle = 180
-			var int i
 			
 			pADControllerTwist = ADController.new()
 			pADControllerTwist.setName(behavior.getControllerNameTwist())
@@ -378,7 +351,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 			adef.addLink(link)
 			
 			var float angle = pTwistPropagation * maxAngle / count
-			var int baseIndex = count - 1
+			baseIndex = count - 1
 			
 			for i = 0 to count
 				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
@@ -410,6 +383,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pTargetTracker.resetTransform()
 		pBaseTracker.resetTransform()
 		pCalibrateZeroRotation = Vector2.new()
+		pCalibrateBendAxesX.removeAll()
+		pCalibrateBendAxesY.removeAll()
 		pCalibrateTwistRotation = Vector.new()
 		pCalibrateTwistAxes.removeAll()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
@@ -439,17 +414,36 @@ class MotionTransferBend extends DefaultMotionTransfer
 		if indexBase != -1 and indexTarget != -1 and indexTip != -1
 			var Matrix baseMatrix = Matrix.newRT(pBaseTracker.getOffsetRotation(), \
 				pBaseTracker.getOffsetPosition()) * component.boneGetMatrix(indexBase)
-			var Matrix baseMatrixInv = baseMatrix.getInverse()
 			
 			var Matrix targetMatrix = Matrix.newRT(pTargetTracker.getOffsetRotation(), \
 				pTargetTracker.getOffsetPosition()) * component.boneGetMatrix(indexTarget)
 			
-			var Matrix transform = targetMatrix * baseMatrixInv
-			var Vector position = transform.getPosition()
+			var Vector position = (targetMatrix * baseMatrix.getInverse()).getPosition()
 			
 			pCalibrateZeroRotation = Vector2.new(\
 				DEMath.atan2(position.getY(), position.getZ()),\
 				-DEMath.atan2(position.getX(), position.getZ()))
+			
+			// bend axes
+			var Vector axisX = baseMatrix.getRightVector()
+			var Vector axisY = baseMatrix.getUpVector()
+			var int count = pCalibrateBones.getCount()
+			var int i, baseIndex = count - 1
+			
+			for i = 0 to count
+				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
+				var int indexBone = component.indexOfBoneNamed(bone)
+				
+				if indexBone != -1
+					var Matrix boneMatrix = component.boneGetInverseMatrix(indexBone)
+					pCalibrateBendAxesX.add(boneMatrix.transformNormal(axisX))
+					pCalibrateBendAxesY.add(boneMatrix.transformNormal(axisY))
+					
+				else
+					pCalibrateBendAxesX.add(Vector.new(1, 0, 0))
+					pCalibrateBendAxesY.add(Vector.new(0, 0, 1))
+				end
+			end
 			
 			// twist rotation. the rotation angle is unimportant since we only examine relative rotation
 			var Matrix twistTransform = (baseMatrix * targetMatrix.getInverse()).normalize()
@@ -542,6 +536,12 @@ class MotionTransferBend extends DefaultMotionTransfer
 			elif tagName.equals("calibrateZeroRotation")
 				pCalibrateZeroRotation = loader.readVector2(element)
 				
+			elif tagName.equals("bendAxisX")
+				pCalibrateBendAxesX.add(loader.readVector(element))
+				
+			elif tagName.equals("bendAxisY")
+				pCalibrateBendAxesY.add(loader.readVector(element))
+				
 			elif tagName.equals("twistRotation")
 				pCalibrateTwistRotation = loader.readVector(element)
 				
@@ -576,6 +576,12 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pTargetTracker.saveCalibrated(loader, tag.addTag("targetTracker"))
 		pBaseTracker.saveCalibrated(loader, tag.addTag("baseTracker"))
 		loader.writeVector2(tag, "calibrateZeroRotation", pCalibrateZeroRotation)
+		pCalibrateBendAxesX.forEach(block Vector each
+			loader.writeVector(tag, "bendAxisX", each)
+		end)
+		pCalibrateBendAxesY.forEach(block Vector each
+			loader.writeVector(tag, "bendAxisY", each)
+		end)
 		loader.writeVector(tag, "twistRotation", pCalibrateTwistRotation)
 		pCalibrateTwistAxes.forEach(block Vector each
 			loader.writeVector(tag, "twistAxis", each)

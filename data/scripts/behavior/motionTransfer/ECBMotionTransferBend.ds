@@ -67,9 +67,8 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		private var ECBMoCapAnimator.Instance pMoCapAnimator
 		private var ECBTrackerSlot.Instance pSlotTarget
 		private var ECBTrackerSlot.Instance pSlotBase
-		private var AnimatorController pControllerRotateX
-		private var AnimatorController pControllerRotateY
-		private var AnimatorController pControllerRotateZ
+		private var AnimatorController pControllerBendX
+		private var AnimatorController pControllerBendY
 		private var AnimatorController pControllerTwist
 		private var Matrix pTransformTarget
 		private var Matrix pTransformBase
@@ -135,9 +134,8 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			var ECBehaviorActorAnimated.Instance actorAnimated = pMoCapAnimator.getActorAnimated()
 			pComponent = actorAnimated.getComponent().getComponent()
 			
-			pControllerRotateX = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateX())
-			pControllerRotateY = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateY())
-			pControllerRotateZ = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateZ())
+			pControllerBendX = actorAnimated.getControllerNamed(pECBehavior.getControllerNameBendX())
+			pControllerBendY = actorAnimated.getControllerNamed(pECBehavior.getControllerNameBendY())
 			pControllerTwist = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTwist())
 			
 			pTwistBone = -1
@@ -176,16 +174,16 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		end
 		
 		/** Animator controller rotate. */
-		public func AnimatorController getControllerRotateX()
-			return pControllerRotateX
+		public func AnimatorController getControllerBendX()
+			return pControllerBendX
 		end
 		
-		public func AnimatorController getControllerRotateY()
-			return pControllerRotateY
+		public func AnimatorController getControllerBendY()
+			return pControllerBendY
 		end
 		
-		public func AnimatorController getControllerRotateZ()
-			return pControllerRotateZ
+		public func AnimatorController getControllerTwist()
+			return pControllerTwist
 		end
 		
 		
@@ -209,36 +207,76 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixCharacter()
 			var Matrix targetMatrix = pTransformTarget * pSlotTarget.getMatrixCharacter()
 			
-			var Matrix matrix = targetMatrix * baseMatrix.getInverse()
+			var Vector position = (targetMatrix * baseMatrix.getInverse()).getPosition()
 			
-			var Vector position = matrix.getPosition()
-			
-			var float rotateX = DEMath.atan2(position.getY(), position.getZ()) - pZeroRotationX
-			var float rotateY = -DEMath.atan2(position.getX(), position.getZ()) - pZeroRotationY
-			
-			matrix = baseMatrix.normalize()
-			matrix = Matrix.newRotationAxis(matrix.getRightVector(), rotateX * pScaleRotationX) \
-				* Matrix.newRotationAxis(matrix.getUpVector(), rotateY * pScaleRotationY)
-			var Vector rotation = matrix.getEulerAngles()
-			
-			if pControllerRotateX != null
-				pControllerRotateX.setValue(rotation.getX())
+			if pControllerBendX != null
+				var float bend = DEMath.atan2(position.getY(), position.getZ()) - pZeroRotationX
+				pControllerBendX.setValue(bend * pScaleRotationX)
 			end
-			if pControllerRotateY != null
-				pControllerRotateY.setValue(rotation.getY())
-			end
-			if pControllerRotateZ != null
-				pControllerRotateZ.setValue(rotation.getZ())
+			if pControllerBendY != null
+				var float bend = -DEMath.atan2(position.getX(), position.getZ()) - pZeroRotationY
+				pControllerBendY.setValue(bend * pScaleRotationY)
 			end
 			if pControllerTwist != null
 				pControllerTwist.setValue(0)
 			end
+			
+// 			updateControllersPhase2()
 		end
 		
 		public func void updateControllersPhase2()
 			if pSlotTarget != null and pControllerTwist != null and pTwistBone != -1
 				var Quaternion orientation = pTwistQuat * pComponent.boneGetRotation(pTwistBone) * pTwistQuatInv
-				pControllerTwist.setValue(orientation.getEulerAngles().getZ())
+				
+				// this calculation is instable beyond ~88 degrees elevation
+				//pControllerTwist.setValue(orientation.getEulerAngles().getZ())
+				
+				// pfft... this brutal hack actually works
+				var float factor = 0.5
+				var float rotation = (orientation.slerp(Quaternion.new(), factor)).getEulerAngles().getZ() / factor
+				
+				pControllerTwist.setValue(rotation)
+				
+				/*
+				var Matrix matrix = Matrix.newFromQuaternion(orientation)
+				var Vector view = matrix.getViewVector()
+				
+				if view.getY() > 0.99939 // roughly 88 degrees
+					if view.getZ() > 0
+						matrix = Matrix.newFromQuaternion(orientation * Quaternion.newFromEulerX(-2))
+						
+					else
+						matrix = Matrix.newFromQuaternion(orientation * Quaternion.newFromEulerX(2))
+					end
+					view = matrix.getViewVector()
+					
+				elif view.getY() < -0.99939 // roughly 88 degrees
+					if view.getZ() > 0
+						matrix = Matrix.newFromQuaternion(orientation * Quaternion.newFromEulerX(2))
+						
+					else
+						matrix = Matrix.newFromQuaternion(orientation * Quaternion.newFromEulerX(-2))
+					end
+					view = matrix.getViewVector()
+				end
+				
+				var float azimuth = DEMath.atan2(-view.getX(), view.getZ())
+				matrix = matrix * Matrix.newRotationY(-azimuth)
+				view = matrix.getViewVector()
+				
+				var float elevation = DEMath.atan2(view.getY(), view.getZ())
+				matrix = matrix * Matrix.newRotationX(-elevation)
+				var Vector up = matrix.getUpVector()
+				
+				var float rotation = DEMath.atan2(up.getX(), up.getY())
+				pControllerTwist.setValue(rotation)
+				
+				
+				matrix = Matrix.newFromQuaternion(orientation)
+				GameApp.getGameApp().getConsole().addMessage("bend2: M view=" + matrix.getViewVector() \
+					+ " up=" + matrix.getUpVector() + " old=" + orientation.getEulerAngles().getZ() \
+					+ " az=" + azimuth + " el=" + elevation + " rot=" + rotation)
+				*/
 			end
 		end
 	end
@@ -250,9 +288,9 @@ class ECBMotionTransferBend extends DefaultECBehavior
 	private var ECBMoCapAnimator pMoCapAnimator
 	private var ECBTrackerSlot pSlotTarget
 	private var ECBTrackerSlot pSlotBase
-	private var String pControllerNameRotateX
-	private var String pControllerNameRotateY
-	private var String pControllerNameRotateZ
+	private var String pControllerNameBendX
+	private var String pControllerNameBendY
+	private var String pControllerNameBendZ
 	private var String pControllerNameTwist
 	
 	
@@ -276,9 +314,9 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			pSlotBase = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getBaseTracker().getSlot())
 		end
 		
-		pControllerNameRotateX = transfer.getName() + ".rotateX"
-		pControllerNameRotateY = transfer.getName() + ".rotateY"
-		pControllerNameRotateZ = transfer.getName() + ".rotateZ"
+		pControllerNameBendX = transfer.getName() + ".rotateX"
+		pControllerNameBendY = transfer.getName() + ".rotateY"
+		pControllerNameBendZ = transfer.getName() + ".rotateZ"
 		pControllerNameTwist = transfer.getName() + ".twist"
 		
 		eclass.addBehavior(this)
@@ -322,16 +360,16 @@ class ECBMotionTransferBend extends DefaultECBehavior
 	end
 	
 	/** Animator controller name rotate. */
-	public func String getControllerNameRotateX()
-		return pControllerNameRotateX
+	public func String getControllerNameBendX()
+		return pControllerNameBendX
 	end
 	
-	public func String getControllerNameRotateY()
-		return pControllerNameRotateY
+	public func String getControllerNameBendY()
+		return pControllerNameBendY
 	end
 	
-	public func String getControllerNameRotateZ()
-		return pControllerNameRotateZ
+	public func String getControllerNameBendZ()
+		return pControllerNameBendZ
 	end
 	
 	/** Animator controller name twist. */
