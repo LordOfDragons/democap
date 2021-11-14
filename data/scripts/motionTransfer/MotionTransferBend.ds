@@ -73,10 +73,14 @@ class MotionTransferBend extends DefaultMotionTransfer
 	private var MotionTransferTracker pTargetTracker
 	private var MotionTransferTracker pBaseTracker
 	private var Vector2 pScaleRotation
+	private var float pTwistPropagation
+	private var int pTwistBoneCount
+	private var Vector pTwistAxisRotation
 	
 	private var ADController pADControllerRotationX
 	private var ADController pADControllerRotationY
 	private var ADController pADControllerRotationZ
+	private var ADController pADControllerTwist
 	
 	private var ADRuleBoneTransformator pADRuleRotateX
 	private var ADRuleBoneTransformator pADRuleRotateY
@@ -84,6 +88,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 	
 	private var Array pCalibrateBones
 	private var Vector2 pCalibrateZeroRotation
+	private var Vector pCalibrateTwistRotation
+	private var Array pCalibrateTwistAxes
+	private var Vector pCalibrateTwistBoneAxisRotation
 	
 	
 	
@@ -95,8 +102,14 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pTargetTracker = MotionTransferTracker.new()
 		pBaseTracker = MotionTransferTracker.new()
 		pScaleRotation = Vector2.new(1, 1)
+		pTwistPropagation = 0
+		pTwistBoneCount = 0
+		pTwistAxisRotation = Vector.new()
 		pCalibrateBones = Array.new()
 		pCalibrateZeroRotation = Vector2.new()
+		pCalibrateTwistRotation = Vector.new()
+		pCalibrateTwistAxes = Array.new()
+		pCalibrateTwistBoneAxisRotation = Vector.new()
 	end
 	
 	/** Create copy of motion transfer. */
@@ -107,7 +120,13 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pTargetTracker = MotionTransferTracker.new(transfer.pTargetTracker)
 		pBaseTracker = MotionTransferTracker.new(transfer.pBaseTracker)
 		pScaleRotation = transfer.pScaleRotation
+		pTwistPropagation = transfer.pTwistPropagation
+		pTwistBoneCount = transfer.pTwistBoneCount
+		pTwistAxisRotation = transfer.pTwistAxisRotation
 		pCalibrateZeroRotation = transfer.pCalibrateZeroRotation
+		pCalibrateTwistRotation = transfer.pCalibrateTwistRotation
+		pCalibrateTwistAxes = Array.new(transfer.pCalibrateTwistAxes)
+		pCalibrateTwistBoneAxisRotation = transfer.pCalibrateTwistBoneAxisRotation
 	end
 	
 	
@@ -174,6 +193,42 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pScaleRotation = scale
 	end
 	
+	/** Percentage amount of twist propagated from tip bone to first bone after root bone. */
+	public func float getTwistPropagation()
+		return pTwistPropagation
+	end
+	
+	/** Set percentage amount of twist propagated from tip bone to first bone after root bone. */
+	public func void setTwistPropagation(float amount)
+		pTwistPropagation = DEMath.max(amount, 0.0)
+	end
+	
+	/** Count of bones along chain to apply twist to starting at first bone after tip bone. */
+	public func int getTwistBoneCount()
+		return pTwistBoneCount
+	end
+	
+	/** Set count of bones along chain to apply twist to starting at first bone after tip bone. */
+	public func void setTwistBoneCount(int count)
+		if count < 0
+			throw EInvalidParam.new("count < 0")
+		end
+		pTwistBoneCount = count
+	end
+	
+	/** Rotation of twist axis relative to tip bone. */
+	public func Vector getTwistAxisRotation()
+		return pTwistAxisRotation
+	end
+	
+	/** Set rotation of twist axis relative to tip bone. */
+	public func void setTwistAxisRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pTwistAxisRotation = rotation
+	end
+	
 	
 	
 	/** Animator definition rule or null. */
@@ -196,6 +251,16 @@ class MotionTransferBend extends DefaultMotionTransfer
 		return pCalibrateZeroRotation
 	end
 	
+	/** Calibrate twist rotation. */
+	public func Vector getCalibrateTwistRotation()
+		return pCalibrateTwistRotation
+	end
+	
+	/** Calibrate twist bone axis rotation. */
+	public func Vector getCalibrateTwistBoneAxisRotation()
+		return pCalibrateTwistBoneAxisRotation
+	end
+	
 	
 	
 	/** Init element clas. */
@@ -203,6 +268,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pADControllerRotationX = null
 		pADControllerRotationY = null
 		pADControllerRotationZ = null
+		pADControllerTwist = null
 		pADRuleRotateX = null
 		pADRuleRotateY = null
 		pADRuleRotateZ = null
@@ -293,6 +359,44 @@ class MotionTransferBend extends DefaultMotionTransfer
 		end)
 		adef.addRule(pADRuleRotateY)
 		
+		// twist
+		if pTwistBoneCount > 0 and pTwistPropagation > 0.01
+			var int count = DEMath.min(pTwistBoneCount, pCalibrateBones.getCount())
+			var ADRuleBoneTransformator rule
+			var String name = getName() + ".twist"
+			var float maxAngle = 180
+			var int i
+			
+			pADControllerTwist = ADController.new()
+			pADControllerTwist.setName(behavior.getControllerNameTwist())
+			pADControllerTwist.setMinimum(-maxAngle)
+			pADControllerTwist.setMaximum(maxAngle)
+			adef.addController(pADControllerTwist)
+			
+			var ADLink link = ADLink.new()
+			link.setController(pADControllerTwist)
+			adef.addLink(link)
+			
+			var float angle = pTwistPropagation * maxAngle / count
+			var int baseIndex = count - 1
+			
+			for i = 0 to count
+				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
+				var Vector axis = pCalibrateTwistAxes.getAt(i) cast Vector
+				
+				rule = ADRuleBoneTransformator.new()
+				rule.setName(name)
+				rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+				rule.setUseAxis(true)
+				rule.setAxis(axis)
+				rule.setMinimumAngle(-angle)
+				rule.setMaximumAngle(angle)
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				rule.addBone(bone)
+				adef.addRule(rule)
+			end
+		end
+		
 		// register bones to record
 		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
 		if recordAnimation != null
@@ -306,6 +410,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pTargetTracker.resetTransform()
 		pBaseTracker.resetTransform()
 		pCalibrateZeroRotation = Vector2.new()
+		pCalibrateTwistRotation = Vector.new()
+		pCalibrateTwistAxes.removeAll()
+		pCalibrateTwistBoneAxisRotation = Vector.new()
 	end
 	
 	/** Calibrate character. */
@@ -322,13 +429,14 @@ class MotionTransferBend extends DefaultMotionTransfer
 		// calibrate zero rotation
 		pCalibrateZeroRotation = Vector2.new()
 		
-		var int indexBase = -1, indexTarget = -1
+		var int indexBase = -1, indexTarget = -1, indexTip = -1
 		if not pBaseBone.empty() and not pTargetBone.empty()
 			indexBase = component.indexOfBoneNamed(pBaseBone)
 			indexTarget = component.indexOfBoneNamed(pTargetBone)
+			indexTip = component.indexOfBoneNamed(pTipBone)
 		end
 		
-		if indexBase != -1 and indexTarget != -1
+		if indexBase != -1 and indexTarget != -1 and indexTip != -1
 			var Matrix baseMatrix = Matrix.newRT(pBaseTracker.getOffsetRotation(), \
 				pBaseTracker.getOffsetPosition()) * component.boneGetMatrix(indexBase)
 			var Matrix baseMatrixInv = baseMatrix.getInverse()
@@ -342,6 +450,37 @@ class MotionTransferBend extends DefaultMotionTransfer
 			pCalibrateZeroRotation = Vector2.new(\
 				DEMath.atan2(position.getY(), position.getZ()),\
 				-DEMath.atan2(position.getX(), position.getZ()))
+			
+			// twist rotation. the rotation angle is unimportant since we only examine relative rotation
+			var Matrix twistTransform = (baseMatrix * targetMatrix.getInverse()).normalize()
+			var Vector twistAxis = twistTransform.getViewVector()
+			var Vector twistUp = twistTransform.getUpVector()
+			
+			pCalibrateTwistRotation = Matrix.newVU(twistAxis, twistUp).getInverse().getEulerAngles()
+			
+		else
+			pCalibrateTwistRotation = Vector.new()
+		end
+		
+		// calculate twist axes
+		if pTwistBoneCount > 0 and pTwistPropagation > 0.01
+			var int count = DEMath.min(pTwistBoneCount, pCalibrateBones.getCount())
+			var Vector axis = Matrix.newRotation(pTwistAxisRotation).getViewVector()
+			var int i, baseIndex = count - 1
+			
+			for i = 0 to count
+				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
+				var int indexBone = component.indexOfBoneNamed(bone)
+				if indexBone != -1
+					pCalibrateTwistAxes.add(component.boneGetInverseMatrix(indexBone).transformNormal(axis))
+					
+				else
+					pCalibrateTwistAxes.add(Vector.new(0, 0, 1))
+				end
+			end
+			
+			pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation) \
+				* component.boneGetInverseMatrix(indexTarget)).getEulerAngles()
 		end
 	end
 	
@@ -374,13 +513,22 @@ class MotionTransferBend extends DefaultMotionTransfer
 			elif tagName.equals("scaleRotation")
 				setScaleRotation(loader.readVector2(element))
 				
+			elif tagName.equals("twistPropagation")
+				setTwistPropagation(element.getFirstCDataFloat())
+				
+			elif tagName.equals("twistBoneCount")
+				setTwistBoneCount(element.getFirstCDataInt())
+				
+			elif tagName.equals("twistAxisRotation")
+				setTwistAxisRotation(loader.readVector(element))
+				
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
 			end
 		end)
 	end
 	
-	protected func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+	public func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
 		root.forEachTag(block EasyXMLElement element, String tagName
 			if tagName.equals("bone")
 				pCalibrateBones.add(element.getFirstCData())
@@ -393,6 +541,15 @@ class MotionTransferBend extends DefaultMotionTransfer
 				
 			elif tagName.equals("calibrateZeroRotation")
 				pCalibrateZeroRotation = loader.readVector2(element)
+				
+			elif tagName.equals("twistRotation")
+				pCalibrateTwistRotation = loader.readVector(element)
+				
+			elif tagName.equals("twistAxis")
+				pCalibrateTwistAxes.add(loader.readVector(element))
+				
+			elif tagName.equals("twistBoneAxisRotation")
+				pCalibrateTwistBoneAxisRotation = loader.readVector(element)
 			end
 		end)
 	end
@@ -406,15 +563,23 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pTargetTracker.save(loader, tag.addTag("targetTracker"))
 		pBaseTracker.save(loader, tag.addTag("baseTracker"))
 		loader.writeVector2(tag, "scaleRotation", pScaleRotation)
+		tag.addDataTag("twistPropagation", pTwistPropagation)
+		tag.addDataTag("twistBoneCount", pTwistBoneCount)
+		loader.writeVector(tag, "twistAxisRotation", pTwistAxisRotation)
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
-	protected func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+	public func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
 		pCalibrateBones.forEach(block String each
 			tag.addDataTag("bone", each)
 		end)
 		pTargetTracker.saveCalibrated(loader, tag.addTag("targetTracker"))
 		pBaseTracker.saveCalibrated(loader, tag.addTag("baseTracker"))
 		loader.writeVector2(tag, "calibrateZeroRotation", pCalibrateZeroRotation)
+		loader.writeVector(tag, "twistRotation", pCalibrateTwistRotation)
+		pCalibrateTwistAxes.forEach(block Vector each
+			loader.writeVector(tag, "twistAxis", each)
+		end)
+		loader.writeVector(tag, "twistBoneAxisRotation", pCalibrateTwistBoneAxisRotation)
 	end
 end

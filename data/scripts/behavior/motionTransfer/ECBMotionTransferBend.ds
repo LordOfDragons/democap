@@ -45,8 +45,18 @@ class ECBMotionTransferBend extends DefaultECBehavior
 				pInstance = instance
 			end
 			
+			public func int requiredPhaseCount(ECBMoCapAnimator.Instance instance)
+				return pInstance.requiredPhaseCount()
+			end
+			
 			public func void updateControllers(ECBMoCapAnimator.Instance instance, float elapsed, int phase)
-				pInstance.updateControllers()
+				select phase
+				case 0
+					pInstance.updateControllersPhase1()
+					
+				case 1
+					pInstance.updateControllersPhase2()
+				end
 			end
 		end
 		
@@ -60,12 +70,18 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		private var AnimatorController pControllerRotateX
 		private var AnimatorController pControllerRotateY
 		private var AnimatorController pControllerRotateZ
+		private var AnimatorController pControllerTwist
 		private var Matrix pTransformTarget
 		private var Matrix pTransformBase
 		private var float pZeroRotationX
 		private var float pZeroRotationY
 		private var float pScaleRotationX
 		private var float pScaleRotationY
+		private var Component pComponent
+		private var int pTwistBone
+		private var Matrix pTwistMat
+		private var Matrix pTwistMatInv
+		private var Quaternion pTwistQuat, pTwistQuatInv
 		
 		
 		
@@ -81,14 +97,26 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			pScaleRotationX = ecbehavior.getTransfer().getScaleRotation().getX()
 			pScaleRotationY = ecbehavior.getTransfer().getScaleRotation().getY()
 			
+			pTwistQuat = Quaternion.newFromEuler(ecbehavior.getTransfer().getCalibrateTwistBoneAxisRotation())
+			pTwistQuatInv = pTwistQuat.conjugate()
+			
 			if ecbehavior.getSlotTarget() != null
 				pSlotTarget = ecbehavior.getSlotTarget().instance(element)
 				pTransformTarget = ecbehavior.getTransfer().getTargetTracker().getTransformMatrix()
 			end
+			
 			if ecbehavior.getSlotBase() != null
 				pSlotBase = ecbehavior.getSlotBase().instance(element)
 				pTransformBase = ecbehavior.getTransfer().getBaseTracker().getTransformMatrix()
+				
+				pTwistMat = Matrix.newRotation(ecbehavior.getTransfer().getTwistAxisRotation()) \
+					* pSlotBase.getTrackerSlot().getCalibrateMatrixInverse().normalize().getRotation()
+				
+			else
+				pTwistMat = Matrix.newRotation(ecbehavior.getTransfer().getTwistAxisRotation())
 			end
+			
+			pTwistMatInv = pTwistMat.getInverse()
 		end
 		
 		/** Dispose of instance. */
@@ -105,9 +133,17 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
 			var ECBehaviorActorAnimated.Instance actorAnimated = pMoCapAnimator.getActorAnimated()
+			pComponent = actorAnimated.getComponent().getComponent()
+			
 			pControllerRotateX = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateX())
 			pControllerRotateY = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateY())
 			pControllerRotateZ = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRotateZ())
+			pControllerTwist = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTwist())
+			
+			pTwistBone = -1
+			if not pECBehavior.getTransfer().getTargetBone().empty()
+				pTwistBone = pComponent.indexOfBoneNamed(pECBehavior.getTransfer().getTargetBone())
+			end
 			
 			pMoCapAnimator.addListener(UpdateControllers.new(this))
 		end
@@ -154,15 +190,26 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		
 		
 		
+		/** Internal use. */
+		public func int requiredPhaseCount()
+			if pSlotTarget != null and pControllerTwist != null and pTwistBone != -1
+				return 2
+				
+			else
+				return 1
+			end
+		end
+		
 		/** Update controllers. */
-		public func void updateControllers()
+		public func void updateControllersPhase1()
 			if pSlotTarget == null or pSlotBase == null
 				return
 			end
 			
 			var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixCharacter()
+			var Matrix targetMatrix = pTransformTarget * pSlotTarget.getMatrixCharacter()
 			
-			var Matrix matrix = pTransformTarget * pSlotTarget.getMatrixCharacter() * baseMatrix.getInverse()
+			var Matrix matrix = targetMatrix * baseMatrix.getInverse()
 			
 			var Vector position = matrix.getPosition()
 			
@@ -183,6 +230,16 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			if pControllerRotateZ != null
 				pControllerRotateZ.setValue(rotation.getZ())
 			end
+			if pControllerTwist != null
+				pControllerTwist.setValue(0)
+			end
+		end
+		
+		public func void updateControllersPhase2()
+			if pSlotTarget != null and pControllerTwist != null and pTwistBone != -1
+				var Quaternion orientation = pTwistQuat * pComponent.boneGetRotation(pTwistBone) * pTwistQuatInv
+				pControllerTwist.setValue(orientation.getEulerAngles().getZ())
+			end
 		end
 	end
 	
@@ -196,6 +253,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 	private var String pControllerNameRotateX
 	private var String pControllerNameRotateY
 	private var String pControllerNameRotateZ
+	private var String pControllerNameTwist
 	
 	
 	
@@ -221,6 +279,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		pControllerNameRotateX = transfer.getName() + ".rotateX"
 		pControllerNameRotateY = transfer.getName() + ".rotateY"
 		pControllerNameRotateZ = transfer.getName() + ".rotateZ"
+		pControllerNameTwist = transfer.getName() + ".twist"
 		
 		eclass.addBehavior(this)
 	end
@@ -273,6 +332,11 @@ class ECBMotionTransferBend extends DefaultECBehavior
 	
 	public func String getControllerNameRotateZ()
 		return pControllerNameRotateZ
+	end
+	
+	/** Animator controller name twist. */
+	public func String getControllerNameTwist()
+		return pControllerNameTwist
 	end
 	
 	
