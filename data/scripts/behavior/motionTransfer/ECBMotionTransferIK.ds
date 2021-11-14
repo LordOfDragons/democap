@@ -254,45 +254,6 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				
 				if pControllerTwist != null
 					pControllerTwist.setValue(0)
-					
-					/*
-					var Matrix matrix = pTwistMat \
-						* pSlotTip.getMatrixCharacter().normalize().getRotation() \
-						* pSlotBase.getMatrixCharacter().getInverse().normalize().getRotation() \
-						* pTwistMatInv
-					
-					var Vector view = matrix.getViewVector()
-					var float value
-					
-					if view.getY() > 0.9995 // up pole: ~1.8°
-						var Vector up = matrix.getUpVector()
-						value = DEMath.atan2(up.getX(), -up.getZ())
-						
-					elif view.getY() < -0.9995 // down pole: ~1.8°
-						var Vector up = matrix.getUpVector()
-						value = DEMath.atan2(up.getX(), up.getZ())
-						
-					else
-						value = matrix.getEulerAngles().getZ()
-					end
-					
-					pControllerTwist.setValue(value)
-					
-					if pSlotTip.getTrackerSlot().getName().equals("HMD")
-						var Quaternion orientation = pSlotTip.getOrientationCharacter()
-						var Vector view = matrix.getViewVector()
-						var Vector up = matrix.getUpVector()
-						var Vector right = matrix.getRightVector()
-						var float value = pControllerTwist.getValue()
-						
-						var Dictionary dict = Dictionary.new()
-						dict.setAt("view", view)
-						dict.setAt("up", up)
-						dict.setAt("right", right)
-						dict.setAt("value", value)
-						GameApp.getGameApp().getConsole().addMessage("IK " + dict)
-					end
-					*/
 				end
 			end
 			
@@ -313,7 +274,13 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				//pControllerTwist.setValue(pComponent.boneGetRotation(pTwistBone).getEulerAngles().getZ())
 				
 				var Quaternion orientation = pTwistQuat * pComponent.boneGetRotation(pTwistBone) * pTwistQuatInv
-				pControllerTwist.setValue(orientation.getEulerAngles().getZ())
+// 				pControllerTwist.setValue(orientation.getEulerAngles().getZ())
+				
+				var float factor = 0.5
+				var float rotation = (orientation.slerp(Quaternion.new(), factor)).getEulerAngles().getZ() / factor
+				
+				pControllerTwist.setValue(rotation)
+				
 // 				GameApp.getGameApp().getConsole().addMessage("Phase2 " + pECBehavior.getTransfer().getName() \
 // 					+ " " + pControllerTwist.getValue() + " " + pComponent.boneGetName(pTwistBone))
 			end
