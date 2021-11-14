@@ -152,16 +152,17 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 		end
 		
 		var String bone = config.getCameraBone()
-		var Matrix matrix = config.getCameraMatrix()
 		
-		if not bone.empty()
-			var int boneIndex = component.getComponent().indexOfBoneNamed(bone)
-			if boneIndex == -1
-				return pHMD.getMatrix()
-			end
-			
-			matrix = matrix * component.getComponent().boneGetMatrix(boneIndex)
+		if bone.empty()
+			return pHMD.getMatrix()
 		end
+		
+		var int boneIndex = component.getComponent().indexOfBoneNamed(bone)
+		if boneIndex == -1
+			return pHMD.getMatrix()
+		end
+		
+		var Matrix matrix = config.getCameraMatrix() * component.getComponent().boneGetMatrix(boneIndex)
 		
 		return (matrix.toDMatrix() * getActor().getElement().getElementMatrix()).normalize()
 	end
