@@ -570,10 +570,22 @@ class CharacterConfiguration
 				each.initElementClass(eclass, pAnimatorDefinition)
 			end)
 			
-			// add motion capture behaviors
-			pMotionTransfers.forEach(block MotionTransfer each
-				each.initElementClass(this, eclass)
-			end)
+			// add motion capture behaviors. should this fail reset calibration and try again
+			try
+				pMotionTransfers.forEach(block MotionTransfer each
+					each.initElementClass(this, eclass)
+				end)
+				
+			catch Exception e
+				GameApp.getGameApp().getConsole().addError("Init ElementClass failed. Reset clalibration and trying again", e)
+				
+				pMotionTransfers.forEach(block MotionTransfer each
+					each.resetCalibration()
+				end)
+				pMotionTransfers.forEach(block MotionTransfer each
+					each.initElementClass(this, eclass)
+				end)
+			end
 			
 			// add behavior moving origin bone to calibration origin if present
 			if not pProfile.getOriginBone().empty()
