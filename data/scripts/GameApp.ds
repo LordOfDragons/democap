@@ -179,6 +179,13 @@ class GameApp extends BaseGameApp
 	public func void launchApplication()
 		//getWindowGameWorld().addWidget(ShoutConsole.new(getConsole()))
 		
+		// first run handling
+		if getSettings().getBoolAt("firstRun", true)
+			firstRun()
+			getSettings().setAt("firstRun", false)
+			saveSettings()
+		end
+		
 		// set input processor to forward mouse and keyboard input to the desktop widget
 		// while processing all other inputs using bindings. adding, removing and changing
 		// device events are forwarded to both input processors.
@@ -241,6 +248,19 @@ class GameApp extends BaseGameApp
 		
 		// load default game world
 		startLoadGameWorld(StartGame.new(getWindowGameWorld(), "/content/worlds/default.deworld"))
+	end
+	
+	/** First run. */
+	protected func void firstRun()
+		// copy initial content to overlay directory
+		var File basePath = File.new(pCharacterProfiles.getDirectory())
+		
+		FileSystem.searchFiles("/content/initial/config/characters", false, block String path, FileType type
+			if type == FileType.file
+				FileWriter.new((basePath + File.new(path).getName()).getPath()).writeData(FileReader.new(path))
+			end
+			return true
+		end)
 	end
 	
 	/** Create element classes and add them to element class list. */
