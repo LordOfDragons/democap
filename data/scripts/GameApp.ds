@@ -65,6 +65,35 @@ class GameApp extends BaseGameApp
 		end
 	end
 	
+	/** Toggle Enable VR listener. */
+	class ToggleEnableVRListener extends DefaultToggleModelListener
+		public func new()
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			var Console console = GameApp.getGameApp().getConsole()
+			
+			if model.getToggled()
+				console.addMessage("Start VR Runtime...")
+				try
+					VRSystem.startRuntime()
+					
+				catch Exception e
+					console.addMessage("Failed starting VR Runtime")
+				end
+				
+			else
+				console.addMessage("Stop VR Runtime...")
+				try
+					VRSystem.stopRuntime()
+					
+				catch Exception e
+					console.addMessage("Failed stopping VR Runtime")
+				end
+			end
+		end
+	end
+	
 	
 	
 	private var String pPathCaptureAnimations
@@ -74,6 +103,8 @@ class GameApp extends BaseGameApp
 	private var ActorProfile pDefaultActorProfile
 	private var CharacterProfiles pCharacterProfiles
 	private var LoadableWorlds pLoadableWorlds
+	private var DefaultToggleModel pModelEnableVR
+	private var DefaultToggleModel pModelEnableHMD
 	private var DefaultToggleModel pModelShowVRCamera
 	
 	private var MotionTransferFactories pMotionTransferFactories
@@ -81,6 +112,7 @@ class GameApp extends BaseGameApp
 	private var LoadCharacterProfile pLoadCharacterProfile
 	private var MutableID pNextElementClassID
 	
+	private var DefaultListModel pModelSceneObjects
 	private var WorldSpawnCharacter pWorldSpawnCharacter
 	private var Camera pVRCamera
 	private var VRCameraDirector pVRCameraDirector
@@ -107,10 +139,117 @@ class GameApp extends BaseGameApp
 		return pPathCaptureAnimations
 	end
 	
+	/** Get app instance for convenience. */
+	static public func GameApp getGameApp()
+		return getApp() cast GameApp
+	end
+	
+	
+	
 	/** Main window. */
 	public func WindowMain getWindowMain()
 		return pWindowMain
 	end
+	
+	
+	
+	/** Actor profiles. */
+	public func ActorProfiles getActorProfiles()
+		return pActorProfiles
+	end
+	
+	/** Active actor profile or null. */
+	public func ActorProfile getActiveActorProfile()
+		return pActiveActorProfile
+	end
+	
+	/** Set active actor profile or null. */
+	public func void setActiveActorProfile(ActorProfile profile)
+		pActiveActorProfile = profile
+	end
+	
+	/** Default actor profile or null. */
+	public func ActorProfile getDefaultActorProfile()
+		return pDefaultActorProfile
+	end
+	
+	/** Character profiles. */
+	public func CharacterProfiles getCharacterProfiles()
+		return pCharacterProfiles
+	end
+	
+	/** Loadable worlds. */
+	public func LoadableWorlds getLoadableWorlds()
+		return pLoadableWorlds
+	end
+	
+	/** VR camera. */
+	public func Camera getVRCamera()
+		return pVRCamera
+	end
+	
+	/** VR camera director. */
+	public func VRCameraDirector getVRCameraDirector()
+		return pVRCameraDirector
+	end
+	
+	/** Enable VR model. */
+	public func DefaultToggleModel getModelEnableVR()
+		return pModelEnableVR
+	end
+	
+	/** Enable HMD. */
+	public func DefaultToggleModel getModelEnableHMD()
+		return pModelEnableHMD
+	end
+	
+	/** Show VR camera model. */
+	public func DefaultToggleModel getModelShowVRCamera()
+		return pModelShowVRCamera
+	end
+	
+	/** Scene objects model. */
+	public func DefaultListModel getModelSceneObjects()
+		return pModelSceneObjects
+	end
+	
+	
+	
+	/** Next unique element class ID generator. */
+	public func MutableID getNextElementClassID()
+		return pNextElementClassID
+	end
+	
+	/** Motion transfer factories. */
+	public func MotionTransferFactories getMotionTransferFactories()
+		return pMotionTransferFactories
+	end
+	
+	/** Load/save actor profile. */
+	public func LoadActorProfile getLoadActorProfile()
+		return pLoadActorProfile
+	end
+	
+	/** Load/save character profile. */
+	public func LoadCharacterProfile getLoadCharacterProfile()
+		return pLoadCharacterProfile
+	end
+	
+	/** World spawn character. */
+	public func WorldSpawnCharacter getWorldSpawnCharacter()
+		return pWorldSpawnCharacter
+	end
+	
+	/** Handles element class list. */
+	public func ElementClassList getECListHandles()
+		return pECListHandles
+	end
+	
+	/** Selection tracker. */
+	public func ECBSelectable.Tracker getSelectionTracker()
+		return pSelectionTracker
+	end
+	
 	
 	
 	/** Initialize game. */
@@ -123,7 +262,10 @@ class GameApp extends BaseGameApp
 		// has to come after super call since class list is filled not earlier
 		addECListHandles()
 		
+		pModelEnableVR = DefaultToggleModel.new(true)
+		pModelEnableHMD = DefaultToggleModel.new(true)
 		pModelShowVRCamera = DefaultToggleModel.new(true)
+		pModelSceneObjects = DefaultListModel.new()
 		pDefaultActorProfile = ActorProfile.new("Default")
 		
 		pMotionTransferFactories = MotionTransferFactories.new()
@@ -229,6 +371,7 @@ class GameApp extends BaseGameApp
 		
 		// add model listeners
 		pModelShowVRCamera.addListener(ToggleShowVRCameraListener.new())
+		pModelEnableVR.addListener(ToggleEnableVRListener.new())
 		
 		// add support to navigate the view
 		var WindowGameWorld windowGameWorld = getWindowGameWorld()
@@ -371,7 +514,10 @@ class GameApp extends BaseGameApp
 		pSelectionTracker = null
 		pLoadCharacterProfile = null
 		pLoadActorProfile = null
+		pModelSceneObjects = null
 		pModelShowVRCamera = null
+		pModelEnableHMD = null
+		pModelEnableVR = null
 		pVRCameraDirector = null
 		pECListHandles = null
 		
@@ -396,92 +542,16 @@ class GameApp extends BaseGameApp
 		setInputProcessor(SplitInputProcessor.new(getBindingManager(), getDesktop()))
 	end
 	
-	
-	
-	/** Get app instance for convenience. */
-	static public func GameApp getGameApp()
-		return getApp() cast GameApp
-	end
-	
-	/** Actor profiles. */
-	public func ActorProfiles getActorProfiles()
-		return pActorProfiles
-	end
-	
-	/** Active actor profile or null. */
-	public func ActorProfile getActiveActorProfile()
-		return pActiveActorProfile
-	end
-	
-	/** Set active actor profile or null. */
-	public func void setActiveActorProfile(ActorProfile profile)
-		pActiveActorProfile = profile
-	end
-	
-	/** Default actor profile or null. */
-	public func ActorProfile getDefaultActorProfile()
-		return pDefaultActorProfile
-	end
-	
-	/** Character profiles. */
-	public func CharacterProfiles getCharacterProfiles()
-		return pCharacterProfiles
-	end
-	
-	/** Loadable worlds. */
-	public func LoadableWorlds getLoadableWorlds()
-		return pLoadableWorlds
-	end
-	
-	/** VR camera. */
-	public func Camera getVRCamera()
-		return pVRCamera
-	end
-	
-	/** VR camera director. */
-	public func VRCameraDirector getVRCameraDirector()
-		return pVRCameraDirector
-	end
-	
-	/** Show VR camera model. */
-	public func DefaultToggleModel getModelShowVRCamera()
-		return pModelShowVRCamera
-	end
-	
-	
-	
-	/** Next unique element class ID generator. */
-	public func MutableID getNextElementClassID()
-		return pNextElementClassID
-	end
-	
-	/** Motion transfer factories. */
-	public func MotionTransferFactories getMotionTransferFactories()
-		return pMotionTransferFactories
-	end
-	
-	/** Load/save actor profile. */
-	public func LoadActorProfile getLoadActorProfile()
-		return pLoadActorProfile
-	end
-	
-	/** Load/save character profile. */
-	public func LoadCharacterProfile getLoadCharacterProfile()
-		return pLoadCharacterProfile
-	end
-	
-	/** World spawn character. */
-	public func WorldSpawnCharacter getWorldSpawnCharacter()
-		return pWorldSpawnCharacter
-	end
-	
-	/** Handles element class list. */
-	public func ElementClassList getECListHandles()
-		return pECListHandles
-	end
-	
-	/** Selection tracker. */
-	public func ECBSelectable.Tracker getSelectionTracker()
-		return pSelectionTracker
+	/** Render window size changed. */
+	public func void onResizeRenderWindow()
+		var Desktop desktop = getDesktop()
+		desktop.setSize(GraphicSystem.getWindowSize())
+		
+		var WindowGameWorld windowGameWorld = getWindowGameWorld()
+		windowGameWorld.setPosition(Point.new(10, 30))
+		windowGameWorld.setSize(desktop.getContainerSize() - Point.new(350, 50))
+		
+		pWindowMain.setSize(Point.new(300, desktop.getContainerHeight() - 50))
+		pWindowMain.setPosition(Point.new(desktop.getContainerWidth() - 320, 30))
 	end
 end

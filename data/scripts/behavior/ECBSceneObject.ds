@@ -1,0 +1,159 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Gui
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+
+
+/**
+ * Behavior for scene object elements. Scene objects have an optional name.
+ */
+class ECBSceneObject extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBSceneObject pECBehavior
+		private var String pName
+		private var String pDisplayName
+		
+		
+		
+		/** Create instance. */
+		public func new(ECBSceneObject ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pName = ""
+		end
+		
+		/** Dispose of instance. */
+		public func void dispose()
+			super.dispose()
+		end
+		
+		/** Init behavior. */
+		public func void init(StubElement stub)
+			pName = pECBehavior.name.getValue(stub)
+		end
+		
+		
+		/** Behavior. */
+		public func ECBSceneObject getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Set name or empty string. */
+		public func String getName()
+			return pName
+		end
+		
+		/** Set name or empty string. */
+		public func void setName(String name)
+			if name.equals(pName)
+				return
+			end
+			
+			pName = name
+			pDisplayName = null
+		end
+		
+		/** Display name for list boxes. */
+		public func String getDisplayName()
+			if pDisplayName == null
+				if pName.empty()
+					var Element e = getElement()
+					pDisplayName = "{}: {}".format(Array.newWith(e.getClass().getClassname(), e.getID()))
+					
+				else
+					pDisplayName = pName
+				end
+			end
+			
+			return pDisplayName
+		end
+		
+		
+		
+		/** Added to game world. */
+		public func void addToGameWorld()
+			var GameWorld world = getElement().getGameWorld()
+			if world != GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+				return
+			end
+			
+			var DefaultListModel model = GameApp.getGameApp().getModelSceneObjects()
+			if not model.has(this)
+				model.add(this)
+			end
+		end
+		
+		/** Removed from game world. */
+		public func void removeFromGameWorld()
+			var GameWorld world = getElement().getGameWorld()
+			if world != GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+				return
+			end
+			
+			var DefaultListModel model = GameApp.getGameApp().getModelSceneObjects()
+			if model.has(this)
+				model.remove(this)
+			end
+		end
+		
+		
+		
+		/** String representation. */
+		public func String toString()
+			return getDisplayName()
+		end
+	end
+	
+	
+	public var ECPString name
+	
+	
+	/** Create behavior element class. */
+	public func new(BehaviorElementClass eclass) super(eclass)
+		name = ECPString.new("sceneObject.name", "")
+		eclass.addProperty(name)
+		
+		eclass.addBehavior(this)
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
