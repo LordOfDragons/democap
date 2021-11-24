@@ -1,0 +1,146 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Dragengine.Utils
+
+
+/**
+ * List of scenes.
+ * 
+ * Scenes are stored under "/scenes" directory in the user game configure directory
+ * as files of type "*.demcs" .
+ */
+class Scenes
+	private var Array pScenes
+	private var Array pListeners
+	
+	
+	
+	/** Create actor list. */
+	public func new()
+		pListeners = Array.new()
+		pScenes = Array.new()
+	end
+	
+	/** Dispose of list. */
+	public func void dispose()
+		pListeners.removeAll()
+		removeAll()
+	end
+	
+	
+	
+	/** Count of scenes. */
+	public func int getCount()
+		return pScenes.getCount()
+	end
+	
+	/** Named scene is present. */
+	public func bool hasNamed(String name)
+		return getNamed(name) != null
+	end
+	
+	/** Profile at index. */
+	public func Scene getAt(int index)
+		return pScenes.getAt(index) cast Scene
+	end
+	
+	/** Named scene or null if absent. */
+	public func Scene getNamed(String name)
+		name = name.toLower()
+		return pScenes.find(block Scene each
+			return each.getName().compareNoCase(name) == 0
+		end) cast Scene
+	end
+	
+	/** Add scene. Throws exception if named scene is present. */
+	public func void add(Scene scene)
+		if hasNamed(scene.getName())
+			throw EInvalidParam.new("named scene is present: " + scene.getName())
+		end
+		pScenes.add(scene)
+		
+		pListeners.forEach(block ScenesListener each
+			each.sceneAdded(this, scene)
+		end)
+	end
+	
+	/** Remove scene. Throws exception if named scene is absent. */
+	public func void remove(Scene scene)
+		pScenes.remove(scene)
+		
+		pListeners.forEach(block ScenesListener each
+			each.sceneRemoved(this, scene)
+		end)
+		
+		scene.dispose()
+	end
+	
+	/** Remove all scenes. */
+	public func void removeAll()
+		pScenes.forEach(block Scene each
+			each.dispose()
+		end)
+		pScenes.removeAll()
+		
+		pListeners.forEach(block ScenesListener each
+			each.allScenesRemoved(this)
+		end)
+	end
+	
+	/**
+	 * Visit scenes with block. Block receives as only argument Scene.
+	 */
+	public func void forEach(Block ablock)
+		pScenes.forEach(ablock)
+	end
+	
+	/**
+	 * Collect scenes with block. Block receives as only argument Scene and
+	 * has to return true to include or false to exclude scene.
+	 * Returns Array of Scene.
+	 */
+	public func Array collect(Block ablock)
+		return pScenes.collect(ablock)
+	end
+	
+	/** List of scenes as Array of Scene. */
+	public func Array toArray()
+		return Array.new(pScenes)
+	end
+	
+	
+	
+	/** Add listener. */
+	public func void addListener(ScenesListener listener)
+		if listener == null
+			throw ENullPointer.new("listener")
+		end
+		pListeners.add(listener)
+	end
+	
+	/** Remove listener. */
+	public func void removeListener(ScenesListener listener)
+		pListeners.remove(listener)
+	end
+end

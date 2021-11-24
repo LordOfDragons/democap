@@ -1,0 +1,260 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Democap.Behaviors
+
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Utils
+
+
+/**
+ * Scene used for motion capturing. Scenes compose of a world file and scene objects.
+ * Scene objects can be motion captured characters and props.
+ */
+class Scene
+	private var String pName
+	private var String pPathWorld
+	private var MemoryFile pSaveState
+	private var Array pListeners
+	
+	
+	
+	/** Create actor. */
+	public func new(String name)
+		pPathWorld = "/content/worlds/default.deworld"
+		pListeners = Array.new()
+		setName(name)
+	end
+	
+	/** Create copy of actor. */
+	public func new(String name, Scene scene)
+		pListeners = Array.new()
+		setName(name)
+		pPathWorld = scene.pPathWorld
+		
+		if scene.pSaveState != null
+			pSaveState = MemoryFile.new(scene.pSaveState)
+		end
+	end
+	
+	/** Load scene. */
+	public func new(PersistencyEnvironment env, FileReader reader)
+		pListeners = Array.new()
+		var int size
+		
+		if env.getPersistency().getDebugEnableCanaryValue()
+			if not reader.readString(Persistency.debugCanaryValue_BEGIN.getLength() ).equals(Persistency.debugCanaryValue_BEGIN)
+				throw EInvalidParam.new("Begin canary value invalid at reader position " + reader.getPosition())
+			end
+		end
+		
+		select reader.readByte() // version
+		case 0
+			reader.readByte() // flags
+			
+			pName = reader.readString8()
+			pPathWorld = reader.readString8()
+			
+			size = reader.readUInt() // save state size
+			if size > 0 // 0 size means not saved
+				pSaveState = MemoryFile.new("saveState")
+				pSaveState.getWriter(false).writeData(reader, size)
+			end
+			
+		else
+			throw EInvalidParam.new("Unsupported scene file version")
+		end
+		
+		if env.getPersistency().getDebugEnableCanaryValue()
+			if not reader.readString(Persistency.debugCanaryValue_END.getLength() ).equals(Persistency.debugCanaryValue_END)
+				throw EInvalidParam.new("End canary value invalid at reader position " + reader.getPosition())
+			end
+		end
+	end
+	
+	/** Dispose of list. */
+	public func void dispose()
+		pListeners.removeAll()
+	end
+	
+	
+	
+	/** Name. */
+	public func String getName()
+		return pName
+	end
+	
+	/** Set name. */
+	public func void setName(String name)
+		if name == null
+			throw ENullPointer.new("name")
+		end
+		if name.empty()
+			throw EInvalidParam.new("name is empty string")
+		end
+		
+		pName = name
+	end
+	
+	/** Path to world file. */
+	public func String getPathWorld()
+		return pPathWorld
+	end
+	
+	/** Set path to world file. */
+	public func void setPathWorld(String path)
+		if path == null
+			throw ENullPointer.new("path")
+		end
+		
+		pPathWorld = path
+	end
+	
+	/** Save state or null. */
+	public func MemoryFile getSaveState()
+		return pSaveState
+	end
+	
+	
+	
+	/** Load world. */
+	public func void loadWorld()
+		GameApp.getGameApp().startLoadGameWorld(StartGame.new(GameApp.getGameApp().getWindowGameWorld(), this))
+	end
+	
+	/** Save state. */
+	public func void saveWorld(GameWorld gameWorld)
+		if gameWorld == null
+			pSaveState = null
+			return
+		end
+		
+		var MemoryFile saveState = MemoryFile.new("saveSate")
+		
+		var PersistencyEnvironment env = PersistencyEnvironment.new(GameApp.getGameApp().getLoaders().getPersistency())
+		var FileWriter writer = saveState.getWriter(false)
+		
+		var World world = gameWorld.getWorld()
+		
+		writer.writeByte(0) // version
+		
+		// write element id generator state. required to be known before loading stubs
+		GameApp.getGameApp().getIDGenerator().writeToFile(writer)
+		
+		// write game world information
+		gameWorld.writeToFile(env, writer)
+		
+		// write all game world stub. required for preloading
+		gameWorld.writeElementStubsToFile(env, writer)
+		gameWorld.getUniqueIDRemapper().forEach(block UniqueIDRemapper.RemapEntry each
+			GameApp.getGameApp().getConsole().addMessage("  - remap " + each.getFirstID() \
+				+ " : " + each.getLastID() + " offset " + each.getOffset())
+		end)
+		
+		// write dynamic content
+		gameWorld.writeDynamicElementDataToFile(env, writer)
+		
+		// store save state
+		pSaveState = saveState
+	end
+	
+	
+	
+	/** Add listener. */
+	public func void addListener(SceneListener listener)
+		if listener == null
+			throw ENullPointer.new("listener")
+		end
+		pListeners.add(listener)
+	end
+	
+	/** Remove listener. */
+	public func void removeListener(SceneListener listener)
+		pListeners.remove(listener)
+	end
+	
+	/** Notify listeners scene object added to game world. */
+	public func void notifyObjectAdded(ECBSceneObject.Instance object)
+		pListeners.forEach(block SceneListener each
+			each.objectAdded(this, object)
+		end)
+	end
+	
+	/** Notify listeners scene object removed to game world. */
+	public func void notifyObjectRemoved(ECBSceneObject.Instance object)
+		pListeners.forEach(block SceneListener each
+			each.objectRemoved(this, object)
+		end)
+	end
+	
+	/** Notify listeners all scene objects removed to game world. */
+	public func void notifyAllObjectsRemoved()
+		pListeners.forEach(block SceneListener each
+			each.allObjectsRemoved(this)
+		end)
+	end
+	
+	
+	
+	/** Write scene to file. */
+	public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+		if env.getPersistency().getDebugEnableCanaryValue()
+			writer.writeString(Persistency.debugCanaryValue_BEGIN)
+		end
+		
+		writer.writeByte(0) // version
+		writer.writeByte(0) // flags
+		
+		writer.writeString8(pName)
+		writer.writeString8(pPathWorld)
+		
+		if pSaveState != null
+			writer.writeUInt(pSaveState.getSize())
+			writer.writeData(pSaveState.getReader())
+			
+		else
+			writer.writeUInt(0)
+		end
+		
+		if env.getPersistency().getDebugEnableCanaryValue()
+			writer.writeString(Persistency.debugCanaryValue_END)
+		end
+	end
+	
+	
+	
+	/** Compare scene for sorting. */
+	public func int compare(Object obj)
+		if obj castable Scene
+			return pName.compare((obj cast Scene).pName)
+		end
+		return 0
+	end
+	
+	/** String representation. Returns name. */
+	public func String toString()
+		return pName
+	end
+end

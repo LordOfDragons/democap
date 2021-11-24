@@ -37,92 +37,6 @@ pin Dragengine.Scenery
  * Main window character panel.
  */
 class WMPanelSession extends CollapsibleGroup
-	/** Loadable world list element renderer. */
-	class LoadableWorldRenderer extends DefaultListElementRenderer
-		public func new()
-		end
-		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
-			var String text = String.new(' ', 20)
-			if element != null
-				text = (element cast LoadableWorld).getName()
-			end
-			super.updateRenderer(listBox, renderer, text, selected, focused)
-		end
-	end
-	
-	/** Loadable world selection listener. */
-	class LoadableWorldSelection extends DefaultListModelListener
-		protected var WMPanelSession pWindow
-		
-		public func new(WMPanelSession window)
-			pWindow = window
-		end
-		
-		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
-			selectionChanged(model)
-		end
-		
-		public func void selectionChanged(ListModel model)
-			var int index = model.getSelected()
-			if index != -1
-				pWindow.setLoadableWorld(model.getAt(index) cast LoadableWorld)
-				
-			else
-				pWindow.setLoadableWorld(null)
-			end
-		end
-	end
-	
-	/** Loadable worlds listener. */
-	class ListenLoadableWorlds extends DefaultLoadableWorldsListener
-		protected var WMPanelSession pWindow
-		
-		public func new(WMPanelSession window)
-			pWindow = window
-		end
-		
-		public func void worldAdded(LoadableWorlds worlds, LoadableWorld world)
-			pWindow.updateLoadableWorlds()
-		end
-		
-		public func void worldRemoved(LoadableWorlds worlds, LoadableWorld world)
-			pWindow.updateLoadableWorlds()
-		end
-		
-		public func void allWorldsRemoved(LoadableWorlds worlds)
-			pWindow.updateLoadableWorlds()
-		end
-	end
-	
-	/** Loadable world popup menu. */
-	class LoadableWorldPopupAction extends DefaultActionListener
-		private var WMPanelSession pPanel
-		
-		public func new(WMPanelSession panel)
-			pPanel = panel
-		end
-		
-		public func void onAction(ActionEvent event)
-			var Widget widget = event.getSource() cast Widget
-			var WindowPopup popup = WindowPopup.new()
-			var Button button
-			
-			button = Button.new("Browse Worlds...", BlockActionListener.new(block ActionEvent event
-				popup.popdown()
-				pPanel.browseLoadableWorlds()
-			end))
-			popup.addWidget(button)
-			
-			pPanel.getDesktop().addWindow(popup)
-			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
-		end
-	end
-	
-	
-	
-	protected var DefaultListModel pModelLoadableWorlds
-	protected var LoadableWorld pLoadableWorld
 	protected var bool pInVR
 	
 	
@@ -131,25 +45,9 @@ class WMPanelSession extends CollapsibleGroup
 	public func new(bool inVR) super("Session", CollapsibleGroup.persistModel(prefixUIOptions(inVR)))
 		pInVR = inVR
 		
-		pModelLoadableWorlds = DefaultListModel.new()
-		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
 		end)
-		
-		pModelLoadableWorlds.addListener(LoadableWorldSelection.new(this))
-		
-		GameApp.getGameApp().getLoadableWorlds().addListener(ListenLoadableWorlds.new(this))
-		updateLoadableWorlds()
-	end
-	
-	/** Dispose of widget. */
-	public func void dispose()
-		setLoadableWorld(null)
-		
-		pModelLoadableWorlds = null
-		
-		super.dispose()
 	end
 	
 	/** UI options prefix. */
@@ -165,48 +63,6 @@ class WMPanelSession extends CollapsibleGroup
 	end
 	
 	
-	
-	/** Selected loadable world or null. */
-	public func LoadableWorld getLoadableWorld()
-		return pLoadableWorld
-	end
-	
-	/** Set selected loadable world or null. */
-	public func void setLoadableWorld(LoadableWorld world)
-		if world == pLoadableWorld
-			return
-		end
-		
-		pLoadableWorld = world
-	end
-	
-	/** Update loadable worlds model. */
-	public func void updateLoadableWorlds()
-		var LoadableWorld world = pLoadableWorld
-		
-		pModelLoadableWorlds.setContent(GameApp.getGameApp().getLoadableWorlds().toArray().sorted())
-		
-		var int index = pModelLoadableWorlds.indexOf(world)
-		if index != -1
-			pModelLoadableWorlds.setSelected(index)
-			pModelLoadableWorlds.notifyContentChanged(index, index)
-		end
-	end
-	
-	/** Browse loadable worlds in overlay directory. */
-	public func void browseLoadableWorlds()
-		FileSystem.browseOverlay(GameApp.getGameApp().getLoadableWorlds().getDirectory())
-	end
-	
-	/** Activate world. */
-	public func void activateWorld()
-		var GameApp app = GameApp.getGameApp()
-		if pLoadableWorld == null or app.getGameWorldLoader() != null
-			return
-		end
-		
-		app.startLoadGameWorld(StartGame.new(app.getWindowGameWorld(), pLoadableWorld.getPath()))
-	end
 	
 	/** Toggle large mirror. */
 	public func void toggleLargeMirror()
@@ -290,18 +146,6 @@ class WMPanelSession extends CollapsibleGroup
 				+ "Showing VR View is faster. Use Free Camera to set up scene.")
 			p.addWidget(checkBox)
 		end)) 
-		
-		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
-			p.addWidget(Label.new("World:", "Label.FormCaption"))
-			
-			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
-				p2.addWidget(ComboBox.new(pModelLoadableWorlds, LoadableWorldRenderer.new()))
-				
-				button = Button.new("...", LoadableWorldPopupAction.new(this))
-				button.setDesignerSelector("Button.Popup")
-				p2.addWidget(button)
-			end))
-		end))
 		
 		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
 			button = Button.new("Mirror", BlockActionListener.new(block ActionEvent event

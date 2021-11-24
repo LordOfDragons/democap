@@ -1,0 +1,583 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Actors
+pin Democap.Actions
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+
+/**
+ * Main window project panel.
+ */
+class WMPanelProject extends CollapsibleGroup
+	/** Game changes listener. */
+	class GameChangedListener extends DefaultGameListener
+		protected var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+		end
+		
+		public func void projectChanged(GameApp app)
+			pPanel.setProject(app.getProject())
+		end
+		
+		public func void sceneChanged(GameApp app)
+			pPanel.setScene(app.getScene())
+		end
+		
+		public func void gameWorldChanged(GameApp app)
+			pPanel.updateModelObjects()
+		end
+	end
+	
+	
+	
+	/** Scenes changed listener. */
+	class ScenesChangedListener extends DefaultScenesListener
+		protected var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+		end
+		
+		public func void sceneAdded(Scenes scenes, Scene scene)
+			pPanel.updateModelScenes()
+		end
+		
+		public func void sceneRemoved(Scenes scenes, Scene scene)
+			pPanel.updateModelScenes()
+		end
+		
+		public func void allScenesRemoved(Scenes scenes)
+			pPanel.updateModelScenes()
+		end
+	end
+	
+	/** Scene list element renderer. */
+	class SceneListElementRenderer extends DefaultListElementRenderer
+		public func new()
+			setDefaultMinimumSize(Point.new(50, 10))
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text = ""
+			if element != null
+				text = (element cast Scene).getName()
+			end
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	/** Scene selection listener. */
+	class SelectScene extends DefaultListModelListener
+		protected var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+		end
+		
+		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+			selectionChanged(model)
+		end
+		
+		public func void selectionChanged(ListModel model)
+			var int index = model.getSelected()
+			if index != -1
+				GameApp.getGameApp().setScene(model.getAt(index) cast Scene)
+			end
+		end
+	end
+	
+	/** Scene changed listener. */
+	class SceneChangedListener extends DefaultSceneListener
+		protected var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+		end
+		
+		public func void objectAdded(Scene scene, ECBSceneObject.Instance object)
+			pPanel.updateModelObjects()
+		end
+		
+		public func void objectRemoved(Scene scene, ECBSceneObject.Instance object)
+			pPanel.updateModelObjects()
+		end
+		
+		public func void allObjectsRemoved(Scene scene)
+			pPanel.updateModelObjects()
+		end
+	end
+	
+	/** Scene popup menu. */
+	class ScenePopupAction extends DefaultActionListener
+		protected var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			var Widget widget = event.getSource() cast Widget
+			var WindowPopup popup = WindowPopup.new()
+			var Button button
+			
+			button = Button.new("Add...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+// 				pPanel.activateWorld()
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Rename...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+// 				pPanel.browseLoadableWorlds()
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Remove...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+// 				pPanel.browseLoadableWorlds()
+			end))
+			popup.addWidget(button)
+			
+			pPanel.getDesktop().addWindow(popup)
+			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
+		end
+	end
+	
+	
+	
+	/** Loadable world list element renderer. */
+	class LoadableWorldRenderer extends DefaultListElementRenderer
+		public func new()
+			setDefaultMinimumSize(Point.new(50, 10))
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text = ""
+			if element != null
+				text = (element cast LoadableWorld).getName()
+			end
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	/** Loadable worlds listener. */
+	class ListenLoadableWorlds extends DefaultLoadableWorldsListener
+		protected var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+		end
+		
+		public func void worldAdded(LoadableWorlds worlds, LoadableWorld world)
+			pPanel.updateModelLoadableWorlds()
+		end
+		
+		public func void worldRemoved(LoadableWorlds worlds, LoadableWorld world)
+			pPanel.updateModelLoadableWorlds()
+		end
+		
+		public func void allWorldsRemoved(LoadableWorlds worlds)
+			pPanel.updateModelLoadableWorlds()
+		end
+	end
+	
+	/** Loadable world popup menu. */
+	class LoadableWorldPopupAction extends DefaultActionListener
+		protected var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			var Widget widget = event.getSource() cast Widget
+			var WindowPopup popup = WindowPopup.new()
+			var Button button
+			
+			button = Button.new("Activate World", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.activateWorld()
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Browse Worlds...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.browseLoadableWorlds()
+			end))
+			popup.addWidget(button)
+			
+			pPanel.getDesktop().addWindow(popup)
+			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
+		end
+	end
+	
+	
+	
+	/** Object element renderer. */
+	class ObjectElementRenderer extends DefaultListElementRenderer
+		public func new()
+			setDefaultMinimumSize(Point.new(80, 20))
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text = ""
+			if element != null
+				text = (element cast ECBSceneObject.Instance).getDisplayName()
+			end
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	/** Select object listener. */
+	class SelectObject extends DefaultListModelListener
+		protected var WMPanelProject pWindow
+		
+		public func new(WMPanelProject window)
+			pWindow = window
+		end
+		
+		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+			selectionChanged(model)
+		end
+		
+		public func void selectionChanged(ListModel model)
+			var int index = model.getSelected()
+			if index != -1
+				pWindow.setObject(model.getAt(index) cast ECBSceneObject.Instance)
+				
+			else
+				pWindow.setObject(null)
+			end
+		end
+	end
+	
+	/** Object popup menu. */
+	class ObjectPopupAction extends DefaultActionListener
+		private var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			var Widget widget = event.getSource() cast Widget
+			var WindowPopup popup = WindowPopup.new()
+			var Button button
+			
+// 			button = Button.new("Activate", BlockActionListener.new(block ActionEvent event
+// 				pPanel.activateWorld()
+// 			end))
+// 			button.setToolTip("Activate world. Replaces entire world with selected one")
+// 			popup.addWidget(button)
+// 			
+// 			button = Button.new("Browse Worlds...", BlockActionListener.new(block ActionEvent event
+// 				popup.popdown()
+// 				pPanel.browseBehaviorElements()
+// 			end))
+// 			popup.addWidget(button)
+			
+			pPanel.getDesktop().addWindow(popup)
+			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
+		end
+	end
+	
+	
+	
+	protected var DefaultListModel pModelScenes
+	protected var DefaultListModel pModelLoadableWorlds
+	protected var DefaultListModel pModelObjects
+	protected var ECBSceneObject.Instance pObject
+	protected var bool pInVR
+	protected var Project pProject
+	protected var Scene pScene
+	protected var ScenesChangedListener pScenesChangedListener
+	protected var SceneChangedListener pSceneChangedListener
+	
+	
+	
+	/** Create panel. */
+	public func new(bool inVR) super("Project", CollapsibleGroup.persistModel(prefixUIOptions(inVR)))
+		pInVR = inVR
+		
+		pModelScenes = DefaultListModel.new()
+		pModelScenes.setAutoSelect(false)
+		
+		pModelLoadableWorlds = DefaultListModel.new()
+		
+		pModelObjects = DefaultListModel.new()
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+		
+		GameApp.getGameApp().getLoadableWorlds().addListener(ListenLoadableWorlds.new(this))
+		updateModelLoadableWorlds()
+		
+		pModelScenes.addListener(SelectScene.new(this))
+		pModelObjects.addListener(SelectObject.new(this))
+		
+		pScenesChangedListener = ScenesChangedListener.new(this)
+		pSceneChangedListener = SceneChangedListener.new(this)
+		GameApp.getGameApp().addListener(GameChangedListener.new(this))
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		setObject(null)
+		setScene(null)
+		setProject(null)
+		
+		pSceneChangedListener = null
+		pScenesChangedListener = null
+		pModelObjects = null
+		pModelLoadableWorlds = null
+		pModelScenes = null
+		
+		super.dispose()
+	end
+	
+	/** UI options prefix. */
+	static public func String prefixUIOptions(bool inVR)
+		return inVR if "UI/VR/WMPanelProject" else "UI/WMPanelProject"
+	end
+	
+	
+	
+	/** Shown in VR. */
+	public func bool getInVR()
+		return pInVR
+	end
+	
+	
+	
+	/** Active project or null. */
+	public func Project getProject()
+		return pProject
+	end
+	
+	/** Set active project or null. */
+	public func void setProject(Project project)
+		if project == pProject
+			return
+		end
+		
+		setScene(null)
+		
+		if pProject != null
+			pProject.getScenes().removeListener(pScenesChangedListener)
+		end
+		
+		pProject = project
+		
+		if project != null
+			project.getScenes().addListener(pScenesChangedListener)
+		end
+		
+		updateModelScenes()
+	end
+	
+	
+	
+	/** Update scenes model. */
+	public func void updateModelScenes()
+		var Array content = Array.new()
+		if GameApp.getGameApp().getProject() != null
+			content = GameApp.getGameApp().getProject().getScenes().toArray()
+		end
+		
+		pModelScenes.setSelected(-1)
+		pModelScenes.setContent(content)
+		
+		selectScene()
+	end
+	
+	/** Select scene. */
+	public func void selectScene()
+		pModelScenes.setSelected(pModelScenes.indexOf(GameApp.getGameApp().getScene()))
+	end
+	
+	/** Active scene or null. */
+	public func Scene getScene()
+		return pScene
+	end
+	
+	/** Set active scene or null. */
+	public func void setScene(Scene scene)
+		if scene == pScene
+			return
+		end
+		
+		if pScene != null
+			pScene.removeListener(pSceneChangedListener)
+		end
+		
+		pScene = scene
+		
+		if scene != null
+			scene.addListener(pSceneChangedListener)
+		end
+		
+		selectScene()
+		updateModelObjects()
+	end
+	
+	
+	
+	/** Selected loadable world or null. */
+	public func LoadableWorld getLoadableWorld()
+		if pModelLoadableWorlds.getSelected() == -1
+			return null
+		end
+		return pModelLoadableWorlds.getAt(pModelLoadableWorlds.getSelected()) cast LoadableWorld
+	end
+	
+	/** Update loadable worlds model. */
+	public func void updateModelLoadableWorlds()
+		var LoadableWorld world = getLoadableWorld()
+		
+		pModelLoadableWorlds.setContent(GameApp.getGameApp().getLoadableWorlds().toArray().sorted())
+		
+		var int index = pModelLoadableWorlds.indexOf(world)
+		if index != -1
+			pModelLoadableWorlds.setSelected(index)
+			pModelLoadableWorlds.notifyContentChanged(index, index)
+		end
+	end
+	
+	/** Browse loadable worlds in overlay directory. */
+	public func void browseLoadableWorlds()
+		FileSystem.browseOverlay(GameApp.getGameApp().getLoadableWorlds().getDirectory())
+	end
+	
+	/** Activate world. */
+	public func void activateWorld()
+		var GameApp app = GameApp.getGameApp()
+		var LoadableWorld world = getLoadableWorld()
+		if pScene == null or world == null or app.getGameWorldLoader() != null
+			return
+		end
+		
+		pScene.saveWorld(app.getWindowGameWorld().getGameWorld())
+		pScene.setPathWorld(world.getPath())
+		pScene.loadWorld()
+	end
+	
+	
+	
+	/** Selected object or null. */
+	public func ECBSceneObject.Instance getObject()
+		return pObject
+	end
+	
+	/** Set selected object or null. */
+	public func void setObject(ECBSceneObject.Instance object)
+		if object == pObject
+			return
+		end
+		
+		pObject = object
+	end
+	
+	/** Update objects model. */
+	public func void updateModelObjects()
+		if pModelObjects == null
+			return // dispose protection
+		end
+		
+		var ECBSceneObject.Instance selection = pObject
+		
+		var Array content = Array.new()
+		
+		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+		if gameWorld != null
+			gameWorld.forEachElement(block BehaviorElement each
+				if each castable BehaviorElement
+					var ECBSceneObject.Instance sceneObject = ECBSceneObject.getInstanceIn(each cast BehaviorElement)
+					if sceneObject != null
+						content.add(sceneObject)
+					end
+				end
+			end)
+		end
+		
+		content.sort(block ECBSceneObject.Instance a, ECBSceneObject.Instance b
+			return a.getDisplayName().compare(b.getDisplayName())
+		end)
+		
+		pModelObjects.setContent(content)
+		
+		var int index = pModelObjects.indexOf(selection)
+		if index != -1
+			pModelObjects.setSelected(index)
+			pModelObjects.notifyContentChanged(index, index)
+		end
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var Button button
+		
+		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			p.addWidget(Label.new("Scene:", "Label.FormCaption"))
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
+				p2.addWidget(ComboBox.new(pModelScenes, SceneListElementRenderer.new()))
+				
+				button = Button.new("...", ScenePopupAction.new(this))
+				button.setDesignerSelector("Button.Popup")
+				p2.addWidget(button)
+			end))
+			
+			p.addWidget(Label.new("World:", "Label.FormCaption"))
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
+				p2.addWidget(ComboBox.new(pModelLoadableWorlds, LoadableWorldRenderer.new()))
+				
+				button = Button.new("...", LoadableWorldPopupAction.new(this))
+				button.setDesignerSelector("Button.Popup")
+				p2.addWidget(button)
+			end))
+			
+			p.addWidget(Label.new("Object:", "Label.FormCaption"))
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
+				p2.addWidget(ComboBox.new(pModelObjects, ObjectElementRenderer.new()))
+				
+				button = Button.new("...", ObjectPopupAction.new(this))
+				button.setDesignerSelector("Button.Popup")
+				p2.addWidget(button)
+			end))
+		end))
+	end
+end

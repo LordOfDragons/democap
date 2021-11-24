@@ -23,7 +23,10 @@ namespace Democap
 
 pin Dragengine.CameraDirectors
 pin Dragengine.Gui
+pin Dragengine.Preloading
+pin Dragengine.LoadSave
 pin Dragengine.Scenery
+pin Dragengine.Utils
 
 
 
@@ -31,9 +34,42 @@ pin Dragengine.Scenery
  * Start game loader class.
  */
 class StartGame extends WindowGameWorld.Loader
+	private var Scene pScene
+	private var PersistencyEnvironment pPersistEnv
+	private var FileReader pReader
+	
+	
+	
 	/** Create start game loader. */
-	public func new(WindowGameWorld window, String pathWorld) super(window)
-		setPathWorld(pathWorld)
+	public func new(WindowGameWorld window, Scene scene) super(window)
+		pScene = scene
+		setPathWorld(scene.getPathWorld())
+		
+		// load initial data from save state
+		if scene.getSaveState() != null
+			pReader = scene.getSaveState().getReader()
+			pPersistEnv = PersistencyEnvironment.new(GameApp.getGameApp().getLoaders().getPersistency())
+			
+			select pReader.readByte() // version
+			case 0
+				GameApp.getGameApp().getIDGenerator().readFromFile(pReader)
+				
+			else
+				throw EInvalidParam.new("Unsupported version")
+			end
+			
+			setIgnorePersistableElements(true)
+			
+		else
+			GameApp.getGameApp().getIDGenerator().setFrom(UniqueID.new(1))
+		end
+	end
+	
+	
+	
+	/** Scene. */
+	public func Scene getScene()
+		return pScene
 	end
 	
 	
@@ -47,6 +83,80 @@ class StartGame extends WindowGameWorld.Loader
 		GameApp.getGameApp().setSplitInputProcessor()
 	end
 	
+	/** Load world from *.deworld file. */
+	protected func void loadWorld()
+		super.loadWorld()
+		
+		// store next object ID. this is done always
+		var StubGameWorld stubGameWorld = getStubWorld()
+		var GameWorld gameWorld = stubGameWorld.getGameWorld()
+		var MutableID idGenerator = GameApp.getGameApp().getIDGenerator()
+		
+		var UniqueID nextObjectID = stubGameWorld.getNextObjectID()
+		gameWorld.setNextObjectID(nextObjectID)
+		
+		var UniqueID firstID = UniqueID.new(1)
+		if idGenerator.toUniqueID() > firstID
+			gameWorld.getUniqueIDRemapper().add(firstID, nextObjectID, idGenerator.toUniqueID() - firstID)
+		end
+		idGenerator.incrementBy(nextObjectID - firstID)
+		
+		// for loading from file read game world from file
+		if pPersistEnv != null
+			getStubWorld().getGameWorld().readFromFile(pPersistEnv, pReader)
+		end
+		
+		// read element stubs from file. this call does a couple of things.
+		// 
+		// first it reads the next object ID and unique ID remapper.
+		// 
+		// then it remaps the elements stubs created while loading the world using the unique
+		// ID remapper load in the previous step. for this reason this call has to come after
+		// the create element calls above.
+		// 
+		// then the dynamic element stubs are read. this creates the dynamnic elements not
+		// present in the game world at the time the world has been designed
+		gameWorld.readElementStubsFromFile(pPersistEnv, pReader, GameApp.getGameApp().getIDGenerator(), \
+			GameApp.getGameApp().getElementClassList(), stubGameWorld )
+		
+		gameWorld.getUniqueIDRemapper().forEach(block UniqueIDRemapper.RemapEntry each
+			GameApp.getGameApp().getConsole().addMessage("  - remap " + each.getFirstID() + " : " \
+				+ each.getLastID() + " offset " + each.getOffset())
+		end)
+	end
+	
+	/** Create content from stubs. */
+	protected func void createContentFromStub()
+		if pPersistEnv == null
+			super.createContentFromStub()
+			return
+		end
+		
+		var StubGameWorld stubGameWorld = getStubWorld()
+		var GameWorld gameWorld = stubGameWorld.getGameWorld()
+		var Console console = getConsole()
+		
+		// verify preloading
+		stubGameWorld.verifyPreloading(console)
+		if getDebugVerifyStubProperties() != null
+			getDebugVerifyStubProperties().verifyWorld(stubGameWorld)
+		end
+		
+		// create all non-persistable elements from the world file
+		stubGameWorld.createAndAddNonPersistableElements(console)
+		
+		// create persistable elements added to the world file since the last saving
+		if stubGameWorld.getNewElementsRange() != null
+			stubGameWorld.createAndAddPersistableElements(console, stubGameWorld.getNewElementsRange())
+		end
+		
+		// load all persistable elements from the save state
+		stubGameWorld.loadAndAddPersistableElements(console, pPersistEnv, pReader)
+		
+// 		addDecalVisitor.setWorld( this.pWorld )
+		stubGameWorld.createWorldDecals(getDecalBuilder(), console)
+	end
+	
 	/** Loading world finished successfully. */
 	public func void onLoadWorldFinished()
 		var GameApp app = BaseGameApp.getApp() cast GameApp
@@ -54,56 +164,22 @@ class StartGame extends WindowGameWorld.Loader
 		// assign camera director attaching the camera to the player controlled actor
 		getWindow().setCameraDirector(app.getVRCameraDirector())
 		
-		// finish loading. the super call calls WindowWorldRenderer.setGameWorld() which in
-		// turn disposes of the previously set game world. usually this is fine but we want
-		// to reused elements across loading new game worlds. for this reason we first clear
-		// the previous the game world using the non-dispose version of setGameWorld().
-		// then the super call and finishLoadGameWorld() is called. afterwards the game
-		// world is disposed. this ensures elements properly transfer to the new game world
-		// without needing to know all the details
-		var GameWorld oldWorld = getWindow().getGameWorld()
+		// finish loading world. sets the game world disposing of the previous one
+		super.onLoadWorldFinished()
 		
-		try
-			getWindow().setGameWorld(null, false)
-			super.onLoadWorldFinished()
-			
-			if app.getModelShowVRCamera().getToggled()
-				getWindow().getWorldRenderer().setCamera(app.getVRCamera())
-			end
-			
-			app.finishLoadGameWorld()
-			
-		catch Exception e
-			app.getConsole().addError("Loading game world failed: " + getPathWorld(), e)
-			onLoadWorldFailed()
+		// activate vr camera if required
+		if app.getModelShowVRCamera().getToggled()
+			getWindow().getWorldRenderer().setCamera(app.getVRCamera())
 		end
 		
-		if oldWorld != null
-			oldWorld.dispose()
-		end
+		// finish loading
+		app.finishLoadGameWorld()
 	end
 	
 	/** Loading world failed. */
 	public func void onLoadWorldFailed()
-		// the super call calls WindowWorldRenderer.setGameWorld() which in turn disposes of
-		// the previously set game world. usually this is fine but we want to reused elements
-		// across loading new game worlds. for this reason we first clear the previous the
-		// game world using the non-dispose version of setGameWorld(). then the super call
-		// and cancelLoadGameWorld() is called. afterwards the game world is disposed. this
-		// ensures elements properly move out of the game world without being disposed of
-		var GameWorld oldWorld = getWindow().getGameWorld()
+		super.onLoadWorldFailed()
 		
-		try
-			getWindow().setGameWorld(null, false)
-			super.onLoadWorldFailed()
-			BaseGameApp.getApp().cancelLoadGameWorld()
-			
-		catch Exception e
-			GameApp.getGameApp().getConsole().addError("Cancel game world failed: " + getPathWorld(), e)
-		end
-		
-		if oldWorld != null
-			oldWorld.dispose()
-		end
+		BaseGameApp.getApp().cancelLoadGameWorld()
 	end
 end

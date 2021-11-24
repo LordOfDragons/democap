@@ -1,0 +1,110 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Motion capture project.
+ * 
+ * Projects are stored under "/projects" directory in the user game configure directory
+ * as files of type "*.demcp" .
+ */
+class Project
+	private var String pPath
+	private var Scenes pScenes
+	
+	
+	
+	/** Create project. */
+	public func new()
+		pScenes = Scenes.new()
+	end
+	
+	/** Load project from file. */
+	static public func Project load(String path)
+		var PersistencyEnvironment env = PersistencyEnvironment.new(GameApp.getGameApp().getLoaders().getPersistency())
+		var FileReader reader = env.getPersistency().getDebugEnableCanaryValue() \
+			if FileReader.new(path) else FileReader.newZCompressed(path)
+		
+		var Project project = Project.new()
+		var int size, i, count
+		
+		project.pPath = path
+		
+		select reader.readByte() // version
+		case 0
+			reader.readByte() // flags
+			
+			count = reader.readUShort()
+			for i = 0 to count
+				project.pScenes.add(Scene.new(env, reader))
+			end
+			
+		else
+			throw EInvalidParam.new("Unsupported scene file version")
+		end
+		
+		return project
+	end
+	
+	/** Dispose of list. */
+	public func void dispose()
+		pScenes.dispose()
+	end
+	
+	
+	
+	/** Project path. */
+	public func String getPath()
+		return pPath
+	end
+	
+	/** Scenes. */
+	public func Scenes getScenes()
+		return pScenes
+	end
+	
+	
+	
+	/** Save to file. */
+	public func void save(String path)
+		var MemoryFile safe = MemoryFile.new("safe")
+		
+		var PersistencyEnvironment env = PersistencyEnvironment.new(GameApp.getGameApp().getLoaders().getPersistency())
+		var FileWriter writer = env.getPersistency().getDebugEnableCanaryValue()\
+			if safe.getWriter(false) else safe.getWriterZCompressed()
+		
+		writer.writeByte(0) // version
+		writer.writeByte(0) // flags
+		
+		writer.writeUShort(pScenes.getCount())
+		pScenes.forEach(block Scene each
+			each.writeToFile(env, writer)
+		end)
+		
+		FileWriter.new(path).writeData(safe.getReader())
+	end
+end

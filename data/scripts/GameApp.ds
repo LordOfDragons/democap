@@ -97,6 +97,7 @@ class GameApp extends BaseGameApp
 	
 	
 	private var String pPathCaptureAnimations
+	private var String pPathProjects
 	
 	private var ActorProfiles pActorProfiles
 	private var ActorProfile pActiveActorProfile
@@ -112,14 +113,17 @@ class GameApp extends BaseGameApp
 	private var LoadCharacterProfile pLoadCharacterProfile
 	private var MutableID pNextElementClassID
 	
-	private var DefaultListModel pModelSceneObjects
 	private var WorldSpawnCharacter pWorldSpawnCharacter
 	private var Camera pVRCamera
 	private var VRCameraDirector pVRCameraDirector
 	private var ElementClassList pECListHandles
 	private var ECBSelectable.Tracker pSelectionTracker
 	
+	private var Project pProject
+	private var Scene pScene
 	private var WindowMain pWindowMain
+	
+	private var Array pListeners
 	
 	
 	
@@ -129,6 +133,7 @@ class GameApp extends BaseGameApp
 	public func new()
 		pathDesktopGuiTheme = "/content/gui/main.guitheme.xml"
 		pPathCaptureAnimations = "/capture/animations"
+		pPathProjects = "/config/projects"
 // 		defaultConsoleBufferSize = 100
 	end
 	
@@ -137,6 +142,11 @@ class GameApp extends BaseGameApp
 	/** Path to overlay capture animations directory. */
 	public func String getPathCaptureAnimations()
 		return pPathCaptureAnimations
+	end
+	
+	/** Path to projects directory. */
+	public func String getPathProjects()
+		return pPathProjects
 	end
 	
 	/** Get app instance for convenience. */
@@ -208,11 +218,6 @@ class GameApp extends BaseGameApp
 		return pModelShowVRCamera
 	end
 	
-	/** Scene objects model. */
-	public func DefaultListModel getModelSceneObjects()
-		return pModelSceneObjects
-	end
-	
 	
 	
 	/** Next unique element class ID generator. */
@@ -252,12 +257,87 @@ class GameApp extends BaseGameApp
 	
 	
 	
+	/** Project. */
+	public func Project getProject()
+		return pProject
+	end
+	
+	/** Set project. */
+	public func void setProject(Project project)
+		if project == pProject
+			return
+		end
+		
+		setScene(null)
+		if pProject != null
+			pProject.save(File.new(pPathProjects, "autosave.demcp").getPath())
+			pProject.dispose()
+		end
+		
+		pProject = project
+		
+		pListeners.forEach(block GameListener each
+			each.projectChanged(this)
+		end)
+	end
+	
+	/** Scene. */
+	public func Scene getScene()
+		return pScene
+	end
+	
+	/** Set scene. */
+	public func void setScene(Scene scene)
+		if scene == pScene
+			return
+		end
+		
+		if pScene != null
+			cancelLoadGameWorld()
+			if getWindowGameWorld().getGameWorld() != null
+				pScene.saveWorld(getWindowGameWorld().getGameWorld())
+			end
+		end
+		
+		pScene = scene
+		
+		if scene != null
+			scene.loadWorld()
+		end
+		
+		pListeners.forEach(block GameListener each
+			each.sceneChanged(this)
+		end)
+	end
+	
+	
+	
+	/** Add listener. */
+	public func void addListener(GameListener listener)
+		if listener == null
+			throw ENullPointer.new("listener")
+		end
+		pListeners.add(listener)
+	end
+	
+	/** Remove listener. */
+	public func void removeListener(GameListener listener)
+		pListeners.remove(listener)
+	end
+	
+	
+	
 	/** Initialize game. */
 	public func void initGame()
+		pListeners = Array.new()
+		
 		// has to come before super call since createAndAddElementClasses() uses it
 		pECListHandles = ElementClassList.new()
 		
 		super.initGame()
+		
+		// only enable this in debug build
+		getLoaders().getPersistency().setDebugEnableCanaryValue(true)
 		
 		// has to come after super call since class list is filled not earlier
 		addECListHandles()
@@ -265,7 +345,6 @@ class GameApp extends BaseGameApp
 		pModelEnableVR = DefaultToggleModel.new(true)
 		pModelEnableHMD = DefaultToggleModel.new(true)
 		pModelShowVRCamera = DefaultToggleModel.new(true)
-		pModelSceneObjects = DefaultListModel.new()
 		pDefaultActorProfile = ActorProfile.new("Default")
 		
 		pMotionTransferFactories = MotionTransferFactories.new()
@@ -390,8 +469,24 @@ class GameApp extends BaseGameApp
 		
 		windowGameWorld.addMouseListener(InteractMouseListener.new())
 		
-		// load default game world
-		startLoadGameWorld(StartGame.new(getWindowGameWorld(), "/content/worlds/default.deworld"))
+		// load auto save project if present
+		var String pathAutoSaveProject = File.new(pPathProjects, "autosave.demcp").getPath()
+		if FileSystem.existsFile(pathAutoSaveProject)
+			try
+				setProject(Project.load(pathAutoSaveProject))
+				
+			catch Exception e
+				getConsole().addError("Failed loading auto save project", e)
+			end
+		end
+		
+		if pProject == null
+			var Project project = Project.new()
+			project.getScenes().add(Scene.new("Scene"))
+			setProject(project)
+		end
+		
+		setScene(pProject.getScenes().getAt(0))
 	end
 	
 	/** First run. */
@@ -492,6 +587,8 @@ class GameApp extends BaseGameApp
 			pWorldSpawnCharacter = null
 		end
 		
+		setProject(null)
+		
 		pLoadableWorlds = null
 		
 		if pCharacterProfiles != null
@@ -514,12 +611,12 @@ class GameApp extends BaseGameApp
 		pSelectionTracker = null
 		pLoadCharacterProfile = null
 		pLoadActorProfile = null
-		pModelSceneObjects = null
 		pModelShowVRCamera = null
 		pModelEnableHMD = null
 		pModelEnableVR = null
 		pVRCameraDirector = null
 		pECListHandles = null
+		pListeners = null
 		
 		super.cleanUp()
 	end
@@ -535,6 +632,10 @@ class GameApp extends BaseGameApp
 		pWorldSpawnCharacter.setGameWorld(getWindowGameWorld().getGameWorld())
 		
 		getWindowGameWorld().getGameWorld().getWorld().addCamera(pVRCamera)
+		
+		pListeners.forEach(block GameListener each
+			each.gameWorldChanged(this)
+		end)
 	end
 	
 	/** Set split input processor. */
