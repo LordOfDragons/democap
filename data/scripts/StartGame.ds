@@ -35,8 +35,6 @@ pin Dragengine.Utils
  */
 class StartGame extends WindowGameWorld.Loader
 	private var Scene pScene
-	private var PersistencyEnvironment pPersistEnv
-	private var FileReader pReader
 	
 	
 	
@@ -47,12 +45,12 @@ class StartGame extends WindowGameWorld.Loader
 		
 		// load initial data from save state
 		if scene.getSaveState() != null
-			pReader = scene.getSaveState().getReader()
-			pPersistEnv = PersistencyEnvironment.new(GameApp.getGameApp().getLoaders().getPersistency())
+			setPersistency(PersistencyEnvironment.new(\
+				GameApp.getGameApp().getLoaders().getPersistency()), scene.getSaveState().getReader())
 			
-			select pReader.readByte() // version
+			select getPersistencyReader().readByte() // version
 			case 0
-				GameApp.getGameApp().getIDGenerator().readFromFile(pReader)
+				getIDGenerator().readFromFile(getPersistencyReader())
 				
 			else
 				throw EInvalidParam.new("Unsupported version")
@@ -61,7 +59,7 @@ class StartGame extends WindowGameWorld.Loader
 			setIgnorePersistableElements(true)
 			
 		else
-			GameApp.getGameApp().getIDGenerator().setFrom(UniqueID.new(1))
+			getIDGenerator().setFrom(UniqueID.new(1))
 		end
 	end
 	
@@ -81,80 +79,6 @@ class StartGame extends WindowGameWorld.Loader
 		// the base class implementation activates the desktop input processor.
 		// revert back to our split input processor
 		GameApp.getGameApp().setSplitInputProcessor()
-	end
-	
-	/** Load world from *.deworld file. */
-	protected func void loadWorld()
-		super.loadWorld()
-		
-		// store next object ID. this is done always
-		var StubGameWorld stubGameWorld = getStubWorld()
-		var GameWorld gameWorld = stubGameWorld.getGameWorld()
-		var MutableID idGenerator = GameApp.getGameApp().getIDGenerator()
-		
-		var UniqueID nextObjectID = stubGameWorld.getNextObjectID()
-		gameWorld.setNextObjectID(nextObjectID)
-		
-		var UniqueID firstID = UniqueID.new(1)
-		if idGenerator.toUniqueID() > firstID
-			gameWorld.getUniqueIDRemapper().add(firstID, nextObjectID, idGenerator.toUniqueID() - firstID)
-		end
-		idGenerator.incrementBy(nextObjectID - firstID)
-		
-		// for loading from file read game world from file
-		if pPersistEnv != null
-			getStubWorld().getGameWorld().readFromFile(pPersistEnv, pReader)
-		end
-		
-		// read element stubs from file. this call does a couple of things.
-		// 
-		// first it reads the next object ID and unique ID remapper.
-		// 
-		// then it remaps the elements stubs created while loading the world using the unique
-		// ID remapper load in the previous step. for this reason this call has to come after
-		// the create element calls above.
-		// 
-		// then the dynamic element stubs are read. this creates the dynamnic elements not
-		// present in the game world at the time the world has been designed
-		gameWorld.readElementStubsFromFile(pPersistEnv, pReader, GameApp.getGameApp().getIDGenerator(), \
-			GameApp.getGameApp().getElementClassList(), stubGameWorld )
-		
-		gameWorld.getUniqueIDRemapper().forEach(block UniqueIDRemapper.RemapEntry each
-			GameApp.getGameApp().getConsole().addMessage("  - remap " + each.getFirstID() + " : " \
-				+ each.getLastID() + " offset " + each.getOffset())
-		end)
-	end
-	
-	/** Create content from stubs. */
-	protected func void createContentFromStub()
-		if pPersistEnv == null
-			super.createContentFromStub()
-			return
-		end
-		
-		var StubGameWorld stubGameWorld = getStubWorld()
-		var GameWorld gameWorld = stubGameWorld.getGameWorld()
-		var Console console = getConsole()
-		
-		// verify preloading
-		stubGameWorld.verifyPreloading(console)
-		if getDebugVerifyStubProperties() != null
-			getDebugVerifyStubProperties().verifyWorld(stubGameWorld)
-		end
-		
-		// create all non-persistable elements from the world file
-		stubGameWorld.createAndAddNonPersistableElements(console)
-		
-		// create persistable elements added to the world file since the last saving
-		if stubGameWorld.getNewElementsRange() != null
-			stubGameWorld.createAndAddPersistableElements(console, stubGameWorld.getNewElementsRange())
-		end
-		
-		// load all persistable elements from the save state
-		stubGameWorld.loadAndAddPersistableElements(console, pPersistEnv, pReader)
-		
-// 		addDecalVisitor.setWorld( this.pWorld )
-		stubGameWorld.createWorldDecals(getDecalBuilder(), console)
 	end
 	
 	/** Loading world finished successfully. */
