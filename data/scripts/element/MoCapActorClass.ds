@@ -32,9 +32,11 @@ pin Dragengine.Scenery
 class MoCapActorClass extends BaseVRActorClass
 	public var ECBAControlDesktop controlDesktop
 	public var ECBAInteractHandle interactHandle
-	public var ECBASelectable selectable
+	public var ECBASelectable actorSelectable
 	public var ECBVRHudInfo vrHudInfo
 	public var ECBSceneObject sceneObject
+	public var ECBSelectable selectable
+	public var ECBShowInteractHandles showInteractHandles
 	
 	
 	
@@ -44,6 +46,9 @@ class MoCapActorClass extends BaseVRActorClass
 	
 	public func new(String name) super(name)
 		setPersistable(false)
+		
+		getCollider().getCollider().collisionCategorySetBit(GameApp.CollisionFilterBit.interaction)
+		getCollider().getCollider().collisionFilterSetBit(GameApp.CollisionFilterBit.interaction)
 		
 // 		getVRRightHand().getShowHand().setValue(false)
 // 		getVRLeftHand().getShowHand().setValue(false)
@@ -56,8 +61,23 @@ class MoCapActorClass extends BaseVRActorClass
 		
 		controlDesktop = ECBAControlDesktop.new(this)
 		interactHandle = ECBAInteractHandle.new(this)
-		selectable = ECBASelectable.new(this)
+		
+		actorSelectable = ECBASelectable.new(this)
+		
 		vrHudInfo = ECBVRHudInfo.new(this)
 		sceneObject = ECBSceneObject.new(this)
+		
+		selectable = ECBSelectable.new(this)
+		
+		showInteractHandles = ECBShowInteractHandles.new(this, selectable)
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveX")
+// 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveY")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveZ")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveXNeg")
+// 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveYNeg")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveZNeg")
+// 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateX")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateY")
+// 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateZ")
 	end
 end

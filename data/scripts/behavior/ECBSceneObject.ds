@@ -27,7 +27,9 @@ pin Dragengine.Scenery
 
 
 /**
- * Behavior for scene object elements. Scene objects have an optional name.
+ * Behavior for scene object elements. Scene objects have an optional name and are shown
+ * to the user in the project panel. Scene objects are persistable except the active
+ * motion capture actor which is not saved.
  */
 class ECBSceneObject extends DefaultECBehavior
 	/** Behavior instance. */
@@ -73,6 +75,11 @@ class ECBSceneObject extends DefaultECBehavior
 			
 			pName = name
 			pDisplayName = null
+			
+			var Scene scene = getScene()
+			if scene != null
+				scene.notifyObjectAdded(this)
+			end
 		end
 		
 		/** Display name for list boxes. */
@@ -92,22 +99,40 @@ class ECBSceneObject extends DefaultECBehavior
 		
 		
 		
-		/** Added to game world. */
-		public func void addToGameWorld()
+		/** Scene if object belongs to active game world otherwise null. */
+		protected func Scene getScene()
 			var GameWorld world = getElement().getGameWorld()
 			if world == GameApp.getGameApp().getWindowGameWorld().getGameWorld()
-				GameApp.getGameApp().getScene().notifyObjectAdded(this)
+				return GameApp.getGameApp().getScene()
+			end
+			return null
+		end
+		
+		
+		
+		/** Added to game world. */
+		public func void addToGameWorld()
+			var Scene scene = getScene()
+			if scene != null
+				scene.notifyObjectAdded(this)
 			end
 		end
 		
 		/** Removed from game world. */
 		public func void removeFromGameWorld()
-			var GameWorld world = getElement().getGameWorld()
-			if world == GameApp.getGameApp().getWindowGameWorld().getGameWorld()
-				GameApp.getGameApp().getScene().notifyObjectRemoved(this)
+			var Scene scene = getScene()
+			if scene != null
+				scene.notifyObjectRemoved(this)
 			end
 		end
 		
+		/** Element geometry changed. */
+		public func void geometryChanged()
+			var Scene scene = getScene()
+			if scene != null
+				scene.notifyObjectGeometryChanged(this)
+			end
+		end
 		
 		
 		/** String representation. */

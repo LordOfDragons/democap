@@ -118,6 +118,7 @@ class GameApp extends BaseGameApp
 	private var VRCameraDirector pVRCameraDirector
 	private var ElementClassList pECListHandles
 	private var ECBSelectable.Tracker pSelectionTracker
+	private var ElementClassList pECListSceneObjects
 	
 	private var Project pProject
 	private var Scene pScene
@@ -250,6 +251,11 @@ class GameApp extends BaseGameApp
 		return pECListHandles
 	end
 	
+	/** Scene object element class list. */
+	public func ElementClassList getECListSceneObjects()
+		return pECListSceneObjects
+	end
+	
 	/** Selection tracker. */
 	public func ECBSelectable.Tracker getSelectionTracker()
 		return pSelectionTracker
@@ -333,6 +339,7 @@ class GameApp extends BaseGameApp
 		
 		// has to come before super call since createAndAddElementClasses() uses it
 		pECListHandles = ElementClassList.new()
+		pECListSceneObjects = ElementClassList.new()
 		
 		super.initGame()
 		
@@ -341,6 +348,7 @@ class GameApp extends BaseGameApp
 		
 		// has to come after super call since class list is filled not earlier
 		addECListHandles()
+		addECListSceneObjects()
 		
 		pModelEnableVR = DefaultToggleModel.new(true)
 		pModelEnableHMD = DefaultToggleModel.new(true)
@@ -367,7 +375,7 @@ class GameApp extends BaseGameApp
 		var WindowGameWorld windowGameWorld = getWindowGameWorld()
 		windowGameWorld.setTitle("VR View")
 		windowGameWorld.setPosition(Point.new(10, 30))
-		windowGameWorld.setSize(desktop.getContainerSize() - Point.new(350, 50))
+		windowGameWorld.setSize(desktop.getContainerSize() - Point.new(400, 50))
 		windowGameWorld.setCanClose(false)
 		windowGameWorld.setCanMaximize(false)
 		windowGameWorld.setCanMinimize(false)
@@ -528,6 +536,15 @@ class GameApp extends BaseGameApp
 		end)
 	end
 	
+	/** Add scene object element classes. */
+	protected func void addECListSceneObjects()
+		getElementClassList().forEachCastable(block BehaviorElementClass each
+			if ECBInteractHandle.getBehaviorIn(each) != null
+				pECListSceneObjects.add(each)
+			end
+		end)
+	end
+	
 	/** Add commands. */
 	protected func void createAndAddCommands()
 		var CommandManager commands = getCommandManager()
@@ -616,6 +633,7 @@ class GameApp extends BaseGameApp
 		pModelEnableVR = null
 		pVRCameraDirector = null
 		pECListHandles = null
+		pECListSceneObjects = null
 		pListeners = null
 		
 		super.cleanUp()
@@ -650,9 +668,9 @@ class GameApp extends BaseGameApp
 		
 		var WindowGameWorld windowGameWorld = getWindowGameWorld()
 		windowGameWorld.setPosition(Point.new(10, 30))
-		windowGameWorld.setSize(desktop.getContainerSize() - Point.new(350, 50))
+		windowGameWorld.setSize(desktop.getContainerSize() - Point.new(400, 50))
 		
-		pWindowMain.setSize(Point.new(300, desktop.getContainerHeight() - 50))
-		pWindowMain.setPosition(Point.new(desktop.getContainerWidth() - 320, 30))
+		pWindowMain.setSize(Point.new(350, desktop.getContainerHeight() - 50))
+		pWindowMain.setPosition(Point.new(desktop.getContainerWidth() - 370, 30))
 	end
 end

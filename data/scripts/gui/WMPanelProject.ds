@@ -135,6 +135,22 @@ class WMPanelProject extends CollapsibleGroup
 		public func void allObjectsRemoved(Scene scene)
 			pPanel.updateModelObjects()
 		end
+		
+		public func void objectNameChanged(Scene scene, ECBSceneObject.Instance object)
+			pPanel.updateModelObjects()
+		end
+		
+		public func void objectGeometryChanged(Scene scene, ECBSceneObject.Instance object)
+			if object == pPanel.getObject()
+				pPanel.updateObject()
+			end
+		end
+		
+		public func void objectParameterChanged(Scene scene, ECBSceneObject.Instance object)
+			if object == pPanel.getObject()
+				pPanel.updateObject()
+			end
+		end
 	end
 	
 	/** Scene popup menu. */
@@ -294,11 +310,11 @@ class WMPanelProject extends CollapsibleGroup
 			var WindowPopup popup = WindowPopup.new()
 			var Button button
 			
-// 			button = Button.new("Activate", BlockActionListener.new(block ActionEvent event
-// 				pPanel.activateWorld()
-// 			end))
-// 			button.setToolTip("Activate world. Replaces entire world with selected one")
-// 			popup.addWidget(button)
+			button = Button.new("Rename...", BlockActionListener.new(block ActionEvent event
+				pPanel.renameObject()
+			end))
+			popup.addWidget(button)
+			button.setToolTip("Rename scene object")
 // 			
 // 			button = Button.new("Browse Worlds...", BlockActionListener.new(block ActionEvent event
 // 				popup.popdown()
@@ -316,6 +332,9 @@ class WMPanelProject extends CollapsibleGroup
 	protected var DefaultListModel pModelScenes
 	protected var DefaultListModel pModelLoadableWorlds
 	protected var DefaultListModel pModelObjects
+	protected var DefaultTextModel pModelObjectClass
+	protected var EditVector pEditObjectPosition
+	protected var EditVector pEditObjectRotation
 	protected var ECBSceneObject.Instance pObject
 	protected var bool pInVR
 	protected var Project pProject
@@ -331,10 +350,9 @@ class WMPanelProject extends CollapsibleGroup
 		
 		pModelScenes = DefaultListModel.new()
 		pModelScenes.setAutoSelect(false)
-		
 		pModelLoadableWorlds = DefaultListModel.new()
-		
 		pModelObjects = DefaultListModel.new()
+		pModelObjectClass = DefaultTextModel.new("")
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
@@ -359,9 +377,12 @@ class WMPanelProject extends CollapsibleGroup
 		
 		pSceneChangedListener = null
 		pScenesChangedListener = null
+		pModelObjectClass = null
 		pModelObjects = null
 		pModelLoadableWorlds = null
 		pModelScenes = null
+		pEditObjectPosition = null
+		pEditObjectRotation = null
 		
 		super.dispose()
 	end
@@ -506,6 +527,8 @@ class WMPanelProject extends CollapsibleGroup
 		end
 		
 		pObject = object
+		
+		updateObject()
 	end
 	
 	/** Update objects model. */
@@ -543,10 +566,40 @@ class WMPanelProject extends CollapsibleGroup
 		end
 	end
 	
+	/** Update object. */
+	public func void updateObject()
+		if pObject != null
+			var BehaviorElement element = pObject.getElement()
+			pModelObjectClass.setText(element.getClass().getClassname())
+			pEditObjectPosition.setVector(element.getPosition().toVector())
+			pEditObjectRotation.setVector(element.getOrientation().getEulerAngles())
+			
+		else
+			pModelObjectClass.setText("")
+			pEditObjectPosition.setVector(Vector.new())
+			pEditObjectRotation.setVector(Vector.new())
+		end
+	end
+	
+	/** Rename object. */
+	public func void renameObject()
+		if pObject == null
+			return
+		end
+		
+		WindowDialog.input(getWindow(), "Rename Scene Object", "Name:", null, pObject.getName(),\
+		null, null, WindowDialog.BlockResultListener.new(block String result
+			if result != null
+				pObject.setName(result)
+			end
+		end))
+	end
+	
 	
 	
 	/** Create panel content. */
 	protected func void createContent(Panel content)
+		var TextField textField
 		var Button button
 		
 		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
@@ -578,6 +631,21 @@ class WMPanelProject extends CollapsibleGroup
 				button.setDesignerSelector("Button.Popup")
 				p2.addWidget(button)
 			end))
+			
+			p.addWidget(Label.new("Class:", "Label.FormCaption"))
+			textField = TextField.new(pModelObjectClass, true)
+			textField.setToolTip("Object class. Defines behaviors shown below")
+			p.addWidget(textField)
+			
+			p.addWidget(Label.new("Position:", "Label.FormCaption"))
+			pEditObjectPosition = EditVector.new(3)
+			pEditObjectPosition.setToolTip("Object position")
+			p.addWidget(pEditObjectPosition)
+			
+			p.addWidget(Label.new("Rotation:", "Label.FormCaption"))
+			pEditObjectRotation = EditVector.new(1)
+			pEditObjectRotation.setToolTip("Object rotation in euler angles")
+			p.addWidget(pEditObjectRotation)
 		end))
 	end
 end
