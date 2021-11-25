@@ -327,6 +327,42 @@ class WMPanelProject extends CollapsibleGroup
 		end
 	end
 	
+	/** Object position changed. */
+	class ObjectPositionChanged implements ActionListener
+		private var WMPanelProject pPanel
+		private var EditVector pEditVector
+		
+		public func new(WMPanelProject panel, EditVector editVector)
+			pPanel = panel
+			pEditVector = editVector
+		end
+		
+		public func void onAction(ActionEvent event)
+			var ECBSceneObject.Instance object = pPanel.getObject()
+			if object != null and not pEditVector.isEqualTo(object.getElement().getPosition().toVector())
+				object.getElement().setPosition(DVector.new(pEditVector.getVector()))
+			end
+		end
+	end
+	
+	/** Object rotation changed. */
+	class ObjectRotationChanged implements ActionListener
+		private var WMPanelProject pPanel
+		private var EditVector pEditVector
+		
+		public func new(WMPanelProject panel, EditVector editVector)
+			pPanel = panel
+			pEditVector = editVector
+		end
+		
+		public func void onAction(ActionEvent event)
+			var ECBSceneObject.Instance object = pPanel.getObject()
+			if object != null and not pEditVector.isEqualTo(object.getElement().getOrientation().getEulerAngles())
+				object.getElement().setOrientation(Quaternion.newFromEuler(pEditVector.getVector()))
+			end
+		end
+	end
+	
 	
 	
 	protected var DefaultListModel pModelScenes
@@ -641,10 +677,12 @@ class WMPanelProject extends CollapsibleGroup
 			pEditObjectPosition = EditVector.new(3)
 			pEditObjectPosition.setToolTip("Object position")
 			p.addWidget(pEditObjectPosition)
+			pEditObjectPosition.addActionListener(ObjectPositionChanged.new(this, pEditObjectPosition))
 			
 			p.addWidget(Label.new("Rotation:", "Label.FormCaption"))
 			pEditObjectRotation = EditVector.new(1)
 			pEditObjectRotation.setToolTip("Object rotation in euler angles")
+			pEditObjectRotation.addActionListener(ObjectRotationChanged.new(this, pEditObjectRotation))
 			p.addWidget(pEditObjectRotation)
 		end))
 	end

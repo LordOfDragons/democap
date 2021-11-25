@@ -44,6 +44,18 @@ class EditVector extends Panel
 		end
 	end
 	
+	protected class ComponentValueAccepted implements ActionListener
+		private var EditVector pEditVector
+		
+		public func new(EditVector editVector)
+			pEditVector = editVector
+		end
+		
+		public func void onAction(ActionEvent event)
+			pEditVector.onComponentValueAccepted()
+		end
+	end
+	
 	
 	
 	private var TextField pEditX
@@ -98,6 +110,11 @@ class EditVector extends Panel
 		return pPrecision
 	end
 	
+	/** Round unit */
+	public func float getRoundUnit()
+		return pRoundUnit
+	end
+	
 	/** Get vector. */
 	public func Vector getVector()
 		return pVector
@@ -112,6 +129,11 @@ class EditVector extends Panel
 		pVector = vector
 		updateTextFields()
 		notifyListeners()
+	end
+	
+	/** Vector is equal. */
+	public func bool isEqualTo(Vector vector)
+		return vector.isEqualTo(pVector, pRoundUnit)
 	end
 	
 	/** Update text fields. */
@@ -178,11 +200,14 @@ class EditVector extends Panel
 	protected func void createContent()
 		setLayout(BoxLayout.new(LayoutAxis.x, 5))
 		
+		var ComponentValueAccepted action = ComponentValueAccepted.new(this)
+		
 		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.last), block Panel p
 			p.addWidget(Label.new("X"))
 			pEditX = TextField.new(DefaultTextModel.new((0).toString()), 5)
 			pEditX.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 			pEditX.getModel().addListener(ComponentValueChanged.new(this, 0))
+			pEditX.addActionListener(action)
 			p.addWidget(pEditX)
 		end))
 		
@@ -191,6 +216,7 @@ class EditVector extends Panel
 			pEditY = TextField.new(DefaultTextModel.new((0).toString()), 5)
 			pEditY.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 			pEditY.getModel().addListener(ComponentValueChanged.new(this, 1))
+			pEditY.addActionListener(action)
 			p.addWidget(pEditY)
 		end))
 		
@@ -199,6 +225,7 @@ class EditVector extends Panel
 			pEditZ = TextField.new(DefaultTextModel.new((0).toString()), 5)
 			pEditZ.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 			pEditZ.getModel().addListener(ComponentValueChanged.new(this, 2))
+			pEditZ.addActionListener(action)
 			p.addWidget(pEditZ)
 		end))
 	end
@@ -230,7 +257,10 @@ class EditVector extends Panel
 		end
 		
 		pVector = Vector.new(x, y, z)
-		
+	end
+	
+	/** Component value accepted. */
+	public func void onComponentValueAccepted()
 		notifyListeners()
 	end
 	
