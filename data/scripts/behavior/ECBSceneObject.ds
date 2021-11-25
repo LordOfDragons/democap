@@ -143,12 +143,26 @@ class ECBSceneObject extends DefaultECBehavior
 	
 	
 	public var ECPString name
+	public var ECPVector addActorOffset
+	public var ECPBoolean canRemove
+	public var ECPBoolean canHide
 	
 	
 	/** Create behavior element class. */
 	public func new(BehaviorElementClass eclass) super(eclass)
-		name = ECPString.new("sceneObject.name", "")
+		var String prefix = "sceneObject."
+		
+		name = ECPString.new(prefix + "name", "")
 		eclass.addProperty(name)
+		
+		addActorOffset = ECPVector.new(prefix + "addActorOffset", null)
+		eclass.addProperty(addActorOffset)
+		
+		canRemove = ECPBoolean.new(prefix + "canRemove", false)
+		eclass.addProperty(canRemove)
+		
+		canHide = ECPBoolean.new(prefix + "canHide", false)
+		eclass.addProperty(canHide)
 		
 		eclass.addBehavior(this)
 	end
@@ -157,6 +171,13 @@ class ECBSceneObject extends DefaultECBehavior
 	/** Get instance in element from owner element class. */
 	public func Instance instance(BehaviorElement element)
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBSceneObject getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBSceneObject each
+			return true
+		end) cast ECBSceneObject
 	end
 	
 	/** Get instance in element or null if absent. */

@@ -29,6 +29,7 @@ pin Democap.Worlds
 
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
+pin Dragengine.Preloading
 pin Dragengine.Scenery
 
 
@@ -297,6 +298,30 @@ class WMPanelProject extends CollapsibleGroup
 		end
 	end
 	
+	/** Selected selectable object changed. */
+	class SelectedSelectableObjectChanged extends ECBSelectable.Tracker.DefaultListener
+		protected var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+		end
+		
+		public func void selectedElementChanged(ECBSelectable.Tracker tracker)
+			if tracker.getElement() == null
+				pPanel.getModelObjects().setSelected(-1)
+				return
+			end
+			
+			var ECBSceneObject.Instance sceneObject = ECBSceneObject.getInstanceIn(tracker.getElement().getElement())
+			if sceneObject == null
+				pPanel.getModelObjects().setSelected(-1)
+				return
+			end
+			
+			pPanel.getModelObjects().setSelected(pPanel.getModelObjects().indexOf(sceneObject))
+		end
+	end
+	
 	/** Object popup menu. */
 	class ObjectPopupAction extends DefaultActionListener
 		private var WMPanelProject pPanel
@@ -310,17 +335,26 @@ class WMPanelProject extends CollapsibleGroup
 			var WindowPopup popup = WindowPopup.new()
 			var Button button
 			
+			button = Button.new("Add...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.addObject()
+			end))
+			popup.addWidget(button)
+			button.setToolTip("Add scene object")
+			
+			button = Button.new("Remove", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.removeObject()
+			end))
+			popup.addWidget(button)
+			button.setToolTip("Remove scene object")
+			
 			button = Button.new("Rename...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
 				pPanel.renameObject()
 			end))
 			popup.addWidget(button)
 			button.setToolTip("Rename scene object")
-// 			
-// 			button = Button.new("Browse Worlds...", BlockActionListener.new(block ActionEvent event
-// 				popup.popdown()
-// 				pPanel.browseBehaviorElements()
-// 			end))
-// 			popup.addWidget(button)
 			
 			pPanel.getDesktop().addWindow(popup)
 			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
@@ -377,6 +411,7 @@ class WMPanelProject extends CollapsibleGroup
 	protected var Scene pScene
 	protected var ScenesChangedListener pScenesChangedListener
 	protected var SceneChangedListener pSceneChangedListener
+	protected var SelectedSelectableObjectChanged pSelectedSelectableObjectChanged
 	
 	
 	
@@ -387,7 +422,10 @@ class WMPanelProject extends CollapsibleGroup
 		pModelScenes = DefaultListModel.new()
 		pModelScenes.setAutoSelect(false)
 		pModelLoadableWorlds = DefaultListModel.new()
+		
 		pModelObjects = DefaultListModel.new()
+		pModelObjects.setAutoSelect(false)
+		
 		pModelObjectClass = DefaultTextModel.new("")
 		
 		getPanelContent().runWhileBlockingLayout(block
@@ -402,15 +440,20 @@ class WMPanelProject extends CollapsibleGroup
 		
 		pScenesChangedListener = ScenesChangedListener.new(this)
 		pSceneChangedListener = SceneChangedListener.new(this)
+		pSelectedSelectableObjectChanged = SelectedSelectableObjectChanged.new(this)
 		GameApp.getGameApp().addListener(GameChangedListener.new(this))
+		GameApp.getGameApp().getSelectionTracker().addListener(pSelectedSelectableObjectChanged)
 	end
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		GameApp.getGameApp().getSelectionTracker().removeListener(pSelectedSelectableObjectChanged)
+		
 		setObject(null)
 		setScene(null)
 		setProject(null)
 		
+		pSelectedSelectableObjectChanged = null
 		pSceneChangedListener = null
 		pScenesChangedListener = null
 		pModelObjectClass = null
@@ -435,6 +478,11 @@ class WMPanelProject extends CollapsibleGroup
 		return pInVR
 	end
 	
+	/** Scene objects model. */
+	public func DefaultListModel getModelObjects()
+		return pModelObjects
+	end
+	
 	
 	
 	/** Active project or null. */
@@ -450,7 +498,7 @@ class WMPanelProject extends CollapsibleGroup
 		
 		setScene(null)
 		
-		if pProject != null
+		if pProject != null and pProject.getScenes() != null // dispose protection
 			pProject.getScenes().removeListener(pScenesChangedListener)
 		end
 		
@@ -564,6 +612,14 @@ class WMPanelProject extends CollapsibleGroup
 		
 		pObject = object
 		
+		var ECBSelectable.Instance selectable
+		if object != null
+			selectable = ECBSelectable.getInstanceIn(object.getElement())
+			if selectable != null
+				GameApp.getGameApp().getSelectionTracker().setElement(selectable)
+			end
+		end
+		
 		updateObject()
 	end
 	
@@ -615,6 +671,79 @@ class WMPanelProject extends CollapsibleGroup
 			pEditObjectPosition.setVector(Vector.new())
 			pEditObjectRotation.setVector(Vector.new())
 		end
+	end
+	
+	/** Add object. */
+	public func void addObject()
+		if pScene == null
+			return
+		end
+		
+		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+		if gameWorld == null
+			return
+		end
+		
+		var ElementClassList eclist = GameApp.getGameApp().getECListSceneObjects()
+		var DefaultListModel model = DefaultListModel.new()
+		eclist.forEach(block ElementClass each
+			model.add(each.getClassname())
+		end)
+		model.sort()
+		
+		WindowDialog.chooseList(getWindow(), "Add Scene Object", "Object Class:", null, model,\
+			DefaultListElementRenderer.new(String.new('X', 30)),\
+			WindowDialog.ButtonConfiguration.new("Add Object"),\
+			WindowDialog.ButtonConfiguration.new("Cancel"),\
+			WindowDialog.BlockResultListener.new(block int result
+				if result != -1
+					var String cname = model.getAt(result) cast String
+					var BehaviorElementClass eclass = eclist.getNamed(cname) cast BehaviorElementClass
+					var ECBSceneObject sceneObject = ECBSceneObject.getBehaviorIn(eclass)
+					var StubElement stub = StubElement.new(eclass)
+					
+					if eclass.getPersistable()
+						stub.setID(GameApp.getGameApp().getIDGenerator().nextID())
+					end
+					
+					var DMatrix matrix = DMatrix.newTranslation(DVector.new(sceneObject.addActorOffset.getVector()))
+					var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+					if actor != null
+						matrix = matrix * actor.getElementMatrix()
+					end
+					
+					stub.setPosition(matrix.getPosition())
+					stub.setRotation(matrix.getEulerAngles().toVector())
+					
+					var BehaviorElement element = stub.createElement() cast BehaviorElement
+					gameWorld.addElement(element)
+					ECBSelectable.getInstanceIn(element).selectElement()
+				end
+		end))
+	end
+	
+	/** Remove object. */
+	public func void removeObject()
+		if pObject == null
+			return
+		end
+		
+		if not pObject.getECBehavior().canRemove.getValue()
+			WindowDialog.message(getWindow(), "Remove Scene Object",\
+				"Scene objects of type " + pObject.getElement().getClass().getClassname()\
+					+ " can not be removed.", null, null, null)
+			return
+		end
+		
+		WindowDialog.input(getWindow(), "Remove Scene Object", "Remove Scene Object '"\
+			+ pObject.getDisplayName() + "'?", null, pObject.getName(),\
+			WindowDialog.ButtonConfiguration.new("Remove", true),\
+			WindowDialog.ButtonConfiguration.new("Cancel", false),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					pObject.getElement().safeDispose()
+				end
+		end))
 	end
 	
 	/** Rename object. */

@@ -279,9 +279,9 @@ class GameApp extends BaseGameApp
 		end
 		
 		setScene(null)
+		var Project disposeProject = pProject
 		if pProject != null
 			pProject.save(File.new(pPathProjects, "autosave.demcp").getPath())
-			pProject.dispose()
 		end
 		
 		pProject = project
@@ -289,6 +289,10 @@ class GameApp extends BaseGameApp
 		pListeners.forEach(block GameListener each
 			each.projectChanged(this)
 		end)
+		
+		if disposeProject != null
+			disposeProject.dispose()
+		end
 	end
 	
 	/** Scene. */
@@ -514,10 +518,12 @@ class GameApp extends BaseGameApp
 		eclist.add(VRMenuClass.new())
 		eclist.add(MirrorLargeClass.new())
 		eclist.add(CharacterPreviewClass.new())
+		eclist.add(ActorMarkerClass.new())
 		eclist.add(InteractHandleMoveClass.new())
 		eclist.add(InteractHandleRotateClass.new())
 		eclist.add(InteractHandleMoveHMDClass.new())
 		eclist.add(InteractHandleHideClass.new())
+		eclist.add(InteractHandleRemoveClass.new())
 		
 		getLoaders().getElementClass().addXmlElementClasses(eclist, "/content/models", true)
 	end
@@ -534,7 +540,8 @@ class GameApp extends BaseGameApp
 	/** Add scene object element classes. */
 	protected func void addECListSceneObjects()
 		getElementClassList().forEachCastable(block BehaviorElementClass each
-			if ECBInteractHandle.getBehaviorIn(each) != null
+			var ECBSceneObject sceneObject = ECBSceneObject.getBehaviorIn(each)
+			if sceneObject != null and sceneObject.addActorOffset.getVector() != null
 				pECListSceneObjects.add(each)
 			end
 		end)
@@ -589,17 +596,19 @@ class GameApp extends BaseGameApp
 	public func void cleanUp()
 		saveSettings()
 		
+		setProject(null) // has to come first since this saves the project... at least for now
+		
+		if getWindowGameWorld() != null
+			getWindowGameWorld().setGameWorld(null) // avoid problems while cleaning up
+		end
 		if pWindowMain != null
 			pWindowMain.safeDispose()
 			pWindowMain = null
 		end
-		
 		if pWorldSpawnCharacter != null
 			pWorldSpawnCharacter.dispose()
 			pWorldSpawnCharacter = null
 		end
-		
-		setProject(null)
 		
 		pLoadableWorlds = null
 		
