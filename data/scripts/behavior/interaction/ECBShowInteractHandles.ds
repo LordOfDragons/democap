@@ -21,6 +21,7 @@
 
 namespace Democap.Behaviors
 
+pin Dragengine.LoadSave
 pin Dragengine.Preloading
 pin Dragengine.Scenery
 
@@ -89,6 +90,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		private var ECBRecordAnimation.Instance pRecordAnimation
 		private var AttachRecordAnimation pAttachRecordAnimation
 		private var RecordingStateChanged pRecordingStateChanged
+		private var float pHandleSize
 		private var Array pHandleClasses
 		private var Array pHandleElements
 		private var bool pVisible
@@ -116,6 +118,8 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
+			pHandleSize = pECBehavior.getHandleSize().getValue(stub)
+			
 			pHandleClasses = pECBehavior.getHandleClasses().getElementClasses(\
 				stub, getElement().getClass().getCodecPropertyString())
 			
@@ -132,6 +136,18 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		/** Selectable behavior instance. */
 		public func ECBSelectable.Instance getSelectable()
 			return pSelectable
+		end
+		
+		
+		
+		/** Handle size in meters. */
+		public func float getHandleSize()
+			return pHandleSize
+		end
+		
+		/** Set handle size in meters. */
+		public func void setHandleSize(float size)
+			pHandleSize = DEMath.max(size, 0.0)
 		end
 		
 		
@@ -158,7 +174,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 			var BehaviorElement handleElement
 			var StubElement handleStub
 			
-			pHandleClasses.forEach(block ElementClass handleClass
+			pHandleClasses.forEach(block BehaviorElementClass handleClass
 				handleStub = StubElement.new(handleClass) // no generated ID on purpose
 				
 				handleElement = handleStub.createElement() cast BehaviorElement
@@ -251,12 +267,32 @@ class ECBShowInteractHandles extends DefaultECBehavior
 			// just to make sure
 			hide()
 		end
+		
+		
+		
+		/** Read behavior from file. */
+		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+			select reader.readByte() // version
+			case 0
+				pHandleSize = reader.readFloat()
+				
+			else
+				throw EInvalidParam.new("unsupported version")
+			end
+		end
+		
+		/** Write behavior to file. */
+		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+			writer.writeByte(0) // version
+			writer.writeFloat(pHandleSize)
+		end
 	end
 	
 	
 	
 	private var ECBSelectable pSelectable
 	private var ECPElementClassList pHandleClasses
+	private var ECPFloat pHandleSize
 	
 	
 	
@@ -272,6 +308,9 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		
 		pHandleClasses = ECPElementClassList.new(prefix + "handles", GameApp.getGameApp().getECListHandles())
 		eclass.addProperty(pHandleClasses)
+		
+		pHandleSize = ECPFloat.new(prefix + "handleSize", 0.2, 0)
+		eclass.addProperty(pHandleSize)
 		
 		eclass.addBehavior(this)
 	end
@@ -293,6 +332,11 @@ class ECBShowInteractHandles extends DefaultECBehavior
 	/** Element class list. */
 	public func ECPElementClassList getHandleClasses()
 		return pHandleClasses
+	end
+	
+	/** Base handle size. */
+	public func ECPFloat getHandleSize()
+		return pHandleSize
 	end
 	
 	

@@ -95,6 +95,12 @@ class ECBAttachHandle extends DefaultECBehavior
 		/** Attach to parent. */
 		public func void attachToParent(Element parent)
 			var BehaviorElement beparent = parent cast BehaviorElement
+			
+			var ECBShowInteractHandles.Instance parentSih = ECBShowInteractHandles.getInstanceIn(beparent)
+			if parentSih == null
+				return
+			end
+			
 			var Collider parentCollider = ECBehaviorCollider.getInstanceIn(beparent).getCollider()
 			if parentCollider == null
 				return
@@ -114,10 +120,9 @@ class ECBAttachHandle extends DefaultECBehavior
 			var Vector parentMinExtend = parentModel.getMinimumExtend()
 			var Vector parentMaxExtend = parentModel.getMaximumExtend()
 			var Vector parentSize = parentMaxExtend - parentMinExtend
-			var float refParentSize = (parentSize.getX() + parentSize.getY() + parentSize.getZ()) / 3
 			var Vector parentCenter = (parentMinExtend + parentMaxExtend) / 2
 			var Vector parentHalfSize = parentSize / 2
-			var float scaleValue = refParentSize * pScale
+			var float scaleValue = parentSih.getHandleSize() * pScale
 			var Vector scale = Vector.new(scaleValue, scaleValue, scaleValue)
 			
 			// position and rotation

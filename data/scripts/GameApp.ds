@@ -82,6 +82,8 @@ class GameApp extends BaseGameApp
 					console.addMessage("Failed starting VR Runtime")
 				end
 				
+				GameApp.getGameApp().getModelShowVRCamera().setToggled(VRSystem.isRuntimeRunning())
+				
 			else
 				console.addMessage("Stop VR Runtime...")
 				try
@@ -90,6 +92,8 @@ class GameApp extends BaseGameApp
 				catch Exception e
 					console.addMessage("Failed stopping VR Runtime")
 				end
+				
+				GameApp.getGameApp().getModelShowVRCamera().setToggled(false)
 			end
 		end
 	end
@@ -350,9 +354,9 @@ class GameApp extends BaseGameApp
 		addECListHandles()
 		addECListSceneObjects()
 		
-		pModelEnableVR = DefaultToggleModel.new(true)
+		pModelEnableVR = DefaultToggleModel.new(false)
 		pModelEnableHMD = DefaultToggleModel.new(true)
-		pModelShowVRCamera = DefaultToggleModel.new(true)
+		pModelShowVRCamera = DefaultToggleModel.new(false)
 		pDefaultActorProfile = ActorProfile.new("Default")
 		
 		pMotionTransferFactories = MotionTransferFactories.new()
@@ -420,15 +424,6 @@ class GameApp extends BaseGameApp
 		// while processing all other inputs using bindings. adding, removing and changing
 		// device events are forwarded to both input processors.
 		setSplitInputProcessor()
-		
-		// start VR runtime. this can fail hence capture exceptions
-		getConsole().addMessage("Start VR Runtime...")
-		try
-			VRSystem.startRuntime()
-			
-		catch Exception e
-			getConsole().addMessage("Failed starting VR Runtime")
-		end
 		
 		// load stuff
 		pActorProfiles.loadAll()
