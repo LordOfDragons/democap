@@ -1,0 +1,183 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Actors
+pin Democap.Actions
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+
+
+
+/**
+ * Main window project panel.
+ */
+class WMPSOComponent extends WMPPanelSceneObject
+	protected var ECBehaviorComponent.Instance pBehaviorComponent
+	protected var DefaultTextModel pModelPathModel
+	protected var DefaultTextModel pModelPathSkin
+	protected var DefaultTextModel pModelPathRig
+	protected var DefaultTextModel pModelPathOcclusionMesh
+	protected var DefaultTextModel pModelPathAudioModel
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelProject panelProject, ECBehaviorComponent.Instance behavior)\
+	super(panelProject, behavior, behavior.getECBehavior().getID(), "Component", "WMPSOComponent")
+		pBehaviorComponent = behavior
+		
+		pModelPathModel = DefaultTextModel.new("")
+		pModelPathSkin = DefaultTextModel.new("")
+		pModelPathRig = DefaultTextModel.new("")
+		pModelPathOcclusionMesh = DefaultTextModel.new("")
+		pModelPathAudioModel = DefaultTextModel.new("")
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		pModelPathModel = null
+		pModelPathSkin = null
+		pModelPathRig = null
+		pModelPathOcclusionMesh = null
+		pModelPathAudioModel = null
+		super.dispose()
+	end
+	
+	/** Update behavior. */
+	public func void updateBehavior()
+		var ECBehaviorComponent behavior = pBehaviorComponent.getECBehavior()
+		var StubElement stub = pBehaviorComponent.getElement().getStub()
+		var ECComposeComponent component = behavior.getComponent()
+		var String path
+		
+		path = stub.getPropertyValueFor(component.getModel().getName(), component.getModel().getPath())
+		if path == null or path.empty()
+			path = component.getModel().getPath()
+		end
+		pModelPathModel.setText(path != null if path else "")
+		
+		path = stub.getPropertyValueFor(component.getSkin().getName(), component.getSkin().getPath())
+		if path == null or path.empty()
+			path = component.getSkin().getPath()
+		end
+		pModelPathSkin.setText(path != null if path else "")
+		
+		path = stub.getPropertyValueFor(component.getRig().getName(), component.getRig().getPath())
+		if path == null or path.empty()
+			path = component.getRig().getPath()
+		end
+		pModelPathRig.setText(path != null if path else "")
+		
+		path = stub.getPropertyValueFor(component.getOcclusionMesh().getName(), component.getOcclusionMesh().getPath())
+		if path == null or path.empty()
+			path = component.getOcclusionMesh().getPath()
+		end
+		pModelPathOcclusionMesh.setText(path != null if path else "")
+		
+		path = stub.getPropertyValueFor(component.getAudioModel().getName(), component.getAudioModel().getPath())
+		if path == null or path.empty()
+			path = component.getAudioModel().getPath()
+		end
+		pModelPathAudioModel.setText(path != null if path else "")
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var ECBehaviorComponent behavior = pBehaviorComponent.getECBehavior()
+		var StubElement stub = pBehaviorComponent.getElement().getStub()
+		var ECComposeComponent component = behavior.getComponent()
+		var String startDirectory = "/content/models/characters"
+		var EditPath editPath
+		
+		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			// path model resource
+			p.addWidget(Label.new("Model:", "Label.FormCaption"))
+			
+			editPath = EditPath.new(pModelPathModel, ResourceLoaderType.model, startDirectory)
+			editPath.setToolTip("Model resource to use")
+			p.addWidget(editPath)
+			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
+				stub.setPropertyValueFor(component.getModel().getName(), pModelPathModel.getText())
+				notifyStubChanged()
+			end))
+			
+			// path skin resource
+			p.addWidget(Label.new("Skin:", "Label.FormCaption"))
+			
+			editPath = EditPath.new(pModelPathSkin, ResourceLoaderType.skin, startDirectory)
+			editPath.setToolTip("Skin resource to use")
+			p.addWidget(editPath)
+			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
+				stub.setPropertyValueFor(component.getSkin().getName(), pModelPathSkin.getText())
+				notifyStubChanged()
+			end))
+			
+			// path rig resource
+			p.addWidget(Label.new("Rig:", "Label.FormCaption"))
+			
+			editPath = EditPath.new(pModelPathRig, ResourceLoaderType.rig, startDirectory)
+			editPath.setToolTip("Rig resource to use")
+			p.addWidget(editPath)
+			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
+				stub.setPropertyValueFor(component.getRig().getName(), pModelPathRig.getText())
+				notifyStubChanged()
+			end))
+			
+			// path occlusion mesh resource
+			p.addWidget(Label.new("Occlusion:", "Label.FormCaption"))
+			
+			editPath = EditPath.new(pModelPathOcclusionMesh, ResourceLoaderType.occlusionMesh, startDirectory)
+			editPath.setToolTip("Occlusion mesh resource to use")
+			p.addWidget(editPath)
+			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
+				stub.setPropertyValueFor(component.getOcclusionMesh().getName(), pModelPathOcclusionMesh.getText())
+				notifyStubChanged()
+			end))
+			
+			// path audio model resource
+			p.addWidget(Label.new("Audio:", "Label.FormCaption"))
+			
+			editPath = EditPath.new(pModelPathAudioModel, ResourceLoaderType.model, startDirectory)
+			editPath.setToolTip("Audio model resource to use")
+			p.addWidget(editPath)
+			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
+				stub.setPropertyValueFor(component.getAudioModel().getName(), pModelPathAudioModel.getText())
+				notifyStubChanged()
+			end))
+		end))
+	end
+end

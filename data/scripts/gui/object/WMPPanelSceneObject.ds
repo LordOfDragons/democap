@@ -1,0 +1,142 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * Scene object panel.
+ */
+class WMPPanelSceneObject extends CollapsibleGroup
+	protected var WMPanelProject pPanelProject
+	protected var ECBehaviorInstance pBehavior
+	protected var String pPrefixUIOptions
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelProject panelProject, ECBehaviorInstance behavior, String behaviorId,\
+	String label, String settingsName) super(behaviorId.empty() if label else label + ": " + behaviorId,\
+	CollapsibleGroup.persistModel(prefixUIOptions(panelProject, behaviorId, settingsName)))
+		pPanelProject = panelProject
+		pBehavior = behavior
+		pPrefixUIOptions = prefixUIOptions(panelProject, behaviorId, settingsName)
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		pBehavior = null
+		pPanelProject = null
+		
+		super.dispose()
+	end
+	
+	/** UI options prefix. */
+	static public func String prefixUIOptions(WMPanelProject panelProject,\
+	String behaviorId, String settingsName)
+		var String prefix = "UI/"
+		if panelProject.getInVR()
+			prefix = prefix + "VR/"
+		end
+		prefix = prefix + settingsName
+		if not behaviorId.empty()
+			prefix = prefix + "(" + behaviorId + ")"
+		end
+		return prefix
+	end
+	
+	
+	
+	/** Parent project panel. */
+	public func WMPanelProject getPanelProject()
+		return pPanelProject
+	end
+	
+	/** Behavior instance. */
+	public func ECBehaviorInstance getBehavior()
+		return pBehavior
+	end
+	
+	/** Prefix UI Options. */
+	public func String getPrefixUIOptions()
+		return pPrefixUIOptions
+	end
+	
+	/** Update behavior. */
+	public func void updateBehavior()
+	end
+	
+	/** Notify element stub changed. */
+	protected func void notifyStubChanged()
+		var WMPanelProject panelProject = pPanelProject
+		var ECBSceneObject.Instance object = pPanelProject.getObject()
+		var BehaviorElement element = object.getElement()
+		var GameWorld gameWorld = element.getGameWorld()
+		
+		var Widget focusWidget = getDesktop().getDesktop().getFocusWidget()
+		var Point focusPosition
+		var String puio
+		
+		if focusWidget != null
+			var Container widget = focusWidget.getParent()
+			while widget != null
+				if widget castable WMPPanelSceneObject
+					focusPosition = focusWidget.getRelativePosition(widget) + focusWidget.getSize() / 2
+					puio = (widget cast WMPPanelSceneObject).pPrefixUIOptions
+					break
+				end
+				widget = widget.getParent()
+			end
+		end
+		
+		// we delay this by one frame update to avoid complicated problems due to disposing
+		TimerBlock.new(0, false, block
+			var StubElement stub = element.getStub()
+			stub.setPosition(element.getPosition())
+			stub.setRotation(element.getOrientation().getEulerAngles())
+			
+			element.safeDispose()
+			
+			element = stub.createElement() cast BehaviorElement
+			gameWorld.addElement(element)
+			ECBSelectable.getInstanceIn(element).selectElement()
+			
+			if focusPosition != null
+				var WMPPanelSceneObject pso = panelProject.getBehaviorPanelWith(puio)
+				if pso != null
+					focusWidget = pso.getWidgetAt(focusPosition)
+					if focusWidget != null
+						focusWidget.grabFocus()
+					end
+				end
+			end
+		end)
+	end
+end

@@ -412,6 +412,7 @@ class WMPanelProject extends CollapsibleGroup
 	protected var ScenesChangedListener pScenesChangedListener
 	protected var SceneChangedListener pSceneChangedListener
 	protected var SelectedSelectableObjectChanged pSelectedSelectableObjectChanged
+	protected var Panel pPanelBehaviors
 	
 	
 	
@@ -462,6 +463,7 @@ class WMPanelProject extends CollapsibleGroup
 		pModelScenes = null
 		pEditObjectPosition = null
 		pEditObjectRotation = null
+		pPanelBehaviors = null
 		
 		super.dispose()
 	end
@@ -610,6 +612,8 @@ class WMPanelProject extends CollapsibleGroup
 			return
 		end
 		
+		pPanelBehaviors.removeAllWidgets()
+		
 		pObject = object
 		
 		var ECBSelectable.Instance selectable
@@ -617,6 +621,19 @@ class WMPanelProject extends CollapsibleGroup
 			selectable = ECBSelectable.getInstanceIn(object.getElement())
 			if selectable != null
 				GameApp.getGameApp().getSelectionTracker().setElement(selectable)
+			end
+		end
+		
+		if object != null
+			if not object.getECBehavior().editPanelNoBehaviors.getValue()
+				pPanelBehaviors.runWhileBlockingLayout(block
+					(object.getElement() cast BehaviorElement).forEachInstance(block ECBehaviorInstance each
+						if each castable ECBehaviorComponent.Instance
+							pPanelBehaviors.addWidget(WMPSOComponent.new(this, each cast ECBehaviorComponent.Instance))
+						end
+					end)
+				end)
+				pPanelBehaviors.doLayoutIfBlocked()
 			end
 		end
 		
@@ -665,6 +682,10 @@ class WMPanelProject extends CollapsibleGroup
 			pModelObjectClass.setText(element.getClass().getClassname())
 			pEditObjectPosition.setVector(element.getPosition().toVector())
 			pEditObjectRotation.setVector(element.getOrientation().getEulerAngles())
+			
+			pPanelBehaviors.forEachWidget(block WMPPanelSceneObject each
+				each.updateBehavior()
+			end)
 			
 		else
 			pModelObjectClass.setText("")
@@ -762,6 +783,15 @@ class WMPanelProject extends CollapsibleGroup
 	
 	
 	
+	/** Behavior panel matching prefix UI options value or null. */
+	public func WMPPanelSceneObject getBehaviorPanelWith(String prefix)
+		return pPanelBehaviors.findWidget(block WMPPanelSceneObject each
+			return each.getPrefixUIOptions().equals(prefix)
+		end) cast WMPPanelSceneObject
+	end
+	
+	
+	
 	/** Create panel content. */
 	protected func void createContent(Panel content)
 		var TextField textField
@@ -814,5 +844,8 @@ class WMPanelProject extends CollapsibleGroup
 			p.addWidget(pEditObjectRotation)
 			pEditObjectRotation.addActionListener(ObjectRotationChanged.new(this, pEditObjectRotation))
 		end))
+		
+		pPanelBehaviors = Panel.new(FlowLayout.new(LayoutAxis.y, 2))
+		content.addWidget(pPanelBehaviors)
 	end
 end
