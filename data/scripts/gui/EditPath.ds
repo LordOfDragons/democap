@@ -1,0 +1,199 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit path widget.
+ */
+class EditPath extends Panel
+	protected class SelectFileAction implements ActionListener, WindowDialog.ResultListener
+		private var EditPath pEditPath
+		
+		public func new(EditPath editPath)
+			pEditPath = editPath
+		end
+		
+		public func void onAction(ActionEvent event)
+			var String filename = pEditPath.getModel().getText()
+			if filename.empty()
+				filename = pEditPath.getStartDirectory()
+			end
+			
+			DialogFileSelect.showOpenFile(pEditPath.getWindow(), "Select File",\
+				pEditPath.getResourceType(), filename, this)
+		end
+		
+		public func void onResult(Object result)
+			if result == null or pEditPath.getModel().getText().equals(result)
+				return
+			end
+			
+			pEditPath.getModel().setText(result cast String)
+			pEditPath.getEditPath().fireAction(0)
+		end
+	end
+	
+	
+	
+	private var TextField pEditPath
+	private var Button pButton
+	private var ResourceLoaderType pResourceType
+	private var String pStartDirectory
+	
+	
+	
+	/** Create widget. */
+	public func new(TextModel model, ResourceLoaderType type, String startDirectory)
+		if model == null
+			throw ENullPointer.new("model")
+		end
+		if type == null
+			throw ENullPointer.new("type")
+		end
+		if startDirectory == null
+			throw ENullPointer.new("startDirectory")
+		end
+		
+		pResourceType = type
+		pStartDirectory = startDirectory
+		
+		runWhileBlockingLayout(block
+			createContent(model)
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		pButton = null
+		pEditPath = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Get path. */
+	public func String getPath()
+		return pEditPath.getText()
+	end
+	
+	/** Set path. */
+	public func void setPath(String path)
+		if path.equals(pEditPath.getText())
+			return
+		end
+		
+		pEditPath.setText(path)
+		pEditPath.fireAction(0)
+	end
+	
+	/** Resource type. */
+	public func ResourceLoaderType getResourceType()
+		return pResourceType
+	end
+	
+	/** Set resource type. */
+	public func void setResourceType(ResourceLoaderType type)
+		if type == null
+			throw ENullPointer.new("type")
+		end
+		pResourceType = type
+	end
+	
+	/** Start directory. */
+	public func String getStartDirectory()
+		return pStartDirectory
+	end
+	
+	/** Set start directory. */
+	public func void setStartDirectory(String startDirectory)
+		if startDirectory == null
+			throw ENullPointer.new("startDirectory")
+		end
+		pStartDirectory = startDirectory
+	end
+	
+	/** Text model. */
+	public func TextModel getModel()
+		return pEditPath.getModel()
+	end
+	
+	/** Set text model. */
+	public func void setModel(TextModel model)
+		pEditPath.setModel(model)
+	end
+	
+	
+	
+	/** Text field. */
+	public func TextField getEditPath()
+		return pEditPath
+	end
+	
+	/** Button. */
+	public func Button getButton()
+		return pButton
+	end
+	
+	
+	
+	/** Add focus listener. */
+	public func void addFocusListener(FocusListener listener)
+		pEditPath.addFocusListener(listener)
+		pButton.addFocusListener(listener)
+	end
+	
+	/** Remove focus listener. */
+	public func void removeFocusListener(FocusListener listener)
+		pEditPath.removeFocusListener(listener)
+		pButton.removeFocusListener(listener)
+	end
+	
+	/** Add action listener. */
+	public func void addActionListener(ActionListener listener)
+		pEditPath.addActionListener(listener)
+	end
+	
+	/** Remove action listener. */
+	public func void removeActionListener(ActionListener listener)
+		pEditPath.removeActionListener(listener)
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent(TextModel model)
+		setLayout(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.first))
+		
+		pEditPath = TextField.new(model, 20)
+		addWidget(pEditPath)
+		
+		pButton = Button.new("...", SelectFileAction.new(this))
+		pButton.setDesignerSelector("Button.Popup")
+		pButton.setCanFocus(false)
+		addWidget(pButton)
+	end
+end
