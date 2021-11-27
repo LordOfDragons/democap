@@ -1,0 +1,117 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Actors
+pin Democap.Actions
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * Main window project panel.
+ */
+class WMPSOCustomColor extends WMPPanelSceneObject
+	class ColorChanged implements ActionListener
+		protected var WMPSOCustomColor pPanel
+		protected var EditColor pEditColor
+		
+		public func new(WMPSOCustomColor panel, EditColor editColor)
+			pPanel = panel
+			pEditColor = editColor
+		end
+		
+		public func void onAction(ActionEvent event)
+			var ECBehaviorCustomColor.Instance behavior = pPanel.getBehaviorCustomColor()
+			var CodecPropertyString codec = behavior.getElement().getClass().getCodecPropertyString()
+			var Color color = pEditColor.getColor()
+			
+			behavior.getElement().getStub().setPropertyValueFor(\
+				behavior.getECBehavior().getColor().getName(), codec.encodeColor3(color))
+			
+			behavior.setColor(color)
+		end
+	end
+	
+	
+	
+	protected var ECBehaviorCustomColor.Instance pBehaviorCustomColor
+	protected var EditColor pEditColor
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelProject panelProject, ECBehaviorCustomColor.Instance behavior)\
+	super(panelProject, behavior, behavior.getECBehavior().getID(), "Custom Color", "WMPSOCustomColor")
+		pBehaviorCustomColor = behavior
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		pEditColor = null
+		super.dispose()
+	end
+	
+	
+	
+	/** CustomColor behavior. */
+	public func ECBehaviorCustomColor.Instance getBehaviorCustomColor()
+		return pBehaviorCustomColor
+	end
+	
+	/** Update behavior. */
+	public func void updateBehavior()
+		var CodecPropertyString codec = pBehaviorCustomColor.getElement().getClass().getCodecPropertyString()
+		var ECBehaviorCustomColor behavior = pBehaviorCustomColor.getECBehavior()
+		var StubElement stub = pBehaviorCustomColor.getElement().getStub()
+		
+		pEditColor.setColor(behavior.getColor().getColor(stub, codec))
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			p.addWidget(Label.new("Color:", "Label.FormCaption"))
+			
+			pEditColor = EditColor.new(Color.white)
+			pEditColor.setToolTip("Color.")
+			p.addWidget(pEditColor)
+			pEditColor.addActionListener(ColorChanged.new(this, pEditColor))
+		end))
+	end
+end
