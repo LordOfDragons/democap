@@ -625,11 +625,19 @@ class WMPanelProject extends CollapsibleGroup
 		end
 		
 		if object != null
-			if not object.getECBehavior().editPanelNoBehaviors.getValue()
+			var bool noBehaviors = object.getECBehavior().editPanelNoBehaviors.getValue()
+			var bool noPhysics = object.getECBehavior().editPanelNoPhysics.getValue()
+			
+			if not noBehaviors
 				pPanelBehaviors.runWhileBlockingLayout(block
 					(object.getElement() cast BehaviorElement).forEachInstance(block ECBehaviorInstance each
 						if each castable ECBehaviorComponent.Instance
 							pPanelBehaviors.addWidget(WMPSOComponent.new(this, each cast ECBehaviorComponent.Instance))
+							
+						elif each castable ECBehaviorCollider.Instance
+							if not noPhysics
+								pPanelBehaviors.addWidget(WMPSOCollider.new(this, each cast ECBehaviorCollider.Instance))
+							end
 						end
 					end)
 				end)
