@@ -30,33 +30,43 @@ pin Dragengine.Scenery
 
 
 /**
- * Actor marker element class.
+ * Static prop element class.
  */
-class ActorMarkerClass extends BehaviorElementClass
+class StaticPropClass extends BehaviorElementClass
 	public var ECBehaviorComponent component
 	public var ECBehaviorCollider collider
+	public var ECBehaviorNavigationBlocker navigationBlocker
 	public var ECBehaviorVRHandPointedAt vrHandPointedAt
 	public var ECBSceneObject sceneObject
 	public var ECBSelectable selectable
 	public var ECBShowInteractHandles showInteractHandles
 	
 	
-	
 	/** Create element class. */
-	public func new() this("ActorMarker")
+	public func new() this("StaticProp")
 	end
 	
 	public func new(String name) super(name)
 		component = ECBehaviorComponent.new(this, null)
-		component.setCommonPath("/content/models/actorMarker",\
-			"actorMarker.demodel", "actorMarker.deskin", "actorMarker.derig")
+		component.setCommonPath("/content/models/unknownObject",\
+			"object.demodel", "object.deskin", "object.derig")
 		
 		collider = ECBehaviorCollider.new(this, component)
 		collider.getCollider().getPhysicsType().setEnumeration(CollisionResponse.none)
 		collider.getCollider().getLocalGravity().setVector(Vector.new())
 		
-		collider.getCollider().setCollisionFilter(CollisionFilter.new(\
-			LayerMask.newWith(GameApp.CollisionFilterBit.interaction)))
+		var LayerMask cfcategory = LayerMask.newWith(BaseGameApp.CollisionFilterBit.geometry)
+		
+		var LayerMask cffilter = LayerMask.new()
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.actor)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.actorAI)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.dynamic)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.particle)
+		cffilter.setBit(GameApp.CollisionFilterBit.interaction)
+		
+		collider.getCollider().setCollisionFilter(CollisionFilter.new(cfcategory, cffilter))
+		
+		navigationBlocker = ECBehaviorNavigationBlocker.new(this, collider)
 		
 		vrHandPointedAt = ECBehaviorVRHandPointedAt.new(this)
 		
@@ -74,12 +84,15 @@ class ActorMarkerClass extends BehaviorElementClass
 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveXNeg")
 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveYNeg")
 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveZNeg")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateX")
 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateY")
-		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRemoveFloor")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateZ")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRemove")
 	end
+	
 	
 	/** Create copy of element class with new name. Required for XML subclassing. */
 	public func ElementClass duplicateNamed(String classname)
-		return ActorMarkerClass.new(classname)
+		return StaticPropClass.new(classname)
 	end
 end

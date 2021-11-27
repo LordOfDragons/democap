@@ -1,0 +1,128 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Actors
+pin Democap.Actions
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * Main window project panel.
+ */
+class WMPSOShowInteractHandles extends WMPPanelSceneObject
+	class HandleSizeChanged implements ActionListener
+		protected var WMPSOShowInteractHandles pPanel
+		protected var DefaultTextModel pModel
+		
+		public func new(WMPSOShowInteractHandles panel, DefaultTextModel model)
+			pPanel = panel
+			pModel = model
+		end
+		
+		public func void onAction(ActionEvent event)
+			var ECBShowInteractHandles.Instance behavior = pPanel.getBehaviorShowInteractHandles()
+			var float size = pModel.getText().toFloat()
+			
+			behavior.getElement().getStub().setPropertyFloatFor(\
+				behavior.getECBehavior().getHandleSize().getName(), size)
+			
+			behavior.setHandleSize(size)
+			
+			if behavior.getVisible()
+				behavior.hide()
+				behavior.show()
+			end
+		end
+	end
+	
+	
+	
+	protected var ECBShowInteractHandles.Instance pBehaviorShowInteractHandles
+	protected var DefaultTextModel pModelHandleSize
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelProject panelProject, ECBShowInteractHandles.Instance behavior)\
+	super(panelProject, behavior, behavior.getECBehavior().getID(), "Interact Handles", "WMPSOShowInteractHandles")
+		pBehaviorShowInteractHandles = behavior
+		
+		pModelHandleSize = DefaultTextModel.new("0.2")
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		pModelHandleSize = null
+		super.dispose()
+	end
+	
+	
+	
+	/** ShowInteractHandles behavior. */
+	public func ECBShowInteractHandles.Instance getBehaviorShowInteractHandles()
+		return pBehaviorShowInteractHandles
+	end
+	
+	/** Update behavior. */
+	public func void updateBehavior()
+		var ECBShowInteractHandles behavior = pBehaviorShowInteractHandles.getECBehavior()
+		var StubElement stub = pBehaviorShowInteractHandles.getElement().getStub()
+		
+		pModelHandleSize.setText(behavior.getHandleSize().getValue(stub).toString())
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var ECBShowInteractHandles behavior = pBehaviorShowInteractHandles.getECBehavior()
+		var StubElement stub = pBehaviorShowInteractHandles.getElement().getStub()
+		var TextField textField
+		
+		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			// handle size
+			p.addWidget(Label.new("Size:", "Label.FormCaption"))
+			
+			textField = TextField.new(pModelHandleSize)
+			textField.setValidator(SimpleTextValidator.new(8, SimpleTextValidator.CharacterClass.positiveNumber))
+			textField.setToolTip("Handle size in meters.")
+			p.addWidget(textField)
+			textField.addActionListener(HandleSizeChanged.new(this, pModelHandleSize))
+		end))
+	end
+end

@@ -102,24 +102,36 @@ class WMPPanelSceneObject extends CollapsibleGroup
 		return value != null if value else ""
 	end
 	
-	protected func String stubParamValue(StubElement stub, ECPString param)
-		return stubParamValue(stub, param.getName(), param.getValue())
+	/** Get path stub parameter converting null to empty string. */
+	protected func String stubParamPath(StubElement stub, String basePath, String name, String defaultValue)
+		var String value = stub.getPropertyValueFor(name, "")
+		if value.empty()
+			if defaultValue == null or defaultValue.empty()
+				return ""
+			end
+			return File.absolutePath(defaultValue, basePath).getPath()
+		end
+		return value
 	end
 	
-	protected func String stubParamValue(StubElement stub, ECPModel param)
-		return stubParamValue(stub, param.getName(), param.getPath())
+	protected func String stubParamPath(StubElement stub, ECPString param)
+		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getValue())
 	end
 	
-	protected func String stubParamValue(StubElement stub, ECPSkin param)
-		return stubParamValue(stub, param.getName(), param.getPath())
+	protected func String stubParamPath(StubElement stub, ECPModel param)
+		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
 	end
 	
-	protected func String stubParamValue(StubElement stub, ECPRig param)
-		return stubParamValue(stub, param.getName(), param.getPath())
+	protected func String stubParamPath(StubElement stub, ECPSkin param)
+		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
 	end
 	
-	protected func String stubParamValue(StubElement stub, ECPOcclusionMesh param)
-		return stubParamValue(stub, param.getName(), param.getPath())
+	protected func String stubParamPath(StubElement stub, ECPRig param)
+		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
+	end
+	
+	protected func String stubParamPath(StubElement stub, ECPOcclusionMesh param)
+		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
 	end
 	
 	/** Notify element stub changed. */

@@ -47,13 +47,21 @@ class MoCapActorClass extends BaseVRActorClass
 	public func new(String name) super(name)
 		setPersistable(false)
 		
-		getCollider().getCollider().collisionCategorySetBit(GameApp.CollisionFilterBit.interaction)
 		getCollider().getCollider().collisionFilterSetBit(GameApp.CollisionFilterBit.interaction)
 		
 // 		getVRRightHand().getShowHand().setValue(false)
 // 		getVRLeftHand().getShowHand().setValue(false)
 		
-		var CollisionFilter cfPointAt = CollisionFilter.new(LayerMask.newWith(GameApp.CollisionFilterBit.interaction))
+		var LayerMask cfcategory = LayerMask.newWith(GameApp.CollisionFilterBit.interaction)
+		
+		var LayerMask cffilter = LayerMask.new()
+		cffilter.setBit(GameApp.CollisionFilterBit.interaction)
+		cffilter.setBit(GameApp.CollisionFilterBit.geometry)
+		cffilter.setBit(GameApp.CollisionFilterBit.dynamic)
+		cffilter.setBit(GameApp.CollisionFilterBit.actor)
+		
+		var CollisionFilter cfPointAt = CollisionFilter.new(cfcategory, cffilter)
+		
 		getVRLeftHandPointAt().getCollisionFilter().setCollisionFilter(cfPointAt)
 		getVRRightHandPointAt().getCollisionFilter().setCollisionFilter(cfPointAt)
 		
