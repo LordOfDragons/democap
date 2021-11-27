@@ -1,0 +1,94 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Elements
+
+pin Democap.Behaviors
+
+pin Dragengine.Commands
+pin Dragengine.Gui
+pin Dragengine.Scenery
+
+
+
+/**
+ * Dynamic prop element class.
+ */
+class DynamicPropClass extends BehaviorElementClass
+	public var ECBehaviorComponent component
+	public var ECBehaviorCollider collider
+	public var ECBehaviorVRHandPointedAt vrHandPointedAt
+	public var ECBSceneObject sceneObject
+	public var ECBSelectable selectable
+	public var ECBShowInteractHandles showInteractHandles
+	
+	
+	/** Create element class. */
+	public func new() this("DynamicProp")
+	end
+	
+	public func new(String name) super(name)
+		component = ECBehaviorComponent.new(this, null)
+		component.setCommonPath("/content/models/unknownObject",\
+			"object.demodel", "object.deskin", "object.derig")
+		
+		collider = ECBehaviorCollider.new(this, component)
+		collider.getCollider().getPhysicsType().setEnumeration(CollisionResponse.dynamic)
+		
+		var LayerMask cfcategory = LayerMask.newWith(BaseGameApp.CollisionFilterBit.dynamic)
+		
+		var LayerMask cffilter = LayerMask.new()
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.actor)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.actorAI)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.dynamic)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.geometry)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.particle)
+		cffilter.setBit(GameApp.CollisionFilterBit.interaction)
+		
+		collider.getCollider().setCollisionFilter(CollisionFilter.new(cfcategory, cffilter))
+		
+		vrHandPointedAt = ECBehaviorVRHandPointedAt.new(this)
+		
+		sceneObject = ECBSceneObject.new(this)
+		sceneObject.addActorOffset.setVector(Vector.new(0, 1, 0.5))
+		sceneObject.canRemove.setValue(true)
+		
+		selectable = ECBSelectable.new(this)
+		
+		showInteractHandles = ECBShowInteractHandles.new(this, selectable)
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveX")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveY")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveZ")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveXNeg")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveYNeg")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveZNeg")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateX")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateY")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateZ")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRemove")
+	end
+	
+	
+	/** Create copy of element class with new name. Required for XML subclassing. */
+	public func ElementClass duplicateNamed(String classname)
+		return DynamicPropClass.new(classname)
+	end
+end
