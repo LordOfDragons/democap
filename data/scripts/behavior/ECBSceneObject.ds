@@ -22,6 +22,7 @@
 namespace Democap.Behaviors
 
 pin Dragengine.Gui
+pin Dragengine.LoadSave
 pin Dragengine.Preloading
 pin Dragengine.Scenery
 
@@ -32,6 +33,12 @@ pin Dragengine.Scenery
  * motion capture actor which is not saved.
  */
 class ECBSceneObject extends DefaultECBehavior
+	/** Create scene object stub initializer interace. */
+	interface SceneObjectStubInitializer
+		/** Init stub. Returns true if sucessful or false otherwise. */
+		func bool initStub(StubElement stub, Window window)
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		private var ECBSceneObject pECBehavior
@@ -139,6 +146,25 @@ class ECBSceneObject extends DefaultECBehavior
 		public func String toString()
 			return getDisplayName()
 		end
+		
+		
+		
+		/** Read from file. */
+		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+			select reader.readByte() // version
+			case 0
+				pName = reader.readString8()
+				
+			else
+				throw EInvalidParam.new("unsupported version")
+			end
+		end
+		
+		/** Write to file. */
+		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+			writer.writeByte(0) // version
+			writer.writeString8(pName)
+		end
 	end
 	
 	
@@ -148,11 +174,14 @@ class ECBSceneObject extends DefaultECBehavior
 	public var ECPBoolean canHide
 	public var ECPBoolean editPanelNoBehaviors
 	public var ECPBoolean editPanelNoPhysics
+	public var Array pSceneObjectStubInitializers
 	
 	
 	/** Create behavior element class. */
 	public func new(BehaviorElementClass eclass) super(eclass)
 		var String prefix = "sceneObject."
+		
+		pSceneObjectStubInitializers = Array.new()
 		
 		name = ECPString.new(prefix + "name", "")
 		eclass.addProperty(name)
@@ -173,6 +202,27 @@ class ECBSceneObject extends DefaultECBehavior
 		eclass.addProperty(editPanelNoPhysics)
 		
 		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pSceneObjectStubInitializers = null
+		super.dispose()
+	end
+	
+	
+	/** Add create scene object stub initializer or null. */
+	public func void addSceneObjectStubInitializer(SceneObjectStubInitializer initializer)
+		pSceneObjectStubInitializers.add(initializer)
+	end
+	
+	/**
+	 * Run scene object stub initializers. Returns true if all initializers succeeded.
+	 */
+	public func bool runSceneObjectStubInitializers(StubElement stub, Window window)
+		return pSceneObjectStubInitializers.find(block SceneObjectStubInitializer each
+			return not each.initStub(stub, window)
+		end) == null
 	end
 	
 	

@@ -1,0 +1,74 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Characters
+
+pin Dragengine.Scenery
+pin Dragengine.LoadSave
+
+
+/**
+ * Character animation keyframe.
+ */
+class CharacterAnimationKeyframe
+	private var float pTime
+	private var Vector pPosition
+	private var Quaternion pOrientation
+	
+	
+	/** Create character animation keyframe. */
+	public func new(float time, Vector position, Quaternion orientation)
+		pTime = time
+		pPosition = position
+		pOrientation = orientation
+	end
+	
+	/** Create character animation from file. */
+	public func new(FileReader reader)
+		pTime = reader.readFloat()
+		pPosition = Vector.readFromFile(reader)
+		pOrientation = Quaternion.readFromFile(reader)
+	end
+	
+	
+	/** Time in seconds. */
+	public func float getTime()
+		return pTime
+	end
+	
+	/** Position. */
+	public func Vector getPosition()
+		return pPosition
+	end
+	
+	/** Orientation. */
+	public func Quaternion getOrientation()
+		return pOrientation
+	end
+	
+	
+	/** Write to file. */
+	public func void writeToFile(FileWriter writer)
+		writer.writeFloat(pTime)
+		pPosition.writeToFile(writer)
+		pOrientation.writeToFile(writer)
+	end
+end

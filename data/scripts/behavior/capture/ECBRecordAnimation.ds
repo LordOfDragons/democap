@@ -72,7 +72,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var ECBehaviorActorAnimated.Instance pActorAnimated
 		private var Array pBoneIndices
 		private var CharacterAnimation pCharacterAnimation
-		private var TimeDate pTimestamp
 		private var bool pIsPreparing
 		private var bool pIsRecording
 		private var float pRecordTime
@@ -164,19 +163,16 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end
 			
 			pIsPreparing = false
-			pTimestamp = TimeDate.new()
 			
-			pCharacterAnimation = CharacterAnimation.new()
-			pCharacterAnimation.setFilename(File.new(GameApp.getGameApp().getPathCaptureAnimations(),\
-				pTimestamp.format("%Y-%m-%d_%H-%M-%S") + ".deanim").getPath())
+			pCharacterAnimation = CharacterAnimation.new(\
+				GameApp.getGameApp().getWorldSpawnCharacter().getCharacter().getName())
 			
 			pComponent = pActorAnimated.getComponent().getComponent()
-			var int index
 			
 			pBoneIndices.removeAll()
 			
 			pECBehavior.getBones().forEach(block String each
-				index = pComponent.indexOfBoneNamed(each)
+				var int index = pComponent.indexOfBoneNamed(each)
 				if index != -1
 					pCharacterAnimation.addBone(each)
 					pBoneIndices.add(index)
@@ -263,10 +259,12 @@ class ECBRecordAnimation extends DefaultECBehavior
 			var WorldSpawnCharacter wsc = app.getWorldSpawnCharacter()
 			var EasyXML document = EasyXML.new()
 			var EasyXMLElement root = document.getRootElement()
+			var TimeDate timestamp = pCharacterAnimation.getTimestamp()
+			
 			root.setTagName("mocapAnimation")
 			
 			// general information
-			root.addDataTag("timestamp", pTimestamp.format("%Y-%m-%dT%H:%M:%S"))
+			root.addDataTag("timestamp", timestamp.format("%Y-%m-%dT%H:%M:%S"))
 			
 			// actor
 			var ActorProfile actorProfile = app.getActiveActorProfile()
@@ -318,7 +316,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			// write to file
 			document.writeToFile(FileWriter.new(File.new(app.getPathCaptureAnimations(),\
-				pTimestamp.format("%Y-%m-%d_%H-%M-%S") + ".demca").getPath()), false)
+				timestamp.format("%Y-%m-%d_%H-%M-%S") + ".demca").getPath()), false)
 		end
 	end
 	

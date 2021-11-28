@@ -650,6 +650,9 @@ class WMPanelProject extends CollapsibleGroup
 							
 						elif each castable ECBehaviorCustomColor.Instance
 							pPanelBehaviors.addWidget(WMPSOCustomColor.new(this, each cast ECBehaviorCustomColor.Instance))
+							
+						elif each castable ECBCapturedAnimations.Instance
+							pPanelBehaviors.addWidget(WMPSOCapturedAnimations.new(this, each cast ECBCapturedAnimations.Instance))
 						end
 					end)
 				end)
@@ -756,6 +759,10 @@ class WMPanelProject extends CollapsibleGroup
 					stub.setPosition(matrix.getPosition())
 					stub.setRotation(matrix.getEulerAngles().toVector())
 					
+					if not sceneObject.runSceneObjectStubInitializers(stub, getWindow())
+						return null
+					end
+					
 					var BehaviorElement element = stub.createElement() cast BehaviorElement
 					gameWorld.addElement(element)
 					ECBSelectable.getInstanceIn(element).selectElement()
@@ -796,6 +803,7 @@ class WMPanelProject extends CollapsibleGroup
 		WindowDialog.input(getWindow(), "Rename Scene Object", "Name:", null, pObject.getName(),\
 		null, null, WindowDialog.BlockResultListener.new(block String result
 			if result != null
+				pObject.getElement().getStub().setPropertyValueFor(pObject.getECBehavior().name.getName(), result)
 				pObject.setName(result)
 			end
 		end))

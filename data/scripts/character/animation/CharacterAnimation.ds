@@ -23,6 +23,7 @@ namespace Democap.Characters
 
 pin Dragengine.Scenery
 pin Dragengine.Utils
+pin Dragengine.LoadSave
 
 
 /**
@@ -67,24 +68,73 @@ class CharacterAnimation
 	
 	
 	
+	private var String pName
 	private var Array pBones
 	private var Array pKeyframes
 	private var int pStride
 	private var Animation pAnimation
 	private var float pFPS
 	private var String pFilename
+	private var TimeDate pTimestamp
 	
 	
 	
 	/** Create character animation. */
-	public func new()
+	public func new(String name)
+		setName(name)
 		pBones = Array.new()
 		pKeyframes = Array.new()
 		pStride = 0
 		pFPS = 25
+		pTimestamp = TimeDate.new()
+		pFilename = File.new(GameApp.getGameApp().getPathCaptureAnimations(),\
+			pTimestamp.format("%Y-%m-%d_%H-%M-%S") + ".deanim").getPath()
+	end
+	
+	/** Create character animation from file. */
+	public func new(FileReader reader)
+		var int i, count
+		
+		select reader.readByte() // version
+		case 0
+			pName = reader.readString8()
+			pTimestamp = reader.readTimeDate()
+			pFPS = reader.readFloat()
+			
+			count = reader.readUShort()
+			pBones = Array.new(count)
+			for i = 0 to count
+				pBones.add(reader.readString8())
+			end
+			
+			count = reader.readUInt()
+			pKeyframes = Array.new(count)
+			for i = 0 to count
+				pKeyframes.add(CharacterAnimationKeyframe.new(reader))
+			end
+			
+		else
+			throw EInvalidParam.new("unsupported version")
+		end
+		
+		pFilename = File.new(GameApp.getGameApp().getPathCaptureAnimations(),\
+			pTimestamp.format("%Y-%m-%d_%H-%M-%S") + ".deanim").getPath()
 	end
 	
 	
+	
+	/** Name. */
+	public func String getName()
+		return pName
+	end
+	
+	/** Set name. */
+	public func void setName(String name)
+		if name == null
+			throw ENullPointer.new("name")
+		end
+		pName = name
+	end
 	
 	/** Count of bones. */
 	public func int getBoneCount()
@@ -118,6 +168,11 @@ class CharacterAnimation
 	/** Set FPS. */
 	public func void setFPS(float fps)
 		pFPS = DEMath.max(fps, 1.0)
+	end
+	
+	/** Time stamp. */
+	public func TimeDate getTimestamp()
+		return pTimestamp
 	end
 	
 	
@@ -172,5 +227,26 @@ class CharacterAnimation
 	/** Set filename or null. */
 	public func void setFilename(String filename)
 		pFilename = filename
+	end
+	
+	
+	
+	/** Write to file. */
+	public func void writeToFile(FileWriter writer)
+		writer.writeByte(0) // version
+		
+		writer.writeString8(pName)
+		writer.writeTimeDate(pTimestamp)
+		writer.writeFloat(pFPS)
+		
+		writer.writeUShort(pBones.getCount())
+		pBones.forEach(block String each
+			writer.writeString8(each)
+		end)
+		
+		writer.writeUInt(pKeyframes.getCount())
+		pKeyframes.forEach(block CharacterAnimationKeyframe each
+			each.writeToFile(writer)
+		end)
 	end
 end

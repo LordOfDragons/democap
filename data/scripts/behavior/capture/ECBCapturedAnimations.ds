@@ -1,0 +1,243 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Actors
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding captured animation support to owner element.
+ */
+class ECBCapturedAnimations extends DefaultECBehavior
+	/** Create scene object stub initializer. */
+	class InitSOStub implements ECBSceneObject.SceneObjectStubInitializer
+		public func new()
+		end
+		
+		/** Init scene object stub element. */
+		public func bool initStub(StubElement stub, Window window)
+			var BehaviorElementClass eclass = stub.getClass() cast BehaviorElementClass
+			var ECBCapturedAnimations capturedAnimations = ECBCapturedAnimations.getBehaviorIn(eclass)
+			var ECBehaviorComponent component = ECBehaviorComponent.getBehaviorIn(eclass)
+			
+			// find actor and character profile to use
+			var GameApp app = GameApp.getGameApp()
+			var ActorProfile actorProfile = app.getActiveActorProfile()
+			var CharacterConfiguration configuration = app.getWorldSpawnCharacter().getCharacter()
+			
+			if actorProfile == null or configuration == null
+				WindowDialog.message(window, "Add Scene Object",\
+					"Activate Character Configuration first", null, null, null)
+				return false
+			end
+			
+			stub.setPropertyValueFor(capturedAnimations.actorProfile.getName(), actorProfile.getName())
+			stub.setPropertyValueFor(capturedAnimations.characterProfile.getName(), configuration.getProfile().getName())
+			
+			// update stub with appearance information
+			var CharacterAppearance appearance = configuration.getProfile().getAppearance()
+			stub.setPropertyValueFor(component.getComponent().getModel().getName(), appearance.getPathModel())
+			stub.setPropertyValueFor(component.getComponent().getSkin().getName(), appearance.getPathSkin())
+			stub.setPropertyValueFor(component.getComponent().getRig().getName(), appearance.getPathRig())
+			
+			// set initial scaling to match configuration scaling
+			if configuration.getScaleMode() == CharacterConfiguration.ScaleMode.character
+				var float scale = 1.0 / configuration.getCalibrateScale()
+				stub.setScaling(Vector.new(scale, scale, scale))
+			end
+			
+			return true
+		end
+	end
+	
+	
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		protected var ECBCapturedAnimations pECBehavior
+		protected var ECBehaviorComponent.Instance pComponent
+		protected var String pActorProfile
+		protected var String pCharacterProfile
+		protected var CharacterAnimations pAnimations
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBCapturedAnimations ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pAnimations = CharacterAnimations.new()
+			
+			pComponent = ecbehavior.getComponent().instance(element)
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			pActorProfile = pECBehavior.actorProfile.getValue(stub)
+			pCharacterProfile = pECBehavior.characterProfile.getValue(stub)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pComponent = null
+			super.dispose()
+		end
+		
+		
+		
+		/** Behavior. */
+		public func ECBCapturedAnimations getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Component behavior instance. */
+		public func ECBehaviorComponent.Instance getComponent()
+			return pComponent
+		end
+		
+		/** Actor profile name. */
+		public func String getActorProfile()
+			return pActorProfile
+		end
+		
+		/** Character profile name. */
+		public func String getCharacterProfile()
+			return pCharacterProfile
+		end
+		
+		
+		
+		/** Animations. */
+		public func CharacterAnimations getAnimations()
+			return pAnimations
+		end
+		
+		
+		
+		/** Read from file. */
+		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+			var int i, count
+			
+			select reader.readByte() // version
+			case 0
+				pActorProfile = reader.readString8()
+				pCharacterProfile = reader.readString8()
+				
+				count = reader.readUShort()
+				for i = 0 to count
+					pAnimations.add(CharacterAnimation.new(reader))
+				end
+				
+			else
+				throw EInvalidParam.new("unsupported version")
+			end
+		end
+		
+		/** Write to file. */
+		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+			writer.writeByte(0) // version
+			
+			writer.writeString8(pActorProfile)
+			writer.writeString8(pCharacterProfile)
+			
+			writer.writeUShort(pAnimations.getCount())
+			pAnimations.forEach(block CharacterAnimation each
+				each.writeToFile(writer)
+			end)
+		end
+	end
+	
+	
+	
+	protected var ECBehaviorComponent pComponent
+	
+	public var ECPString actorProfile
+	public var ECPString characterProfile
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorComponent component,\
+	ECBSceneObject sceneObject) super(eclass)
+		var String prefix = "capturedAnimations."
+		
+		pComponent = component
+		
+		actorProfile = ECPString.new(prefix + "actorProfile", "")
+		eclass.addProperty(actorProfile)
+		
+		characterProfile = ECPString.new(prefix + "characterProfile", "")
+		eclass.addProperty(characterProfile)
+		
+		eclass.addBehavior(this)
+		
+		sceneObject.addSceneObjectStubInitializer(InitSOStub.new())
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pComponent = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Component behavior. */
+	public func ECBehaviorComponent getComponent()
+		return pComponent
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
+	end
+	
+	
+	
+	/** Get instance for element or null. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBCapturedAnimations getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBCapturedAnimations each
+			return true
+		end) cast ECBCapturedAnimations
+	end
+	
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

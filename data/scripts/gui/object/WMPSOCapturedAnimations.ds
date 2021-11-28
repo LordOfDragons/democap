@@ -1,0 +1,313 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Actors
+pin Democap.Actions
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * Main window project panel.
+ */
+class WMPSOCapturedAnimations extends WMPPanelSceneObject
+	/** Animation element renderer. */
+	class AnimationElementRenderer extends DefaultListElementRenderer
+		public func new()
+			setDefaultMinimumSize(Point.new(80, 20))
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text = ""
+			if element != null
+				text = (element cast CharacterAnimation).getName()
+			end
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	/** Animations listener. */
+	class AnimationsChangedListener extends DefaultCharacterAnimationsListener
+		protected var WMPSOCapturedAnimations pPanel
+		
+		public func new(WMPSOCapturedAnimations panel)
+			pPanel = panel
+		end
+		
+		public func void animationAdded(CharacterAnimations animations, CharacterAnimation animation)
+			pPanel.updateModelAnimations()
+		end
+		
+		public func void animationRemoved(CharacterAnimations animations, CharacterAnimation animation)
+			pPanel.updateModelAnimations()
+		end
+		
+		public func void animationNameChanged(CharacterAnimations animations, CharacterAnimation animation)
+			pPanel.updateModelAnimations()
+		end
+		
+		public func void allAnimationsRemoved(CharacterAnimations animations)
+			pPanel.updateModelAnimations()
+		end
+		
+		public func void activeAnimationChanged(CharacterAnimations animations)
+			pPanel.setAnimation(animations.getActive())
+		end
+	end
+	
+	/** Select animation listener. */
+	class SelectedAnimationChanged extends DefaultListModelListener
+		protected var WMPSOCapturedAnimations pPanel
+		
+		public func new(WMPSOCapturedAnimations panel)
+			pPanel = panel
+		end
+		
+		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+			selectionChanged(model)
+		end
+		
+		public func void selectionChanged(ListModel model)
+			var int index = model.getSelected()
+			if index != -1
+				pPanel.getBehaviorCapturedAnimations().getAnimations().setActive(\
+					model.getAt(index) cast CharacterAnimation)
+				
+			else
+				pPanel.getBehaviorCapturedAnimations().getAnimations().setActive(null)
+			end
+		end
+	end
+	
+	/** Animation popup menu. */
+	class AnimationPopupAction extends DefaultActionListener
+		protected var WMPSOCapturedAnimations pPanel
+		
+		public func new(WMPSOCapturedAnimations panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			var Widget widget = event.getSource() cast Widget
+			var WindowPopup popup = WindowPopup.new()
+			var Button button
+			
+			button = Button.new("Add...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.addAnimation()
+			end))
+			popup.addWidget(button)
+			button.setToolTip("Add animation")
+			
+			button = Button.new("Remove", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.removeAnimation()
+			end))
+			popup.addWidget(button)
+			button.setToolTip("Remove animation")
+			
+			button = Button.new("Rename...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.renameAnimation()
+			end))
+			popup.addWidget(button)
+			button.setToolTip("Rename animation")
+			
+			pPanel.getDesktop().addWindow(popup)
+			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
+		end
+	end
+	
+	
+	
+	protected var ECBCapturedAnimations.Instance pBehaviorCapturedAnimations
+	protected var DefaultListModel pModelAnimations
+	protected var AnimationsChangedListener pAnimationsChangedListener
+	protected var CharacterAnimation pAnimation
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelProject panelProject, ECBCapturedAnimations.Instance behavior)\
+	super(panelProject, behavior, behavior.getECBehavior().getID(),\
+	"Captured Animations", "WMPSOCapturedAnimations")
+		pBehaviorCapturedAnimations = behavior
+		
+		pModelAnimations = DefaultListModel.new()
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+		
+		updateModelAnimations()
+		setAnimation(behavior.getAnimations().getActive())
+		
+		pModelAnimations.addListener(SelectedAnimationChanged.new(this))
+		
+		pAnimationsChangedListener = AnimationsChangedListener.new(this)
+		behavior.getAnimations().addListener(pAnimationsChangedListener)
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		setAnimation(null)
+		
+		if pAnimationsChangedListener != null
+			pBehaviorCapturedAnimations.getAnimations().removeListener(pAnimationsChangedListener)
+			pAnimationsChangedListener = null
+		end
+		pModelAnimations = null
+		super.dispose()
+	end
+	
+	
+	
+	/** CapturedAnimations behavior. */
+	public func ECBCapturedAnimations.Instance getBehaviorCapturedAnimations()
+		return pBehaviorCapturedAnimations
+	end
+	
+	/** Update behavior. */
+	public func void updateBehavior()
+		var ECBCapturedAnimations behavior = pBehaviorCapturedAnimations.getECBehavior()
+		var StubElement stub = pBehaviorCapturedAnimations.getElement().getStub()
+		
+		
+	end
+	
+	
+	
+	/** Update animations model. */
+	public func void updateModelAnimations()
+		var CharacterAnimation selection = pAnimation
+		
+		pModelAnimations.setContent(pBehaviorCapturedAnimations.getAnimations().toArray())
+		
+		var int index = pModelAnimations.indexOf(selection)
+		if index != -1
+			pModelAnimations.setSelected(index)
+			pModelAnimations.notifyContentChanged(index, index)
+		end
+	end
+	
+	/** Animation or null. */
+	public func CharacterAnimation getAnimation()
+		return pAnimation
+	end
+	
+	/** Set animation or null. */
+	public func void setAnimation(CharacterAnimation animation)
+		if animation == pAnimation
+			return
+		end
+		
+		pAnimation = animation
+		updateAnimation()
+	end
+	
+	/** Update animation. */
+	public func void updateAnimation()
+	end
+	
+	/** Add animation. */
+	public func void addAnimation()
+		WindowDialog.input(getWindow(), "Add Animation", "Name:", null, "Body",\
+			WindowDialog.ButtonConfiguration.new("Add Animation"),\
+			WindowDialog.ButtonConfiguration.new("Cancel"),\
+			WindowDialog.BlockResultListener.new(block String result
+				if result != null
+					if pBehaviorCapturedAnimations.getAnimations().hasNamed(result)
+						WindowDialog.message(getWindow(), "Add Animation",\
+							"Animation with this name exists already.", null, null, null)
+						
+					else
+						var CharacterAnimation animation = CharacterAnimation.new(result)
+						pBehaviorCapturedAnimations.getAnimations().add(animation)
+						pModelAnimations.setSelected(pModelAnimations.indexOf(animation))
+					end
+				end
+		end))
+	end
+	
+	/** Remove animation. */
+	public func void removeAnimation()
+		if pAnimation == null
+			return
+		end
+		
+		WindowDialog.question(getWindow(), "Remove Animation", "Remove Animation '"\
+			+ pAnimation.getName() + "'?", null, Array.newWith(\
+				WindowDialog.ButtonConfiguration.new("Remove", true),\
+				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					pBehaviorCapturedAnimations.getAnimations().remove(pAnimation)
+				end
+		end))
+	end
+	
+	/** Rename animation. */
+	public func void renameAnimation()
+		if pAnimation == null
+			return
+		end
+		
+		WindowDialog.input(getWindow(), "Rename Animation", "Name:", null, pAnimation.getName(),\
+		null, null, WindowDialog.BlockResultListener.new(block String result
+			if result != null
+				if not result.equals(pAnimation.getName())
+					pAnimation.setName(result)
+					pBehaviorCapturedAnimations.getAnimations().notifyAnimationNameChanged(pAnimation)
+				end
+			end
+		end))
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var Button button
+		
+		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			p.addWidget(Label.new("Animation:", "Label.FormCaption"))
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
+				p2.addWidget(ComboBox.new(pModelAnimations, AnimationElementRenderer.new()))
+				
+				button = Button.new("...", AnimationPopupAction.new(this))
+				button.setDesignerSelector("Button.Popup")
+				p2.addWidget(button)
+			end))
+		end))
+	end
+end

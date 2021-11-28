@@ -23,59 +23,55 @@ namespace Democap.Elements
 
 pin Democap.Behaviors
 
+pin Dragengine.Commands
+pin Dragengine.Gui
 pin Dragengine.Scenery
+pin Dragengine.Preloading
+
 
 
 /**
- * Base element class for motion capture actor.
+ * Captured character element class.
  */
-class MoCapActorClass extends BaseVRActorClass
-	public var ECBAControlDesktop controlDesktop
-	public var ECBAInteractHandle interactHandle
-	public var ECBASelectable actorSelectable
-	public var ECBVRHudInfo vrHudInfo
+class CapturedCharacterClass extends BehaviorElementClass
+	public var ECBehaviorComponent component
+	public var ECBehaviorCollider collider
+	public var ECBehaviorVRHandPointedAt vrHandPointedAt
 	public var ECBSceneObject sceneObject
+	public var ECBCapturedAnimations capturedAnimations
 	public var ECBSelectable selectable
 	public var ECBShowInteractHandles showInteractHandles
 	
 	
-	
 	/** Create element class. */
-	public func new() this("MoCapActor")
+	public func new() this("CapturedCharacter")
 	end
 	
 	public func new(String name) super(name)
-		setPersistable(false)
+		component = ECBehaviorComponent.new(this, null)
 		
-		getCollider().getCollider().collisionFilterSetBit(GameApp.CollisionFilterBit.interaction)
+		collider = ECBehaviorCollider.new(this, component)
+		collider.getCollider().getPhysicsType().setEnumeration(CollisionResponse.kinematic)
+		collider.getCollider().getLocalGravity().setVector(Vector.new())
 		
-// 		getVRRightHand().getShowHand().setValue(false)
-// 		getVRLeftHand().getShowHand().setValue(false)
-		
-		var LayerMask cfcategory = LayerMask.newWith(GameApp.CollisionFilterBit.interaction)
+		var LayerMask cfcategory = LayerMask.newWith(BaseGameApp.CollisionFilterBit.actor)
 		
 		var LayerMask cffilter = LayerMask.new()
+		//cffilter.setBit(BaseGameApp.CollisionFilterBit.actorAI)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.dynamic)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.geometry)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.particle)
 		cffilter.setBit(GameApp.CollisionFilterBit.interaction)
-		cffilter.setBit(GameApp.CollisionFilterBit.geometry)
-		cffilter.setBit(GameApp.CollisionFilterBit.dynamic)
-		cffilter.setBit(GameApp.CollisionFilterBit.actor)
 		
-		var CollisionFilter cfPointAt = CollisionFilter.new(cfcategory, cffilter)
+		collider.getCollider().setCollisionFilter(CollisionFilter.new(cfcategory, cffilter))
 		
-		getVRLeftHandPointAt().getCollisionFilter().setCollisionFilter(cfPointAt)
-		getVRRightHandPointAt().getCollisionFilter().setCollisionFilter(cfPointAt)
-		
-		getAIAction().setActionFactory(Actions.AADefault.Factory.new())
-		
-		controlDesktop = ECBAControlDesktop.new(this)
-		interactHandle = ECBAInteractHandle.new(this)
-		
-		actorSelectable = ECBASelectable.new(this)
-		
-		vrHudInfo = ECBVRHudInfo.new(this)
+		vrHandPointedAt = ECBehaviorVRHandPointedAt.new(this)
 		
 		sceneObject = ECBSceneObject.new(this)
-		sceneObject.editPanelNoBehaviors.setValue(true)
+		sceneObject.addActorOffset.setVector(Vector.new(0, 0, 0.5))
+		sceneObject.canRemove.setValue(true)
+		
+		capturedAnimations = ECBCapturedAnimations.new(this, component, sceneObject)
 		
 		selectable = ECBSelectable.new(this)
 		
@@ -89,5 +85,12 @@ class MoCapActorClass extends BaseVRActorClass
 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateX")
 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateY")
 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateZ")
+		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRemove")
+	end
+	
+	
+	/** Create copy of element class with new name. Required for XML subclassing. */
+	public func ElementClass duplicateNamed(String classname)
+		return CapturedCharacterClass.new(classname)
 	end
 end
