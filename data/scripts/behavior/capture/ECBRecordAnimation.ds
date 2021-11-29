@@ -78,6 +78,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var bool pIncrementTime
 		private var Component pComponent
 		private var Array pListeners
+		private var ECBCapturedAnimations.Instance pCapturedAnimations
 		
 		
 		
@@ -92,6 +93,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		
 		/** Dispose of instance. */
 		public func void dispose()
+			pCapturedAnimations = null
 			pListeners = null
 			pActorAnimated = null
 			super.dispose()
@@ -150,7 +152,24 @@ class ECBRecordAnimation extends DefaultECBehavior
 		/** Prepare to record. */
 		public func void prepareRecording()
 			stopRecording()
+			
+			GameApp.getGameApp().getPlaybackScene().pause()
+			
+			var ECBSelectable.Instance selection = GameApp.getGameApp().getSelectionTracker().getElement()
+			if selection != null
+				pCapturedAnimations = ECBCapturedAnimations.getInstanceIn(selection.getElement())
+				
+				if pCapturedAnimations != null
+					pCharacterAnimation = pCapturedAnimations.getAnimations().getActive()
+					
+					if pCharacterAnimation != null
+						pCharacterAnimation.reset()
+					end
+				end
+			end
+			
 			pIsPreparing = true
+			
 			pListeners.forEach(block Listener each
 				each.prepareRecording(this)
 			end)
@@ -164,8 +183,10 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			pIsPreparing = false
 			
-			pCharacterAnimation = CharacterAnimation.new(\
-				GameApp.getGameApp().getWorldSpawnCharacter().getCharacter().getName())
+			if pCharacterAnimation == null
+				pCharacterAnimation = CharacterAnimation.new(\
+					GameApp.getGameApp().getWorldSpawnCharacter().getCharacter().getName())
+			end
 			
 			pComponent = pActorAnimated.getComponent().getComponent()
 			
@@ -186,6 +207,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pListeners.forEach(block Listener each
 				each.startRecording(this)
 			end)
+			
+			GameApp.getGameApp().getPlaybackScene().play()
 		end
 		
 		/** Stop recording animation. */
@@ -194,16 +217,18 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pIsRecording = false
 				pComponent = null
 				
-				// write animation to file
-				if pCharacterAnimation == null
-					return
+				if pCharacterAnimation != null
+					pCharacterAnimation.createAnimation()
+					
+					if pCapturedAnimations == null
+						pCharacterAnimation.getAnimation().save(pCharacterAnimation.getFilename())
+						
+						writeCaptureInfoFile()
+					end
 				end
 				
-				pCharacterAnimation.createAnimation()
-				pCharacterAnimation.getAnimation().save(pCharacterAnimation.getFilename())
-				
-				// write capture information file
-				writeCaptureInfoFile()
+				pCharacterAnimation = null
+				pCapturedAnimations = null
 				
 			elif pIsPreparing
 				pIsPreparing = false
@@ -215,6 +240,17 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pListeners.forEach(block Listener each
 				each.stopRecording(this)
 			end)
+			
+			var PlaybackScene ps = GameApp.getGameApp().getPlaybackScene()
+			ps.stop()
+			ps.updatePlaytime()
+		end
+		
+		
+		
+		/** Captured animations behavior or null. */
+		public func ECBCapturedAnimations.Instance getCapturedAnimations()
+			return pCapturedAnimations
 		end
 		
 		

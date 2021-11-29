@@ -128,6 +128,7 @@ class GameApp extends BaseGameApp
 	private var Project pProject
 	private var Scene pScene
 	private var WindowMain pWindowMain
+	private var PlaybackScene pPlaybackScene
 	
 	private var Array pListeners
 	
@@ -313,6 +314,8 @@ class GameApp extends BaseGameApp
 			return
 		end
 		
+		pPlaybackScene.stop()
+		
 		if pScene != null
 			cancelLoadGameWorld()
 			if getWindowGameWorld().getGameWorld() != null
@@ -329,6 +332,11 @@ class GameApp extends BaseGameApp
 		pListeners.forEach(block GameListener each
 			each.sceneChanged(this)
 		end)
+	end
+	
+	/** Playback scene. */
+	public func PlaybackScene getPlaybackScene()
+		return pPlaybackScene
 	end
 	
 	
@@ -351,6 +359,7 @@ class GameApp extends BaseGameApp
 	/** Initialize game. */
 	public func void initGame()
 		pListeners = Array.new()
+		pPlaybackScene = PlaybackScene.new()
 		
 		// has to come before super call since createAndAddElementClasses() uses it
 		pECListHandles = ElementClassList.new()
@@ -652,6 +661,7 @@ class GameApp extends BaseGameApp
 		pECListHandles = null
 		pECListSceneObjects = null
 		pListeners = null
+		pPlaybackScene = null
 		
 		super.cleanUp()
 	end
@@ -671,6 +681,8 @@ class GameApp extends BaseGameApp
 		pListeners.forEach(block GameListener each
 			each.gameWorldChanged(this)
 		end)
+		
+		pPlaybackScene.updatePlaytime()
 	end
 	
 	/** Set split input processor. */

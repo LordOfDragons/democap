@@ -37,7 +37,42 @@ pin Dragengine.Scenery
  * Main window character panel.
  */
 class WMPanelSession extends CollapsibleGroup
+	/** Playback changed. */
+	class PlaybackChanged extends PlaybackScene.DefaultListener
+		protected var WMPanelSession pPanel
+		
+		public func new(WMPanelSession panel)
+			pPanel = panel
+		end
+		
+		public func void startPlayback(PlaybackScene playbackScene)
+			pPanel.updatePlaybackState()
+		end
+		
+		public func void stopPlayback(PlaybackScene playbackScene)
+			pPanel.updatePlaybackState()
+		end
+		
+		public func void pausePlayback(PlaybackScene playbackScene)
+			pPanel.updatePlaybackState()
+		end
+		
+		public func void timeChanged(PlaybackScene playbackScene, float time)
+			pPanel.updatePlaybackPosition()
+		end
+		
+		public func void playtimeChanged(PlaybackScene playbackScene, float playtime)
+			pPanel.updatePlaybackPosition()
+		end
+	end
+	
+	
 	protected var bool pInVR
+	protected var DefaultRangeModel pModelPlaybackPosition
+	protected var Button pButtonPlaybackPlay
+	protected var Button pButtonPlaybackPause
+	protected var Button pButtonPlaybackStop
+	protected var PlaybackChanged pPlaybackChanged
 	
 	
 	
@@ -45,9 +80,15 @@ class WMPanelSession extends CollapsibleGroup
 	public func new(bool inVR) super("Session", CollapsibleGroup.persistModel(prefixUIOptions(inVR)))
 		pInVR = inVR
 		
+		pModelPlaybackPosition = DefaultRangeModel.new(0, 1000, 100, 0, 1)
+		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
+			updatePlaybackState()
 		end)
+		
+		pPlaybackChanged = PlaybackChanged.new(this)
+		GameApp.getGameApp().getPlaybackScene().addListener(pPlaybackChanged)
 	end
 	
 	/** UI options prefix. */
@@ -55,6 +96,19 @@ class WMPanelSession extends CollapsibleGroup
 		return inVR if "UI/VR/WMPanelSession" else "UI/WMPanelSession"
 	end
 	
+	/** Dispose of widget. */
+	public func void dispose()
+		if pPlaybackChanged != null
+			GameApp.getGameApp().getPlaybackScene().removeListener(pPlaybackChanged)
+			pPlaybackChanged = null
+		end
+		
+		pButtonPlaybackPlay = null
+		pButtonPlaybackPause = null
+		pButtonPlaybackStop = null
+		pModelPlaybackPosition = null
+		super.dispose()
+	end
 	
 	
 	/** Shown in VR. */
@@ -125,6 +179,54 @@ class WMPanelSession extends CollapsibleGroup
 	
 	
 	
+	/** Update playback state. */
+	public func void updatePlaybackState()
+		var PlaybackScene.State state = GameApp.getGameApp().getPlaybackScene().getState()
+		pButtonPlaybackPlay.setEnabled(state != PlaybackScene.State.playing)
+		pButtonPlaybackPause.setEnabled(state == PlaybackScene.State.playing)
+		pButtonPlaybackStop.setEnabled(state != PlaybackScene.State.stopped)
+	end
+	
+	/** Update playback position. */
+	public func void updatePlaybackPosition()
+		var PlaybackScene ps = GameApp.getGameApp().getPlaybackScene()
+		var float playtime = ps.getPlaytime()
+		
+		if playtime < 0.01
+			pModelPlaybackPosition.setValue(0)
+			
+		else
+			pModelPlaybackPosition.setValue((ps.getTime() * 1000 / playtime) cast int)
+		end
+	end
+	
+	/** Start playback. */
+	public func void playbackStart()
+		GameApp.getGameApp().getPlaybackScene().play()
+	end
+	
+	/** Pause playback. */
+	public func void playbackPause()
+		GameApp.getGameApp().getPlaybackScene().pause()
+	end
+	
+	/** Stop playback. */
+	public func void playbackStop()
+		GameApp.getGameApp().getPlaybackScene().stop()
+	end
+	
+	/** Rewind playback. */
+	public func void playbackRewind()
+		GameApp.getGameApp().getPlaybackScene().rewind()
+	end
+	
+	/** Fast forward to end of playback. */
+	public func void playbackForwardEnd()
+		GameApp.getGameApp().getPlaybackScene().forwardEnd()
+	end
+	
+	
+	
 	/** Create panel content. */
 	protected func void createContent(Panel content)
 		var CheckBox checkBox
@@ -173,6 +275,50 @@ class WMPanelSession extends CollapsibleGroup
 			end))
 			button.setToolTip("Browse motion captured animations")
 			p.addWidget(button)
-		end), BorderLayout.Area.bottom)
+		end)) 
+		
+		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
+			var ProgressBar progress = ProgressBar.new(Orientation.horizontal, pModelPlaybackPosition)
+			progress.setDesignerSelector("ProgressBar.PlaybackTime")
+			//progress.addMouseListener( ClickAndDragPlayBar.new( progress ) )
+			p.addWidget(progress)
+		end))
+		
+		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
+			button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+				playbackRewind()
+			end))
+			button.setDesignerSelector("Button.PlaybackRewind")
+			button.setToolTip("Rewind to start")
+			p.addWidget(button)
+			
+			pButtonPlaybackPlay = Button.new(" ", BlockActionListener.new(block ActionEvent event
+				playbackStart()
+			end))
+			pButtonPlaybackPlay.setDesignerSelector("Button.PlaybackPlay")
+			pButtonPlaybackPlay.setToolTip("Start playing back")
+			p.addWidget(pButtonPlaybackPlay)
+			
+			pButtonPlaybackPause = Button.new(" ", BlockActionListener.new(block ActionEvent event
+				playbackPause()
+			end))
+			pButtonPlaybackPause.setDesignerSelector("Button.PlaybackPause")
+			pButtonPlaybackPause.setToolTip("Pause/Resume playback")
+			p.addWidget(pButtonPlaybackPause)
+			
+			pButtonPlaybackStop = Button.new(" ", BlockActionListener.new(block ActionEvent event
+				playbackStop()
+			end))
+			pButtonPlaybackStop.setDesignerSelector("Button.PlaybackStop")
+			pButtonPlaybackStop.setToolTip("Stop playback and rewind to start")
+			p.addWidget(pButtonPlaybackStop)
+			
+			button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+				playbackForwardEnd()
+			end))
+			button.setDesignerSelector("Button.PlaybackForwardEnd")
+			button.setToolTip("Fast forward to end of playback")
+			p.addWidget(button)
+		end))
 	end
 end

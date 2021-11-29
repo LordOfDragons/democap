@@ -216,7 +216,12 @@ class CharacterAnimation
 	
 	/** Create animation. */
 	public func void createAnimation()
-		pAnimation = CreateAnimation.new(pBones, pKeyframes, pFPS).build("")
+		if pBones.getCount() > 0 and pKeyframes.getCount() > 0
+			pAnimation = CreateAnimation.new(pBones, pKeyframes, pFPS).build("")
+			
+		else
+			pAnimation = null
+		end
 	end
 	
 	/** Filename or null. */
@@ -227,6 +232,19 @@ class CharacterAnimation
 	/** Set filename or null. */
 	public func void setFilename(String filename)
 		pFilename = filename
+	end
+	
+	
+	
+	/** Reset animation to record into it. */
+	public func void reset()
+		pAnimation = null
+		pBones.removeAll()
+		pKeyframes.removeAll()
+		pStride = 0
+		pTimestamp = TimeDate.new()
+		pFilename = File.new(GameApp.getGameApp().getPathCaptureAnimations(),\
+			pTimestamp.format("%Y-%m-%d_%H-%M-%S") + ".deanim").getPath()
 	end
 	
 	

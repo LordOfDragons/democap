@@ -1,0 +1,279 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Democap.Actors
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Scene playback.
+ */
+class PlaybackScene
+	/** Listener. */
+	interface Listener
+		/** Start playback. */
+		func void startPlayback(PlaybackScene playbackScene)
+		
+		/** Stop playback. */
+		func void stopPlayback(PlaybackScene playbackScene)
+		
+		/** Pause playback. */
+		func void pausePlayback(PlaybackScene playbackScene)
+		
+		/** Playback time changed. */
+		func void timeChanged(PlaybackScene playbackScene, float time)
+		
+		/** Playtime changed. */
+		func void playtimeChanged(PlaybackScene playbackScene, float playtime)
+		
+		/** Maximum playtime. */
+		func float maxPlaytime(PlaybackScene playbackScene)
+	end
+	
+	/** Default listener implementation. */
+	class DefaultListener implements Listener
+		/** Create listener. */
+		public func new()
+		end
+		
+		/** Start playback. */
+		public func void startPlayback(PlaybackScene playbackScene)
+		end
+		
+		/** Stop playback. */
+		public func void stopPlayback(PlaybackScene playbackScene)
+		end
+		
+		/** Pause playback. */
+		public func void pausePlayback(PlaybackScene playbackScene)
+		end
+		
+		/** Playback update. */
+		public func void timeChanged(PlaybackScene playbackScene, float time)
+		end
+		
+		/** Playtime changed. */
+		public func void playtimeChanged(PlaybackScene playbackScene, float playtime)
+		end
+		
+		/** Maximum playtime. */
+		public func float maxPlaytime(PlaybackScene playbackScene)
+			return 0
+		end
+	end
+	
+	/** Playback state. */
+	enum State
+		stopped
+		playing
+		paused
+	end
+	
+	
+	
+	private var float pPlaytime
+	private var float pTime
+	private var State pState
+	private var float pSpeed
+	private var Array pListeners
+	
+	
+	
+	/** Create instance. */
+	public func new()
+		pListeners = Array.new()
+		pPlaytime = 0
+		pTime = 0
+		pState = State.stopped
+		pSpeed = 1
+	end
+	
+	
+	
+	/** Play time in seconds. */
+	public func float getPlaytime()
+		return pPlaytime
+	end
+	
+	/** Current playback time in seconds. */
+	public func float getTime()
+		return pTime
+	end
+	
+	/** Playback state. */
+	public func State getState()
+		return pState
+	end
+	
+	/** Play speed. */
+	public func float getSpeed()
+		return pSpeed
+	end
+	
+	/** Set play speed. */
+	public func void setSpeed(float speed)
+		pSpeed = DEMath.clamp(speed, 0.1, 10.0)
+	end
+	
+	
+	
+	/** Stopped. */
+	public func bool isStopped()
+		return pState == State.stopped
+	end
+	
+	/** Playing back. */
+	public func bool isPlaying()
+		return pState == State.playing
+	end
+	
+	/** Paused. */
+	public func bool isPaused()
+		return pState == State.paused
+	end
+	
+	/** Start playback if stopped or paused. */
+	public func void play()
+		if pState == State.playing
+			return
+		end
+		
+		pState = State.playing
+		
+		pListeners.forEach(block Listener each
+			each.startPlayback(this)
+		end)
+	end
+	
+	/** Pause playback if playing. */
+	public func void pause()
+		if pState != State.playing
+			return
+		end
+		
+		pState = State.paused
+		
+		pListeners.forEach(block Listener each
+			each.pausePlayback(this)
+		end)
+	end
+	
+	/** Stop playback if playing or paused and rewinds to the beginning. */
+	public func void stop()
+		if pState == State.stopped
+			return
+		end
+		
+		pState = State.stopped
+		
+		pListeners.forEach(block Listener each
+			each.stopPlayback(this)
+		end)
+		
+		rewind()
+	end
+	
+	/** Rewind to beginning. */
+	public func void rewind()
+		if pTime == 0
+			return
+		end
+		
+		pTime = 0
+		
+		pListeners.forEach(block Listener each
+			each.timeChanged(this, 0)
+		end)
+	end
+	
+	/** Forward to end. */
+	public func void forwardEnd()
+		if pTime == pPlaytime
+			return
+		end
+		
+		pTime = pPlaytime
+		
+		pListeners.forEach(block Listener each
+			each.timeChanged(this, pPlaytime)
+		end)
+		
+		if pState == State.playing
+			stop()
+		end
+	end
+	
+	
+	
+	/** Add listener. */
+	public func void addListener(Listener listener)
+		pListeners.add(listener)
+	end
+	
+	/** Remove listener. */
+	public func void removeListener(Listener listener)
+		pListeners.remove(listener)
+	end
+	
+	
+	
+	/** Frame update. */
+	public func void update(float elapsed)
+		if pState != State.playing
+			return
+		end
+		
+		var float time = pTime + elapsed * pSpeed
+		
+		pTime = DEMath.min(time, pPlaytime)
+		
+		pListeners.forEach(block Listener each
+			each.timeChanged(this, pTime)
+		end)
+		
+		if time >= pPlaytime and pState == State.playing
+			stop()
+		end
+	end
+	
+	/** Update playtime. */
+	public func void updatePlaytime()
+		var float playtime = pListeners.inject(0.0, block float result, Listener listener
+			return DEMath.max(result, listener.maxPlaytime(this))
+		end) cast float
+		
+		if DEMath.fabs(playtime - pPlaytime) < 0.01
+			return
+		end
+		
+		pPlaytime = playtime
+		
+		pListeners.forEach(block Listener each
+			each.playtimeChanged(this, playtime)
+		end)
+	end
+end

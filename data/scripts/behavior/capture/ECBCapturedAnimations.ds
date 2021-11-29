@@ -79,11 +79,56 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
+		/** Playback scene listener. */
+		class PlaybackSceneChanged extends PlaybackScene.DefaultListener
+			protected var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void timeChanged(PlaybackScene playbackScene, float time)
+				pInstance.updateControllers()
+			end
+			
+			public func float maxPlaytime(PlaybackScene playbackScene)
+				return pInstance.getPlaytime()
+			end
+		end
+		
+		/** Animations changed. */
+		class AnimationsChanged extends DefaultCharacterAnimationsListener
+			protected var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void animationAdded(CharacterAnimations animations, CharacterAnimation animation)
+				pInstance.rebuildAnimator()
+			end
+			
+			public func void animationRemoved(CharacterAnimations animations, CharacterAnimation animation)
+				pInstance.rebuildAnimator()
+			end
+			
+			public func void allAnimationsRemoved(CharacterAnimations animations)
+				pInstance.rebuildAnimator()
+			end
+		end
+		
+		
+		
 		protected var ECBCapturedAnimations pECBehavior
 		protected var ECBehaviorComponent.Instance pComponent
 		protected var String pActorProfile
 		protected var String pCharacterProfile
 		protected var CharacterAnimations pAnimations
+		protected var Array pAnimatorInstances
+		protected var Array pPlaybackControllers
+		protected var float pPlaytime
+		protected var PlaybackSceneChanged pPlaybackSceneChanged
+		protected var AnimationsChanged pAnimationsChanged
 		
 		
 		
@@ -91,8 +136,14 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		public func new(ECBCapturedAnimations ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pAnimations = CharacterAnimations.new()
+			pAnimatorInstances = Array.new()
+			pPlaybackControllers = Array.new()
+			pPlaybackSceneChanged = PlaybackSceneChanged.new(this)
+			pAnimationsChanged = AnimationsChanged.new(this)
 			
 			pComponent = ecbehavior.getComponent().instance(element)
+			
+			setRequiresThink(true)
 		end
 		
 		/** Init behavior instance. */
@@ -103,6 +154,9 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		
 		/** Dispose of behavior instance. */
 		public func void dispose()
+			pPlaybackSceneChanged = null
+			pAnimationsChanged = null
+			pAnimations = null
 			pComponent = null
 			super.dispose()
 		end
@@ -134,6 +188,111 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		/** Animations. */
 		public func CharacterAnimations getAnimations()
 			return pAnimations
+		end
+		
+		/** Maximum playtime in seconds of all animations. */
+		public func float getPlaytime()
+			return pPlaytime
+		end
+		
+		
+		
+		/** Rebuild animator. */
+		public func void rebuildAnimator()
+			pPlaybackControllers.removeAll()
+			pAnimatorInstances.removeAll()
+			pPlaytime = 0
+			
+			var CurveBezier curve = CurveBezier.newDefaultLinear()
+			var Component component = pComponent.getComponent()
+			var Rig rig = component.getRig()
+			
+			pAnimations.forEach(block CharacterAnimation each
+				var Animation animation = each.getAnimation()
+				if animation == null
+					return null
+				end
+				
+				var AnimatorInstance ainst = AnimatorInstance.new()
+				ainst.setComponent(component)
+				
+				var Animator animator = Animator.new()
+				animator.setAnimation(animation)
+				animator.setRig(rig)
+				each.forEachBone(block String bone
+					animator.addBone(bone)
+				end)
+				
+				animator.setControllerCount(1)
+				var AnimatorController controller = animator.getControllerAt(0)
+				controller.setName("playback")
+				controller.setClamp(true)
+				
+				animator.addLink(0)
+				animator.setLinkCurve(0, curve)
+				
+				var ARAnimation rule = ARAnimation.new()
+				var String move = animation.getMoveName(0)
+				rule.setMoveName(move)
+				rule.targetAddLink(ARAnimationTarget.moveTime, 0)
+				each.forEachBone(block String bone
+					rule.addBone(bone)
+				end)
+				animator.addRule(rule)
+				
+				ainst.setAnimator(animator)
+				pAnimatorInstances.add(ainst)
+				pPlaybackControllers.add(ainst.getControllerAt(0))
+				
+				pPlaytime = DEMath.max(pPlaytime, animation.getMovePlaytime(move))
+			end)
+			
+			pPlaybackControllers.forEach(block AnimatorController each
+				each.setRange(0, pPlaytime)
+				each.setValue(0)
+			end)
+		end
+		
+		/** Update controllers. */
+		public func void updateControllers()
+			var float time = GameApp.getGameApp().getPlaybackScene().getTime()
+			pPlaybackControllers.forEach(block AnimatorController each
+				each.setValue(time)
+			end)
+		end
+		
+		/** Apply animators. */
+		public func void applyAnimators()
+			pAnimatorInstances.forEach(block AnimatorInstance each
+				each.apply()
+			end)
+		end
+		
+		
+		
+		/** Add to game world. Ensure animation instance are prepared. */
+		public func void addToGameWorld()
+			pAnimations.forEach(block CharacterAnimation each
+				if each.getAnimation() == null
+					each.createAnimation()
+				end
+			end)
+			
+			rebuildAnimator()
+			
+			GameApp.getGameApp().getPlaybackScene().addListener(pPlaybackSceneChanged)
+			pAnimations.addListener(pAnimationsChanged)
+		end
+		
+		/** Remove from game world. */
+		public func void removeFromGameWorld()
+			pAnimations.removeListener(pAnimationsChanged)
+			GameApp.getGameApp().getPlaybackScene().removeListener(pPlaybackSceneChanged)
+		end
+		
+		/** Frame update. */
+		public func void think(float elapsed)
+			applyAnimators()
 		end
 		
 		
