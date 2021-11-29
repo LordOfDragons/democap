@@ -148,15 +148,46 @@ class WMPanelSession extends CollapsibleGroup
 	
 	/** Start recording. */
 	public func void startRecording()
-		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+		var GameApp app = GameApp.getGameApp()
+		var BaseVRActor actor = app.getWorldSpawnCharacter().getActor()
 		if actor == null
 			return
 		end
 		
 		var AAControlCommands aacc = actor.getAIAction().getAction() cast AAControlCommands
-		if aacc != null
-			aacc.startRecording()
+		if aacc == null
+			return
 		end
+		
+		var ECBSelectable.Instance selection = app.getSelectionTracker().getElement()
+		if selection != null
+			var ECBCapturedAnimations.Instance ca = ECBCapturedAnimations.getInstanceIn(selection.getElement())
+			
+			if ca != null
+				if not ca.getCharacterProfile().equals(app.getWorldSpawnCharacter().getCharacter().getProfile().getName())
+					WindowDialog.message(getWindow(), "Record Animation",\
+						"Recording into selected Capture Animation Scene Object is only possible " +\
+						"if the matching Character Profile is activate.", null, null, null)
+					return
+				end
+				
+				if ca.getAnimations().getActive() == null
+					WindowDialog.message(getWindow(), "Record Animation",\
+						"Recording into selected Capture Animation Scene Object is only possible " +\
+						"if an animation is selected.", null, null, null)
+					return
+				end
+				
+				if app.getProject().getPath() == null
+					WindowDialog.message(getWindow(), "Record Animation",\
+						"Recording into selected Capture Animation Scene Object is only possible " +\
+						"if the project is saved to file.", null, null, null)
+					return
+				end
+			end
+		end
+		
+		aacc.startRecording()
 	end
 	
 	/** Stop recording. */

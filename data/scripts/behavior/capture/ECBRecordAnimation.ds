@@ -71,6 +71,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var ECBRecordAnimation pECBehavior
 		private var ECBehaviorActorAnimated.Instance pActorAnimated
 		private var Array pBoneIndices
+		private var RecordAnimation pRecordAnimation
 		private var CharacterAnimation pCharacterAnimation
 		private var bool pIsPreparing
 		private var bool pIsRecording
@@ -117,14 +118,14 @@ class ECBRecordAnimation extends DefaultECBehavior
 		
 		
 		
-		/** Character animation or null if none has been recorded yet. */
-		public func CharacterAnimation getCharacterAnimation()
-			return pCharacterAnimation
+		/** Record animation or null. */
+		public func RecordAnimation getRecordAnimation()
+			return pRecordAnimation
 		end
 		
-		/** Set character animation or null if none has been recorded yet. */
-		public func void setCharacterAnimation(CharacterAnimation animation)
-			pCharacterAnimation = animation
+		/** Character animation or null. */
+		public func CharacterAnimation getCharacterAnimation()
+			return pCharacterAnimation
 		end
 		
 		
@@ -153,17 +154,34 @@ class ECBRecordAnimation extends DefaultECBehavior
 		public func void prepareRecording()
 			stopRecording()
 			
-			GameApp.getGameApp().getPlaybackScene().pause()
+			var GameApp app = GameApp.getGameApp()
+			app.getPlaybackScene().pause()
 			
-			var ECBSelectable.Instance selection = GameApp.getGameApp().getSelectionTracker().getElement()
+			var ECBSelectable.Instance selection = app.getSelectionTracker().getElement()
 			if selection != null
 				pCapturedAnimations = ECBCapturedAnimations.getInstanceIn(selection.getElement())
 				
 				if pCapturedAnimations != null
+					if not pCapturedAnimations.getCharacterProfile().equals(\
+					app.getWorldSpawnCharacter().getCharacter().getProfile().getName())
+						pCapturedAnimations = null
+						throw EInvalidParam.new("character profile mismatch")
+					end
+					
+					if pCapturedAnimations.getAnimations().getActive() == null
+						pCapturedAnimations = null
+						throw EInvalidParam.new("no active animation")
+					end
+					
+					if app.getProject().getPath() == null
+						pCapturedAnimations = null
+						throw EInvalidParam.new("project not saved yet")
+					end
+					
 					pCharacterAnimation = pCapturedAnimations.getAnimations().getActive()
 					
 					if pCharacterAnimation != null
-						pCharacterAnimation.reset()
+						pCharacterAnimation.clear()
 					end
 				end
 			end
@@ -183,10 +201,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			pIsPreparing = false
 			
-			if pCharacterAnimation == null
-				pCharacterAnimation = CharacterAnimation.new(\
-					GameApp.getGameApp().getWorldSpawnCharacter().getCharacter().getName())
-			end
+			pRecordAnimation = RecordAnimation.new()
 			
 			pComponent = pActorAnimated.getComponent().getComponent()
 			
@@ -195,7 +210,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pECBehavior.getBones().forEach(block String each
 				var int index = pComponent.indexOfBoneNamed(each)
 				if index != -1
-					pCharacterAnimation.addBone(each)
+					pRecordAnimation.addBone(each)
 					pBoneIndices.add(index)
 				end
 			end)
@@ -217,16 +232,27 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pIsRecording = false
 				pComponent = null
 				
-				if pCharacterAnimation != null
-					pCharacterAnimation.createAnimation()
+				if pRecordAnimation != null
+					pRecordAnimation.createAnimation()
+					pRecordAnimation.getAnimation().save(pRecordAnimation.getPath())
+					writeCaptureInfoFile()
 					
-					if pCapturedAnimations == null
-						pCharacterAnimation.getAnimation().save(pCharacterAnimation.getFilename())
+					if pCharacterAnimation != null
+						var Project project = GameApp.getGameApp().getProject()
+						var File directory = GameApp.getGameApp().getProject().getDataDirectory()
+						var String path = project.nextAnimationPath("deanim")
 						
-						writeCaptureInfoFile()
+						FileWriter.new((directory + path).getPath()).writeData(\
+							FileReader.new(pRecordAnimation.getPath()))
+						
+						pCharacterAnimation.setPath(path)
+						pCharacterAnimation.setAnimation(pRecordAnimation.getAnimation())
+						
+						pCapturedAnimations.getAnimations().notifyAnimationChanged(pCharacterAnimation)
 					end
 				end
 				
+				pRecordAnimation = null
 				pCharacterAnimation = null
 				pCapturedAnimations = null
 				
@@ -283,7 +309,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pComponent.updateBones()
 			
 			pBoneIndices.forEach(block int each
-				pCharacterAnimation.addKeyframe(pRecordTime, \
+				pRecordAnimation.addKeyframe(pRecordTime, \
 					pComponent.boneGetPosition(each), \
 					pComponent.boneGetRotation(each))
 			end)
@@ -295,7 +321,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			var WorldSpawnCharacter wsc = app.getWorldSpawnCharacter()
 			var EasyXML document = EasyXML.new()
 			var EasyXMLElement root = document.getRootElement()
-			var TimeDate timestamp = pCharacterAnimation.getTimestamp()
+			var TimeDate timestamp = pRecordAnimation.getTimestamp()
 			
 			root.setTagName("mocapAnimation")
 			
@@ -335,18 +361,18 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end
 			
 			// animation
-			var Animation animation = pCharacterAnimation.getAnimation()
+			var Animation animation = pRecordAnimation.getAnimation()
 			var String moveName = animation.getMoveName(0)
 			
 			var EasyXMLElement tagAnimation = root.addTag("capturedAnimation")
-			tagAnimation.addDataTag("pathAnimation", pCharacterAnimation.getFilename())
+			tagAnimation.addDataTag("pathAnimation", pRecordAnimation.getPath())
 			tagAnimation.addDataTag("moveName", moveName)
 			tagAnimation.addDataTag("playtime", animation.getMovePlaytime(moveName))
 			tagAnimation.addDataTag("frameRate", animation.getMoveFPS(moveName))
-			tagAnimation.addDataTag("boneCount", pCharacterAnimation.getBoneCount())
+			tagAnimation.addDataTag("boneCount", pRecordAnimation.getBoneCount())
 			
 			var EasyXMLElement tagBones = tagAnimation.addTag("bones")
-			pCharacterAnimation.forEachBone(block String each
+			pRecordAnimation.forEachBone(block String each
 				tagBones.addDataTag("boneName", each)
 			end)
 			

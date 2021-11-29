@@ -33,14 +33,24 @@ pin Dragengine.Utils
  * as files of type "*.demcp" .
  */
 class Project
+	/** Animation directory name. */
+	static public fixed var String animationDirectory = "animation"
+	
+	
+	
 	private var String pPath
+	private var File pDataDirectory
+	private var FileUsageManager pFileUsage
+	private var MutableID pAnimationIDGenerator
 	private var Scenes pScenes
 	
 	
 	
 	/** Create project. */
 	public func new()
-		pScenes = Scenes.new()
+		pFileUsage = FileUsageManager.new()
+		pAnimationIDGenerator = MutableID.new(1)
+		pScenes = Scenes.new(pFileUsage)
 	end
 	
 	/** Load project from file. */
@@ -53,6 +63,7 @@ class Project
 		var int size, i, count
 		
 		project.pPath = path
+		project.updateDirectories()
 		
 		select reader.readByte() // version
 		case 0
@@ -63,15 +74,23 @@ class Project
 				project.pScenes.add(Scene.new(env, reader))
 			end
 			
+			project.pAnimationIDGenerator.readFromFile(reader)
+			
 		else
 			throw EInvalidParam.new("Unsupported scene file version")
 		end
 		
+		if FileUsageManager.debugUsage
+			project.pFileUsage.log(GameApp.getGameApp().getConsole(), "Project.load()")
+		end
 		return project
 	end
 	
 	/** Dispose of list. */
 	public func void dispose()
+		pFileUsage.setDeleteFiles(false)
+		pFileUsage.setLocked(true)
+		
 		pScenes.dispose()
 	end
 	
@@ -85,6 +104,26 @@ class Project
 	/** Scenes. */
 	public func Scenes getScenes()
 		return pScenes
+	end
+	
+	/** Data directory. */
+	public func File getDataDirectory()
+		return pDataDirectory
+	end
+	
+	/** Animation ID generator. */
+	public func MutableID getAnimationIDGenerator()
+		return pAnimationIDGenerator
+	end
+	
+	/** Generate animation path. */
+	public func String nextAnimationPath(String extension)
+		return animationDirectory + "/a" + pAnimationIDGenerator.nextID().toHexString() + "." + extension
+	end
+	
+	/** Get file usage. */
+	public func FileUsageManager getFileUsage()
+		return pFileUsage
 	end
 	
 	
@@ -105,6 +144,22 @@ class Project
 			each.writeToFile(env, writer)
 		end)
 		
+		pAnimationIDGenerator.writeToFile(writer)
+		
 		FileWriter.new(path).writeData(safe.getReader())
+		
+		pPath = path
+		updateDirectories()
+	end
+	
+	/** Update data directory from path. */
+	protected func void updateDirectories()
+		var File file = File.new(pPath)
+		var String name = file.getName()
+		name = name.substring(0, name.findReverse('.'))
+		pDataDirectory = File.new(file.getParent(), name + "-data")
+		
+		pFileUsage.setDataDirectory(pDataDirectory)
+		pFileUsage.setDeleteFiles(true)
 	end
 end

@@ -37,6 +37,7 @@ class Scene
 	private var String pName
 	private var String pPathWorld
 	private var MemoryFile pSaveState
+	private var FileUsageManager pFileUsage
 	private var Array pListeners
 	
 	
@@ -44,15 +45,17 @@ class Scene
 	/** Create actor. */
 	public func new(String name)
 		pPathWorld = "/content/worlds/default.deworld"
+		pFileUsage = FileUsageManager.new()
 		pListeners = Array.new()
 		setName(name)
 	end
 	
 	/** Create copy of actor. */
 	public func new(String name, Scene scene)
-		pListeners = Array.new()
 		setName(name)
 		pPathWorld = scene.pPathWorld
+		pFileUsage = FileUsageManager.new(scene.pFileUsage)
+		pListeners = Array.new()
 		
 		if scene.pSaveState != null
 			pSaveState = MemoryFile.new(scene.pSaveState)
@@ -61,8 +64,10 @@ class Scene
 	
 	/** Load scene. */
 	public func new(PersistencyEnvironment env, FileReader reader)
+		pFileUsage = FileUsageManager.new()
 		pListeners = Array.new()
-		var int size
+		var int size, i, count
+		var String key
 		
 		if env.getPersistency().getDebugEnableCanaryValue()
 			if not reader.readString(Persistency.debugCanaryValue_BEGIN.getLength() ).equals(Persistency.debugCanaryValue_BEGIN)
@@ -99,6 +104,10 @@ class Scene
 	/** Dispose of list. */
 	public func void dispose()
 		pListeners.removeAll()
+		
+		if pFileUsage != null
+			pFileUsage.setParent(null)
+		end
 	end
 	
 	
@@ -137,6 +146,11 @@ class Scene
 	/** Save state or null. */
 	public func MemoryFile getSaveState()
 		return pSaveState
+	end
+	
+	/** File usage. */
+	public func FileUsageManager getFileUsage()
+		return pFileUsage
 	end
 	
 	

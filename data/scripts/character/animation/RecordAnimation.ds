@@ -1,0 +1,189 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Characters
+
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Record animation. Stores one large keyframe list containing the keyframes of all bones
+ * in a single move. The keyframe list contains the keyframes for each bone of a single
+ * time frame packed together.
+ */
+class RecordAnimation
+	/** Animation builder. */
+	protected class CreateAnimation extends AnimationBuilder
+		private var Array pBones
+		private var Array pKeyframes
+		private var float pFPS
+		
+		public func new(Array bones, Array keyframes, float fps)
+			pBones = bones
+			pKeyframes = keyframes
+			pFPS = fps
+		end
+		
+		protected func void buildAnimation()
+			var int boneCount = pBones.getCount()
+			
+			if boneCount == 0 or pKeyframes.getCount() == 0
+				addMove("MoCap", 0, pFPS)
+				return
+			end
+			
+			pBones.forEach(block String each
+				addBone(each)
+			end)
+			
+			addMove("MoCap", (pKeyframes.getAt(-1) cast RecordAnimationKeyframe).getTime(), pFPS)
+			setKeyframeListCount(0, boneCount)
+			
+			pKeyframes.forEach(block int index, RecordAnimationKeyframe keyframe
+				addKeyframe(0, index % boneCount, keyframe.getTime(), keyframe.getPosition(), \
+					keyframe.getOrientation().getEulerAngles(), Vector.new(1, 1, 1))
+			end)
+		end
+	end
+	
+	
+	
+	private var Array pBones
+	private var Array pKeyframes
+	private var int pStride
+	private var Animation pAnimation
+	private var float pFPS
+	private var String pPath
+	private var TimeDate pTimestamp
+	
+	
+	
+	/** Create record animation. */
+	public func new()
+		pBones = Array.new()
+		pKeyframes = Array.new()
+		pStride = 0
+		pFPS = 25
+		pTimestamp = TimeDate.new()
+		pPath = File.new(GameApp.getGameApp().getPathCaptureAnimations(),\
+			pTimestamp.format("%Y-%m-%d_%H-%M-%S") + ".deanim").getPath()
+	end
+	
+	
+	
+	/** Count of bones. */
+	public func int getBoneCount()
+		return pBones.getCount()
+	end
+	
+	/** Bone name at index. */
+	public func String getBoneAt(int index)
+		return pBones.getAt(index) cast String
+	end
+	
+	/** Add bone name. */
+	public func void addBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pBones.add(bone)
+		pStride = pBones.getCount()
+	end
+	
+	/** Visit bones with block receiving String as argument. */
+	public func void forEachBone(Block ablock)
+		pBones.forEach(ablock)
+	end
+	
+	/** FPS. */
+	public func float getFPS()
+		return pFPS
+	end
+	
+	/** Set FPS. */
+	public func void setFPS(float fps)
+		pFPS = DEMath.max(fps, 1.0)
+	end
+	
+	/** Time stamp. */
+	public func TimeDate getTimestamp()
+		return pTimestamp
+	end
+	
+	
+	
+	/** Count of keyframes. */
+	public func int getKeyframeCount()
+		return pKeyframes.getCount()
+	end
+	
+	/** Keyframe at index. */
+	public func RecordAnimationKeyframe getKeyframeAt(int index)
+		return pKeyframes.getAt(index) cast RecordAnimationKeyframe
+	end
+	
+	/** Keyframe for bone. */
+	public func RecordAnimationKeyframe getKeyframeFor(int frame, int bone)
+		return pKeyframes.getAt(pStride * frame + bone) cast RecordAnimationKeyframe
+	end
+	
+	/** Add keyframe. */
+	public func void addKeyframe(float time, Vector position, Quaternion orientation)
+		pKeyframes.add(RecordAnimationKeyframe.new(time, position, orientation))
+	end
+	
+	
+	
+	/** Playtime in seconds. */
+	public func float getPlaytime()
+		if pKeyframes.getCount() > 0
+			return (pKeyframes.getAt(-1) cast RecordAnimationKeyframe).getTime()
+		end
+		return 0
+	end
+	
+	
+	
+	/** Animation or null if not created. */
+	public func Animation getAnimation()
+		return pAnimation
+	end
+	
+	/** Create animation. */
+	public func void createAnimation()
+		if pBones.getCount() > 0 and pKeyframes.getCount() > 0
+			pAnimation = CreateAnimation.new(pBones, pKeyframes, pFPS).build("")
+			
+		else
+			pAnimation = null
+		end
+	end
+	
+	/** Load animation from file if present. */
+	public func void loadAnimation()
+	end
+	
+	/** Path or null. */
+	public func String getPath()
+		return pPath
+	end
+end

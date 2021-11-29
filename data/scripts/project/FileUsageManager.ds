@@ -1,0 +1,225 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Dragengine.Utils
+
+
+/**
+ * File usage manager.
+ */
+class FileUsageManager
+	public static fixed var bool debugUsage = false
+	
+	
+	
+	private var File pDataDirectory
+	private var Dictionary pFileUsage
+	private var FileUsageManager pParent
+	private var bool pDeleteFiles
+	private var bool pLocked
+	
+	
+	
+	/** Create file usage manager. */
+	public func new()
+		pFileUsage = Dictionary.new()
+	end
+	
+	/** Create copy of file usage manager. */
+	public func new(FileUsageManager manager)
+		pDataDirectory = manager.pDataDirectory
+		pFileUsage = Dictionary.new(manager.pFileUsage)
+		pDeleteFiles = manager.pDeleteFiles
+	end
+	
+	
+	
+	/** Data directory. */
+	public func File getDataDirectory()
+		if pDataDirectory == null
+			return pParent.getDataDirectory()
+		end
+		return pDataDirectory
+	end
+	
+	/** Set data directory. */
+	public func void setDataDirectory(File directory)
+		pDataDirectory = directory
+	end
+	
+	/** Delete files if reaching 0 usage count. */
+	public func void setDeleteFiles(bool deleteFiles)
+		pDeleteFiles = deleteFiles
+	end
+	
+	/** Lock manager. */
+	public func void setLocked(bool locked)
+		pLocked = locked
+	end
+	
+	/** Parent or null. */
+	public func FileUsageManager getParent()
+		return pParent
+	end
+	
+	/** Set parent or null. */
+	public func void setParent(FileUsageManager parent)
+		if parent == pParent
+			return
+		end
+		
+		if pParent != null and not pLocked
+			pFileUsage.forEach(block String key, int value
+				pParent.removeFileUsage(key, value)
+			end)
+		end
+		
+		pParent = parent
+		
+		if parent != null and not pLocked
+			pFileUsage.forEach(block String key, int value
+				parent.addFileUsage(key, value)
+			end)
+		end
+	end
+	
+	
+	
+	/** Get file usage. */
+	public func int getFileUsage(String file)
+		return pFileUsage.getAt(file, 0) cast int
+	end
+	
+	/** Add file usage. */
+	public func void addFileUsage(String file)
+		addFileUsage(file, 1)
+	end
+	
+	public func void addFileUsage(String file, int count)
+		if file == null
+			throw ENullPointer.new("file")
+		end
+		if count < 1
+			throw EInvalidParam.new("count < 1")
+		end
+		if pLocked
+			return
+		end
+		
+		pFileUsage.setAt(file, (pFileUsage.getAt(file, 0) cast int) + count)
+		
+		if pParent != null
+			pParent.addFileUsage(file, count)
+		end
+	end
+	
+	/** Remove file usage. */
+	public func void removeFileUsage(String file)
+		removeFileUsage(file, 1)
+	end
+	
+	public func void removeFileUsage(String file, int count)
+		if file == null
+			throw ENullPointer.new("file")
+		end
+		if count < 1
+			throw EInvalidParam.new("count < 1")
+		end
+		if pLocked
+			return
+		end
+		
+		var int usage = pFileUsage.getAt(file, 0) cast int
+		
+		if count > usage
+			GameApp.getGameApp().getConsole().addMessage(\
+				"File '" + file + "' usage count " + usage + " remove " + count + "!")
+			count = usage
+		end
+		
+		usage -= count
+		
+		if usage > 0
+			pFileUsage.setAt(file, usage)
+			
+		else
+			pFileUsage.remove(file)
+			
+			if pDeleteFiles
+				if debugUsage
+					GameApp.getGameApp().getConsole().addMessage("FileUsageManager delete 0 usage file: " + file)
+				end
+				var String path = File.new(getDataDirectory(), file).getPath()
+				
+				try
+					FileSystem.deleteFile(path)
+					
+				catch Exception e
+					GameApp.getGameApp().getConsole().addError("Failed deleting 0 usage file: " + path, e)
+				end
+			end
+		end
+		
+		if pParent != null
+			pParent.removeFileUsage(file, count)
+		end
+	end
+	
+	
+	
+	/** Read from file. */
+	public func void readFromFile(FileReader reader)
+		var int i, count = reader.readUInt()
+		var String key
+		
+		pFileUsage.removeAll()
+		
+		for i = 0 to count
+			key = reader.readString8()
+			pFileUsage.setAt(key, reader.readUInt())
+		end
+	end
+	
+	/** Write to file. */
+	public func void writeToFile(FileWriter writer)
+		writer.writeUInt(pFileUsage.getCount())
+		pFileUsage.forEach(block String key, int value
+			writer.writeString8(key)
+			writer.writeUInt(value)
+		end)
+	end
+	
+	
+	
+	/** Log. */
+	public func void log(Console console, String info)
+		console.addMessage("FileUsageManager: " + info)
+		pFileUsage.forEach(block String key, int value
+			console.addMessage("- " + key + ": " + value)
+		end)
+		
+		if pParent != null
+			pParent.log(console, info + " (parent)")
+		end
+	end
+end

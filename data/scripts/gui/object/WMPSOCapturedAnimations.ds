@@ -74,6 +74,12 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			pPanel.updateModelAnimations()
 		end
 		
+		public func void animationChanged(CharacterAnimations animations, CharacterAnimation animation)
+			if animation == pPanel.getAnimation()
+				pPanel.updateAnimation()
+			end
+		end
+		
 		public func void allAnimationsRemoved(CharacterAnimations animations)
 			pPanel.updateModelAnimations()
 		end
@@ -141,6 +147,13 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			popup.addWidget(button)
 			button.setToolTip("Rename animation")
 			
+			button = Button.new("Clear", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.clearAnimation()
+			end))
+			popup.addWidget(button)
+			button.setToolTip("Clear animation")
+			
 			pPanel.getDesktop().addWindow(popup)
 			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
 		end
@@ -150,6 +163,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	
 	protected var ECBCapturedAnimations.Instance pBehaviorCapturedAnimations
 	protected var DefaultListModel pModelAnimations
+	protected var DefaultTextModel pModelAnimationInfo
 	protected var AnimationsChangedListener pAnimationsChangedListener
 	protected var CharacterAnimation pAnimation
 	
@@ -162,6 +176,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		pBehaviorCapturedAnimations = behavior
 		
 		pModelAnimations = DefaultListModel.new()
+		pModelAnimationInfo = DefaultTextModel.new("")
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
@@ -185,6 +200,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			pAnimationsChangedListener = null
 		end
 		pModelAnimations = null
+		pModelAnimationInfo = null
 		super.dispose()
 	end
 	
@@ -235,6 +251,20 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	
 	/** Update animation. */
 	public func void updateAnimation()
+		var Animation animation
+		if pAnimation != null
+			animation = pAnimation.getAnimation()
+		end
+		
+		if animation != null and animation.getMoveCount() > 0
+			pModelAnimationInfo.setText("{}: {:.1f}s, {} bones".format(Array.newWith(\
+				File.new(pAnimation.getPath()).getName(),\
+				animation.getMovePlaytime(animation.getMoveName(0)),\
+				animation.getBoneCount())))
+			
+		else
+			pModelAnimationInfo.setText("")
+		end
 	end
 	
 	/** Add animation. */
@@ -291,6 +321,16 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		end))
 	end
 	
+	/** Clear animation. */
+	public func void clearAnimation()
+		if pAnimation == null or pAnimation.getAnimation() == null
+			return
+		end
+		
+		pAnimation.clear()
+		pBehaviorCapturedAnimations.getAnimations().notifyAnimationChanged(pAnimation)
+	end
+	
 	
 	
 	/** Create panel content. */
@@ -308,6 +348,9 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 				button.setDesignerSelector("Button.Popup")
 				p2.addWidget(button)
 			end))
+			
+			p.addWidget(Label.new("", "Label.FormCaption"))
+			p.addWidget(Label.new(pModelAnimationInfo, "Label.FormText"))
 		end))
 	end
 end

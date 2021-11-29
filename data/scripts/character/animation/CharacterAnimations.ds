@@ -28,6 +28,7 @@ pin Dragengine.Utils
  * List of character animations.
  */
 class CharacterAnimations
+	private var FileUsageManager pFileUsage
 	private var Array pAnimations
 	private var Array pListeners
 	private var CharacterAnimation pActive
@@ -35,7 +36,8 @@ class CharacterAnimations
 	
 	
 	/** Create animation list. */
-	public func new()
+	public func new(FileUsageManager fileUsage)
+		pFileUsage = fileUsage
 		pListeners = Array.new()
 		pAnimations = Array.new()
 	end
@@ -76,7 +78,12 @@ class CharacterAnimations
 		if hasNamed(animation.getName())
 			throw EInvalidParam.new("named animation is present: " + animation.getName())
 		end
+		
 		pAnimations.add(animation)
+		animation.getFileUsage().setParent(pFileUsage)
+		if FileUsageManager.debugUsage
+			pFileUsage.log(GameApp.getGameApp().getConsole(), "CharacterAnimations.add()")
+		end
 		
 		pListeners.forEach(block CharacterAnimationsListener each
 			each.animationAdded(this, animation)
@@ -107,6 +114,10 @@ class CharacterAnimations
 		end
 		
 		pAnimations.remove(animation)
+		animation.getFileUsage().setParent(null)
+		if FileUsageManager.debugUsage
+			pFileUsage.log(GameApp.getGameApp().getConsole(), "CharacterAnimations.remove()")
+		end
 		
 		pListeners.forEach(block CharacterAnimationsListener each
 			each.animationRemoved(this, animation)
@@ -116,6 +127,14 @@ class CharacterAnimations
 	/** Remove all animations. */
 	public func void removeAll()
 		setActive(null)
+		
+		pAnimations.forEach(block CharacterAnimation each
+			each.dispose()
+		end)
+		pAnimations.removeAll()
+		if FileUsageManager.debugUsage
+			pFileUsage.log(GameApp.getGameApp().getConsole(), "CharacterAnimations.removeAll()")
+		end
 		
 		pAnimations.removeAll()
 		
@@ -182,6 +201,13 @@ class CharacterAnimations
 	public func void notifyAnimationNameChanged(CharacterAnimation animation)
 		pListeners.forEach(block CharacterAnimationsListener each
 			each.animationNameChanged(this, animation)
+		end)
+	end
+	
+	/** Notify listeners animation changed. */
+	public func void notifyAnimationChanged(CharacterAnimation animation)
+		pListeners.forEach(block CharacterAnimationsListener each
+			each.animationChanged(this, animation)
 		end)
 	end
 end

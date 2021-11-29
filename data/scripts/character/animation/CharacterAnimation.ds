@@ -27,98 +27,51 @@ pin Dragengine.LoadSave
 
 
 /**
- * Character animation. Stores one large keyframe list containing the keyframes of all bones
- * in a single move. The keyframe list contains the keyframes for each bone of a single
- * time frame packed together.
+ * Character animation
  */
 class CharacterAnimation
-	/** Animation builder. */
-	protected class CreateAnimation extends AnimationBuilder
-		private var Array pBones
-		private var Array pKeyframes
-		private var float pFPS
-		
-		public func new(Array bones, Array keyframes, float fps)
-			pBones = bones
-			pKeyframes = keyframes
-			pFPS = fps
-		end
-		
-		protected func void buildAnimation()
-			var int boneCount = pBones.getCount()
-			
-			if boneCount == 0 or pKeyframes.getCount() == 0
-				addMove("MoCap", 0, pFPS)
-				return
-			end
-			
-			pBones.forEach(block String each
-				addBone(each)
-			end)
-			
-			addMove("MoCap", (pKeyframes.getAt(-1) cast CharacterAnimationKeyframe).getTime(), pFPS)
-			setKeyframeListCount(0, boneCount)
-			
-			pKeyframes.forEach(block int index, CharacterAnimationKeyframe keyframe
-				addKeyframe(0, index % boneCount, keyframe.getTime(), keyframe.getPosition(), \
-					keyframe.getOrientation().getEulerAngles(), Vector.new(1, 1, 1))
-			end)
-		end
-	end
-	
-	
-	
 	private var String pName
-	private var Array pBones
-	private var Array pKeyframes
-	private var int pStride
-	private var Animation pAnimation
-	private var float pFPS
-	private var String pFilename
+	private var String pPath
 	private var TimeDate pTimestamp
+	private var FileUsageManager pFileUsage
+	private var Animation pAnimation
 	
 	
 	
 	/** Create character animation. */
 	public func new(String name)
 		setName(name)
-		pBones = Array.new()
-		pKeyframes = Array.new()
-		pStride = 0
-		pFPS = 25
+		pPath = ""
 		pTimestamp = TimeDate.new()
-		pFilename = File.new(GameApp.getGameApp().getPathCaptureAnimations(),\
-			pTimestamp.format("%Y-%m-%d_%H-%M-%S") + ".deanim").getPath()
+		pFileUsage = FileUsageManager.new()
 	end
 	
 	/** Create character animation from file. */
 	public func new(FileReader reader)
 		var int i, count
 		
+		pPath = ""
+		pFileUsage = FileUsageManager.new()
+		
 		select reader.readByte() // version
 		case 0
 			pName = reader.readString8()
+			setPath(reader.readString8())
 			pTimestamp = reader.readTimeDate()
-			pFPS = reader.readFloat()
-			
-			count = reader.readUShort()
-			pBones = Array.new(count)
-			for i = 0 to count
-				pBones.add(reader.readString8())
-			end
-			
-			count = reader.readUInt()
-			pKeyframes = Array.new(count)
-			for i = 0 to count
-				pKeyframes.add(CharacterAnimationKeyframe.new(reader))
-			end
+			pFileUsage.readFromFile(reader)
 			
 		else
 			throw EInvalidParam.new("unsupported version")
 		end
+	end
+	
+	/** Dispose of list. */
+	public func void dispose()
+		setPath("")
 		
-		pFilename = File.new(GameApp.getGameApp().getPathCaptureAnimations(),\
-			pTimestamp.format("%Y-%m-%d_%H-%M-%S") + ".deanim").getPath()
+		if pFileUsage != null
+			pFileUsage.setParent(null)
+		end
 	end
 	
 	
@@ -136,115 +89,60 @@ class CharacterAnimation
 		pName = name
 	end
 	
-	/** Count of bones. */
-	public func int getBoneCount()
-		return pBones.getCount()
+	/** Path relative to project or empty string. */
+	public func String getPath()
+		return pPath
 	end
 	
-	/** Bone name at index. */
-	public func String getBoneAt(int index)
-		return pBones.getAt(index) cast String
-	end
-	
-	/** Add bone name. */
-	public func void addBone(String bone)
-		if bone == null
-			throw ENullPointer.new("bone")
+	/** Set path relative to project or empty string. */
+	public func void setPath(String path)
+		if path.equals(pPath)
+			return
 		end
-		pBones.add(bone)
-		pStride = pBones.getCount()
-	end
-	
-	/** Visit bones with block receiving String as argument. */
-	public func void forEachBone(Block ablock)
-		pBones.forEach(ablock)
-	end
-	
-	/** FPS. */
-	public func float getFPS()
-		return pFPS
-	end
-	
-	/** Set FPS. */
-	public func void setFPS(float fps)
-		pFPS = DEMath.max(fps, 1.0)
-	end
-	
-	/** Time stamp. */
-	public func TimeDate getTimestamp()
-		return pTimestamp
-	end
-	
-	
-	
-	/** Count of keyframes. */
-	public func int getKeyframeCount()
-		return pKeyframes.getCount()
-	end
-	
-	/** Keyframe at index. */
-	public func CharacterAnimationKeyframe getKeyframeAt(int index)
-		return pKeyframes.getAt(index) cast CharacterAnimationKeyframe
-	end
-	
-	/** Keyframe for bone. */
-	public func CharacterAnimationKeyframe getKeyframeFor(int frame, int bone)
-		return pKeyframes.getAt(pStride * frame + bone) cast CharacterAnimationKeyframe
-	end
-	
-	/** Add keyframe. */
-	public func void addKeyframe(float time, Vector position, Quaternion orientation)
-		pKeyframes.add(CharacterAnimationKeyframe.new(time, position, orientation))
-	end
-	
-	
-	
-	/** Playtime in seconds. */
-	public func float getPlaytime()
-		if pKeyframes.getCount() > 0
-			return (pKeyframes.getAt(-1) cast CharacterAnimationKeyframe).getTime()
+		
+		if not pPath.empty()
+			pFileUsage.removeFileUsage(pPath)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(), "CharacterAnimation.setPath() old(" + pPath + ")")
+			end
 		end
-		return 0
+		
+		pPath = path
+		
+		if not path.empty()
+			pFileUsage.addFileUsage(path)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(), "CharacterAnimation.setPath() new(" + path + ")")
+			end
+		end
 	end
 	
-	
+	/** File usage. */
+	public func FileUsageManager getFileUsage()
+		return pFileUsage
+	end
 	
 	/** Animation or null if not created. */
 	public func Animation getAnimation()
 		return pAnimation
 	end
 	
-	/** Create animation. */
-	public func void createAnimation()
-		if pBones.getCount() > 0 and pKeyframes.getCount() > 0
-			pAnimation = CreateAnimation.new(pBones, pKeyframes, pFPS).build("")
-			
-		else
-			pAnimation = null
+	/** Set animation or null if not created. */
+	public func void setAnimation(Animation animation)
+		pAnimation = animation
+	end
+	
+	/** Load animation if present and possible. */
+	public func void loadAnimation(Project project)
+		if not pPath.empty()
+			pAnimation = Animation.new((project.getDataDirectory() + pPath).getPath())
 		end
 	end
 	
-	/** Filename or null. */
-	public func String getFilename()
-		return pFilename
-	end
-	
-	/** Set filename or null. */
-	public func void setFilename(String filename)
-		pFilename = filename
-	end
-	
-	
-	
-	/** Reset animation to record into it. */
-	public func void reset()
+	/** Clear animation. */
+	public func void clear()
 		pAnimation = null
-		pBones.removeAll()
-		pKeyframes.removeAll()
-		pStride = 0
-		pTimestamp = TimeDate.new()
-		pFilename = File.new(GameApp.getGameApp().getPathCaptureAnimations(),\
-			pTimestamp.format("%Y-%m-%d_%H-%M-%S") + ".deanim").getPath()
+		setPath("")
 	end
 	
 	
@@ -254,17 +152,8 @@ class CharacterAnimation
 		writer.writeByte(0) // version
 		
 		writer.writeString8(pName)
+		writer.writeString8(pPath)
 		writer.writeTimeDate(pTimestamp)
-		writer.writeFloat(pFPS)
-		
-		writer.writeUShort(pBones.getCount())
-		pBones.forEach(block String each
-			writer.writeString8(each)
-		end)
-		
-		writer.writeUInt(pKeyframes.getCount())
-		pKeyframes.forEach(block CharacterAnimationKeyframe each
-			each.writeToFile(writer)
-		end)
+		pFileUsage.writeToFile(writer)
 	end
 end

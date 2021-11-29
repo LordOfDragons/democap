@@ -33,13 +33,15 @@ pin Dragengine.Utils
 class Scenes
 	private var Array pScenes
 	private var Array pListeners
+	private var FileUsageManager pFileUsage
 	
 	
 	
 	/** Create actor list. */
-	public func new()
+	public func new(FileUsageManager fileUsage)
 		pListeners = Array.new()
 		pScenes = Array.new()
+		pFileUsage = fileUsage
 	end
 	
 	/** Dispose of list. */
@@ -78,7 +80,12 @@ class Scenes
 		if hasNamed(scene.getName())
 			throw EInvalidParam.new("named scene is present: " + scene.getName())
 		end
+		
 		pScenes.add(scene)
+		scene.getFileUsage().setParent(pFileUsage)
+		if FileUsageManager.debugUsage
+			pFileUsage.log(GameApp.getGameApp().getConsole(), "Scenes.add()")
+		end
 		
 		pListeners.forEach(block ScenesListener each
 			each.sceneAdded(this, scene)
@@ -88,6 +95,10 @@ class Scenes
 	/** Remove scene. Throws exception if named scene is absent. */
 	public func void remove(Scene scene)
 		pScenes.remove(scene)
+		scene.getFileUsage().setParent(null)
+		if FileUsageManager.debugUsage
+			pFileUsage.log(GameApp.getGameApp().getConsole(), "Scenes.remove()")
+		end
 		
 		pListeners.forEach(block ScenesListener each
 			each.sceneRemoved(this, scene)
@@ -102,6 +113,9 @@ class Scenes
 			each.dispose()
 		end)
 		pScenes.removeAll()
+		if FileUsageManager.debugUsage
+			pFileUsage.log(GameApp.getGameApp().getConsole(), "Scenes.removeAll()")
+		end
 		
 		pListeners.forEach(block ScenesListener each
 			each.allScenesRemoved(this)

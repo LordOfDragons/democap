@@ -112,6 +112,10 @@ class ECBCapturedAnimations extends DefaultECBehavior
 				pInstance.rebuildAnimator()
 			end
 			
+			public func void animationChanged(CharacterAnimations animations, CharacterAnimation animation)
+				pInstance.rebuildAnimator()
+			end
+			
 			public func void allAnimationsRemoved(CharacterAnimations animations)
 				pInstance.rebuildAnimator()
 			end
@@ -128,22 +132,21 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		protected var Array pPlaybackControllers
 		protected var float pPlaytime
 		protected var PlaybackSceneChanged pPlaybackSceneChanged
-		protected var AnimationsChanged pAnimationsChanged
 		
 		
 		
 		/** Create behavior instance. */
 		public func new(ECBCapturedAnimations ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
-			pAnimations = CharacterAnimations.new()
 			pAnimatorInstances = Array.new()
 			pPlaybackControllers = Array.new()
 			pPlaybackSceneChanged = PlaybackSceneChanged.new(this)
-			pAnimationsChanged = AnimationsChanged.new(this)
 			
 			pComponent = ecbehavior.getComponent().instance(element)
 			
 			setRequiresThink(true)
+			
+			pAnimations = CharacterAnimations.new(GameApp.getGameApp().getScene().getFileUsage())
 		end
 		
 		/** Init behavior instance. */
@@ -154,9 +157,12 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		
 		/** Dispose of behavior instance. */
 		public func void dispose()
+			if pAnimations != null
+				pAnimations.dispose()
+				pAnimations = null
+			end
+			
 			pPlaybackSceneChanged = null
-			pAnimationsChanged = null
-			pAnimations = null
 			pComponent = null
 			super.dispose()
 		end
@@ -219,9 +225,11 @@ class ECBCapturedAnimations extends DefaultECBehavior
 				var Animator animator = Animator.new()
 				animator.setAnimation(animation)
 				animator.setRig(rig)
-				each.forEachBone(block String bone
-					animator.addBone(bone)
-				end)
+				
+				var int i, boneCount = animation.getBoneCount()
+				for i = 0 to boneCount
+					animator.addBone(animation.getBoneName(i))
+				end
 				
 				animator.setControllerCount(1)
 				var AnimatorController controller = animator.getControllerAt(0)
@@ -235,9 +243,9 @@ class ECBCapturedAnimations extends DefaultECBehavior
 				var String move = animation.getMoveName(0)
 				rule.setMoveName(move)
 				rule.targetAddLink(ARAnimationTarget.moveTime, 0)
-				each.forEachBone(block String bone
-					rule.addBone(bone)
-				end)
+				for i = 0 to boneCount
+					rule.addBone(animation.getBoneName(i))
+				end
 				animator.addRule(rule)
 				
 				ainst.setAnimator(animator)
@@ -272,21 +280,23 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		
 		/** Add to game world. Ensure animation instance are prepared. */
 		public func void addToGameWorld()
+			var GameApp app = GameApp.getGameApp()
+			
+			var Project project = app.getProject()
 			pAnimations.forEach(block CharacterAnimation each
 				if each.getAnimation() == null
-					each.createAnimation()
+					each.loadAnimation(project)
 				end
 			end)
 			
 			rebuildAnimator()
 			
-			GameApp.getGameApp().getPlaybackScene().addListener(pPlaybackSceneChanged)
-			pAnimations.addListener(pAnimationsChanged)
+			app.getPlaybackScene().addListener(pPlaybackSceneChanged)
+			pAnimations.addListener(AnimationsChanged.new(this))
 		end
 		
 		/** Remove from game world. */
 		public func void removeFromGameWorld()
-			pAnimations.removeListener(pAnimationsChanged)
 			GameApp.getGameApp().getPlaybackScene().removeListener(pPlaybackSceneChanged)
 		end
 		
