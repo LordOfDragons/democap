@@ -130,6 +130,8 @@ class GameApp extends BaseGameApp
 	private var WindowMain pWindowMain
 	private var PlaybackScene pPlaybackScene
 	
+	private var Array pPatternsProject
+	
 	private var Array pListeners
 	
 	
@@ -143,6 +145,8 @@ class GameApp extends BaseGameApp
 		pPathProjects = "/config/projects"
 		pPathObjects = "/content/models/objects"
 // 		defaultConsoleBufferSize = 100
+		
+		pPatternsProject = Array.newWith(FileExtension.new("DEMoCap Project", Array.newWith(".demcp"), ".demcp"))
 	end
 	
 	
@@ -289,7 +293,7 @@ class GameApp extends BaseGameApp
 		setScene(null)
 		var Project disposeProject = pProject
 		if pProject != null
-			pProject.save(File.new(pPathProjects, "autosave.demcp").getPath())
+			pProject.save()
 		end
 		
 		pProject = project
@@ -336,6 +340,7 @@ class GameApp extends BaseGameApp
 			end
 			
 			pScene.getFileUsage().setLocked(false)
+			pProject.save()
 		end
 		
 		pScene = scene
@@ -352,6 +357,11 @@ class GameApp extends BaseGameApp
 	/** Playback scene. */
 	public func PlaybackScene getPlaybackScene()
 		return pPlaybackScene
+	end
+	
+	/** File dialog patterns for project files as Array of FileExtension. */
+	public func Array getPatternsProject()
+		return pPatternsProject
 	end
 	
 	
@@ -381,6 +391,9 @@ class GameApp extends BaseGameApp
 		pECListSceneObjects = ElementClassList.new()
 		
 		super.initGame()
+		
+		// debug
+		FileUsageManager.debugUsage = getSettings().getBoolAt("Debug/FileUsageManager/Enable", false)
 		
 		// only enable this in debug build
 		getLoaders().getPersistency().setDebugEnableCanaryValue(true)
@@ -519,8 +532,9 @@ class GameApp extends BaseGameApp
 		end
 		
 		if pProject == null
-			var Project project = Project.new()
+			var Project project = Project.new(pathAutoSaveProject)
 			project.getScenes().add(Scene.new("Scene"))
+			project.save()
 			setProject(project)
 		end
 		

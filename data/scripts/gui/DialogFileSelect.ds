@@ -197,6 +197,7 @@ class DialogFileSelect extends WindowDialog
 		
 		pDirectory = "/"
 		pModelFiles = DefaultListModel.new()
+		pModelFiles.setAutoSelect(false)
 		pModelPattern = DefaultListModel.new()
 		pModelFilename = DefaultTextModel.new("")
 		pModelPattern.add(patternAllFiles())
@@ -229,12 +230,30 @@ class DialogFileSelect extends WindowDialog
 	/** Show open file dialog for resource type. */
 	public static func DialogFileSelect showOpenFile(Window window, String title,\
 	ResourceLoaderType type, String path, ResultListener listener)
+		return showOpenFile(window, title, FileSystem.getFileExtensions(type), path, listener)
+	end
+	
+	/** Show open file dialog for array of FileExtension. */
+	public static func DialogFileSelect showOpenFile(Window window, String title,\
+	Array patterns, String path, ResultListener listener)
 		var DialogFileSelect dialog = DialogFileSelect.new(window, title, listener)
-		dialog.setPatterns(FileSystem.getFileExtensions(type))
+		dialog.setPatterns(patterns)
 		dialog.setPath(path)
 		dialog.selectPatternMatchingPath()
 		dialog.show(window, false, WindowModal.Placement.desktop)
 		return dialog
+	end
+	
+	/** Show save file dialog for resource type. */
+	public static func DialogFileSelect showSaveFile(Window window, String title,\
+	ResourceLoaderType type, String path, ResultListener listener)
+		return showOpenFile(window, title, type, path, listener)
+	end
+	
+	/** Show save file dialog for array of FileExtension. */
+	public static func DialogFileSelect showSaveFile(Window window, String title,\
+	Array patterns, String path, ResultListener listener)
+		return showOpenFile(window, title, patterns, path, listener)
 	end
 	
 	/** Create all files pattern. */
@@ -273,12 +292,11 @@ class DialogFileSelect extends WindowDialog
 			throw EInvalidParam.new("path is not absolute path")
 		end
 		
-		select FileSystem.getTypeOfFile(path)
-		case FileType.directory
+		if FileSystem.existsFile(path) and FileSystem.getTypeOfFile(path) == FileType.directory
 			setDirectory(path)
 			setFilename("")
 			
-		case FileType.file
+		else
 			var File parent = file.getParent()
 			if parent != null
 				setDirectory(parent.getPath())
@@ -287,9 +305,6 @@ class DialogFileSelect extends WindowDialog
 				setDirectory("/")
 			end
 			setFilename(file.getName())
-			
-		else
-			throw EInvalidParam.new("path is not a file or directory")
 		end
 	end
 	
@@ -390,7 +405,7 @@ class DialogFileSelect extends WindowDialog
 			return
 		end
 		
-		if FileSystem.getTypeOfFile(path) == FileType.directory
+		if FileSystem.existsFile(path) and FileSystem.getTypeOfFile(path) == FileType.directory
 			setDirectory(path)
 			
 		else
@@ -427,7 +442,7 @@ class DialogFileSelect extends WindowDialog
 				// filename
 				p2.addWidget(Label.new("Filename:", "Label.DialogFileSelect.FormCaption"))
 				
-				var TextField textField = TextField.new(pModelFilename, 15, true)
+				var TextField textField = TextField.new(pModelFilename, 15)
 				textField.setDesignerSelector("TextField.DialogFileSelect.Filename")
 				p2.addWidget(textField)
 				
@@ -507,8 +522,8 @@ class DialogFileSelect extends WindowDialog
 		
 		pModelFiles.setContent(directories + files)
 		
-		if files.getCount() > 0
+		/*if files.getCount() > 0
 			pModelFiles.setSelected(directories.getCount())
-		end
+		end*/
 	end
 end

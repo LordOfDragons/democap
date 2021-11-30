@@ -61,6 +61,44 @@ class WMPanelProject extends CollapsibleGroup
 	
 	
 	
+	/** Project popup menu. */
+	class ProjectPopupAction extends DefaultActionListener
+		protected var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			var Widget widget = event.getSource() cast Widget
+			var WindowPopup popup = WindowPopup.new()
+			var Button button
+			
+			button = Button.new("New...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.newProject()
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Open...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.openProject()
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Save", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.saveProject()
+			end))
+			popup.addWidget(button)
+			
+			pPanel.getDesktop().addWindow(popup)
+			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
+		end
+	end
+	
+	
+	
 	/** Scenes changed listener. */
 	class ScenesChangedListener extends DefaultScenesListener
 		protected var WMPanelProject pPanel
@@ -426,6 +464,7 @@ class WMPanelProject extends CollapsibleGroup
 	
 	public var bool preventUpdate
 	
+	protected var DefaultTextModel pModelProjectFilename
 	protected var DefaultListModel pModelScenes
 	protected var DefaultListModel pModelLoadableWorlds
 	protected var DefaultListModel pModelObjects
@@ -447,6 +486,7 @@ class WMPanelProject extends CollapsibleGroup
 	public func new(bool inVR) super("Project", CollapsibleGroup.persistModel(prefixUIOptions(inVR)))
 		pInVR = inVR
 		
+		pModelProjectFilename = DefaultTextModel.new("")
 		pModelScenes = DefaultListModel.new()
 		pModelScenes.setAutoSelect(false)
 		pModelLoadableWorlds = DefaultListModel.new()
@@ -488,6 +528,7 @@ class WMPanelProject extends CollapsibleGroup
 		pModelObjects = null
 		pModelLoadableWorlds = null
 		pModelScenes = null
+		pModelProjectFilename = null
 		pEditObjectPosition = null
 		pEditObjectRotation = null
 		pPanelBehaviors = null
@@ -535,9 +576,82 @@ class WMPanelProject extends CollapsibleGroup
 		
 		if project != null
 			project.getScenes().addListener(pScenesChangedListener)
+			pModelProjectFilename.setText(File.new(project.getPath()).getName())
+			
+		else
+			pModelProjectFilename.setText("")
 		end
 		
 		updateModelScenes()
+	end
+	
+	
+	
+	/** Create new project. */
+	public func void newProject()
+		if pProject == null
+			return
+		end
+		
+		var GameApp app = GameApp.getGameApp()
+		
+		DialogFileSelect.showSaveFile(getWindow(), "New Project", app.getPatternsProject(),\
+		File.new(app.getPathProjects(), "Project.demcp").getPath(),\
+			DialogFileSelect.BlockResultListener.new(block String result
+				if result != null
+					if FileSystem.existsFile(result)
+						WindowDialog.message(getWindow(), "New Project",\
+							"Project file exists already", null, null, null)
+						
+					else
+						try
+							var Project project = Project.new(result)
+							project.getScenes().add(Scene.new("Scene"))
+							project.save()
+							app.setProject(project)
+							app.setScene(project.getScenes().getAt(0))
+							
+						catch Exception e
+							app.getConsole().addError("create project failed: " + result, e)
+							WindowDialog.message(getWindow(), "New Project",\
+								"Failed creating project\n" + result + "\n" + e, null, null, null)
+						end
+					end
+				end
+			end))
+	end
+	
+	/** Open project. */
+	public func void openProject()
+		if pProject == null
+			return
+		end
+		
+		var GameApp app = GameApp.getGameApp()
+		
+		DialogFileSelect.showOpenFile(getWindow(), "Open Project",\
+		app.getPatternsProject(), pProject.getPath(),\
+			DialogFileSelect.BlockResultListener.new(block String result
+				if result != null
+					try
+						var Project project = Project.load(result)
+						app.setProject(project)
+						app.setScene(project.getScenes().getAt(0))
+						
+					catch Exception e
+						app.getConsole().addError("open project failed: " + result, e)
+						WindowDialog.message(getWindow(), "Open Project",\
+							"Failed opening project\n" + result + "\n" + e, null, null, null)
+					end
+				end
+			end))
+	end
+	
+	/** Save project. */
+	public func void saveProject()
+		if pProject != null
+			pProject.save()
+		end
 	end
 	
 	
@@ -679,6 +793,7 @@ class WMPanelProject extends CollapsibleGroup
 					end
 					GameApp.getGameApp().setScene(pModelScenes.getAt(index) cast Scene)
 					pProject.getScenes().remove(scene)
+					pProject.save()
 				end
 		end))
 	end
@@ -750,6 +865,8 @@ class WMPanelProject extends CollapsibleGroup
 		
 		// set new path and load world
 		pScene.setPathWorld(world.getPath())
+		pProject.save()
+		
 		pScene.loadWorld()
 	end
 	
@@ -1005,10 +1122,22 @@ class WMPanelProject extends CollapsibleGroup
 	protected func void createContent(Panel content)
 		var TextField textField
 		var Button button
+		var Label label
 		
 		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
 		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			p.addWidget(Label.new("Project:", "Label.FormCaption"))
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
+				label = Label.new(pModelProjectFilename, "Label.FormText")
+				label.setToolTip("Project filename")
+				p2.addWidget(label)
+				
+				button = Button.new("...", ProjectPopupAction.new(this))
+				button.setDesignerSelector("Button.Popup")
+				p2.addWidget(button)
+			end))
+			
 			p.addWidget(Label.new("Scene:", "Label.FormCaption"))
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
 				p2.addWidget(ComboBox.new(pModelScenes, SceneListElementRenderer.new()))
@@ -1037,9 +1166,9 @@ class WMPanelProject extends CollapsibleGroup
 			end))
 			
 			p.addWidget(Label.new("Class:", "Label.FormCaption"))
-			textField = TextField.new(pModelObjectClass, true)
-			textField.setToolTip("Object class. Defines behaviors shown below")
-			p.addWidget(textField)
+			label = Label.new(pModelObjectClass, "Label.FormText")
+			label.setToolTip("Object class. Defines behaviors shown below")
+			p.addWidget(label)
 			
 			p.addWidget(Label.new("Position:", "Label.FormCaption"))
 			pEditObjectPosition = EditVector.new(3)

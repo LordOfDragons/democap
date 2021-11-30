@@ -47,10 +47,12 @@ class Project
 	
 	
 	/** Create project. */
-	public func new()
+	public func new(String path)
+		pPath = path
 		pFileUsage = FileUsageManager.new()
 		pAnimationIDGenerator = MutableID.new(1)
 		pScenes = Scenes.new(pFileUsage)
+		updateDirectories()
 	end
 	
 	/** Load project from file. */
@@ -59,11 +61,8 @@ class Project
 		var FileReader reader = env.getPersistency().getDebugEnableCanaryValue() \
 			if FileReader.new(path) else FileReader.newZCompressed(path)
 		
-		var Project project = Project.new()
+		var Project project = Project.new(path)
 		var int size, i, count
-		
-		project.pPath = path
-		project.updateDirectories()
 		
 		select reader.readByte() // version
 		case 0
@@ -129,7 +128,7 @@ class Project
 	
 	
 	/** Save to file. */
-	public func void save(String path)
+	public func void save()
 		var MemoryFile safe = MemoryFile.new("safe")
 		
 		var PersistencyEnvironment env = PersistencyEnvironment.new(GameApp.getGameApp().getLoaders().getPersistency())
@@ -146,10 +145,7 @@ class Project
 		
 		pAnimationIDGenerator.writeToFile(writer)
 		
-		FileWriter.new(path).writeData(safe.getReader())
-		
-		pPath = path
-		updateDirectories()
+		FileWriter.new(pPath).writeData(safe.getReader())
 	end
 	
 	/** Update data directory from path. */
