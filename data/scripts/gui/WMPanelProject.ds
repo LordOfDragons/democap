@@ -110,9 +110,11 @@ class WMPanelProject extends CollapsibleGroup
 		end
 		
 		public func void selectionChanged(ListModel model)
-			var int index = model.getSelected()
-			if index != -1
-				GameApp.getGameApp().setScene(model.getAt(index) cast Scene)
+			if not pPanel.preventUpdate
+				var int index = model.getSelected()
+				if index != -1
+					GameApp.getGameApp().setScene(model.getAt(index) cast Scene)
+				end
 			end
 		end
 	end
@@ -123,6 +125,10 @@ class WMPanelProject extends CollapsibleGroup
 		
 		public func new(WMPanelProject panel)
 			pPanel = panel
+		end
+		
+		public func void sceneNameChanged(Scene scene)
+			pPanel.updateModelScenes()
 		end
 		
 		public func void objectAdded(Scene scene, ECBSceneObject.Instance object)
@@ -169,19 +175,25 @@ class WMPanelProject extends CollapsibleGroup
 			
 			button = Button.new("Add...", BlockActionListener.new(block ActionEvent event
 				popup.popdown()
-// 				pPanel.activateWorld()
+				pPanel.addScene()
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Duplicate...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.duplicateScene()
 			end))
 			popup.addWidget(button)
 			
 			button = Button.new("Rename...", BlockActionListener.new(block ActionEvent event
 				popup.popdown()
-// 				pPanel.browseLoadableWorlds()
+				pPanel.renameScene()
 			end))
 			popup.addWidget(button)
 			
 			button = Button.new("Remove...", BlockActionListener.new(block ActionEvent event
 				popup.popdown()
-// 				pPanel.browseLoadableWorlds()
+				pPanel.removeScene()
 			end))
 			popup.addWidget(button)
 			
@@ -342,6 +354,13 @@ class WMPanelProject extends CollapsibleGroup
 			popup.addWidget(button)
 			button.setToolTip("Add scene object")
 			
+			button = Button.new("Duplicate", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.duplicateObject()
+			end))
+			popup.addWidget(button)
+			button.setToolTip("Add scene object")
+			
 			button = Button.new("Remove", BlockActionListener.new(block ActionEvent event
 				popup.popdown()
 				pPanel.removeObject()
@@ -404,6 +423,8 @@ class WMPanelProject extends CollapsibleGroup
 	end
 	
 	
+	
+	public var bool preventUpdate
 	
 	protected var DefaultListModel pModelScenes
 	protected var DefaultListModel pModelLoadableWorlds
@@ -528,8 +549,16 @@ class WMPanelProject extends CollapsibleGroup
 			content = GameApp.getGameApp().getProject().getScenes().toArray()
 		end
 		
-		pModelScenes.setSelected(-1)
-		pModelScenes.setContent(content)
+		preventUpdate = true
+		try
+			pModelScenes.setSelected(-1)
+			pModelScenes.setContent(content)
+			
+		catch Exception e
+			preventUpdate = false
+			throw
+		end
+		preventUpdate = false
 		
 		selectScene()
 	end
@@ -562,6 +591,118 @@ class WMPanelProject extends CollapsibleGroup
 		
 		selectScene()
 		updateModelObjects()
+		
+		if scene != null
+			var Object world = pModelLoadableWorlds.find(block LoadableWorld each
+				return each.getPath().equals(scene.getPathWorld())
+			end)
+			if world != null
+				pModelLoadableWorlds.setSelected(pModelLoadableWorlds.indexOf(world))
+			end
+		end
+	end
+	
+	/** Add scene. */
+	public func void addScene()
+		var LoadableWorld world = getLoadableWorld()
+		if world == null
+			return
+		end
+		
+		WindowDialog.input(getWindow(), "Add Scene", "Name:", null, "Scene",\
+		null, null, WindowDialog.BlockResultListener.new(block String result
+			if result != null
+				if result.empty()
+					WindowDialog.message(getWindow(), "Add Scene", "Scene name can not be empty.", null, null, null)
+					
+				elif pProject.getScenes().hasNamed(result)
+					WindowDialog.message(getWindow(), "Add Scene", "Scene with this name exists already.", null, null, null)
+					
+				else
+					var Scene scene = Scene.new(result)
+					scene.setPathWorld(world.getPath())
+					pProject.getScenes().add(scene)
+					GameApp.getGameApp().setScene(scene)
+				end
+			end
+		end))
+	end
+	
+	/** Duplicate scene. */
+	public func void duplicateScene()
+		if pScene == null
+			return
+		end
+		
+		WindowDialog.input(getWindow(), "Duplicate Scene", "Name:", null, pScene.getName(),\
+		null, null, WindowDialog.BlockResultListener.new(block String result
+			if result != null
+				if result.empty()
+					WindowDialog.message(getWindow(), "Duplicate Scene", "Scene name can not be empty.", null, null, null)
+					
+				elif pProject.getScenes().hasNamed(result)
+					WindowDialog.message(getWindow(), "Duplicate Scene", "Scene with this name exists already.", null, null, null)
+					
+				else
+					var Scene scene = Scene.new(result, pScene)
+					pProject.getScenes().add(scene)
+					GameApp.getGameApp().setScene(scene)
+				end
+			end
+		end))
+	end
+	
+	/** Remove scene. */
+	public func void removeScene()
+		if pScene == null
+			return
+		end
+		
+		if pProject.getScenes().getCount() == 1
+			WindowDialog.message(getWindow(), "Remove Scene", "You can not remove the last scene.", null, null, null)
+			return
+		end
+		
+		WindowDialog.question(getWindow(), "Remove Scene", "Remove Scene '"\
+			+ pScene.getName() + "'?", null, Array.newWith(\
+				WindowDialog.ButtonConfiguration.new("Remove", true),\
+				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					var Scene scene = pScene
+					var int index = pModelScenes.indexOf(scene)
+					if index < pModelScenes.getCount() - 1
+						index++
+						
+					else
+						index--
+					end
+					GameApp.getGameApp().setScene(pModelScenes.getAt(index) cast Scene)
+					pProject.getScenes().remove(scene)
+				end
+		end))
+	end
+	
+	/** Rename scene. */
+	public func void renameScene()
+		if pScene == null
+			return
+		end
+		
+		WindowDialog.input(getWindow(), "Rename Scene", "Name:", null, pScene.getName(),\
+		null, null, WindowDialog.BlockResultListener.new(block String result
+			if result != null and not result.equals(pScene.getName())
+				if result.empty()
+					WindowDialog.message(getWindow(), "Rename Scene", "Scene name can not be empty.", null, null, null)
+					
+				elif pProject.getScenes().hasNamed(result)
+					WindowDialog.message(getWindow(), "Rename Scene", "Scene with this name exists already.", null, null, null)
+					
+				else
+					pScene.setName(result)
+				end
+			end
+		end))
 	end
 	
 	
@@ -600,7 +741,14 @@ class WMPanelProject extends CollapsibleGroup
 			return
 		end
 		
-		pScene.saveWorld(app.getWindowGameWorld().getGameWorld())
+		// dispose game world. this removes scene objects and clears held file usages
+		app.getWorldSpawnCharacter().setGameWorld(null)
+		app.getWindowGameWorld().setGameWorld(null)
+		
+		// drop saved state
+		pScene.dropSaveState()
+		
+		// set new path and load world
 		pScene.setPathWorld(world.getPath())
 		pScene.loadWorld()
 	end
@@ -768,6 +916,34 @@ class WMPanelProject extends CollapsibleGroup
 					ECBSelectable.getInstanceIn(element).selectElement()
 				end
 		end))
+	end
+	
+	/** Duplicate object. */
+	public func void duplicateObject()
+		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+		if pObject == null or pScene == null or gameWorld == null
+			return
+		end
+		
+		var StubElement stub = StubElement.new(pObject.getElement().getStub())
+		var BehaviorElementClass eclass = stub.getClass() cast BehaviorElementClass
+		var ECBSceneObject sceneObject = ECBSceneObject.getBehaviorIn(eclass)
+		
+		if eclass.getPersistable()
+			stub.setID(GameApp.getGameApp().getIDGenerator().nextID())
+		end
+		
+		var DMatrix matrix = pObject.getElement().getElementMatrix() * DMatrix.newTranslation(1, 0, 1)
+		stub.setPosition(matrix.getPosition())
+		stub.setRotation(matrix.getEulerAngles().toVector())
+		
+		if not sceneObject.runSceneObjectStubInitializers(stub, getWindow())
+			return
+		end
+		
+		var BehaviorElement element = stub.createElement() cast BehaviorElement
+		gameWorld.addElement(element)
+		ECBSelectable.getInstanceIn(element).selectElement()
 	end
 	
 	/** Remove object. */

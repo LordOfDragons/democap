@@ -317,10 +317,25 @@ class GameApp extends BaseGameApp
 		pPlaybackScene.stop()
 		
 		if pScene != null
-			cancelLoadGameWorld()
-			if getWindowGameWorld().getGameWorld() != null
-				pScene.saveWorld(getWindowGameWorld().getGameWorld())
+			pScene.getFileUsage().setLocked(true)
+			
+			try
+				cancelLoadGameWorld()
+				
+				if getWindowGameWorld().getGameWorld() != null
+					pScene.saveWorld(getWindowGameWorld().getGameWorld())
+					pWorldSpawnCharacter.setGameWorld(null)
+					getWindowGameWorld().setGameWorld(null)
+				end
+				
+			catch Exception e
+				pWorldSpawnCharacter.setGameWorld(null)
+				getWindowGameWorld().setGameWorld(null)
+				pScene.getFileUsage().setLocked(false)
+				throw
 			end
+			
+			pScene.getFileUsage().setLocked(false)
 		end
 		
 		pScene = scene

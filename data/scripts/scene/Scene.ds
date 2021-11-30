@@ -52,10 +52,10 @@ class Scene
 	
 	/** Create copy of actor. */
 	public func new(String name, Scene scene)
-		setName(name)
 		pPathWorld = scene.pPathWorld
 		pFileUsage = FileUsageManager.new(scene.pFileUsage)
 		pListeners = Array.new()
+		setName(name)
 		
 		if scene.pSaveState != null
 			pSaveState = MemoryFile.new(scene.pSaveState)
@@ -81,6 +81,8 @@ class Scene
 			
 			pName = reader.readString8()
 			pPathWorld = reader.readString8()
+			
+			pFileUsage.readFromFile(reader)
 			
 			reader.readUShort() // TODO custom object classes
 			
@@ -119,14 +121,18 @@ class Scene
 	
 	/** Set name. */
 	public func void setName(String name)
-		if name == null
-			throw ENullPointer.new("name")
+		if name.equals(pName)
+			return
 		end
 		if name.empty()
 			throw EInvalidParam.new("name is empty string")
 		end
 		
 		pName = name
+		
+		pListeners.forEach(block SceneListener each
+			each.sceneNameChanged(this)
+		end)
 	end
 	
 	/** Path to world file. */
@@ -194,6 +200,11 @@ class Scene
 		
 		// store save state
 		pSaveState = saveState
+	end
+	
+	/** Drop save state. */
+	public func void dropSaveState()
+		pSaveState = null
 	end
 	
 	
@@ -266,6 +277,8 @@ class Scene
 		
 		writer.writeString8(pName)
 		writer.writeString8(pPathWorld)
+		
+		pFileUsage.writeToFile(writer)
 		
 		writer.writeUShort(0) // TODO custom object classes
 		
