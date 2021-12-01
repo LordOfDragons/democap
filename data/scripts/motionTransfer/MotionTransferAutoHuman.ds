@@ -734,16 +734,21 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	protected func void assignSlots(CharacterConfiguration config)
 		var String slotWaist = firstSlotWithType(config, CharacterTrackerSlot.Type.waist)
 		
+		var String slotHead = firstSlotAttachedWithType(config, CharacterTrackerSlot.Type.headTracker)
+		if slotHead.empty()
+			slotHead = firstSlotWithType(config, CharacterTrackerSlot.Type.headHmd)
+		end
+		
 		pTransferWaist.getTracker().setSlot(slotWaist)
 		
 		/*
-		pTransferSpineHead.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.headHmd))
+		pTransferSpineHead.getTipTracker().setSlot(slotHead)
 		pTransferSpineHead.getBaseTracker().setSlot(slotWaist)
 		*/
 		
-		pTransferHead.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.headHmd))
+		pTransferHead.getTipTracker().setSlot(slotHead)
 		
-		pTransferSpine.getTargetTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.headHmd))
+		pTransferSpine.getTargetTracker().setSlot(slotHead)
 		pTransferSpine.getBaseTracker().setSlot(slotWaist)
 		
 		pTransferArmRight.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightHandController))
@@ -766,6 +771,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	/** First slot name matching type or empty string. */
 	protected func String firstSlotWithType(CharacterConfiguration config, CharacterTrackerSlot.Type type)
 		var CharacterTrackerSlot slot = config.getTrackerSlots().firstWithType(type)
+		return slot != null if slot.getName() else ""
+	end
+	
+	/** First slot name with attached device matching type or empty string. */
+	protected func String firstSlotAttachedWithType(CharacterConfiguration config, CharacterTrackerSlot.Type type)
+		var CharacterTrackerSlot slot = config.getTrackerSlots().firstAttachedWithType(type)
 		return slot != null if slot.getName() else ""
 	end
 end
