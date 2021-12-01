@@ -50,6 +50,9 @@ class PlaybackScene
 		/** Playtime changed. */
 		func void playtimeChanged(PlaybackScene playbackScene, float playtime)
 		
+		/** Speed changed. */
+		func void speedChanged(PlaybackScene playbackScene, float speed)
+		
 		/** Maximum playtime. */
 		func float maxPlaytime(PlaybackScene playbackScene)
 	end
@@ -80,6 +83,10 @@ class PlaybackScene
 		public func void playtimeChanged(PlaybackScene playbackScene, float playtime)
 		end
 		
+		/** Speed changed. */
+		public func void speedChanged(PlaybackScene playbackScene, float speed)
+		end
+		
 		/** Maximum playtime. */
 		public func float maxPlaytime(PlaybackScene playbackScene)
 			return 0
@@ -100,6 +107,7 @@ class PlaybackScene
 	private var State pState
 	private var float pSpeed
 	private var Array pListeners
+	private var bool pBackwards
 	
 	
 	
@@ -110,6 +118,7 @@ class PlaybackScene
 		pTime = 0
 		pState = State.stopped
 		pSpeed = 1
+		pBackwards = false
 	end
 	
 	
@@ -124,6 +133,15 @@ class PlaybackScene
 		return pTime
 	end
 	
+	/** Set current playback time in seconds. */
+	public func void setTime(float time)
+		pTime = DEMath.clamp(time, 0.0, pPlaytime)
+		
+		pListeners.forEach(block Listener each
+			each.timeChanged(this, time)
+		end)
+	end
+	
 	/** Playback state. */
 	public func State getState()
 		return pState
@@ -136,7 +154,21 @@ class PlaybackScene
 	
 	/** Set play speed. */
 	public func void setSpeed(float speed)
-		pSpeed = DEMath.clamp(speed, 0.1, 10.0)
+		var float speed = DEMath.clamp(speed, 0.05, 20.0)
+		if DEMath.fabs(speed - pSpeed) < 0.01
+			return
+		end
+		
+		pSpeed = speed
+		
+		pListeners.forEach(block Listener each
+			each.speedChanged(this, speed)
+		end)
+	end
+	
+	/** Play backwards. */
+	public func bool getBackwards()
+		return pBackwards
 	end
 	
 	
@@ -157,11 +189,12 @@ class PlaybackScene
 	end
 	
 	/** Start playback if stopped or paused. */
-	public func void play()
-		if pState == State.playing
+	public func void play(bool backwards)
+		if pState == State.playing and backwards == pBackwards
 			return
 		end
 		
+		pBackwards = backwards
 		pState = State.playing
 		
 		pListeners.forEach(block Listener each
@@ -203,11 +236,7 @@ class PlaybackScene
 			return
 		end
 		
-		pTime = 0
-		
-		pListeners.forEach(block Listener each
-			each.timeChanged(this, 0)
-		end)
+		setTime( 0 )
 	end
 	
 	/** Forward to end. */
@@ -216,14 +245,10 @@ class PlaybackScene
 			return
 		end
 		
-		pTime = pPlaytime
-		
-		pListeners.forEach(block Listener each
-			each.timeChanged(this, pPlaytime)
-		end)
+		setTime(pPlaytime)
 		
 		if pState == State.playing
-			stop()
+			pause()
 		end
 	end
 	
@@ -247,16 +272,19 @@ class PlaybackScene
 			return
 		end
 		
-		var float time = pTime + elapsed * pSpeed
-		
-		pTime = DEMath.min(time, pPlaytime)
-		
-		pListeners.forEach(block Listener each
-			each.timeChanged(this, pTime)
-		end)
-		
-		if time >= pPlaytime and pState == State.playing
-			pause()
+		if pBackwards
+			var float time = pTime - elapsed * pSpeed
+			setTime(time)
+			if time <= 0 and pState == State.playing
+				pause()
+			end
+			
+		else
+			var float time = pTime + elapsed * pSpeed
+			setTime(time)
+			if time >= pPlaytime and pState == State.playing
+				pause()
+			end
 		end
 	end
 	

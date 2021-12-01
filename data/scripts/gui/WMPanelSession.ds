@@ -64,12 +64,62 @@ class WMPanelSession extends CollapsibleGroup
 		public func void playtimeChanged(PlaybackScene playbackScene, float playtime)
 			pPanel.updatePlaybackPosition()
 		end
+		
+		public func void speedChanged(PlaybackScene playbackScene, float speed)
+			pPanel.updatePlaybackSpeed()
+		end
+	end
+	
+	/** Click and drag in playback bar. */
+	class ClickAndDragPlaybackBar extends DefaultMouseListener
+		protected var bool pDragging
+		protected var Widget pWidget
+		protected var WMPanelSession pPanel
+		
+		public func new(WMPanelSession panel, Widget widget)
+			pPanel = panel
+			pWidget = widget
+		end
+		
+		public func float positionFromMouse(int mouse)
+			var int x = mouse - pWidget.getPadding().getLeft()
+			var int width = pWidget.getWidth() - pWidget.getPadding().getWidth()
+			var float percentage = (x cast float) / (width cast float)
+			return GameApp.getGameApp().getPlaybackScene().getPlaytime() * percentage
+		end
+		
+		public func void onButtonPress( MouseEvent event )
+			if not pDragging and event.getButton() == InputEventMouseButton.left
+				pDragging = true
+				pWidget.captureMouse()
+				pPanel.playbackPause()
+				GameApp.getGameApp().getPlaybackScene().setTime(\
+					positionFromMouse(event.getPosition().getX()))
+			end
+		end
+		
+		public func void onButtonRelease(MouseEvent event)
+			if pDragging and event.getButton() == InputEventMouseButton.left
+				pDragging = false
+				pWidget.releaseMouse()
+			end
+		end
+		
+		public func void onMouseMove(MouseEvent event)
+			if pDragging
+				GameApp.getGameApp().getPlaybackScene().setTime(\
+					positionFromMouse(event.getPosition().getX()))
+			end
+		end
 	end
 	
 	
 	protected var bool pInVR
 	protected var DefaultRangeModel pModelPlaybackPosition
+	protected var DefaultListModel pModelListPlaybackSpeed
+	protected var DefaultTextModel pModelTextPlaybackSpeed
 	protected var Button pButtonPlaybackPlay
+	protected var Button pButtonPlaybackPlayBackwards
 	protected var Button pButtonPlaybackPause
 	protected var Button pButtonPlaybackStop
 	protected var PlaybackChanged pPlaybackChanged
@@ -81,6 +131,12 @@ class WMPanelSession extends CollapsibleGroup
 		pInVR = inVR
 		
 		pModelPlaybackPosition = DefaultRangeModel.new(0, 1000, 100, 0, 1)
+		
+		pModelListPlaybackSpeed = DefaultListModel.new()
+		pModelListPlaybackSpeed.setAutoSelect(false)
+		pModelListPlaybackSpeed.setContent(Array.newWith(6, 12, 25, 50, 100, 200, 400, 800, 1600))
+		
+		pModelTextPlaybackSpeed = DefaultTextModel.new("100")
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
@@ -104,9 +160,12 @@ class WMPanelSession extends CollapsibleGroup
 		end
 		
 		pButtonPlaybackPlay = null
+		pButtonPlaybackPlayBackwards = null
 		pButtonPlaybackPause = null
 		pButtonPlaybackStop = null
 		pModelPlaybackPosition = null
+		pModelListPlaybackSpeed = null
+		pModelTextPlaybackSpeed = null
 		super.dispose()
 	end
 	
@@ -205,8 +264,13 @@ class WMPanelSession extends CollapsibleGroup
 	
 	/** Update playback state. */
 	public func void updatePlaybackState()
-		var PlaybackScene.State state = GameApp.getGameApp().getPlaybackScene().getState()
-		pButtonPlaybackPlay.setEnabled(state != PlaybackScene.State.playing)
+		var PlaybackScene playback = GameApp.getGameApp().getPlaybackScene()
+		var PlaybackScene.State state = playback.getState()
+		
+		pButtonPlaybackPlay.setEnabled(state != PlaybackScene.State.playing\
+			or playback.getBackwards())
+		pButtonPlaybackPlayBackwards.setEnabled(state != PlaybackScene.State.playing\
+			or not playback.getBackwards())
 		pButtonPlaybackPause.setEnabled(state == PlaybackScene.State.playing)
 		pButtonPlaybackStop.setEnabled(state != PlaybackScene.State.stopped)
 	end
@@ -224,9 +288,14 @@ class WMPanelSession extends CollapsibleGroup
 		end
 	end
 	
+	/** Update playback speed. */
+	public func void updatePlaybackSpeed()
+		pModelTextPlaybackSpeed.setText(((GameApp.getGameApp().getPlaybackScene().getSpeed() * 100 + 0.5) cast int).toString())
+	end
+	
 	/** Start playback. */
-	public func void playbackStart()
-		GameApp.getGameApp().getPlaybackScene().play()
+	public func void playbackStart(bool backwards)
+		GameApp.getGameApp().getPlaybackScene().play(backwards)
 	end
 	
 	/** Pause playback. */
@@ -253,6 +322,7 @@ class WMPanelSession extends CollapsibleGroup
 	
 	/** Create panel content. */
 	protected func void createContent(Panel content)
+		var ComboBox comboBox
 		var CheckBox checkBox
 		var Button button
 		
@@ -304,45 +374,63 @@ class WMPanelSession extends CollapsibleGroup
 		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
 			var ProgressBar progress = ProgressBar.new(Orientation.horizontal, pModelPlaybackPosition)
 			progress.setDesignerSelector("ProgressBar.PlaybackTime")
-			//progress.addMouseListener( ClickAndDragPlayBar.new( progress ) )
+			progress.addMouseListener(ClickAndDragPlaybackBar.new(this, progress))
 			p.addWidget(progress)
 		end))
 		
-		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
-			button = Button.new(" ", BlockActionListener.new(block ActionEvent event
-				playbackRewind()
+		content.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.first), block Panel p
+			p.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p2
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					playbackRewind()
+				end))
+				button.setDesignerSelector("Button.PlaybackRewind")
+				button.setToolTip("Rewind to start")
+				p2.addWidget(button)
+				
+				pButtonPlaybackPlayBackwards = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					playbackStart(true)
+				end))
+				pButtonPlaybackPlayBackwards.setDesignerSelector("Button.PlaybackPlayBackwards")
+				pButtonPlaybackPlayBackwards.setToolTip("Start playing backwards")
+				p2.addWidget(pButtonPlaybackPlayBackwards)
+				
+				pButtonPlaybackPlay = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					playbackStart(false)
+				end))
+				pButtonPlaybackPlay.setDesignerSelector("Button.PlaybackPlay")
+				pButtonPlaybackPlay.setToolTip("Start playing")
+				p2.addWidget(pButtonPlaybackPlay)
+				
+				pButtonPlaybackPause = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					playbackPause()
+				end))
+				pButtonPlaybackPause.setDesignerSelector("Button.PlaybackPause")
+				pButtonPlaybackPause.setToolTip("Pause/Resume playback")
+				p2.addWidget(pButtonPlaybackPause)
+				
+				pButtonPlaybackStop = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					playbackStop()
+				end))
+				pButtonPlaybackStop.setDesignerSelector("Button.PlaybackStop")
+				pButtonPlaybackStop.setToolTip("Stop playback and rewind to start")
+				p2.addWidget(pButtonPlaybackStop)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					playbackForwardEnd()
+				end))
+				button.setDesignerSelector("Button.PlaybackForwardEnd")
+				button.setToolTip("Fast forward to end of playback")
+				p2.addWidget(button)
 			end))
-			button.setDesignerSelector("Button.PlaybackRewind")
-			button.setToolTip("Rewind to start")
-			p.addWidget(button)
 			
-			pButtonPlaybackPlay = Button.new(" ", BlockActionListener.new(block ActionEvent event
-				playbackStart()
+			var DefaultComboBoxEditor editor = DefaultComboBoxEditor.new(pModelTextPlaybackSpeed, 2)
+			editor.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
+			comboBox = ComboBox.new(pModelListPlaybackSpeed, editor)
+			comboBox.setToolTip("Playback speed in percentage (100 = normal speed)")
+			p.addWidget(comboBox)
+			editor.addTextActionListener(BlockActionListener.new(block ActionEvent event
+				GameApp.getGameApp().getPlaybackScene().setSpeed(0.01 * pModelTextPlaybackSpeed.getText().toInt())
 			end))
-			pButtonPlaybackPlay.setDesignerSelector("Button.PlaybackPlay")
-			pButtonPlaybackPlay.setToolTip("Start playing back")
-			p.addWidget(pButtonPlaybackPlay)
-			
-			pButtonPlaybackPause = Button.new(" ", BlockActionListener.new(block ActionEvent event
-				playbackPause()
-			end))
-			pButtonPlaybackPause.setDesignerSelector("Button.PlaybackPause")
-			pButtonPlaybackPause.setToolTip("Pause/Resume playback")
-			p.addWidget(pButtonPlaybackPause)
-			
-			pButtonPlaybackStop = Button.new(" ", BlockActionListener.new(block ActionEvent event
-				playbackStop()
-			end))
-			pButtonPlaybackStop.setDesignerSelector("Button.PlaybackStop")
-			pButtonPlaybackStop.setToolTip("Stop playback and rewind to start")
-			p.addWidget(pButtonPlaybackStop)
-			
-			button = Button.new(" ", BlockActionListener.new(block ActionEvent event
-				playbackForwardEnd()
-			end))
-			button.setDesignerSelector("Button.PlaybackForwardEnd")
-			button.setToolTip("Fast forward to end of playback")
-			p.addWidget(button)
 		end))
 	end
 end

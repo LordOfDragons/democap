@@ -80,6 +80,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var Component pComponent
 		private var Array pListeners
 		private var ECBCapturedAnimations.Instance pCapturedAnimations
+		private var DVector pRestorePosition
+		private var Quaternion pRestoreOrientation
 		
 		
 		
@@ -179,6 +181,9 @@ class ECBRecordAnimation extends DefaultECBehavior
 						pCharacterAnimation.clear()
 						GameApp.getGameApp().getProject().save()
 					end
+					
+					pRestorePosition = getElement().getPosition()
+					pRestoreOrientation = getElement().getOrientation()
 				end
 			end
 			
@@ -219,7 +224,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				each.startRecording(this)
 			end)
 			
-			GameApp.getGameApp().getPlaybackScene().play()
+			GameApp.getGameApp().getPlaybackScene().play(false)
 		end
 		
 		/** Stop recording animation. */
@@ -249,12 +254,23 @@ class ECBRecordAnimation extends DefaultECBehavior
 					end
 				end
 				
+				if pRestorePosition != null
+					getElement().setGeometry(pRestorePosition, pRestoreOrientation)
+					pRestorePosition = null
+					pRestoreOrientation = null
+				end
+				
 				pRecordAnimation = null
 				pCharacterAnimation = null
 				pCapturedAnimations = null
 				
 			elif pIsPreparing
 				pIsPreparing = false
+				pRecordAnimation = null
+				pCharacterAnimation = null
+				pCapturedAnimations = null
+				pRestorePosition = null
+				pRestoreOrientation = null
 				
 			else
 				return
@@ -300,8 +316,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pRecordTime += elapsed
 			end
 			pIncrementTime = true
-			
-			var Vector position, rotation
 			
 			pComponent.updateBones()
 			

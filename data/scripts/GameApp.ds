@@ -346,7 +346,7 @@ class GameApp extends BaseGameApp
 		pScene = scene
 		
 		if scene != null
-			scene.loadWorld()
+			scene.loadWorld(pProject)
 		end
 		
 		pListeners.forEach(block GameListener each
@@ -601,8 +601,8 @@ class GameApp extends BaseGameApp
 	/** Add commands. */
 	protected func void createAndAddCommands()
 		var CommandManager commands = getCommandManager()
-// 		CommandsBAAMovement.addCommands(pCommandManager, pPlayerControlledActor)
-// 		CommandsBAAInteract.addCommands(pCommandManager, pPlayerControlledActor)
+		CommandsBAAMovement.addCommands(commands, getPlayerControlledActor())
+// 		CommandsBAAInteract.addCommands(commands, getPlayerControlledActor())
 		CommandsAAControllerInput.addCommands(commands, getPlayerControlledActor())
 	end
 	
@@ -611,6 +611,13 @@ class GameApp extends BaseGameApp
 	 */
 	public func DefaultBindingHelper defaultBindings()
 		var DefaultBindingHelper helper = super.defaultBindings()
+		
+		if helper.hasVRHand(true)
+			helper.vrHandBindStick(true, InputDeviceAxisType.stick, 0, "analogLookLR", "")
+		end
+		if helper.hasVRHand(false)
+			helper.vrHandBindStick(false, InputDeviceAxisType.stick, 0, "analogMoveLR", "analogMoveFB")
+		end
 		
 		CommandsAAControllerInput.addDefaultBindings(helper)
 		
