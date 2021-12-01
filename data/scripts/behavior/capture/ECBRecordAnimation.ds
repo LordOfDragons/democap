@@ -80,8 +80,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var Component pComponent
 		private var Array pListeners
 		private var ECBCapturedAnimations.Instance pCapturedAnimations
-		private var DVector pRestorePosition
-		private var Quaternion pRestoreOrientation
 		
 		
 		
@@ -161,7 +159,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			var ECBSelectable.Instance selection = app.getSelectionTracker().getElement()
 			if selection != null
-				pCapturedAnimations = ECBCapturedAnimations.getInstanceIn(selection.getElement())
+				var BehaviorElement selectionElement = selection.getElement()
+				pCapturedAnimations = ECBCapturedAnimations.getInstanceIn(selectionElement)
 				
 				if pCapturedAnimations != null
 					if not pCapturedAnimations.getCharacterProfile().equals(\
@@ -181,9 +180,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 						pCharacterAnimation.clear()
 						GameApp.getGameApp().getProject().save()
 					end
-					
-					pRestorePosition = getElement().getPosition()
-					pRestoreOrientation = getElement().getOrientation()
 				end
 			end
 			
@@ -235,29 +231,25 @@ class ECBRecordAnimation extends DefaultECBehavior
 				
 				if pRecordAnimation != null
 					pRecordAnimation.createAnimation()
-					pRecordAnimation.getAnimation().save(pRecordAnimation.getPath())
-					writeCaptureInfoFile()
 					
 					if pCharacterAnimation != null
 						var Project project = GameApp.getGameApp().getProject()
 						var File directory = GameApp.getGameApp().getProject().getDataDirectory()
 						var String path = project.nextAnimationPath("deanim")
 						
-						FileWriter.new((directory + path).getPath()).writeData(\
-							FileReader.new(pRecordAnimation.getPath()))
+						pRecordAnimation.getAnimation().save((directory + path).getPath())
+						writeCaptureInfoFile()
 						
 						pCharacterAnimation.setPath(path)
 						pCharacterAnimation.setAnimation(pRecordAnimation.getAnimation())
 						GameApp.getGameApp().getProject().save()
 						
 						pCapturedAnimations.getAnimations().notifyAnimationChanged(pCharacterAnimation)
+						
+					else
+						pRecordAnimation.getAnimation().save(pRecordAnimation.getPath())
+						writeCaptureInfoFile()
 					end
-				end
-				
-				if pRestorePosition != null
-					getElement().setGeometry(pRestorePosition, pRestoreOrientation)
-					pRestorePosition = null
-					pRestoreOrientation = null
 				end
 				
 				pRecordAnimation = null
@@ -269,8 +261,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pRecordAnimation = null
 				pCharacterAnimation = null
 				pCapturedAnimations = null
-				pRestorePosition = null
-				pRestoreOrientation = null
 				
 			else
 				return

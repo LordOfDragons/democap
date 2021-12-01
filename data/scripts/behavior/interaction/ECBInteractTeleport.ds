@@ -1,0 +1,93 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding support to teleport actor character to element position and orientation.
+ * Teleporting is done on stopInteract() to avoid problems.
+ */
+class ECBInteractTeleport extends ECBInteractHandle
+	/** Behavior instance. */
+	class Instance extends ECBInteractHandle.Instance
+		protected var ECBInteractTeleport pECBehavior
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBInteractTeleport ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+		end
+		
+		
+		
+		/** Behavior. */
+		public func ECBInteractTeleport getECBehavior()
+			return pECBehavior
+		end
+		
+		
+		
+		/** Stop interacting. */
+		public func void stopInteract()
+			var BehaviorElement element = getElement().getParent() cast BehaviorElement
+			if element == null
+				return
+			end
+			
+			var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+			if actor == null
+				return
+			end
+			
+			// teleport actor element
+			actor.setGeometry(element.getPosition(), element.getOrientation())
+			
+			// if physics attachments are used init collider bone states from component.
+			// this is required since collider bone states are in world space and do not
+			// move if the actor moves due to teleportation
+			var Collider collider = actor.getCollider().getCollider()
+			if collider.getResponseType() == CollisionResponse.dynamic\
+			and collider castable ColliderComponent
+				(collider cast ColliderComponent).copyStatesFromComponent()
+			end
+		end
+	end
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass) super(eclass)
+		eclass.addBehavior(this)
+	end
+	
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
