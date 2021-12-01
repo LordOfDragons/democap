@@ -180,6 +180,23 @@ class ECBRecordAnimation extends DefaultECBehavior
 						pCharacterAnimation.clear()
 						GameApp.getGameApp().getProject().save()
 					end
+					
+					// ensure actor element lines up with selection element. if this is not
+					// the case the captured animation would be played back at the wrong
+					// position. we could calculate the transformation matrix from actor
+					// element in selection element coordinate system but this hides the
+					// problem and causes troubles later on while using the animation
+					var BehaviorElement element = getElement()
+					element.setGeometry(selectionElement.getPosition(), selectionElement.getOrientation())
+					
+					// if physics attachments are used init collider bone states from component.
+					// this is required since collider bone states are in world space and do not
+					// move if the actor moves due to teleportation
+					var Collider collider = ECBehaviorCollider.getInstanceIn(element).getCollider()
+					if collider.getResponseType() == CollisionResponse.dynamic\
+					and collider castable ColliderComponent
+						(collider cast ColliderComponent).copyStatesFromComponent()
+					end
 				end
 			end
 			
@@ -225,6 +242,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 		
 		/** Stop recording animation. */
 		public func void stopRecording()
+			var GameApp app = GameApp.getGameApp()
+			
 			if pIsRecording
 				pIsRecording = false
 				pComponent = null
@@ -233,22 +252,22 @@ class ECBRecordAnimation extends DefaultECBehavior
 					pRecordAnimation.createAnimation()
 					
 					if pCharacterAnimation != null
-						var Project project = GameApp.getGameApp().getProject()
-						var File directory = GameApp.getGameApp().getProject().getDataDirectory()
-						var String path = project.nextAnimationPath("deanim")
+						var Project project = app.getProject()
+						var File directory = app.getProject().getDataDirectory()
+						var Project.AnimationPath animPath = project.nextAnimationPath("deanim")
 						
-						pRecordAnimation.getAnimation().save((directory + path).getPath())
-						writeCaptureInfoFile()
+						pRecordAnimation.getAnimation().save((directory + animPath.getPath()).getPath())
+						writeCaptureInfoFile((directory + animPath.getPathMeta()).getPath(), animPath.getPath())
 						
-						pCharacterAnimation.setPath(path)
+						pCharacterAnimation.setPath(animPath.getPath())
 						pCharacterAnimation.setAnimation(pRecordAnimation.getAnimation())
-						GameApp.getGameApp().getProject().save()
+						project.save()
 						
 						pCapturedAnimations.getAnimations().notifyAnimationChanged(pCharacterAnimation)
 						
 					else
 						pRecordAnimation.getAnimation().save(pRecordAnimation.getPath())
-						writeCaptureInfoFile()
+						writeCaptureInfoFile(pRecordAnimation.getPathMeta(), pRecordAnimation.getPath())
 					end
 				end
 				
@@ -270,7 +289,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				each.stopRecording(this)
 			end)
 			
-			var PlaybackScene ps = GameApp.getGameApp().getPlaybackScene()
+			var PlaybackScene ps = app.getPlaybackScene()
 			ps.stop()
 			ps.updatePlaytime()
 		end
@@ -317,7 +336,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		end
 		
 		/** Write capture information file. */
-		public func void writeCaptureInfoFile()
+		public func void writeCaptureInfoFile(String path, String animPath)
 			var GameApp app = GameApp.getGameApp()
 			var WorldSpawnCharacter wsc = app.getWorldSpawnCharacter()
 			var EasyXML document = EasyXML.new()
@@ -366,7 +385,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			var String moveName = animation.getMoveName(0)
 			
 			var EasyXMLElement tagAnimation = root.addTag("capturedAnimation")
-			tagAnimation.addDataTag("pathAnimation", pRecordAnimation.getPath())
+			tagAnimation.addDataTag("pathAnimation", animPath)
 			tagAnimation.addDataTag("moveName", moveName)
 			tagAnimation.addDataTag("playtime", animation.getMovePlaytime(moveName))
 			tagAnimation.addDataTag("frameRate", animation.getMoveFPS(moveName))
@@ -378,8 +397,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end)
 			
 			// write to file
-			document.writeToFile(FileWriter.new(File.new(app.getPathCaptureAnimations(),\
-				timestamp.format("%Y-%m-%d_%H-%M-%S") + ".demca").getPath()), false)
+			document.writeToFile(FileWriter.new(path), false)
 		end
 	end
 	

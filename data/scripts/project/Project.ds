@@ -38,6 +38,33 @@ class Project
 	
 	
 	
+	/** Animation path. */
+	class AnimationPath
+		private var UniqueID pID
+		private var String pPath
+		private var String pPathMeta
+		
+		public func new(UniqueID id, String path, String pathMeta)
+			pID = id
+			pPath = path
+			pPathMeta = pathMeta
+		end
+		
+		public func UniqueID getID()
+			return pID
+		end
+		
+		public func String getPath()
+			return pPath
+		end
+		
+		public func String getPathMeta()
+			return pPathMeta
+		end
+	end
+	
+	
+	
 	private var String pPath
 	private var File pDataDirectory
 	private var FileUsageManager pFileUsage
@@ -116,8 +143,10 @@ class Project
 	end
 	
 	/** Generate animation path. */
-	public func String nextAnimationPath(String extension)
-		return animationDirectory + "/a" + pAnimationIDGenerator.nextID().toHexString() + "." + extension
+	public func AnimationPath nextAnimationPath(String extension)
+		var UniqueID id = pAnimationIDGenerator.nextID()
+		var String base = animationDirectory + "/a" + id.toHexString() + "."
+		return AnimationPath.new(id, base + extension, base + "demca")
 	end
 	
 	/** Get file usage. */
