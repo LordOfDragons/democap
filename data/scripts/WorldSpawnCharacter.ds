@@ -121,8 +121,6 @@ class WorldSpawnCharacter
 	/** Create. */
 	public func new()
 		pUpdateCharacter = UpdateCharacter.new(this)
-		pLastActorPosition = DVector.new()
-		pLastActorOrientation = Quaternion.new()
 		pMoCapActorClass = GameApp.getGameApp().getElementClassList().getNamed("MoCapActor")
 		pListeners = Array.new()
 	end
@@ -172,6 +170,8 @@ class WorldSpawnCharacter
 		// start with a fresh copy
 		disposeActor()
 		pSpawnPoint = null
+		pLastActorPosition = null
+		pLastActorOrientation = null
 		
 		// set game world
 		pGameWorld = gameWorld
@@ -372,11 +372,24 @@ class WorldSpawnCharacter
 			stub = StubElement.new(pMoCapActorClass) // no generated ID on purpose
 		end
 		
-		stub.setPosition(pLastActorPosition)
-		stub.setRotation(pLastActorOrientation.getEulerAngles())
-		
 		pActor = stub.createElement() cast BaseVRActor
 		pSpawnPoint.spawn(pGameWorld, pActor)
+		
+		if pLastActorPosition != null
+			pActor.setGeometry(pLastActorPosition, pLastActorOrientation)
+			
+			// if physics attachments are used init collider bone states from component.
+			// this is required since collider bone states are in world space and do not
+			// move if the actor moves due to teleportation
+			var Collider collider = pActor.getCollider().getCollider()
+			if collider.getResponseType() == CollisionResponse.dynamic\
+			and collider castable ColliderComponent
+				(collider cast ColliderComponent).copyStatesFromComponent()
+			end
+			
+			pLastActorPosition = null
+			pLastActorOrientation = null
+		end
 		
 		// take control of actor
 		pActor.getPlayerControllable().takeControl()
