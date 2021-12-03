@@ -500,7 +500,8 @@ class WMPanelProject extends CollapsibleGroup
 			createContent(getPanelContent())
 		end)
 		
-		GameApp.getGameApp().getLoadableWorlds().addListener(ListenLoadableWorlds.new(this))
+		var GameApp app = GameApp.getGameApp()
+		app.getLoadableWorlds().addListener(ListenLoadableWorlds.new(this))
 		updateModelLoadableWorlds()
 		
 		pModelScenes.addListener(SelectScene.new(this))
@@ -509,8 +510,12 @@ class WMPanelProject extends CollapsibleGroup
 		pScenesChangedListener = ScenesChangedListener.new(this)
 		pSceneChangedListener = SceneChangedListener.new(this)
 		pSelectedSelectableObjectChanged = SelectedSelectableObjectChanged.new(this)
-		GameApp.getGameApp().addListener(GameChangedListener.new(this))
-		GameApp.getGameApp().getSelectionTracker().addListener(pSelectedSelectableObjectChanged)
+		
+		app.addListener(GameChangedListener.new(this))
+		app.getSelectionTracker().addListener(pSelectedSelectableObjectChanged)
+		
+		setProject(app.getProject())
+		setScene(app.getScene(), true)
 	end
 	
 	/** Dispose of widget. */
@@ -636,7 +641,7 @@ class WMPanelProject extends CollapsibleGroup
 					try
 						var Project project = Project.load(result)
 						app.setProject(project)
-						app.setScene(project.getScenes().getAt(0))
+						app.setScene(project.getScenes().getNamed(project.getPostLoadActivateScene()))
 						
 					catch Exception e
 						app.getConsole().addError("open project failed: " + result, e)
@@ -689,6 +694,10 @@ class WMPanelProject extends CollapsibleGroup
 	
 	/** Set active scene or null. */
 	public func void setScene(Scene scene)
+		setScene(scene, false)
+	end
+	
+	public func void setScene(Scene scene, bool noLoad)
 		if scene == pScene
 			return
 		end
@@ -706,7 +715,7 @@ class WMPanelProject extends CollapsibleGroup
 		selectScene()
 		updateModelObjects()
 		
-		if scene != null
+		if scene != null and not noLoad
 			var Object world = pModelLoadableWorlds.find(block LoadableWorld each
 				return each.getPath().equals(scene.getPathWorld())
 			end)

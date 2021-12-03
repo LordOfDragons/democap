@@ -70,6 +70,7 @@ class Project
 	private var FileUsageManager pFileUsage
 	private var MutableID pAnimationIDGenerator
 	private var Scenes pScenes
+	private var String pPostLoadActivateScene
 	
 	
 	
@@ -101,6 +102,7 @@ class Project
 			end
 			
 			project.pAnimationIDGenerator.readFromFile(reader)
+			project.pPostLoadActivateScene = reader.readString8()
 			
 		else
 			throw EInvalidParam.new("Unsupported scene file version")
@@ -130,6 +132,11 @@ class Project
 	/** Scenes. */
 	public func Scenes getScenes()
 		return pScenes
+	end
+	
+	/** Post load active scene for loading use only. */
+	public func String getPostLoadActivateScene()
+		return pPostLoadActivateScene
 	end
 	
 	/** Data directory. */
@@ -173,6 +180,8 @@ class Project
 		end)
 		
 		pAnimationIDGenerator.writeToFile(writer)
+		
+		writer.writeString8(GameApp.getGameApp().getScene().getName())
 		
 		FileWriter.new(pPath).writeData(safe.getReader())
 	end
