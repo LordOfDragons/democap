@@ -627,38 +627,6 @@ class CharacterConfiguration
 			var Rig rig = pProfile.getAppearance().getRig()
 			
 			if rig != null and recordAnimation != null
-				var int originBoneIndex = rig.indexOfBoneNamed(pProfile.getOriginBone())
-				var Array boneIndices = Array.new()
-				
-				recordAnimation.getBones().toArray().forEach(block String bone
-					var int index = rig.indexOfBoneNamed(bone)
-					if index != -1
-						boneIndices.add(index)
-					end
-				end)
-				
-				var bool excludeOriginBone = originBoneIndex != -1 and not boneIndices.has(originBoneIndex)
-				
-				boneIndices.forEach(block int index
-					var int parent = index
-					while parent != -1
-						parent = rig.boneGetParent(index)
-						if parent != -1
-							if parent == originBoneIndex and excludeOriginBone
-								parent = -1
-								
-							else
-								index = parent
-							end
-						end
-					end
-					
-					var String name = rig.boneGetName(index)
-					recordAnimation.addBone(name)
-					recordAnimation.addRootBone(name)
-				end)
-				
-				// add behavior
 				var Set rootBones = recordAnimation.getRootBones()
 				if rootBones.getCount() > 0
 					var Animator animator = Animator.new()
