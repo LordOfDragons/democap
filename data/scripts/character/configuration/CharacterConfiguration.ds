@@ -622,37 +622,77 @@ class CharacterConfiguration
 				end)
 			end
 			
-			// add behavior moving origin bone to calibration origin if present
-			if not pProfile.getOriginBone().empty()
-				var Animator animator = Animator.new()
-				var Vector translation = pMatrixCalibrateInv.getPosition()
-				var Vector rotation = pMatrixCalibrateInv.getEulerAngles()
+			// add behavior moving from calibrate space to playspace. for this find the unique
+			// root bones of all captured bones excluding the origin bone if present
+			var Rig rig = pProfile.getAppearance().getRig()
+			
+			if rig != null and recordAnimation != null
+				var int originBoneIndex = rig.indexOfBoneNamed(pProfile.getOriginBone())
+				var Array boneIndices = Array.new()
 				
-				var ARStateSnapshot ruleCurState = ARStateSnapshot.new()
-				ruleCurState.setUseLastState(true)
-				ruleCurState.setEnableSize(true)
-				animator.addRule(ruleCurState)
+				recordAnimation.getBones().toArray().forEach(block String bone
+					var int index = rig.indexOfBoneNamed(bone)
+					if index != -1
+						boneIndices.add(index)
+					end
+				end)
 				
-				var ARBoneTransformator ruleMove = ARBoneTransformator.new()
-				ruleMove.setEnablePosition(true)
-				ruleMove.setEnableOrientation(true)
-				ruleMove.setCoordinateFrame(ARBoneTransformatorCFrame.component)
-				ruleMove.setMinimumTranslation(translation)
-				ruleMove.setMaximumTranslation(translation)
-				ruleMove.setMinimumRotation(rotation)
-				ruleMove.setMaximumRotation(rotation)
-				ruleMove.addBone(pProfile.getOriginBone())
-				animator.addRule(ruleMove)
+				var bool excludeOriginBone = originBoneIndex != -1 and not boneIndices.has(originBoneIndex)
 				
-				animator.addBone(pProfile.getOriginBone())
+				boneIndices.forEach(block int index
+					var int parent = index
+					while parent != -1
+						parent = rig.boneGetParent(index)
+						if parent != -1
+							if parent == originBoneIndex and excludeOriginBone
+								parent = -1
+								
+							else
+								index = parent
+							end
+						end
+					end
+					
+					var String name = rig.boneGetName(index)
+					recordAnimation.addBone(name)
+					recordAnimation.addRootBone(name)
+				end)
 				
-				recordAnimation.addBone(pProfile.getOriginBone())
-				
-				ECBMoveOriginBone.new(eclass, animator)
+				// add behavior
+				var Set rootBones = recordAnimation.getRootBones()
+				if rootBones.getCount() > 0
+					var Animator animator = Animator.new()
+					var Vector translation = pMatrixCalibrateInv.getPosition()
+					var Vector rotation = pMatrixCalibrateInv.getEulerAngles()
+					
+					var ARStateSnapshot ruleCurState = ARStateSnapshot.new()
+					ruleCurState.setUseLastState(true)
+					ruleCurState.setEnableSize(true)
+					animator.addRule(ruleCurState)
+					
+					var ARBoneTransformator ruleMove = ARBoneTransformator.new()
+					ruleMove.setEnablePosition(true)
+					ruleMove.setEnableOrientation(true)
+					ruleMove.setCoordinateFrame(ARBoneTransformatorCFrame.component)
+					ruleMove.setMinimumTranslation(translation)
+					ruleMove.setMaximumTranslation(translation)
+					ruleMove.setMinimumRotation(rotation)
+					ruleMove.setMaximumRotation(rotation)
+					
+					rootBones.forEach(block String bone
+						ruleMove.addBone(bone)
+					end)
+					animator.addRule(ruleMove)
+					
+					rootBones.forEach(block String bone
+						animator.addBone(bone)
+					end)
+					
+					ECBMoveToPlayspace.new(eclass, animator)
+				end
 			end
 			
 			// add physical bones
-			var Rig rig = pProfile.getAppearance().getRig()
 			if rig != null
 				var int i, count = rig.getBoneCount()
 				for i = 0 to count

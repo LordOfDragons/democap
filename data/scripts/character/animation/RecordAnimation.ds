@@ -33,11 +33,13 @@ pin Dragengine.Utils
 class RecordAnimation
 	/** Animation builder. */
 	protected class CreateAnimation extends AnimationBuilder
+		private var String pOriginBone
 		private var Array pBones
 		private var Array pKeyframes
 		private var float pFPS
 		
-		public func new(Array bones, Array keyframes, float fps)
+		public func new(String originBone, Array bones, Array keyframes, float fps)
+			pOriginBone = originBone
 			pBones = bones
 			pKeyframes = keyframes
 			pFPS = fps
@@ -55,18 +57,33 @@ class RecordAnimation
 				addBone(each)
 			end)
 			
+			if pOriginBone != null
+				addBone(pOriginBone)
+			end
+			
 			addMove("MoCap", (pKeyframes.getAt(-1) cast RecordAnimationKeyframe).getTime(), pFPS)
-			setKeyframeListCount(0, boneCount)
+			
+			if pOriginBone != null
+				setKeyframeListCount(0, boneCount + 1)
+				
+			else
+				setKeyframeListCount(0, boneCount)
+			end
 			
 			pKeyframes.forEach(block int index, RecordAnimationKeyframe keyframe
 				addKeyframe(0, index % boneCount, keyframe.getTime(), keyframe.getPosition(), \
 					keyframe.getOrientation().getEulerAngles(), Vector.new(1, 1, 1))
 			end)
+			
+			if pOriginBone != null
+				addKeyframe(0, boneCount, 0, Vector.new(), Vector.new(), Vector.new(1, 1, 1))
+			end
 		end
 	end
 	
 	
 	
+	private var String pOriginBone
 	private var Array pBones
 	private var Array pKeyframes
 	private var int pStride
@@ -80,6 +97,7 @@ class RecordAnimation
 	
 	/** Create record animation. */
 	public func new()
+		pOriginBone = ""
 		pBones = Array.new()
 		pKeyframes = Array.new()
 		pStride = 0
@@ -93,6 +111,19 @@ class RecordAnimation
 	
 	
 	
+	/** Origin bone or empty string. */
+	public func String getOriginBone()
+		return pOriginBone
+	end
+	
+	/** Set origin bone or empty string. */
+	public func void setOriginBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pOriginBone = bone
+	end
+	
 	/** Count of bones. */
 	public func int getBoneCount()
 		return pBones.getCount()
@@ -101,6 +132,11 @@ class RecordAnimation
 	/** Bone name at index. */
 	public func String getBoneAt(int index)
 		return pBones.getAt(index) cast String
+	end
+	
+	/** Bone name is present. */
+	public func bool hasBone(String name)
+		return pBones.has(name)
 	end
 	
 	/** Add bone name. */
@@ -173,11 +209,15 @@ class RecordAnimation
 	
 	/** Create animation. */
 	public func void createAnimation()
-		if pBones.getCount() > 0 and pKeyframes.getCount() > 0
-			pAnimation = CreateAnimation.new(pBones, pKeyframes, pFPS).build("")
+		if pBones.getCount() == 0 or pKeyframes.getCount() == 0
+			return
+		end
+		
+		if pOriginBone.empty() or pBones.has(pOriginBone)
+			pAnimation = CreateAnimation.new(null, pBones, pKeyframes, pFPS).build("")
 			
 		else
-			pAnimation = null
+			pAnimation = CreateAnimation.new(pOriginBone, pBones, pKeyframes, pFPS).build("")
 		end
 	end
 	

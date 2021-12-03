@@ -71,6 +71,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var ECBRecordAnimation pECBehavior
 		private var ECBehaviorActorAnimated.Instance pActorAnimated
 		private var Array pBoneIndices
+		private var Array pRootBoneIndices
+		private var Matrix pTransformRootBones
 		private var RecordAnimation pRecordAnimation
 		private var CharacterAnimation pCharacterAnimation
 		private var bool pIsPreparing
@@ -78,6 +80,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var float pRecordTime
 		private var bool pIncrementTime
 		private var Component pComponent
+		private var Rig pRig
 		private var Array pListeners
 		private var ECBCapturedAnimations.Instance pCapturedAnimations
 		
@@ -87,7 +90,9 @@ class ECBRecordAnimation extends DefaultECBehavior
 		public func new(ECBRecordAnimation ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pBoneIndices = Array.new()
+			pRootBoneIndices = Array.new()
 			pListeners = Array.new()
+			pTransformRootBones = Matrix.new()
 			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
 			setRequiresThink(true)
 		end
@@ -128,6 +133,11 @@ class ECBRecordAnimation extends DefaultECBehavior
 			return pCharacterAnimation
 		end
 		
+		/** Captured animations or null. */
+		public func ECBCapturedAnimations.Instance getCapturedAnimations()
+			return pCapturedAnimations
+		end
+		
 		
 		
 		/** Is preparing to record. */
@@ -156,6 +166,12 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			var GameApp app = GameApp.getGameApp()
 			app.getPlaybackScene().pause()
+			
+			pRecordAnimation = RecordAnimation.new()
+			
+			prepareBoneIndices()
+			
+			pTransformRootBones = Matrix.new()
 			
 			var ECBSelectable.Instance selection = app.getSelectionTracker().getElement()
 			if selection != null
@@ -187,7 +203,10 @@ class ECBRecordAnimation extends DefaultECBehavior
 					// element in selection element coordinate system but this hides the
 					// problem and causes troubles later on while using the animation
 					var BehaviorElement element = getElement()
-					element.setGeometry(selectionElement.getPosition(), selectionElement.getOrientation())
+// 					element.setGeometry(selectionElement.getPosition(), selectionElement.getOrientation())
+					
+					pTransformRootBones = (element.getElementMatrix()\
+						* selectionElement.getInverseElementMatrix()).toMatrix()
 					
 					// if physics attachments are used init collider bone states from component.
 					// this is required since collider bone states are in world space and do not
@@ -207,6 +226,38 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end)
 		end
 		
+		/**
+		 * Prepare bone indices. For each bone find also the root bone. Root bones are also
+		 * added as bones to be recorded. Also find the origin bone if defined. The origin
+		 * bone is always recorded as being 0.
+		 */
+		protected func void prepareBoneIndices()
+			pComponent = pActorAnimated.getComponent().getComponent()
+			pRig = pComponent.getRig()
+			
+			pBoneIndices.removeAll()
+			pRootBoneIndices.removeAll()
+			
+			pECBehavior.getRootBones().forEach(block String bone
+				var int index = pRig.indexOfBoneNamed(bone)
+				if index != -1
+					pRootBoneIndices.add(index)
+					pRecordAnimation.addBone(bone)
+				end
+			end)
+			
+			pECBehavior.getBones().forEach(block String bone
+				var int index = pRig.indexOfBoneNamed(bone)
+				if index != -1 and not pRootBoneIndices.has(index)
+					pBoneIndices.add(index)
+					pRecordAnimation.addBone(bone)
+				end
+			end)
+			
+			pRecordAnimation.setOriginBone(GameApp.getGameApp()\
+				.getWorldSpawnCharacter().getCharacter().getProfile().getOriginBone())
+		end
+		
 		/** Start recording animation. */
 		public func void startRecording()
 			if not pIsPreparing
@@ -214,21 +265,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end
 			
 			pIsPreparing = false
-			
-			pRecordAnimation = RecordAnimation.new()
-			
-			pComponent = pActorAnimated.getComponent().getComponent()
-			
-			pBoneIndices.removeAll()
-			
-			pECBehavior.getBones().forEach(block String each
-				var int index = pComponent.indexOfBoneNamed(each)
-				if index != -1
-					pRecordAnimation.addBone(each)
-					pBoneIndices.add(index)
-				end
-			end)
-			
 			pIsRecording = true
 			pRecordTime = 0
 			pIncrementTime = false
@@ -247,6 +283,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			if pIsRecording
 				pIsRecording = false
 				pComponent = null
+				pRig = null
 				
 				if pRecordAnimation != null
 					pRecordAnimation.createAnimation()
@@ -260,6 +297,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 						writeCaptureInfoFile((directory + animPath.getPathMeta()).getPath(), animPath.getPath())
 						
 						pCharacterAnimation.setPath(animPath.getPath())
+						pCharacterAnimation.setPathMeta(animPath.getPathMeta())
 						pCharacterAnimation.setAnimation(pRecordAnimation.getAnimation())
 						project.save()
 						
@@ -274,12 +312,14 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pRecordAnimation = null
 				pCharacterAnimation = null
 				pCapturedAnimations = null
+				pTransformRootBones = Matrix.new()
 				
 			elif pIsPreparing
 				pIsPreparing = false
 				pRecordAnimation = null
 				pCharacterAnimation = null
 				pCapturedAnimations = null
+				pTransformRootBones = Matrix.new()
 				
 			else
 				return
@@ -292,13 +332,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 			var PlaybackScene ps = app.getPlaybackScene()
 			ps.stop()
 			ps.updatePlaytime()
-		end
-		
-		
-		
-		/** Captured animations behavior or null. */
-		public func ECBCapturedAnimations.Instance getCapturedAnimations()
-			return pCapturedAnimations
 		end
 		
 		
@@ -328,10 +361,15 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			pComponent.updateBones()
 			
-			pBoneIndices.forEach(block int each
+			pRootBoneIndices.forEach(block int index
+				var Matrix matrix = pComponent.boneGetMatrix(index)\
+					* pTransformRootBones * pComponent.getBoneOriginInverseMatrix(index)
+				pRecordAnimation.addKeyframe(pRecordTime, matrix.getPosition(), matrix.toQuaternion())
+			end)
+			
+			pBoneIndices.forEach(block int index
 				pRecordAnimation.addKeyframe(pRecordTime, \
-					pComponent.boneGetPosition(each), \
-					pComponent.boneGetRotation(each))
+					pComponent.boneGetPosition(index), pComponent.boneGetRotation(index))
 			end)
 		end
 		
@@ -361,13 +399,17 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			// character
 			var CharacterConfiguration character = wsc.getCharacter()
+			var String originBone = ""
+			
 			if character != null
 				var CharacterProfile profile = character.getProfile()
+				originBone = profile.getOriginBone()
+				
 				var EasyXMLElement tag = root.addTag("character")
 				tag.addDataTag("profileName", profile.getName())
 				tag.addDataTag("configurationName", character.getName())
 				
-				tag.addDataTag("originBone", profile.getOriginBone())
+				tag.addDataTag("originBone", originBone)
 				tag.addDataTag("shoulderLevel", profile.getShoulderLevel())
 				tag.addDataTag("scaleMode", character.getScaleMode().name())
 				tag.addDataTag("calibratedScale", character.getCalibrateScale())
@@ -381,6 +423,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end
 			
 			// animation
+			var bool hasOriginBone = not originBone.empty() and not pRecordAnimation.hasBone(originBone)
 			var Animation animation = pRecordAnimation.getAnimation()
 			var String moveName = animation.getMoveName(0)
 			
@@ -389,12 +432,22 @@ class ECBRecordAnimation extends DefaultECBehavior
 			tagAnimation.addDataTag("moveName", moveName)
 			tagAnimation.addDataTag("playtime", animation.getMovePlaytime(moveName))
 			tagAnimation.addDataTag("frameRate", animation.getMoveFPS(moveName))
-			tagAnimation.addDataTag("boneCount", pRecordAnimation.getBoneCount())
+			
+			if hasOriginBone
+				tagAnimation.addDataTag("boneCount", pRecordAnimation.getBoneCount() + 1)
+				
+			else
+				tagAnimation.addDataTag("boneCount", pRecordAnimation.getBoneCount())
+			end
 			
 			var EasyXMLElement tagBones = tagAnimation.addTag("bones")
 			pRecordAnimation.forEachBone(block String each
 				tagBones.addDataTag("boneName", each)
 			end)
+			
+			if hasOriginBone
+				tagBones.addDataTag("boneName", originBone)
+			end
 			
 			// write to file
 			document.writeToFile(FileWriter.new(path), false)
@@ -405,6 +458,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 	
 	private var ECBehaviorActorAnimated pActorAnimated
 	private var Set pBones
+	private var Set pRootBones
 	
 	
 	
@@ -412,6 +466,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 	public func new(BaseVRActorClass eclass) super(eclass)
 		pActorAnimated = eclass.getActorAnimated()
 		pBones = Set.new()
+		pRootBones = Set.new()
 		
 		eclass.addBehavior(this)
 	end
@@ -438,6 +493,23 @@ class ECBRecordAnimation extends DefaultECBehavior
 	/** Add bones to record if not present. Expects Array of String. */
 	public func void addBones(Array bones)
 		pBones.addAll(Set.newFrom(bones))
+	end
+	
+	
+	
+	/** Root bones. Set of String. */
+	public func Set getRootBones()
+		return pRootBones
+	end
+	
+	/** Add root bone if not present. */
+	public func void addRootBone(String bone)
+		pRootBones.add(bone)
+	end
+	
+	/** Add root bones if not present. Expects Array of String. */
+	public func void addRootBones(Array rootBones)
+		pRootBones.addAll(Set.newFrom(rootBones))
 	end
 	
 	
