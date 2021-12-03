@@ -78,7 +78,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	
 	
 	/** Behavior instance. */
-	class Instance extends DefaultECBehaviorInstance
+	class Instance extends DefaultECBehaviorInstance implements TakeOverBehaviorState
 		/** Playback scene listener. */
 		class PlaybackSceneChanged extends PlaybackScene.DefaultListener
 			protected var Instance pInstance
@@ -303,6 +303,26 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		/** Frame update. */
 		public func void think(float elapsed)
 			applyAnimators()
+		end
+		
+		
+		
+		/** Interface TakeOverBehaviorState. */
+		public func void takeOverStoreState(Dictionary storage)
+			storage.setAt("ECBCapturedAnimations", pAnimations.deepCopy())
+		end
+		
+		public func void takeOverRestoreState(Dictionary storage)
+			var CharacterAnimations animations = storage.getAt(\
+				"ECBCapturedAnimations", null) cast CharacterAnimations
+			if animations == null
+				return
+			end
+			
+			if pAnimations != null
+				pAnimations.dispose()
+			end
+			pAnimations = animations
 		end
 		
 		

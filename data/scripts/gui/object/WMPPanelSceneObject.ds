@@ -163,9 +163,23 @@ class WMPPanelSceneObject extends CollapsibleGroup
 			stub.setPosition(element.getPosition())
 			stub.setRotation(element.getOrientation().getEulerAngles())
 			
+			var Dictionary storage = Dictionary.new()
+			element.forEachInstance(block ECBehaviorInstance each
+				if each castable TakeOverBehaviorState
+					(each cast TakeOverBehaviorState).takeOverStoreState(storage)
+				end
+			end)
+			
 			element.safeDispose()
 			
 			element = stub.createElement() cast BehaviorElement
+			
+			element.forEachInstance(block ECBehaviorInstance each
+				if each castable TakeOverBehaviorState
+					(each cast TakeOverBehaviorState).takeOverRestoreState(storage)
+				end
+			end)
+			
 			gameWorld.addElement(element)
 			ECBSelectable.getInstanceIn(element).selectElement()
 			
