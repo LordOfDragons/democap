@@ -63,8 +63,13 @@ class ECBInteractTeleport extends ECBInteractHandle
 				return
 			end
 			
-			// teleport actor element
-			actor.setGeometry(element.getPosition(), element.getOrientation())
+			// teleport actor element. place the calibration center at the target
+			// point not the playspace center
+			var DMatrix matrix = ECBCharacterConfiguration.getInstanceIn(actor)\
+				.getCharacter().getMatrixCalibrate().toDMatrix()\
+					* element.getElementMatrix()
+			
+			actor.setGeometry(matrix.getPosition(), matrix.toQuaternion())
 			
 			// if physics attachments are used init collider bone states from component.
 			// this is required since collider bone states are in world space and do not
