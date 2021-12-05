@@ -92,6 +92,12 @@ class WMPanelProject extends CollapsibleGroup
 			end))
 			popup.addWidget(button)
 			
+			button = Button.new("Browse Data...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.browseProjectData()
+			end))
+			popup.addWidget(button)
+			
 			pPanel.getDesktop().addWindow(popup)
 			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
 		end
@@ -656,6 +662,24 @@ class WMPanelProject extends CollapsibleGroup
 	public func void saveProject()
 		if pProject != null
 			pProject.save()
+		end
+	end
+	
+	/** Browse project data in overlay directory. */
+	public func void browseProjectData()
+		if pProject == null
+			return
+		end
+		
+		var String path = pProject.getDataDirectory().getPath()
+		if path.startsWith("/config")
+			FileSystem.browseConfig(path)
+			
+		elif path.startsWith("/capture")
+			FileSystem.browseCapture(path)
+			
+		else
+			FileSystem.browseOverlay(path)
 		end
 	end
 	
