@@ -165,9 +165,17 @@ class Project
 	
 	/** Save to file. */
 	public func void save()
+		var GameApp app = GameApp.getGameApp()
+		var Scene scene = app.getScene()
+		var GameWorld gameWorld = app.getWindowGameWorld().getGameWorld()
+		
+		if scene != null and gameWorld != null
+			scene.saveWorld(gameWorld)
+		end
+		
 		var MemoryFile safe = MemoryFile.new("safe")
 		
-		var PersistencyEnvironment env = PersistencyEnvironment.new(GameApp.getGameApp().getLoaders().getPersistency())
+		var PersistencyEnvironment env = PersistencyEnvironment.new(app.getLoaders().getPersistency())
 		var FileWriter writer = env.getPersistency().getDebugEnableCanaryValue()\
 			if safe.getWriter(false) else safe.getWriterZCompressed()
 		
@@ -181,7 +189,6 @@ class Project
 		
 		pAnimationIDGenerator.writeToFile(writer)
 		
-		var Scene scene = GameApp.getGameApp().getScene()
 		if scene == null
 			scene = pScenes.getAt(0)
 		end
