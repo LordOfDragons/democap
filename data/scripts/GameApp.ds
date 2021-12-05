@@ -71,7 +71,11 @@ class GameApp extends BaseGameApp
 		end
 		
 		public func void toggledChanged(ToggleModel model)
-			var Console console = GameApp.getGameApp().getConsole()
+			var GameApp app = GameApp.getGameApp()
+			var Console console = app.getConsole()
+			
+			// VR runtimes can be crashy. save project just in case
+			app.getProject().save()
 			
 			if model.getToggled()
 				console.addMessage("Start VR Runtime...")
@@ -82,10 +86,11 @@ class GameApp extends BaseGameApp
 					console.addMessage("Failed starting VR Runtime")
 				end
 				
-				GameApp.getGameApp().getModelShowVRCamera().setToggled(VRSystem.isRuntimeRunning())
+				app.getModelShowVRCamera().setToggled(VRSystem.isRuntimeRunning())
 				
 			else
 				console.addMessage("Stop VR Runtime...")
+				
 				try
 					VRSystem.stopRuntime()
 					
@@ -93,7 +98,7 @@ class GameApp extends BaseGameApp
 					console.addMessage("Failed stopping VR Runtime")
 				end
 				
-				GameApp.getGameApp().getModelShowVRCamera().setToggled(false)
+				app.getModelShowVRCamera().setToggled(false)
 			end
 		end
 	end
