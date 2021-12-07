@@ -382,7 +382,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		// spine, head. base is hip which we use to find chains but it should not be
 		// included in anything but the waist. start one bone down the chain
 		var Array chainSpine = Array.new()
+		var Array chainHead = Array.new()
+		
 		findBoneChain(rig, pBoneChest, pBoneHip, chainSpine)
+		findBoneChain(rig, pBoneHead, pBoneChest, chainHead)
 		
 		/*
 		pTransferSpineHead.setTipBone(pBoneHead)
@@ -402,9 +405,36 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		*/
 		
 		pTransferSpine.setTipBone(pBoneChest)
-		pTransferSpine.setTargetBone(pBoneHead)
-		//pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new(0, 0, -0.05))
-		pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new(0, 0, 0))
+		
+		// using the head bone works for short neck characters but fails for long neck
+		// characters. using the base bone in the head chain though is better since it
+		// is rather close to the target bone of the spine chain. if this does not work
+		// fall back to the head bone. this is better than nothing
+// 		if chainHead.getCount() > 1
+// 			pTransferSpine.setTargetBone(chainHead.getAt(-1) cast String)
+// 			
+// 		else
+// 			pTransferSpine.setTargetBone(pBoneHead)
+// 		end
+		pTransferSpine.setTargetBone("")
+		
+		pTransferSpine.getTargetTracker().resolveRealSlot(config)
+		if pTransferSpine.getTargetTracker().getRealSlot() != null
+			select pTransferSpine.getTargetTracker().getRealSlot().getType()
+			case CharacterTrackerSlot.Type.headHmd
+				pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new(0, -0.1, -0.1))
+				
+			case CharacterTrackerSlot.Type.headTracker
+				pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new(0, -0.2, 0))
+				
+			else
+				pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new(0, 0, 0))
+			end
+			
+		else
+			pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new(0, 0, 0))
+		end
+		
 		pTransferSpine.setTwistPropagation(0.5)
 		pTransferSpine.setTwistAxisRotation(Vector.new(90, 0, 0))
 		
@@ -421,9 +451,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			bendScale = 1
 		end
 		pTransferSpine.setScaleRotation(Vector2.new(bendScale, bendScale))
-		
-		var Array chainHead = Array.new()
-		findBoneChain(rig, pBoneHead, pBoneChest, chainHead)
 		
 		pTransferHead.setTipBone(pBoneHead)
 		

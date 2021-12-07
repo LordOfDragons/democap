@@ -78,6 +78,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		private var float pScaleRotationY
 		private var Component pComponent
 		private var int pTwistBone
+		private var bool pUseTwistSlot
 		private var Matrix pTwistMat
 		private var Matrix pTwistMatInv
 		private var Quaternion pTwistQuat, pTwistQuatInv
@@ -139,8 +140,13 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			pControllerTwist = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTwist())
 			
 			pTwistBone = -1
+			pUseTwistSlot = false
+			
 			if not pECBehavior.getTransfer().getTargetBone().empty()
 				pTwistBone = pComponent.indexOfBoneNamed(pECBehavior.getTransfer().getTargetBone())
+				
+			else
+				pUseTwistSlot = pECBehavior.getTransfer().getTargetTracker().getRealSlot() != null
 			end
 			
 			pMoCapAnimator.addListener(UpdateControllers.new(this))
@@ -190,7 +196,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		
 		/** Internal use. */
 		public func int requiredPhaseCount()
-			if pSlotTarget != null and pControllerTwist != null and pTwistBone != -1
+			if pSlotTarget != null and pControllerTwist != null and (pTwistBone != -1 or pUseTwistSlot)
 				return 2
 				
 			else
@@ -225,8 +231,17 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		end
 		
 		public func void updateControllersPhase2()
-			if pSlotTarget != null and pControllerTwist != null and pTwistBone != -1
-				var Quaternion orientation = pTwistQuat * pComponent.boneGetRotation(pTwistBone) * pTwistQuatInv
+			if pSlotTarget != null and pControllerTwist != null and (pTwistBone != -1 or pUseTwistSlot)
+				var Quaternion orientation = pTwistQuat
+				
+				if pTwistBone != -1
+					orientation = orientation * pComponent.boneGetRotation(pTwistBone)
+					
+				else // pUseTwistSlot
+					orientation = orientation * (pTransformTarget * pSlotTarget.getMatrixCharacter()).toQuaternion()
+				end
+				
+				orientation = orientation * pTwistQuatInv
 				
 				// this calculation is instable beyond ~88 degrees elevation
 				//pControllerTwist.setValue(orientation.getEulerAngles().getZ())

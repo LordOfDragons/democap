@@ -269,7 +269,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		end
 		
 		if slotTarget == null or slotBase == null or pCalibrateBones.getCount() == 0 \
-		or pTargetBone.empty() or pBaseBone.empty() or pTipBone.empty()
+		or pBaseBone.empty() or pTipBone.empty()
 			return
 		end
 		
@@ -406,18 +406,27 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pCalibrateZeroRotation = Vector2.new()
 		
 		var int indexBase = -1, indexTarget = -1, indexTip = -1
-		if not pBaseBone.empty() and not pTargetBone.empty()
+		if not pBaseBone.empty()
 			indexBase = component.indexOfBoneNamed(pBaseBone)
-			indexTarget = component.indexOfBoneNamed(pTargetBone)
+			if not pTargetBone.empty()
+				indexTarget = component.indexOfBoneNamed(pTargetBone)
+			end
 			indexTip = component.indexOfBoneNamed(pTipBone)
 		end
 		
-		if indexBase != -1 and indexTarget != -1 and indexTip != -1
+		if indexBase != -1 and indexTip != -1
 			var Matrix baseMatrix = Matrix.newRT(pBaseTracker.getOffsetRotation(), \
 				pBaseTracker.getOffsetPosition()) * component.boneGetMatrix(indexBase)
 			
 			var Matrix targetMatrix = Matrix.newRT(pTargetTracker.getOffsetRotation(), \
-				pTargetTracker.getOffsetPosition()) * component.boneGetMatrix(indexTarget)
+				pTargetTracker.getOffsetPosition())
+			
+			if indexTarget != -1
+				targetMatrix = targetMatrix * component.boneGetMatrix(indexTarget)
+				
+			elif pTargetTracker.getRealSlot() != null
+				targetMatrix = targetMatrix * pTargetTracker.getRealSlot().getTargetMatrix()
+			end
 			
 			var Vector position = (targetMatrix * baseMatrix.getInverse()).getPosition()
 			
@@ -474,8 +483,14 @@ class MotionTransferBend extends DefaultMotionTransfer
 				end
 			end
 			
-			pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation) \
-				* component.boneGetInverseMatrix(indexTarget)).getEulerAngles()
+			if indexTarget != -1
+				pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation) \
+					* component.boneGetInverseMatrix(indexTarget)).getEulerAngles()
+				
+			elif pTargetTracker.getRealSlot() != null
+				pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation) \
+					* pTargetTracker.getRealSlot().getTargetMatrix().getInverse()).getEulerAngles()
+			end
 		end
 	end
 	

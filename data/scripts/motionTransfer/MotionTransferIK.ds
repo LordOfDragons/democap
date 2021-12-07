@@ -107,6 +107,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var Array pCalibrateBones
 	private var float pCalibrateReach
 	private var float pCalibrateReachScale
+	private var float pCalibrateReachRange
 	private var ARTrackToAxis pCalibrateGuideTrackAxis
 	private var ARTrackToAxis pCalibrateGuideUpAxis
 	private var Vector pCalibrateTipOffset
@@ -136,6 +137,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateBones = Array.new()
 		pCalibrateReach = 0.6
 		pCalibrateReachScale  = 1
+		pCalibrateReachRange = 0
 		pCalibrateReachRetracted = 1
 		pCalibrateGuideTrackAxis = ARTrackToAxis.posZ
 		pCalibrateGuideUpAxis = ARTrackToAxis.posY
@@ -164,6 +166,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateBones = Array.new(transfer.pCalibrateBones)
 		pCalibrateReach = transfer.pCalibrateReach
 		pCalibrateReachScale = transfer.pCalibrateReachScale
+		pCalibrateReachRange = transfer.pCalibrateReachRange
 		pCalibrateReachRetracted = transfer.pCalibrateReachRetracted
 		pCalibrateGuideTrackAxis = transfer.pCalibrateGuideTrackAxis
 		pCalibrateGuideUpAxis = transfer.pCalibrateGuideUpAxis
@@ -347,6 +350,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 	/** Calibrate reach scale. */
 	public func float getCalibrateReachScale()
 		return pCalibrateReachScale
+	end
+	
+	/** Calibrate reach range or 0 if disabled. */
+	public func float getCalibrateReachRange()
+		return pCalibrateReachRange
 	end
 	
 	/** Calibrate tip offset. */
@@ -553,7 +561,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADRuleIK.setAdjustPosition(pAdjustPosition)
 		pADRuleIK.setAdjustOrientation(true)
 		pADRuleIK.setReachBone(guideBone)
-		pADRuleIK.setReachRange(pCalibrateReach)
+		
+		pADRuleIK.setReachRange(pCalibrateReachRange)
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, linkTipPosition))
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkTipOrientation))
 		pADRuleIK.addBone(pBaseBone)
@@ -580,7 +589,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	/** Reset calibration. */
 	public func void resetCalibration()
+		pCalibrateReach = 0.6
 		pCalibrateReachScale = 1
+		pCalibrateReachRange = 0
 		pCalibrateReachRetracted = 1
 		pCalibrateGuideTrackAxis = ARTrackToAxis.posZ
 		pCalibrateGuideUpAxis = ARTrackToAxis.posY
@@ -660,6 +671,14 @@ class MotionTransferIK extends DefaultMotionTransfer
 				//pCalibrateGuideUpAxis = ARTrackToAxis.posY
 			end
 			
+			// reach range is only used if base tracker is set
+			if pBaseTracker.getRealSlot() != null
+				pCalibrateReachRange = pCalibrateReach
+				
+			else
+				pCalibrateReachRange = 0
+			end
+			
 			// twist rotation. the rotation angle is unimportant since we only examine
 			// relative rotation
 			var Matrix twistTransform = (guideMatrix * tipMatrix.getInverse()).normalize()
@@ -672,6 +691,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		else
 			pCalibrateReach = 0.6
 			pCalibrateReachScale = 1
+			pCalibrateReachRange = 0
 			pCalibrateReachRetracted = pCalibrateReach
 			pCalibrateTipOffset = Vector.new()
 			pCalibrateTwistRotation = Vector.new()
@@ -862,6 +882,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("reachScale")
 				pCalibrateReachScale = element.getFirstCDataFloat()
 				
+			elif tagName.equals("reachRange")
+				pCalibrateReachRange = element.getFirstCDataFloat()
+				
 			elif tagName.equals("tipOffset")
 				pCalibrateTipOffset = loader.readVector(element)
 				
@@ -919,6 +942,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	public func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("reach", pCalibrateReach)
 		tag.addDataTag("reachScale", pCalibrateReachScale)
+		tag.addDataTag("reachRange", pCalibrateReachRange)
 		loader.writeVector(tag, "tipOffset", pCalibrateTipOffset)
 		pCalibrateBones.forEach(block String each
 			tag.addDataTag("bone", each)

@@ -208,19 +208,22 @@ class MotionTransferTracker
 			return
 		end
 		
-		var int index = component.indexOfBoneNamed(bone)
-		if index == -1
-			resetTransform()
-			return
-		end
-		
 		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
 		var Matrix slotTargetMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) * pRealSlot.getTargetMatrix()
 		var Matrix slotTargetMatrixInv = slotTargetMatrix.getInverse()
 		var Matrix slotRefMatrix = pRealSlot.getCalibrateReferenceMatrix()
-		var Matrix boneMatrix = component.boneGetMatrix(index)
 		
-		var Matrix customOffset = boneMatrix * slotTargetMatrixInv
+		var int index = component.indexOfBoneNamed(bone)
+		var Matrix customOffset
+		
+		if index != -1
+			var Matrix boneMatrix = component.boneGetMatrix(index)
+			customOffset = boneMatrix * slotTargetMatrixInv
+			
+		else
+			customOffset = Matrix.newRT(pOffsetRotation, pOffsetPosition)
+		end
+		
 		var Matrix referenceOffset = slotRefMatrix * slotInvMatrix
 		var Matrix autoTransform = customOffset * referenceOffset
 		
