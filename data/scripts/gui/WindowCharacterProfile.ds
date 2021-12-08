@@ -36,7 +36,7 @@ pin Dragengine.Scenery
  * Edit character profile window.
  */
 class WindowCharacterProfile extends WindowDialog
-	class UpdateBonesListener implements WidgetCharacterPreview.Listener
+	class UpdateListsListener implements WidgetCharacterPreview.Listener
 		private var WindowCharacterProfile pWindow
 		
 		public func new(WindowCharacterProfile window)
@@ -45,6 +45,19 @@ class WindowCharacterProfile extends WindowDialog
 		
 		public func void characterReloaded(WidgetCharacterPreview widget)
 			pWindow.updateBoneLists()
+			pWindow.updateMoveLists()
+		end
+	end
+	
+	class PreviewMoveChanged implements ActionListener
+		private var WindowCharacterProfile pWindow
+		
+		public func new(WindowCharacterProfile window)
+			pWindow = window
+		end
+		
+		public func void onAction(ActionEvent event)
+			pWindow.updatePreviewMove()
 		end
 	end
 	
@@ -59,6 +72,8 @@ class WindowCharacterProfile extends WindowDialog
 	private var DefaultTextModel pModelPathSkin
 	private var DefaultTextModel pModelPathRig
 	private var DefaultTextModel pModelPathAnimation
+	private var DefaultListModel pModelListPreviewMove
+	private var DefaultTextModel pModelTextPreviewMove
 	private var WidgetCharacterPreview pCharacterPreview
 	private var bool pInVR
 	
@@ -78,6 +93,9 @@ class WindowCharacterProfile extends WindowDialog
 		pModelPathSkin = DefaultTextModel.new(profile.getAppearance().getPathSkin())
 		pModelPathRig = DefaultTextModel.new(profile.getAppearance().getPathRig())
 		pModelPathAnimation = DefaultTextModel.new(profile.getAppearance().getPathAnimation())
+		pModelListPreviewMove = DefaultListModel.new()
+		pModelListPreviewMove.setAutoSelect(false)
+		pModelTextPreviewMove = DefaultTextModel.new(profile.getPreviewMove())
 		
 		runWhileBlockingLayout(block
 			setGuiTheme(window.getGuiTheme())
@@ -116,6 +134,8 @@ class WindowCharacterProfile extends WindowDialog
 		pModelPathSkin = null
 		pModelPathRig = null
 		pModelPathAnimation = null
+		pModelListPreviewMove = null
+		pModelTextPreviewMove = null
 		
 		super.dispose()
 	end
@@ -148,6 +168,7 @@ class WindowCharacterProfile extends WindowDialog
 		pCharacterProfile.setName(profileName)
 		pCharacterProfile.setOriginBone(pModelTextOriginBone.getText())
 		pCharacterProfile.setShoulderLevel(pModelShoulderLevel.getText().toFloat())
+		pCharacterProfile.setPreviewMove(pModelTextPreviewMove.getText())
 		
 		var CharacterAppearance appearance = pCharacterProfile.getAppearance()
 		appearance.setPathModel(pModelPathModel.getText())
@@ -201,7 +222,7 @@ class WindowCharacterProfile extends WindowDialog
 		setLayout(BorderLayout.new(20))
 		
 		pCharacterPreview = WidgetCharacterPreview.new()
-		pCharacterPreview.addListener(UpdateBonesListener.new(this))
+		pCharacterPreview.addListener(UpdateListsListener.new(this))
 		addWidget(pCharacterPreview, BorderLayout.Area.content)
 		
 		// properties
@@ -269,6 +290,15 @@ class WindowCharacterProfile extends WindowDialog
 			
 			CPELevel.new(pCharacterPreview, label, textField)
 			
+			// preview move
+			p.addWidget(Label.new("Preview Move:", "Label.FormCaption"))
+			
+			comboBox = ComboBox.new(pModelListPreviewMove, DefaultComboBoxEditor.new(pModelTextPreviewMove))
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterProfile")
+			comboBox.setToolTip("Preview animation move to use.")
+			comboBox.getEditor().addActionListener(PreviewMoveChanged.new(this))
+			p.addWidget(comboBox)
+			
 		end), BorderLayout.Area.right)
 		
 		// button line
@@ -307,5 +337,49 @@ class WindowCharacterProfile extends WindowDialog
 		end
 		
 		pModelListOriginBone.setContent(bones)
+	end
+	
+	/** Update move lists. */
+	public func void updateMoveLists()
+		var Array moves = Array.new()
+		var Animation animation
+		
+		var BehaviorElement element = pCharacterPreview.getCharacterPreview()
+		if element != null
+			var ECBPreviewAnimation.Instance previewAnimation = ECBPreviewAnimation.getInstanceIn(element)
+			if previewAnimation != null
+				animation = previewAnimation.getAnimation()
+			end
+		end
+		
+		if animation != null
+			var int i, count = animation.getMoveCount()
+			for i = 0 to count
+				moves.add(animation.getMoveName(i))
+			end
+			moves.sort(block String a, String b
+				return a.compareNoCase(b)
+			end)
+		end
+		
+		pModelListPreviewMove.setContent(moves)
+	end
+	
+	/** Update preview move. */
+	public func void updatePreviewMove()
+		var BehaviorElement element = pCharacterPreview.getCharacterPreview()
+		if element == null
+			return
+		end
+		
+		var ECBPreviewAnimation.Instance previewAnimation = ECBPreviewAnimation.getInstanceIn(element)
+		if previewAnimation != null
+			previewAnimation.setMove(pModelTextPreviewMove.getText())
+		end
+		
+		var ECBPreviewBones.Instance previewBones = ECBPreviewBones.getInstanceIn(element)
+		if previewBones != null
+			previewBones.bonePositionChanged()
+		end
 	end
 end
