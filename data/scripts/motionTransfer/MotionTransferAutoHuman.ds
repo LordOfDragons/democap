@@ -405,35 +405,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		*/
 		
 		pTransferSpine.setTipBone(pBoneChest)
-		
-		// using the head bone works for short neck characters but fails for long neck
-		// characters. using the base bone in the head chain though is better since it
-		// is rather close to the target bone of the spine chain. if this does not work
-		// fall back to the head bone. this is better than nothing
-// 		if chainHead.getCount() > 1
-// 			pTransferSpine.setTargetBone(chainHead.getAt(-1) cast String)
-// 			
-// 		else
-// 			pTransferSpine.setTargetBone(pBoneHead)
-// 		end
 		pTransferSpine.setTargetBone("")
-		
-		pTransferSpine.getTargetTracker().resolveRealSlot(config)
-		if pTransferSpine.getTargetTracker().getRealSlot() != null
-			select pTransferSpine.getTargetTracker().getRealSlot().getType()
-			case CharacterTrackerSlot.Type.headHmd
-				pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new(0, -0.1, -0.1))
-				
-			case CharacterTrackerSlot.Type.headTracker
-				pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new(0, -0.2, 0))
-				
-			else
-				pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new(0, 0, 0))
-			end
-			
-		else
-			pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new(0, 0, 0))
-		end
+		pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new(0, 0, 0))
+		pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationOffset)
+		pTransferSpine.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 		
 		pTransferSpine.setTwistPropagation(0.5)
 		pTransferSpine.setTwistAxisRotation(Vector.new(90, 0, 0))
@@ -453,6 +428,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferSpine.setScaleRotation(Vector2.new(bendScale, bendScale))
 		
 		pTransferHead.setTipBone(pBoneHead)
+		pTransferHead.getTipTracker().setOffsetPosition(Vector.new(0, 0, 0))
+		pTransferHead.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationOffset)
 		
 		if chainHead.getCount() > 1
 			pTransferHead.setBaseBone(chainHead.getAt(-2) cast String)
@@ -470,6 +447,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmRight.setMoveBaseIK(pMoveBaseIK)
 		pTransferArmRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
 		pTransferArmRight.setActorReach(MotionTransferIK.ActorReach.arm)
+		pTransferArmRight.setReachLimit(1/*0.9*/)
 		pTransferArmRight.setTwistBoneCount(1)
 		pTransferArmRight.setTwistPropagation(0.5)
 		pTransferArmRight.setTwistAxisRotation(Vector.new(0, -90, 0))
@@ -497,6 +475,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.setMoveBaseIK(pMoveBaseIK)
 		pTransferArmLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
 		pTransferArmLeft.setActorReach(MotionTransferIK.ActorReach.arm)
+		pTransferArmLeft.setReachLimit(1/*0.9*/)
 		pTransferArmLeft.setTwistBoneCount(1)
 		pTransferArmLeft.setTwistPropagation(0.5)
 		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))

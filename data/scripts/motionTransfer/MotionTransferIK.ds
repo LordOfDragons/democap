@@ -97,6 +97,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var ADController pADControllerGuideUp
 	private var ADController pADControllerTwist
 	private var ADController pADControllerRetracted
+	private var ADController pADControllerBlend
 	
 	private var ADRuleTrackTo pADRuleGuide
 	private var ADRuleInverseKinematic pADRuleIK
@@ -111,6 +112,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var ARTrackToAxis pCalibrateGuideTrackAxis
 	private var ARTrackToAxis pCalibrateGuideUpAxis
 	private var Vector pCalibrateTipOffset
+	private var Vector pCalibrateBaseOffset
 	private var float pCalibrateReachRetracted
 	private var Vector pCalibrateTwistRotation
 	private var Array pCalibrateTwistAxes
@@ -392,6 +394,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADControllerRetracted = null
 		pADControllerGuideUp = null
 		pADControllerTwist = null
+		pADControllerBlend = null
 		pADRuleIK = null
 		pADRuleIKForce = null
 		pADRuleGuide = null
@@ -540,6 +543,12 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(pADRuleGuide)
 		end
 		
+		pADControllerBlend = ADController.new()
+		pADControllerBlend.setName(behavior.getControllerNameBlend())
+		pADControllerBlend.setMinimum(0)
+		pADControllerBlend.setMaximum(1)
+		adef.addController(pADControllerBlend)
+		
 		pADControllerTipPosition = ADController.new()
 		pADControllerTipPosition.setName(behavior.getControllerNameTipPosition())
 		adef.addController(pADControllerTipPosition)
@@ -547,6 +556,10 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADControllerTipOrientation = ADController.new()
 		pADControllerTipOrientation.setName(behavior.getControllerNameTipOrientation())
 		adef.addController(pADControllerTipOrientation)
+		
+		var ADLink linkBlend = ADLink.new()
+		linkBlend.setController(pADControllerBlend)
+		adef.addLink(linkBlend)
 		
 		var ADLink linkTipPosition = ADLink.new()
 		linkTipPosition.setController(pADControllerTipPosition)
@@ -563,6 +576,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADRuleIK.setReachBone(guideBone)
 		
 		pADRuleIK.setReachRange(pCalibrateReachRange)
+		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.blendFactor, linkBlend))
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, linkTipPosition))
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkTipOrientation))
 		pADRuleIK.addBone(pBaseBone)
@@ -635,31 +649,51 @@ class MotionTransferIK extends DefaultMotionTransfer
 			indexTip = component.indexOfBoneNamed(pTipBone)
 		end
 		
-		if indexBase != -1 and indexGuide != -1 and indexTip != -1
-			var Matrix guideMatrix = component.boneGetMatrix(indexGuide)
+		if indexBase != -1 and indexTip != -1
+			var Matrix baseMatrix = component.boneGetMatrix(indexBase)
 			var Matrix tipMatrix = component.boneGetMatrix(indexTip)
 			
-			var Vector posGuide = guideMatrix.getPosition()
-			var Vector posTip = tipMatrix * pTipTracker.getReverseTransformPosition()
-			pCalibrateReach = (posTip - posGuide).getLength()
-			
-			select pActorReach
-			case ActorReach.arm
-				pCalibrateReachScale = pCalibrateReach / (actorProfile.getArmLength() * config.getCalibrateScale())
+			var Matrix guideMatrix
+			if indexGuide != -1
+				guideMatrix = component.boneGetMatrix(indexGuide)
 				
-			case ActorReach.leg
-				// reach scale is not working well with legs
-// 				pCalibrateReachScale = pCalibrateReach / (actorProfile.getLegLength() * config.getCalibrateScale())
-				pCalibrateReachScale = 1
+				var Vector posGuide = guideMatrix.getPosition()
+				var Vector posTip = tipMatrix * pTipTracker.getReverseTransformPosition()
+				pCalibrateReach = (posTip - posGuide).getLength()
+				
+				select pActorReach
+				case ActorReach.arm
+					pCalibrateReachScale = pCalibrateReach / (actorProfile.getArmLength() * config.getCalibrateScale())
+					
+				case ActorReach.leg
+					// reach scale is not working well with legs
+//	 				pCalibrateReachScale = pCalibrateReach / (actorProfile.getLegLength() * config.getCalibrateScale())
+					pCalibrateReachScale = 1
+					
+				else
+					pCalibrateReachScale = 1
+				end
 				
 			else
 				pCalibrateReachScale = 1
 			end
 			
+			var CharacterTrackerSlot slotBase = pBaseTracker.getRealSlot()
 			var CharacterTrackerSlot slotTip = pTipTracker.getRealSlot()
-			if slotTip != null
+			
+			if slotTip != null and pTipTracker.getAutoTransform() == MotionTransferTracker.AutoTransform.orientationOffset
+				var Vector displacement = slotTip.getTargetPosition()\
+					- slotTip.getCalibrateReferenceMatrix().getPosition()
+				
+				if displacement.getLength() > 0.01
+					pCalibrateTipOffset = component.boneGetInverseMatrix(indexBase)\
+						.transformNormal(displacement)
+					
+				else
+					pCalibrateTipOffset = Vector.new()
+				end
+				
 // 				pCalibrateTipOffset = posTip - slotTip.getCalibratePosition()
-				pCalibrateTipOffset = Vector.new()
 				//var Vector slotPos = slotTip.getCalibratePosition()
 				//var float realReach = (slotPos - posGuide).getLength()
 				//pCalibrateReachScale = pCalibrateReach / realReach
@@ -672,21 +706,26 @@ class MotionTransferIK extends DefaultMotionTransfer
 			end
 			
 			// reach range is only used if base tracker is set
-			if pBaseTracker.getRealSlot() != null
+			if slotBase != null
 				pCalibrateReachRange = pCalibrateReach
 				
 			else
 				pCalibrateReachRange = 0
 			end
 			
-			// twist rotation. the rotation angle is unimportant since we only examine
-			// relative rotation
-			var Matrix twistTransform = (guideMatrix * tipMatrix.getInverse()).normalize()
-			var Vector twistAxis = twistTransform.transformNormal(trackToVectorFromAxis(pCalibrateGuideTrackAxis))
-			var Vector twistUp = twistTransform.transformNormal(trackToVectorFromAxis(pCalibrateGuideUpAxis))
-			
-			twistTransform = Matrix.newVU(twistAxis, twistUp).getInverse()
-			pCalibrateTwistRotation = twistTransform.getEulerAngles()
+			// twist rotation. the rotation angle is unimportant since we only examine relative rotation
+			if indexGuide != -1
+				var Matrix guideMatrix = component.boneGetMatrix(indexGuide)
+				var Matrix twistTransform = (guideMatrix * tipMatrix.getInverse()).normalize()
+				var Vector twistAxis = twistTransform.transformNormal(trackToVectorFromAxis(pCalibrateGuideTrackAxis))
+				var Vector twistUp = twistTransform.transformNormal(trackToVectorFromAxis(pCalibrateGuideUpAxis))
+				
+				twistTransform = Matrix.newVU(twistAxis, twistUp).getInverse()
+				pCalibrateTwistRotation = twistTransform.getEulerAngles()
+				
+			else
+				pCalibrateTwistRotation = Vector.new()
+			end
 			
 		else
 			pCalibrateReach = 0.6

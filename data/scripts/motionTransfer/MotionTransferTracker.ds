@@ -43,6 +43,9 @@ class MotionTransferTracker
 		/** Orientation only. */
 		orientation
 		
+		/** Orientation only with reference offset. */
+		orientationOffset
+		
 		/** None. */
 		none
 	end
@@ -139,8 +142,8 @@ class MotionTransferTracker
 	end
 	
 	/** Set how to calculate transformation during calubration. */
-	public func void setAutoTransform(AutoTransform autoTransform)
-		pAutoTransform = autoTransform
+	public func void setAutoTransform(AutoTransform deviceBoneTransform)
+		pAutoTransform = deviceBoneTransform
 	end
 	
 	
@@ -208,35 +211,62 @@ class MotionTransferTracker
 			return
 		end
 		
+		// getCalibrateMatrix() is the same as getCharacterMatrix() during capturing
+		// getCalibrateReferenceMatrix() is the same as getReferenceMatrix() in tracker slot
 		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
 		var Matrix slotTargetMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) * pRealSlot.getTargetMatrix()
 		var Matrix slotTargetMatrixInv = slotTargetMatrix.getInverse()
 		var Matrix slotRefMatrix = pRealSlot.getCalibrateReferenceMatrix()
+		var Matrix slotRefMatrixInv = pRealSlot.getCalibrateReferenceMatrixInverse()
 		
 		var int index = component.indexOfBoneNamed(bone)
-		var Matrix customOffset
+		var Matrix targetBoneTransform
 		
 		if index != -1
-			var Matrix boneMatrix = component.boneGetMatrix(index)
-			customOffset = boneMatrix * slotTargetMatrixInv
+			targetBoneTransform = component.boneGetMatrix(index) * slotTargetMatrixInv
 			
 		else
-			customOffset = Matrix.newRT(pOffsetRotation, pOffsetPosition)
+			targetBoneTransform = Matrix.newRT(pOffsetRotation, pOffsetPosition)
 		end
 		
-		var Matrix referenceOffset = slotRefMatrix * slotInvMatrix
-		var Matrix autoTransform = customOffset * referenceOffset
+		var Matrix deviceReferenceTransform = slotRefMatrix * slotInvMatrix
+		var Matrix referenceTargetTransform = slotTargetMatrix * slotRefMatrixInv
+		var Matrix deviceBoneTransform = targetBoneTransform\
+			* deviceReferenceTransform * referenceTargetTransform
 		
 		select pAutoTransform
 		case AutoTransform.full
-			pTransformMatrix = autoTransform
+			pTransformMatrix = deviceBoneTransform
 			
 		case AutoTransform.orientation
-			pTransformMatrix = autoTransform.getRotation() * Matrix.newTranslation(\
-				referenceOffset.getRotation() * customOffset.getPosition())
+			pTransformMatrix = deviceBoneTransform.getRotation() * Matrix.newTranslation(\
+				deviceReferenceTransform.getRotation() * targetBoneTransform.getPosition())
 			
+		case AutoTransform.orientationOffset
+			pTransformMatrix = deviceBoneTransform.getRotation()\
+				* Matrix.newTranslation(deviceReferenceTransform.getPosition() + \
+					deviceReferenceTransform.getRotation() * targetBoneTransform.getPosition())
+			
+		/*
+			// modified version of AutoTransform.orientation for use with feet and head.
+			// requires modifying the pTransformMatrix each capture frame before applying
+			// it to the device matrix to do proper pivot rotation. the pTransformMatrix
+			// stays the same. hence this modified version does use AutoTransform.orientation
+			// but applies a displacement relative to the reference matrix.
+			// 
+			// the main problem is how to calculate the displacement. this requires additional
+			// knowledge beyond what the MotionTransferTracker does know. basically we need
+			// to use the information of another MotionTransferTracker to figure out how to
+			// calculate the displacement.
+			// 
+			// what is clear though is that we need to use the target matrix as pivot definition.
+			// once the target matrix has been transformed by whatever calculation to be in
+			// the right position it has to be transformed into reference space to apply
+			// properly to the device matrix.
+		*/
+		
 		case AutoTransform.none
-			pTransformMatrix = customOffset
+			pTransformMatrix = targetBoneTransform
 		end
 		
 		pTransformPosition = pTransformMatrix.getPosition()
@@ -262,25 +292,25 @@ class MotionTransferTracker
 		var Matrix slotRefMatrix = pRealSlot.getCalibrateReferenceMatrix()
 		var Matrix boneMatrix = component.boneGetMatrix(index)
 		
-		var Matrix customOffset = boneMatrix * slotTargetMatrixInv
+		var Matrix targetBoneTransform = boneMatrix * slotTargetMatrixInv
 		
-		var Vector taxis = customOffset.normalize().transformNormal(axis)
-		var float tdistance = -(taxis * customOffset.getPosition())
-		customOffset = customOffset * Matrix.newTranslation(taxis * tdistance)
+		var Vector taxis = targetBoneTransform.normalize().transformNormal(axis)
+		var float tdistance = -(taxis * targetBoneTransform.getPosition())
+		targetBoneTransform = targetBoneTransform * Matrix.newTranslation(taxis * tdistance)
 		
-		var Matrix referenceOffset = slotRefMatrix * slotInvMatrix
-		var Matrix autoTransform = customOffset * referenceOffset
+		var Matrix deviceReferenceTransform = slotRefMatrix * slotInvMatrix
+		var Matrix deviceBoneTransform = targetBoneTransform * deviceReferenceTransform
 		
 		select pAutoTransform
 		case AutoTransform.full
-			pTransformMatrix = autoTransform
+			pTransformMatrix = deviceBoneTransform
 			
 		case AutoTransform.orientation
-			pTransformMatrix = autoTransform.getRotation() * Matrix.newTranslation(\
-				referenceOffset.getRotation() * customOffset.getPosition())
+			pTransformMatrix = deviceBoneTransform.getRotation() * Matrix.newTranslation(\
+				deviceReferenceTransform.getRotation() * targetBoneTransform.getPosition())
 			
 		case AutoTransform.none
-			pTransformMatrix = customOffset
+			pTransformMatrix = targetBoneTransform
 		end
 		
 		pTransformPosition = pTransformMatrix.getPosition()
@@ -326,7 +356,7 @@ class MotionTransferTracker
 			elif tagName.equals("offsetRotation")
 				setOffsetRotation(loader.readVector(element))
 				
-			elif tagName.equals("autoTransform")
+			elif tagName.equals("deviceBoneTransform")
 				pAutoTransform = AutoTransform.named(element.getFirstCData())
 			end
 		end)
@@ -354,7 +384,7 @@ class MotionTransferTracker
 		tag.addDataTag("slot", pSlot)
 		loader.writeVector(tag, "offsetPosition", pOffsetPosition)
 		loader.writeVector(tag, "offsetRotation", pOffsetRotation)
-		tag.addDataTag("autoTransform", pAutoTransform.name())
+		tag.addDataTag("deviceBoneTransform", pAutoTransform.name())
 	end
 	
 	public func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)

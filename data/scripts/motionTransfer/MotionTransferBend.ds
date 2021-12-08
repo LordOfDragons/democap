@@ -277,7 +277,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 		var String rootBone = pCalibrateBones.getAt(-1) cast String
 		
 		var float fullRotation = 180
-		var float rotationStep = fullRotation / pCalibrateBones.getCount()
+		var float fudgeFactor = 0.85
+		var float rotationStep = fullRotation / (fudgeFactor * pCalibrateBones.getCount())
 		
 		pADControllerBendX = ADController.new()
 		pADControllerBendX.setName(behavior.getControllerNameBendX())
@@ -415,17 +416,14 @@ class MotionTransferBend extends DefaultMotionTransfer
 		end
 		
 		if indexBase != -1 and indexTip != -1
-			var Matrix baseMatrix = Matrix.newRT(pBaseTracker.getOffsetRotation(), \
-				pBaseTracker.getOffsetPosition()) * component.boneGetMatrix(indexBase)
+			var Matrix baseMatrix = pBaseTracker.getTransformMatrix()
+			if pBaseTracker.getRealSlot() != null
+				baseMatrix = baseMatrix * pBaseTracker.getRealSlot().getCalibrateMatrix()
+			end
 			
-			var Matrix targetMatrix = Matrix.newRT(pTargetTracker.getOffsetRotation(), \
-				pTargetTracker.getOffsetPosition())
-			
-			if indexTarget != -1
-				targetMatrix = targetMatrix * component.boneGetMatrix(indexTarget)
-				
-			elif pTargetTracker.getRealSlot() != null
-				targetMatrix = targetMatrix * pTargetTracker.getRealSlot().getTargetMatrix()
+			var Matrix targetMatrix = pTargetTracker.getTransformMatrix()
+			if pTargetTracker.getRealSlot() != null
+				targetMatrix = targetMatrix * pTargetTracker.getRealSlot().getCalibrateMatrix()
 			end
 			
 			var Vector position = (targetMatrix * baseMatrix.getInverse()).getPosition()
