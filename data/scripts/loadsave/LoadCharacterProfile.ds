@@ -181,15 +181,20 @@ class LoadCharacterProfile extends BaseXmlLoader
 				configuration.setCalibrateScale(element.getFirstCDataFloat())
 				
 			elif tagName.equals("matrix")
-				configuration.setMatrixCalibrate(Matrix.new(\
-					element.getAttributeFloatNamed("a11"), element.getAttributeFloatNamed("a12"), \
-					element.getAttributeFloatNamed("a13"), element.getAttributeFloatNamed("a14"), \
-					element.getAttributeFloatNamed("a21"), element.getAttributeFloatNamed("a22"), \
-					element.getAttributeFloatNamed("a23"), element.getAttributeFloatNamed("a24"), \
-					element.getAttributeFloatNamed("a31"), element.getAttributeFloatNamed("a32"), \
-					element.getAttributeFloatNamed("a33"), element.getAttributeFloatNamed("a34")))
+				configuration.setMatrixCalibrate(readMatrix(element))
 			end
 		end)
+	end
+	
+	/** Read matrix tag. */
+	public func Matrix readMatrix(EasyXMLElement tag)
+		return Matrix.new(\
+			tag.getAttributeFloatNamed("a11"), tag.getAttributeFloatNamed("a12"), \
+			tag.getAttributeFloatNamed("a13"), tag.getAttributeFloatNamed("a14"), \
+			tag.getAttributeFloatNamed("a21"), tag.getAttributeFloatNamed("a22"), \
+			tag.getAttributeFloatNamed("a23"), tag.getAttributeFloatNamed("a24"), \
+			tag.getAttributeFloatNamed("a31"), tag.getAttributeFloatNamed("a32"), \
+			tag.getAttributeFloatNamed("a33"), tag.getAttributeFloatNamed("a34"))
 	end
 	
 	/** Read tracker slot tag. */
@@ -300,20 +305,24 @@ class LoadCharacterProfile extends BaseXmlLoader
 		var EasyXMLElement tag = root.addTag("calibrated")
 		
 		tag.addDataTag("scale", configuration.getCalibrateScale())
-		
-		var EasyXMLElement tag2 = tag.addTag("matrix")
-		tag2.setAttribute("a11", configuration.getMatrixCalibrate().get11())
-		tag2.setAttribute("a12", configuration.getMatrixCalibrate().get12())
-		tag2.setAttribute("a13", configuration.getMatrixCalibrate().get13())
-		tag2.setAttribute("a14", configuration.getMatrixCalibrate().get14())
-		tag2.setAttribute("a21", configuration.getMatrixCalibrate().get21())
-		tag2.setAttribute("a22", configuration.getMatrixCalibrate().get22())
-		tag2.setAttribute("a23", configuration.getMatrixCalibrate().get23())
-		tag2.setAttribute("a24", configuration.getMatrixCalibrate().get24())
-		tag2.setAttribute("a31", configuration.getMatrixCalibrate().get31())
-		tag2.setAttribute("a32", configuration.getMatrixCalibrate().get32())
-		tag2.setAttribute("a33", configuration.getMatrixCalibrate().get33())
-		tag2.setAttribute("a34", configuration.getMatrixCalibrate().get34())
+		writeMatrix(tag, "matrix", configuration.getMatrixCalibrate())
+	end
+	
+	/** Write matrix. */
+	public func void writeMatrix(EasyXMLElement root, String name, Matrix matrix)
+		var EasyXMLElement tag = root.addTag(name)
+		tag.setAttribute("a11", matrix.get11())
+		tag.setAttribute("a12", matrix.get12())
+		tag.setAttribute("a13", matrix.get13())
+		tag.setAttribute("a14", matrix.get14())
+		tag.setAttribute("a21", matrix.get21())
+		tag.setAttribute("a22", matrix.get22())
+		tag.setAttribute("a23", matrix.get23())
+		tag.setAttribute("a24", matrix.get24())
+		tag.setAttribute("a31", matrix.get31())
+		tag.setAttribute("a32", matrix.get32())
+		tag.setAttribute("a33", matrix.get33())
+		tag.setAttribute("a34", matrix.get34())
 	end
 	
 	/** Write tracker slot. */

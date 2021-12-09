@@ -481,13 +481,18 @@ class MotionTransferBend extends DefaultMotionTransfer
 				end
 			end
 			
+			var Matrix invTargetMat
+			
 			if indexTarget != -1
-				pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation) \
-					* component.boneGetInverseMatrix(indexTarget)).getEulerAngles()
+				invTargetMat = component.boneGetInverseMatrix(indexTarget)
 				
-			elif pTargetTracker.getRealSlot() != null
-				pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation) \
-					* pTargetTracker.getRealSlot().getTargetMatrix().getInverse()).getEulerAngles()
+			elif pTargetTracker.getRealSlot() != null and pBaseTracker.getRealSlot() != null
+				invTargetMat = pTargetTracker.getRealSlot().getTargetMatrix().getInverse()
+			end
+			
+			if invTargetMat != null
+				pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation)\
+					* invTargetMat.normalize().getRotation()).getEulerAngles()
 			end
 		end
 	end
@@ -600,6 +605,5 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pCalibrateTwistAxes.forEach(block Vector each
 			loader.writeVector(tag, "twistAxis", each)
 		end)
-		loader.writeVector(tag, "twistBoneAxisRotation", pCalibrateTwistBoneAxisRotation)
 	end
 end
