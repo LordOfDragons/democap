@@ -86,7 +86,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var AnimatorInstance pAnimatorInstance
 		private var Component pComponent
 		private var int pTwistBone
-		private var float pScaleReach
+		private var Vector pScaleReach
 		private var Quaternion pTwistQuat, pTwistQuatInv
 		private var bool pEnableScaleReach
 		private var bool pEnableTipOffset
@@ -102,7 +102,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
 			
 			pTipOffset = ecbehavior.getTransfer().getCalibrateTipOffset()
-			pScaleReach = ecbehavior.getTransfer().getCalibrateReachScale()
+			pScaleReach = ecbehavior.getTransfer().getCalibrateReachScaleDirection()\
+				* ecbehavior.getTransfer().getCalibrateReachScale()
 			
 			pTwistQuat = Quaternion.newFromEuler(ecbehavior.getTransfer().getCalibrateTwistBoneAxisRotation())
 			pTwistQuatInv = pTwistQuat.conjugate()
@@ -158,8 +159,6 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				and pControllerTipPosition != null and pControllerBlend != null
 			
 			pEnableTipOffset = pEnableScaleReach and not pTipOffset.isZero()
-			GameApp.getGameApp().getConsole().addMessage("OOPS " + pECBehavior.getTransfer().getBaseBone()\
-				+ " " + pEnableScaleReach + " " + pEnableTipOffset + " " + pTipOffset)
 			
 			pMoCapAnimator.addListener(UpdateControllers.new(this))
 		end
@@ -284,16 +283,12 @@ class ECBMotionTransferIK extends DefaultECBehavior
 					var Matrix boneMatrix = pComponent.boneGetMatrix(pBaseBone)
 					
 					if pEnableTipOffset
-// 						GameApp.getGameApp().getConsole().addMessage(\
-// 							"SHIT " + pECBehavior.getTransfer().getBaseBone() + " "\
-// 							+ targetPosition + " " + boneMatrix.transformNormal(pTipOffset)\
-// 							+ " " + (targetPosition + boneMatrix.transformNormal(pTipOffset)))
 						targetPosition = targetPosition + boneMatrix.transformNormal(pTipOffset)
 					end
 					
 					var Vector basePosition = boneMatrix.getPosition()
 					
-					targetPosition = basePosition + (targetPosition - basePosition) * pScaleReach
+					targetPosition = basePosition + (targetPosition - basePosition).compMultiply(pScaleReach)
 					
 					if pControllerRetracted != null
 						pControllerRetracted.setValue((targetPosition - basePosition).getLength())

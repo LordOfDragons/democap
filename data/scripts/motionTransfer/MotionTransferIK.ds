@@ -108,6 +108,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var Array pCalibrateBones
 	private var float pCalibrateReach
 	private var float pCalibrateReachScale
+	private var Vector pCalibrateReachScaleDirection
 	private var float pCalibrateReachRange
 	private var ARTrackToAxis pCalibrateGuideTrackAxis
 	private var ARTrackToAxis pCalibrateGuideUpAxis
@@ -138,7 +139,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTwistAxisRotation = Vector.new()
 		pCalibrateBones = Array.new()
 		pCalibrateReach = 0.6
-		pCalibrateReachScale  = 1
+		pCalibrateReachScale = 1
+		pCalibrateReachScaleDirection = Vector.new(1, 1, 1)
 		pCalibrateReachRange = 0
 		pCalibrateReachRetracted = 1
 		pCalibrateGuideTrackAxis = ARTrackToAxis.posZ
@@ -168,6 +170,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateBones = Array.new(transfer.pCalibrateBones)
 		pCalibrateReach = transfer.pCalibrateReach
 		pCalibrateReachScale = transfer.pCalibrateReachScale
+		pCalibrateReachScaleDirection = transfer.pCalibrateReachScaleDirection
 		pCalibrateReachRange = transfer.pCalibrateReachRange
 		pCalibrateReachRetracted = transfer.pCalibrateReachRetracted
 		pCalibrateGuideTrackAxis = transfer.pCalibrateGuideTrackAxis
@@ -352,6 +355,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 	/** Calibrate reach scale. */
 	public func float getCalibrateReachScale()
 		return pCalibrateReachScale
+	end
+	
+	/** Calibrate reach scale per direction. */
+	public func Vector getCalibrateReachScaleDirection()
+		return pCalibrateReachScaleDirection
 	end
 	
 	/** Calibrate reach range or 0 if disabled. */
@@ -605,6 +613,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	public func void resetCalibration()
 		pCalibrateReach = 0.6
 		pCalibrateReachScale = 1
+		pCalibrateReachScaleDirection = Vector.new(1, 1, 1)
 		pCalibrateReachRange = 0
 		pCalibrateReachRetracted = 1
 		pCalibrateGuideTrackAxis = ARTrackToAxis.posZ
@@ -653,35 +662,59 @@ class MotionTransferIK extends DefaultMotionTransfer
 			var Matrix baseMatrix = component.boneGetMatrix(indexBase)
 			var Matrix tipMatrix = component.boneGetMatrix(indexTip)
 			
-			var Matrix guideMatrix
-			if indexGuide != -1
-				guideMatrix = component.boneGetMatrix(indexGuide)
+			var Vector posBase = baseMatrix.getPosition()
+			var Vector posTip = tipMatrix * pTipTracker.getReverseTransformPosition()
+			
+			select pActorReach
+			case ActorReach.arm
+				var float actorReach = (actorProfile.getArmLength() \
+					+ actorProfile.getShoulderWidth() / 2) * config.getCalibrateScale()
 				
-				var Vector posGuide = guideMatrix.getPosition()
-				var Vector posTip = tipMatrix * pTipTracker.getReverseTransformPosition()
-				pCalibrateReach = (posTip - posGuide).getLength()
+				pCalibrateReach = DEMath.fabs(posTip.getX())
+				pCalibrateReachScale = pCalibrateReach / actorReach
 				
-				select pActorReach
-				case ActorReach.arm
-					pCalibrateReachScale = pCalibrateReach / (actorProfile.getArmLength() * config.getCalibrateScale())
-					
-				case ActorReach.leg
-					// reach scale is not working well with legs
+				// along Z direction this is always 1.
+				// along X and Y direction the scaling has to be adjusted. this is due
+				// to the character shoulder joint usually not lining up with the actor
+				// shoulder joint. here though the spine attachment point is usually used
+				// as the base of the IK chain. this has the advantage that with the
+				// actor the spine attachment point is pretty much at the center of the
+				// actor. this way the location of the character spine attachment point
+				// becomes the pivot point. the length from the pivot point to the
+				// character center is fixed. the remaining length has to make a turn
+				// to reach the IK point. this length has to be matched with the length
+				// from the turned IK point to the spine attachment point.
+				var float shorten = 0.95
+				
+				var float reachFront = pCalibrateReach * shorten
+				
+				var Vector pivot = posBase.absolute()
+				var Vector tip = posTip.absolute()
+				var Vector tipFront = pivot + Vector.new(0, 0, reachFront)
+				
+				var Vector actorPivot = Vector.new(0, pivot.getY(), pivot.getZ())
+				
+				var float scaleSide = reachFront / (tipFront - actorPivot).getLength()
+				
+				pCalibrateReachScaleDirection = Vector.new(1, scaleSide, scaleSide)
+				
+			case ActorReach.leg
+				// reach scale is not working well with legs
 //	 				pCalibrateReachScale = pCalibrateReach / (actorProfile.getLegLength() * config.getCalibrateScale())
-					pCalibrateReachScale = 1
-					
-				else
-					pCalibrateReachScale = 1
-				end
+				pCalibrateReach = (posTip - posBase).getLength()
+				pCalibrateReachScale = 1
+				pCalibrateReachScaleDirection = Vector.new(1, 1, 1)
 				
 			else
+				pCalibrateReach = (posTip - posBase).getLength()
 				pCalibrateReachScale = 1
+				pCalibrateReachScaleDirection = Vector.new(1, 1, 1)
 			end
 			
 			var CharacterTrackerSlot slotBase = pBaseTracker.getRealSlot()
 			var CharacterTrackerSlot slotTip = pTipTracker.getRealSlot()
 			
-			if slotTip != null and pTipTracker.getAutoTransform() == MotionTransferTracker.AutoTransform.orientationOffset
+			if slotTip != null and pTipTracker.getAutoTransform() == MotionTransferTracker.AutoTransform.orientationTarget
 				var Vector displacement = slotTip.getTargetPosition()\
 					- slotTip.getCalibrateReferenceMatrix().getPosition()
 				
@@ -730,6 +763,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		else
 			pCalibrateReach = 0.6
 			pCalibrateReachScale = 1
+			pCalibrateReachScaleDirection = Vector.new(1, 1, 1)
 			pCalibrateReachRange = 0
 			pCalibrateReachRetracted = pCalibrateReach
 			pCalibrateTipOffset = Vector.new()
@@ -921,6 +955,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("reachScale")
 				pCalibrateReachScale = element.getFirstCDataFloat()
 				
+			elif tagName.equals("reachScaleDirection")
+				pCalibrateReachScaleDirection = loader.readVector(element)
+				
 			elif tagName.equals("reachRange")
 				pCalibrateReachRange = element.getFirstCDataFloat()
 				
@@ -981,6 +1018,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	public func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("reach", pCalibrateReach)
 		tag.addDataTag("reachScale", pCalibrateReachScale)
+		loader.writeVector(tag, "reachScaleDirection", pCalibrateReachScaleDirection)
 		tag.addDataTag("reachRange", pCalibrateReachRange)
 		loader.writeVector(tag, "tipOffset", pCalibrateTipOffset)
 		pCalibrateBones.forEach(block String each

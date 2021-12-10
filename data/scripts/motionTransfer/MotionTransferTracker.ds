@@ -43,8 +43,11 @@ class MotionTransferTracker
 		/** Orientation only. */
 		orientation
 		
-		/** Orientation only with reference offset. */
-		orientationOffset
+		/** Orientation with reference offset. */
+		orientationReference
+		
+		/** Orientation with reference and target offset. */
+		orientationTarget
 		
 		/** None. */
 		none
@@ -242,29 +245,11 @@ class MotionTransferTracker
 			pTransformMatrix = deviceBoneTransform.getRotation() * Matrix.newTranslation(\
 				deviceReferenceTransform.getRotation() * targetBoneTransform.getPosition())
 			
-		case AutoTransform.orientationOffset
+		case AutoTransform.orientationReference, AutoTransform.orientationTarget
 			pTransformMatrix = deviceBoneTransform.getRotation()\
 				* Matrix.newTranslation(deviceReferenceTransform.getPosition() + \
 					deviceReferenceTransform.getRotation() * targetBoneTransform.getPosition())
 			
-		/*
-			// modified version of AutoTransform.orientation for use with feet and head.
-			// requires modifying the pTransformMatrix each capture frame before applying
-			// it to the device matrix to do proper pivot rotation. the pTransformMatrix
-			// stays the same. hence this modified version does use AutoTransform.orientation
-			// but applies a displacement relative to the reference matrix.
-			// 
-			// the main problem is how to calculate the displacement. this requires additional
-			// knowledge beyond what the MotionTransferTracker does know. basically we need
-			// to use the information of another MotionTransferTracker to figure out how to
-			// calculate the displacement.
-			// 
-			// what is clear though is that we need to use the target matrix as pivot definition.
-			// once the target matrix has been transformed by whatever calculation to be in
-			// the right position it has to be transformed into reference space to apply
-			// properly to the device matrix.
-		*/
-		
 		case AutoTransform.none
 			pTransformMatrix = targetBoneTransform
 		end
