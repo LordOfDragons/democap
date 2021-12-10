@@ -110,9 +110,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			end
 			
 			if ecbehavior.getSlotTarget() != null and ecbehavior.getSlotBase() != null
-				// (target * base^-1)^-1 => base * target^-1
-				pTransformTwist = ecbehavior.getSlotBase().getTrackerSlot().getTargetMatrix()\
-					* ecbehavior.getSlotTarget().getTrackerSlot().getTargetMatrix().getInverse()
+				pTransformTwist = ecbehavior.getTransfer().getCalibrateTwistTransform()
 			end
 		end
 		
@@ -230,20 +228,31 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		public func void updateControllersPhase2()
 			if pSlotTarget != null and pSlotBase != null and pControllerTwist != null\
 			and (pTwistBone != -1 or pUseTwistSlot)
-				var Quaternion orientation = pTwistQuat
+				//var Quaternion orientation = pTwistQuat
+				var Matrix matrix = Matrix.newFromQuaternion(pTwistQuat)
+					GameApp.getGameApp().getConsole().addMessage("SHIT " + matrix.getViewVector() + " " + matrix.getUpVector())
 				
 				if pTwistBone != -1
-					orientation = orientation * pComponent.boneGetRotation(pTwistBone)
+					//orientation = orientation * pComponent.boneGetRotation(pTwistBone)
+					matrix = matrix * pComponent.boneGetMatrix(pTwistBone).getRotation()
 					
 				else // pUseTwistSlot
 					var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixCharacter()
 					var Matrix targetMatrix = pTransformTarget * pSlotTarget.getMatrixCharacter()
 					
-					orientation = orientation * (targetMatrix * baseMatrix.getInverse()\
-						* pTransformTwist).normalize().getRotation().toQuaternion()
+					//orientation = orientation * (targetMatrix * baseMatrix.getInverse()\
+					//	* pTransformTwist).normalize().getRotation().toQuaternion()
+					matrix = matrix * (targetMatrix * baseMatrix.getInverse()\
+						* pTransformTwist).normalize().getRotation()
+					GameApp.getGameApp().getConsole().addMessage("FICK " + (targetMatrix * baseMatrix.getInverse()\
+						* pTransformTwist).getViewVector() + " " + (targetMatrix * baseMatrix.getInverse()\
+						* pTransformTwist).getUpVector())
 				end
 				
-				orientation = orientation * pTwistQuatInv
+				//orientation = orientation * pTwistQuatInv
+				matrix = matrix * Matrix.newFromQuaternion(pTwistQuatInv)
+				GameApp.getGameApp().getConsole().addMessage("FUCK " + matrix.getViewVector() + " " + matrix.getUpVector())
+				var Quaternion orientation = matrix.toQuaternion()
 				
 				// this calculation is instable beyond ~88 degrees elevation
 				//pControllerTwist.setValue(orientation.getEulerAngles().getZ())
@@ -251,6 +260,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 				// pfft... this brutal hack actually works
 				var float factor = 0.5
 				var float rotation = (orientation.slerp(Quaternion.new(), factor)).getEulerAngles().getZ() / factor
+				GameApp.getGameApp().getConsole().addMessage("DAMNIT " + rotation)
 				
 				pControllerTwist.setValue(rotation)
 				

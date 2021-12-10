@@ -88,6 +88,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 	private var Vector pCalibrateTwistRotation
 	private var Array pCalibrateTwistAxes
 	private var Vector pCalibrateTwistBoneAxisRotation
+	private var Matrix pCalibrateTwistTransform
 	
 	
 	
@@ -109,6 +110,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pCalibrateTwistRotation = Vector.new()
 		pCalibrateTwistAxes = Array.new()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
+		pCalibrateTwistTransform = Matrix.new()
 	end
 	
 	/** Create copy of motion transfer. */
@@ -129,6 +131,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pCalibrateTwistRotation = transfer.pCalibrateTwistRotation
 		pCalibrateTwistAxes = Array.new(transfer.pCalibrateTwistAxes)
 		pCalibrateTwistBoneAxisRotation = transfer.pCalibrateTwistBoneAxisRotation
+		pCalibrateTwistTransform = transfer.pCalibrateTwistTransform
 	end
 	
 	
@@ -246,6 +249,11 @@ class MotionTransferBend extends DefaultMotionTransfer
 	/** Calibrate twist bone axis rotation. */
 	public func Vector getCalibrateTwistBoneAxisRotation()
 		return pCalibrateTwistBoneAxisRotation
+	end
+	
+	/** Calibrate twist transform. */
+	public func Matrix getCalibrateTwistTransform()
+		return pCalibrateTwistTransform
 	end
 	
 	
@@ -390,6 +398,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pCalibrateTwistRotation = Vector.new()
 		pCalibrateTwistAxes.removeAll()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
+		pCalibrateTwistTransform = Matrix.new()
 	end
 	
 	/** Calibrate character. */
@@ -415,17 +424,17 @@ class MotionTransferBend extends DefaultMotionTransfer
 			indexTip = component.indexOfBoneNamed(pTipBone)
 		end
 		
+		var Matrix baseMatrix = pBaseTracker.getTransformMatrix()
+		if pBaseTracker.getRealSlot() != null
+			baseMatrix = baseMatrix * pBaseTracker.getRealSlot().getCalibrateMatrix()
+		end
+		
+		var Matrix targetMatrix = pTargetTracker.getTransformMatrix()
+		if pTargetTracker.getRealSlot() != null
+			targetMatrix = targetMatrix * pTargetTracker.getRealSlot().getCalibrateMatrix()
+		end
+		
 		if indexBase != -1 and indexTip != -1
-			var Matrix baseMatrix = pBaseTracker.getTransformMatrix()
-			if pBaseTracker.getRealSlot() != null
-				baseMatrix = baseMatrix * pBaseTracker.getRealSlot().getCalibrateMatrix()
-			end
-			
-			var Matrix targetMatrix = pTargetTracker.getTransformMatrix()
-			if pTargetTracker.getRealSlot() != null
-				targetMatrix = targetMatrix * pTargetTracker.getRealSlot().getCalibrateMatrix()
-			end
-			
 			var Vector position = (targetMatrix * baseMatrix.getInverse()).getPosition()
 			
 			pCalibrateZeroRotation = Vector2.new(\
@@ -487,13 +496,16 @@ class MotionTransferBend extends DefaultMotionTransfer
 				invTargetMat = component.boneGetInverseMatrix(indexTarget)
 				
 			elif pTargetTracker.getRealSlot() != null and pBaseTracker.getRealSlot() != null
-				invTargetMat = pTargetTracker.getRealSlot().getTargetMatrix().getInverse()
+				invTargetMat = targetMatrix.getInverse()
 			end
 			
 			if invTargetMat != null
 				pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation)\
 					* invTargetMat.normalize().getRotation()).getEulerAngles()
 			end
+			
+			// (target * base^-1)^-1 => base * target^-1
+			pCalibrateTwistTransform = baseMatrix * targetMatrix.getInverse()
 		end
 	end
 	
@@ -569,6 +581,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 				
 			elif tagName.equals("twistBoneAxisRotation")
 				pCalibrateTwistBoneAxisRotation = loader.readVector(element)
+				
+			elif tagName.equals("twistTransform")
+				pCalibrateTwistTransform = GameApp.getGameApp().getLoadCharacterProfile().readMatrix(element)
 			end
 		end)
 	end
@@ -585,6 +600,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 		tag.addDataTag("twistPropagation", pTwistPropagation)
 		tag.addDataTag("twistBoneCount", pTwistBoneCount)
 		loader.writeVector(tag, "twistAxisRotation", pTwistAxisRotation)
+		GameApp.getGameApp().getLoadCharacterProfile().writeMatrix(\
+			tag, "twistTransform", pCalibrateTwistTransform)
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
