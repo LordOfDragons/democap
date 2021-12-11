@@ -30,40 +30,24 @@ pin Dragengine.Scenery
  * Edit color widget.
  */
 class EditColor extends Panel
-	protected class ComponentValueChanged extends DefaultTextModelListener
-		private var EditColor pEditColor
-		private var int pComponent
-		
-		public func new(EditColor editColor, int component)
-			pEditColor = editColor
-			pComponent = component
-		end
-		
-		public func void textChanged(TextModel textModel)
-			pEditColor.onComponentValueChanged(pComponent)
-		end
-	end
-	
-	protected class ComponentValueAccepted implements ActionListener
-		private var EditColor pEditColor
+	/** Edit color listener. */
+	class EditColorListener extends ClickedActionListener
+		protected var EditColor pEditColor
 		
 		public func new(EditColor editColor)
 			pEditColor = editColor
 		end
 		
-		public func void onAction(ActionEvent event)
-			pEditColor.onComponentValueAccepted()
+		public func void onAction()
+			pEditColor.editColor()
 		end
 	end
 	
 	
 	
-	private var TextField pEditRed
-	private var TextField pEditGreen
-	private var TextField pEditBlue
+	private var Widget pColorWell
 	private var Color pColor
 	private var float pRoundUnit
-	private var bool pPreventUpdate
 	private var Array pActionListeners
 	
 	
@@ -71,7 +55,6 @@ class EditColor extends Panel
 	/** Create widget. */
 	public func new()
 		pActionListeners = Array.new()
-		pPreventUpdate = true
 		pRoundUnit = 0.001
 		
 		runWhileBlockingLayout(block
@@ -79,7 +62,7 @@ class EditColor extends Panel
 		end)
 		
 		pColor = Color.black
-		pPreventUpdate = false
+		updateColorWell()
 	end
 	
 	/** Create widget. */
@@ -89,11 +72,8 @@ class EditColor extends Panel
 	
 	/** Dispose of window. */
 	public func void dispose()
-		pPreventUpdate = true
 		pActionListeners = null
-		pEditRed = null
-		pEditGreen = null
-		pEditBlue = null
+		pColorWell = null
 		super.dispose()
 	end
 	
@@ -111,7 +91,7 @@ class EditColor extends Panel
 		end
 		
 		pColor = color
-		updateTextFields()
+		updateColorWell()
 		notifyListeners()
 	end
 	
@@ -120,50 +100,31 @@ class EditColor extends Panel
 		return color.isEqual(pColor, pRoundUnit)
 	end
 	
-	/** Update text fields. */
-	protected func void updateTextFields()
-		var float red = DEMath.floor(pColor.getRed() / pRoundUnit + 0.5) * pRoundUnit
-		var float green = DEMath.floor(pColor.getGreen() / pRoundUnit + 0.5) * pRoundUnit
-		var float blue = DEMath.floor(pColor.getBlue() / pRoundUnit + 0.5) * pRoundUnit
-		
-		pPreventUpdate = true
-		pEditRed.setText(red.toString())
-		pEditGreen.setText(green.toString())
-		pEditBlue.setText(blue.toString())
-		pPreventUpdate = false
+	/** Update color well. */
+	protected func void updateColorWell()
+		pColorWell.setColorTransformation(ColorMatrix.newScaling(pColor))
 	end
 	
-	
-	
-	/** Red component text field. */
-	public func TextField getEditRed()
-		return pEditRed
-	end
-	
-	/** Green component text field. */
-	public func TextField getEditGreen()
-		return pEditGreen
-	end
-	
-	/** Blue component text field. */
-	public func TextField getEditBlueu()
-		return pEditBlue
+	/** Show dialog to edit color. */
+	public func void editColor()
+		DialogColorPicker.editColor(getWindow(), "Edit Color", pColor,\
+		WindowDialog.BlockResultListener.new(block Color result
+			if result != null
+				setColor(result)
+			end
+		end))
 	end
 	
 	
 	
 	/** Add focus listener. */
 	public func void addFocusListener(FocusListener listener)
-		pEditRed.addFocusListener(listener)
-		pEditGreen.addFocusListener(listener)
-		pEditBlue.addFocusListener(listener)
+		pColorWell.addFocusListener(listener)
 	end
 	
 	/** Remove focus listener. */
 	public func void removeFocusListener(FocusListener listener)
-		pEditRed.removeFocusListener(listener)
-		pEditGreen.removeFocusListener(listener)
-		pEditBlue.removeFocusListener(listener)
+		pColorWell.removeFocusListener(listener)
 	end
 	
 	
@@ -185,70 +146,12 @@ class EditColor extends Panel
 	
 	/** Create window content. */
 	protected func void createContent()
-		setLayout(BoxLayout.new(LayoutAxis.x, 5))
+		setLayout(BoxLayout.new(LayoutAxis.x))
 		
-		var ComponentValueAccepted action = ComponentValueAccepted.new(this)
-		
-		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.last), block Panel p
-			p.addWidget(Label.new("R"))
-			pEditRed = TextField.new(DefaultTextModel.new((0).toString()), 5)
-			pEditRed.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
-			pEditRed.getModel().addListener(ComponentValueChanged.new(this, 0))
-			pEditRed.addActionListener(action)
-			p.addWidget(pEditRed)
-		end))
-		
-		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.last), block Panel p
-			p.addWidget(Label.new("G"))
-			pEditGreen = TextField.new(DefaultTextModel.new((0).toString()), 5)
-			pEditGreen.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
-			pEditGreen.getModel().addListener(ComponentValueChanged.new(this, 1))
-			pEditGreen.addActionListener(action)
-			p.addWidget(pEditGreen)
-		end))
-		
-		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.last), block Panel p
-			p.addWidget(Label.new("B"))
-			pEditBlue = TextField.new(DefaultTextModel.new((0).toString()), 5)
-			pEditBlue.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
-			pEditBlue.getModel().addListener(ComponentValueChanged.new(this, 2))
-			pEditBlue.addActionListener(action)
-			p.addWidget(pEditBlue)
-		end))
-	end
-	
-	/** Component value changed. */
-	public func void onComponentValueChanged(int component)
-		if pPreventUpdate
-			return
-		end
-		
-		var float red = pColor.getRed()
-		var float green = pColor.getGreen()
-		var float blue = pColor.getBlue()
-		
-		try
-			select component
-			case 0
-				red = pEditRed.getText().toFloat()
-				
-			case 1
-				green = pEditGreen.getText().toFloat()
-				
-			case 2
-				blue = pEditBlue.getText().toFloat()
-			end
-			
-		catch Exception e
-			return
-		end
-		
-		pColor = Color.new(red, green, blue)
-	end
-	
-	/** Component value accepted. */
-	public func void onComponentValueAccepted()
-		notifyListeners()
+		pColorWell = Widget.new()
+		pColorWell.setDesignerSelector("ColorWell")
+		addWidget(pColorWell)
+		pColorWell.addMouseListener(EditColorListener.new(this))
 	end
 	
 	/** Notify listeners. */

@@ -1,0 +1,574 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Actors
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Color picker dialog.
+ */
+class DialogColorPicker extends WindowDialog
+	/** Update color on RGB range model value changed. */
+	class RgbValueChanged extends DefaultRangeModelListener
+		protected var DialogColorPicker pDialog
+		
+		public func new(DialogColorPicker dialog)
+			pDialog = dialog
+		end
+		
+		public func void valueChanged(RangeModel rangeModel)
+			pDialog.setColorFromRangeRgb()
+		end
+	end
+	
+	/** Update color on HSV range model value changed. */
+	class HsvValueChanged extends DefaultRangeModelListener
+		protected var DialogColorPicker pDialog
+		
+		public func new(DialogColorPicker dialog)
+			pDialog = dialog
+		end
+		
+		public func void valueChanged(RangeModel rangeModel)
+			pDialog.setColorFromRangeHsv()
+		end
+	end
+	
+	/** Drag color component listener. */
+	class DragColorComponent extends DefaultMouseListener
+		protected var RangeModel pModel
+		protected var bool pDraging
+		
+		public func new(RangeModel model)
+			pModel = model
+		end
+		
+		public func void onButtonPress(MouseEvent event)
+			(event.getSource() cast Widget).captureMouse()
+			pDraging = true
+		end
+		
+		public func void onButtonRelease(MouseEvent event)
+			if pDraging
+				pDraging = false
+				(event.getSource() cast Widget).releaseMouse()
+			end
+		end
+		
+		public func void onMouseMove(MouseEvent event)
+			if pDraging
+				var int width = (event.getSource() cast Widget).getWidth()
+				if width > 1
+					pModel.setValue(pModel.getMaximum() * event.getPosition().getX() / (width - 1))
+				end
+			end
+		end
+		
+		public func void onMouseWheel(MouseEvent event)
+			pModel.setValue(pModel.getValue() + pModel.getPageSize() * event.getPosition().getY())
+		end
+	end
+	
+	/** Drag square color listener. */
+	class DragSquareColor extends DefaultMouseListener
+		protected var RangeModel pModelX
+		protected var RangeModel pModelY
+		protected var bool pDraging
+		
+		public func new(RangeModel modelX, RangeModel modelY)
+			pModelX = modelX
+			pModelY = modelY
+		end
+		
+		public func void onButtonPress(MouseEvent event)
+			(event.getSource() cast Widget).captureMouse()
+			pDraging = true
+		end
+		
+		public func void onButtonRelease(MouseEvent event)
+			if pDraging
+				pDraging = false
+				(event.getSource() cast Widget).releaseMouse()
+			end
+		end
+		
+		public func void onMouseMove(MouseEvent event)
+			if pDraging
+				var Point size = (event.getSource() cast Widget).getSize()
+				if not (size <= Point.new(1, 1))
+					var int x = pModelX.getMaximum() * event.getPosition().getX() / (size.getX() - 1)
+					var int y = pModelY.getMaximum() * event.getPosition().getY() / (size.getY() - 1)
+					pModelX.setValue(x)
+					pModelY.setValue(y)
+				end
+			end
+		end
+	end
+	
+	/** Color bar marker panel. */
+	class ColorBarMarkerPanel extends Panel implements RangeModelListener
+		protected var RangeModel pModel
+		protected var Widget pMarker
+		
+		public func new(RangeModel model) super(FixedLayout.new())
+			setMinimumSize(Point.new(1, 1))
+			setProtectMinimumSize(true)
+			
+			pMarker = Widget.new()
+			pMarker.setDesignerSelector("ColorPicker.BarMarker")
+			addWidget(pMarker)
+			
+			pModel = model
+			model.addListener(this)
+		end
+		
+		public func void dispose()
+			pModel = null
+			pMarker = null
+			super.dispose()
+		end
+		
+		public func Widget getWidgetAt(Point position)
+			return null // make a ghost
+		end
+		
+		public func void doLayout()
+			if pMarker != null
+				var int markerWidth = pMarker.getMinimumSize().getX()
+				var int offset = markerWidth / 2
+				var int containerWidth = getContainerWidth() - offset * 2
+				var int position = (DEMath.linearStep(pModel.getValue(), pModel.getMinimum(),\
+					pModel.getMaximum(), offset, containerWidth - 1) + 0.5) cast int
+				
+				pMarker.setSize(Point.new(markerWidth, getContainerHeight()))
+				pMarker.setPosition(Point.new(position, 0))
+			end
+			super.doLayout()
+		end
+		
+		public func void rangeChanged(RangeModel rangeModel)
+		end
+		
+		public func void valueChanged(RangeModel rangeModel)
+			doLayout()
+		end
+	end
+	
+	/** Square marker panel. */
+	class SquareMarkerPanel extends Panel implements RangeModelListener
+		protected var RangeModel pModelX
+		protected var RangeModel pModelY
+		protected var Widget pMarker
+		
+		public func new(RangeModel modelX, RangeModel modelY) super(FixedLayout.new())
+			setMinimumSize(Point.new(1, 1))
+			setProtectMinimumSize(true)
+			
+			pMarker = Widget.new()
+			pMarker.setDesignerSelector("ColorPicker.SquareMarker")
+			addWidget(pMarker)
+			
+			pModelX = modelX
+			pModelY = modelY
+			modelX.addListener(this)
+			modelY.addListener(this)
+		end
+		
+		public func void dispose()
+			pModelX = null
+			pModelY = null
+			pMarker = null
+			super.dispose()
+		end
+		
+		public func Widget getWidgetAt(Point position)
+			return null // make a ghost
+		end
+		
+		public func void doLayout()
+			if pMarker != null
+				var Point markerSize = pMarker.getMinimumSize()
+				var Point containerSize = getContainerSize()
+				var int x = (DEMath.linearStep(pModelX.getValue(), pModelX.getMinimum(),\
+					pModelX.getMaximum(), 0, containerSize.getX() - 1) + 0.5) cast int
+				var int y = (DEMath.linearStep(pModelY.getValue(), pModelY.getMinimum(),\
+					pModelY.getMaximum(), containerSize.getY() - 1, 0) + 0.5) cast int
+				
+				pMarker.setSize(markerSize)
+				pMarker.setPosition(Point.new(x, y) - markerSize / 2)
+			end
+			super.doLayout()
+		end
+		
+		public func void rangeChanged(RangeModel rangeModel)
+		end
+		
+		public func void valueChanged(RangeModel rangeModel)
+			doLayout()
+		end
+	end
+	
+	
+	
+	protected var DefaultRangeModel pModelRed
+	protected var DefaultRangeModel pModelGreen
+	protected var DefaultRangeModel pModelBlue
+	protected var DefaultRangeModel pModelHue
+	protected var DefaultRangeModel pModelSaturation
+	protected var DefaultRangeModel pModelValue
+	
+	protected var DefaultTextModel pModelTextRed
+	protected var DefaultTextModel pModelTextGreen
+	protected var DefaultTextModel pModelTextBlue
+	protected var DefaultTextModel pModelTextHue
+	protected var DefaultTextModel pModelTextSaturation
+	protected var DefaultTextModel pModelTextValue
+	
+	protected var DisplayImage pSquareBox
+	protected var EditableImage pImageRed
+	protected var EditableImage pImageGreen
+	protected var EditableImage pImageBlue
+	protected var EditableImage pImageHue
+	protected var EditableImage pImageSaturation
+	protected var EditableImage pImageValue
+	
+	protected var Color pColor
+	
+	protected var bool pPreventUpdate
+	
+	
+	
+	/** Create window. */
+	public func new(Window window, String title, ResultListener listener)
+		pColor = Color.white
+		
+		pModelRed = DefaultRangeModel.new(0, 255, 32, 255, 1)
+		pModelGreen = DefaultRangeModel.new(0, 255, 32, 255, 1)
+		pModelBlue = DefaultRangeModel.new(0, 255, 32, 255, 1)
+		pModelHue = DefaultRangeModel.new(0, 100, 10, 100, 1)
+		pModelSaturation = DefaultRangeModel.new(0, 100, 10, 100, 1)
+		pModelValue = DefaultRangeModel.new(0, 100, 10, 100, 1)
+		
+		pModelTextRed = DefaultTextModel.new("255")
+		pModelTextGreen = DefaultTextModel.new("255")
+		pModelTextBlue = DefaultTextModel.new("255")
+		pModelTextHue = DefaultTextModel.new("100")
+		pModelTextSaturation = DefaultTextModel.new("100")
+		pModelTextValue = DefaultTextModel.new("100")
+		
+		pImageRed = EditableImage.new(128, 1, 1, 3, 8)
+		pImageGreen = EditableImage.new(128, 1, 1, 3, 8)
+		pImageBlue = EditableImage.new(128, 1, 1, 3, 8)
+		pImageHue = EditableImage.new(128, 1, 1, 3, 8)
+		pImageSaturation = EditableImage.new(128, 1, 1, 3, 8)
+		pImageValue = EditableImage.new(128, 1, 1, 3, 8)
+		
+		var RgbValueChanged rgbValueChanged = RgbValueChanged.new(this)
+		pModelRed.addListener(rgbValueChanged)
+		pModelGreen.addListener(rgbValueChanged)
+		pModelBlue.addListener(rgbValueChanged)
+		
+		var HsvValueChanged hsvValueChanged = HsvValueChanged.new(this)
+		pModelHue.addListener(hsvValueChanged)
+		pModelSaturation.addListener(hsvValueChanged)
+		pModelValue.addListener(hsvValueChanged)
+		
+		runWhileBlockingLayout(block
+			setGuiTheme(window.getGuiTheme())
+			setTitle(title)
+			setDesignerSelector("Window.Dialog.ColorPicker")
+			setSize(Point.new(800, 500))
+			
+			createContent()
+		end)
+		
+		setResultListener(listener)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		pModelRed = null
+		pModelGreen = null
+		pModelBlue = null
+		pModelHue = null
+		pModelSaturation = null
+		pModelValue = null
+		
+		pModelTextRed = null
+		pModelTextGreen = null
+		pModelTextBlue = null
+		pModelTextHue = null
+		pModelTextSaturation = null
+		pModelTextValue = null
+		
+		pSquareBox = null
+		
+		super.dispose()
+	end
+	
+	
+	
+	/** Show dialog. Result listener receives Color as result or null if cancelled. */
+	public static func DialogColorPicker editColor(Window window, String title, Color color, ResultListener listener)
+		var DialogColorPicker dialog = DialogColorPicker.new(window, title, listener)
+		dialog.setColor(color)
+		dialog.show(window, true, WindowModal.Placement.desktop)
+		return dialog
+	end
+	
+	
+	
+	/** Color. */
+	public func Color getColor()
+		return pColor
+	end
+	
+	/** Set color. */
+	public func void setColor(Color color)
+		if color == null
+			throw ENullPointer.new("color")
+		end
+		
+		if color.equals(pColor)
+			return
+		end
+		
+		pColor = color
+		
+		pPreventUpdate = true
+		updateRangeModels()
+		pPreventUpdate = false
+		
+		updateEditableImages()
+		updateSquareBox()
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var BlockActionListener action
+		var DisplayImage displayImage
+		var Widget widget
+		
+		setLayout(BorderLayout.new(20))
+		
+		// content
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 5, FlowLayout.Stretch.last), block Panel p
+			// square picker
+			p.addWidget(Panel.new(StackLayout.new(StackLayout.AspectRatio.fit, true), block Panel p2
+				p2.setDesignerSelector("Panel.ColorPicker.SquareBox")
+				p2.addWidget(DisplayImage.new(Image.new("/content/gui/images/colorPicker/square_base.png"), RepeatMode.stretch))
+				
+				pSquareBox = DisplayImage.new(Image.new("/content/gui/images/colorPicker/square_tint.png"), RepeatMode.stretch)
+				p2.addWidget(pSquareBox)
+				pSquareBox.addMouseListener(DragSquareColor.new(pModelSaturation, pModelValue))
+				
+				p2.addWidget(SquareMarkerPanel.new(pModelSaturation, pModelValue))
+			end))
+			
+// 			widget = Widget.new()
+// 			widget.setDesignerSelector("ColorPicker.SquareBar")
+// 			p.addWidget(widget)
+			
+			// components
+			p.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p2
+				// rgb
+				action = BlockActionListener.new(block ActionEvent event
+					setColorFromTextRgb()
+				end)
+				
+				addColorComponentRow(p2, "R:", pModelRed, pModelTextRed, pImageRed, action)
+				addColorComponentRow(p2, "G:", pModelGreen, pModelTextGreen, pImageGreen, action)
+				addColorComponentRow(p2, "B:", pModelBlue, pModelTextBlue, pImageBlue, action)
+				
+				// hsv
+				action = BlockActionListener.new(block ActionEvent event
+					setColorFromTextHsv()
+				end)
+				
+				addColorComponentRow(p2, "H:", pModelHue, pModelTextHue, pImageHue, action)
+				addColorComponentRow(p2, "S:", pModelSaturation, pModelTextSaturation, pImageSaturation, action)
+				addColorComponentRow(p2, "V:", pModelValue, pModelTextValue, pImageValue, action)
+			end), BorderLayout.Area.top)
+		end), BorderLayout.Area.content)
+		
+		// button line
+		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x), block Panel p
+			var Button button = Button.new("Accept", BlockActionListener.new(block ActionEvent e
+				setResult(pColor)
+				close()
+			end))
+			button.setDesignerSelector("Button.DialogColorPicker.Accept")
+			p.addWidget(button)
+			
+			button = Button.new("Cancel", CloseDialog.new(this, null))
+			button.setDesignerSelector("Button.DialogColorPicker.Cancel")
+			p.addWidget(button)
+		end ), BorderLayout.Area.bottom )
+	end
+	
+	/** Add color component edit widgets. Parent has to use FormLayout. */
+	protected func void addColorComponentRow(Container parent, String label,\
+	RangeModel rangeModel, TextModel textModel, EditableImage editImage,\
+	ActionListener actionText)
+		parent.addWidget(Label.new(label, "Label.FormCaption"))
+		
+		parent.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 2, FlowLayout.Stretch.first), block Panel p2
+			p2.addWidget(Panel.new(StackLayout.new(), block Panel p3
+				var DisplayImage displayImage = DisplayImage.new(editImage.getImage(),\
+					RepeatMode.stretch, "Image.ColorPicker.ColorBox")
+				p3.addWidget(displayImage)
+				displayImage.addMouseListener(DragColorComponent.new(rangeModel))
+				
+				p3.addWidget(ColorBarMarkerPanel.new(rangeModel))
+			end))
+			
+			var TextField textField = TextField.new(textModel, 2)
+			textField.setDesignerSelector("TextField.DialogColorPicker.Component")
+			textField.setValidator(SimpleTextValidator.new(3, SimpleTextValidator.CharacterClass.digits))
+			p2.addWidget(textField)
+			
+			var SpinButton spinButton = SpinButton.new(rangeModel)
+			p2.addWidget(spinButton)
+			
+			textField.addActionListener(actionText)
+		end))
+	end
+	
+	/** Update range models from color. */
+	protected func void updateRangeModels()
+		pModelRed.setValue((pColor.getRed() * 255 + 0.5) cast int)
+		pModelGreen.setValue((pColor.getGreen() * 255 + 0.5) cast int)
+		pModelBlue.setValue((pColor.getBlue() * 255 + 0.5) cast int)
+		
+		var Array hsv = pColor.toHSV()
+		pModelHue.setValue((hsv.getAt(0) cast float * 100 + 0.5) cast int)
+		pModelSaturation.setValue((hsv.getAt(1) cast float * 100 + 0.5) cast int)
+		pModelValue.setValue((hsv.getAt(2) cast float * 100 + 0.5) cast int)
+	end
+	
+	/** Set color from RGB text models. */
+	protected func void setColorFromTextRgb()
+		if pPreventUpdate
+			return
+		end
+		
+		setColor(Color.newRGB(\
+			pModelTextRed.getText().toInt(),\
+			pModelTextGreen.getText().toInt(),\
+			pModelTextBlue.getText().toInt()))
+	end
+	
+	/** Set color from RGB range models. */
+	public func void setColorFromRangeRgb()
+		if not pPreventUpdate
+			setColor(Color.newRGB(pModelRed.getValue(), pModelGreen.getValue(), pModelBlue.getValue()))
+		end
+		
+		pModelTextRed.setText(pModelRed.getValue().toString())
+		pModelTextGreen.setText(pModelGreen.getValue().toString())
+		pModelTextBlue.setText(pModelBlue.getValue().toString())
+	end
+	
+	/** Set color from HSV text models. */
+	protected func void setColorFromTextHsv()
+		if pPreventUpdate
+			return
+		end
+		
+		setColor(Color.newHSV(\
+			0.01 * pModelTextHue.getText().toInt(),\
+			0.01 * pModelTextSaturation.getText().toInt(),\
+			0.01 * pModelTextValue.getText().toInt()))
+	end
+	
+	/** Set color from HSV range models. */
+	public func void setColorFromRangeHsv()
+		if not pPreventUpdate
+			setColor(Color.newHSV(0.01 * pModelHue.getValue(),\
+				0.01 * pModelSaturation.getValue(), 0.01 * pModelValue.getValue()))
+		end
+		
+		pModelTextHue.setText(pModelHue.getValue().toString())
+		pModelTextSaturation.setText(pModelSaturation.getValue().toString())
+		pModelTextValue.setText(pModelValue.getValue().toString())
+	end
+	
+	/** Update color component editable images. */
+	public func void updateEditableImages()
+		updateRgbImage(pImageRed, Color.red)
+		updateRgbImage(pImageGreen, Color.green)
+		updateRgbImage(pImageBlue, Color.blue)
+		
+		updateHsvImage(pImageHue, 1, 0, 0)
+		updateHsvImage(pImageSaturation, 0, 1, 0)
+		updateHsvImage(pImageValue, 0, 0, 1)
+	end
+	
+	/** Update color component editable image. */
+	public func void updateRgbImage(EditableImage editImage, Color mask)
+		var Color base = pColor * mask.invert()
+		var int i
+		
+		for i = 0 to 128
+			editImage.setAt(i, 0, base + mask * (DEMath.pow(i cast float / 128, 0.45)))
+		end
+		editImage.contentChanged()
+	end
+	
+	/** Update color component editable image. */
+	public func void updateHsvImage(EditableImage editImage,\
+	float maskHue, float maskSaturation, float maskValue)
+		var Array values = pColor.toHSV()
+		var float baseHue = values.getAt(0) cast float * (1.0 - maskHue)
+		var float baseSaturation = values.getAt(1) cast float * (1.0 - maskSaturation)
+		var float baseValue = values.getAt(2) cast float * (1.0 - maskValue)
+		var float factor
+		var Color color
+		var int i
+		
+		for i = 0 to 128
+			factor = i cast float / 128
+			color = Color.newHSV(baseHue + maskHue * factor,\
+				baseSaturation + maskSaturation * factor,\
+				baseValue + maskValue * factor)
+			color = Color.new(DEMath.pow(color.getRed(), 0.45),\
+				DEMath.pow(color.getGreen(), 0.45),\
+				DEMath.pow(color.getBlue(), 0.45))
+			editImage.setAt(i, 0, color)
+		end
+		editImage.contentChanged()
+	end
+	
+	/** Update square box. */
+	protected func void updateSquareBox()
+		var float hue = pColor.toHSV().getAt(0) cast float
+		pSquareBox.setColorTransformation(ColorMatrix.newScaling(Color.newHSV(hue, 1, 1)))
+	end
+end
