@@ -407,7 +407,15 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferSpine.setTipBone(pBoneChest)
 		pTransferSpine.setTargetBone("")
 		pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new(0, 0, 0))
-		pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
+		
+		if pTransferSpine.getTargetTracker().getRealSlot() != null \
+		and pTransferSpine.getTargetTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.chest
+			pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+			
+		else
+			pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
+		end
+		
 		pTransferSpine.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 		
 		pTransferSpine.setTwistPropagation(0.5)
@@ -427,6 +435,11 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		end
 		pTransferSpine.setScaleRotation(Vector2.new(bendScale, bendScale))
 		
+		if pTransferSpine.getBaseBone().empty() or pTransferSpine.getTipBone().empty()
+			pTransferSpine.setTipBone("")
+			pTransferSpine.setBaseBone("")
+		end
+		
 		pTransferHead.setTipBone(pBoneHead)
 		pTransferHead.getTipTracker().setOffsetPosition(Vector.new(0, 0, 0))
 		pTransferHead.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
@@ -440,8 +453,20 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		// right arm. separate guide bone is used if chain has at least 4 bones:
 		// hand, lower arm, upper arm, shoulder. with 3 bones no shoulder is assumed
-		findBoneChain(rig, pBoneHandRight, pBoneHip, chain)
-		index = firstBoneNotInChain(chain, chainSpine)
+		var String armBaseBone = pBoneHip.empty() if pBoneChest else pBoneHip
+		
+		var Array armSpineChain = Array.new(chainSpine)
+		if armSpineChain.getCount() == 0
+			if not pBoneChest.empty()
+				armSpineChain.add(pBoneChest)
+			end
+			if not pBoneHip.empty()
+				armSpineChain.add(pBoneHip)
+			end
+		end
+		
+		findBoneChain(rig, pBoneHandRight, armBaseBone, chain)
+		index = firstBoneNotInChain(chain, armSpineChain)
 		
 		pTransferArmRight.setTipBone(pBoneHandRight)
 		pTransferArmRight.setMoveBaseIK(pMoveBaseIK)
@@ -468,8 +493,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		// left arm. separate guide bone is used if chain has at least 4 bones:
 		// hand, lower arm, upper arm, shoulder. with 3 bones no shoulder is assumed
-		findBoneChain(rig, pBoneHandLeft, pBoneHip, chain)
-		index = firstBoneNotInChain(chain, chainSpine)
+		findBoneChain(rig, pBoneHandLeft, armBaseBone, chain)
+		index = firstBoneNotInChain(chain, armSpineChain)
 		
 		pTransferArmLeft.setTipBone(pBoneHandLeft)
 		pTransferArmLeft.setMoveBaseIK(pMoveBaseIK)
@@ -689,6 +714,11 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			slotHead = firstSlotWithType(config, CharacterTrackerSlot.Type.headHmd)
 		end
 		
+		var String slotChest = firstSlotAttachedWithType(config, CharacterTrackerSlot.Type.chest)
+		
+		var String armSlotBase = slotChest != null if slotChest else slotWaist
+		var String spineSlotTarget = slotChest != null if slotChest else slotHead
+		
 		pTransferWaist.getTracker().setSlot(slotWaist)
 		
 		/*
@@ -698,16 +728,16 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		pTransferHead.getTipTracker().setSlot(slotHead)
 		
-		pTransferSpine.getTargetTracker().setSlot(slotHead)
+		pTransferSpine.getTargetTracker().setSlot(spineSlotTarget)
 		pTransferSpine.getBaseTracker().setSlot(slotWaist)
 		
 		pTransferArmRight.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightHandController))
 		pTransferArmRight.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightElbow))
-		pTransferArmRight.getBaseTracker().setSlot(slotWaist)
+		pTransferArmRight.getBaseTracker().setSlot(armSlotBase)
 		
 		pTransferArmLeft.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftHandController))
 		pTransferArmLeft.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftElbow))
-		pTransferArmLeft.getBaseTracker().setSlot(slotWaist)
+		pTransferArmLeft.getBaseTracker().setSlot(armSlotBase)
 		
 		pTransferLegRight.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightFoot))
 		pTransferLegRight.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightKnee))
