@@ -83,31 +83,42 @@ class WidgetCharacterPreview extends Panel
 		end
 		
 		public func void finishedLoading(String filename, ResourceLoaderType resourceType, Object resource)
-			if filename.equals(pathModel)
+			if resourceType == ResourceLoaderType.model and filename.equals(pathModel)
 				model = resource cast Model
 				pPreloadCounter.decrease()
 			end
 			
-			if filename.equals(pathSkin)
+			if resourceType == ResourceLoaderType.skin and filename.equals(pathSkin)
 				skin = resource cast Skin
 				pPreloadCounter.decrease()
 			end
 			
-			if filename.equals(pathRig)
+			if resourceType == ResourceLoaderType.rig and filename.equals(pathRig)
 				rig = resource cast Rig
 				pPreloadCounter.decrease()
 			end
 			
-			if filename.equals(pathAnimation)
+			if resourceType == ResourceLoaderType.animation and filename.equals(pathAnimation)
 				animation = resource cast Animation
 				pPreloadCounter.decrease()
 			end
 		end
 		
 		public func void failedLoading(String filename, ResourceLoaderType resourceType)
-			pPreloadCounter.decrease()
 			GameApp.getGameApp().getConsole().addMessage("PreviewPreloader: Failed loading "\
 				+ resourceType.name() + " '" + filename)
+			if resourceType == ResourceLoaderType.model and filename.equals(pathModel)
+				pPreloadCounter.decrease()
+			end
+			if resourceType == ResourceLoaderType.skin and filename.equals(pathSkin)
+				pPreloadCounter.decrease()
+			end
+			if resourceType == ResourceLoaderType.rig and filename.equals(pathRig)
+				pPreloadCounter.decrease()
+			end
+			if resourceType == ResourceLoaderType.animation and filename.equals(pathAnimation)
+				pPreloadCounter.decrease()
+			end
 		end
 	end
 	
