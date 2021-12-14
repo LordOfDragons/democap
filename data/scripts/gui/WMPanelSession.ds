@@ -113,6 +113,17 @@ class WMPanelSession extends CollapsibleGroup
 		end
 	end
 	
+	class RecordDevicesRenderer extends DefaultListElementRenderer
+		public func new()
+			setDefaultObject(GameApp.RecordDevices.reference) // longest name
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			super.updateRenderer(listBox, renderer, (element cast GameApp.RecordDevices).name(), selected, focused)
+		end
+	end
+	
+	
 	
 	protected var bool pInVR
 	protected var DefaultRangeModel pModelPlaybackPosition
@@ -322,6 +333,7 @@ class WMPanelSession extends CollapsibleGroup
 	
 	/** Create panel content. */
 	protected func void createContent(Panel content)
+		var GameApp app = GameApp.getGameApp()
 		var ComboBox comboBox
 		var CheckBox checkBox
 		var Button button
@@ -329,46 +341,67 @@ class WMPanelSession extends CollapsibleGroup
 		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
 		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
-			checkBox = CheckBox.new(GameApp.getGameApp().getModelEnableVR(), "VR")
+			checkBox = CheckBox.new(app.getModelEnableVR(), "VR")
 			checkBox.setToolTip("Enable VR System")
 			p.addWidget(checkBox)
 			
-			checkBox = CheckBox.new(GameApp.getGameApp().getModelEnableHMD(), "HMD")
+			checkBox = CheckBox.new(app.getModelEnableHMD(), "HMD")
 			checkBox.setToolTip("Enable HMD. If disabled shows placeholder model. For only tracker use")
 			p.addWidget(checkBox)
 			
-			checkBox = CheckBox.new(GameApp.getGameApp().getModelShowVRCamera(), "VR View")
+			checkBox = CheckBox.new(app.getModelShowVRCamera(), "VR View")
 			checkBox.setToolTip("Show VR View (HMD left eye) or Free Camera in 3D View. "\
 				+ "Showing VR View is faster. Use Free Camera to set up scene.")
 			p.addWidget(checkBox)
 		end)) 
 		
-		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
-			button = Button.new("Mirror", BlockActionListener.new(block ActionEvent event
-				toggleLargeMirror()
-			end))
-			button.setToolTip("Show/hide large VR mirror")
-			p.addWidget(button)
+		content.addWidget(Panel.new(BorderLayout.new(), block Panel p
+			p.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p2
+				button = Button.new("Mirror", BlockActionListener.new(block ActionEvent event
+					toggleLargeMirror()
+				end))
+				button.setToolTip("Show/hide large VR mirror")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					startRecording()
+				end))
+				button.setDesignerSelector("Button.CaptureRecord")
+				button.setToolTip("Start motion capturing")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					stopRecording()
+				end))
+				button.setDesignerSelector("Button.CaptureStop")
+				button.setToolTip("Stop motion capturing writing animation to overlay directory")
+				p2.addWidget(button)
+				
+				button = Button.new("Captured", BlockActionListener.new(block ActionEvent event
+					browseCapturedAnimations()
+				end))
+				button.setToolTip("Browse motion captured animations")
+				p2.addWidget(button)
+			end), BorderLayout.Area.content)
 			
-			button = Button.new(" ", BlockActionListener.new(block ActionEvent event
-				startRecording()
-			end))
-			button.setDesignerSelector("Button.CaptureRecord")
-			button.setToolTip("Start motion capturing")
-			p.addWidget(button)
-			
-			button = Button.new(" ", BlockActionListener.new(block ActionEvent event
-				stopRecording()
-			end))
-			button.setDesignerSelector("Button.CaptureStop")
-			button.setToolTip("Stop motion capturing writing animation to overlay directory")
-			p.addWidget(button)
-			
-			button = Button.new("Captured", BlockActionListener.new(block ActionEvent event
-				browseCapturedAnimations()
-			end))
-			button.setToolTip("Browse motion captured animations")
-			p.addWidget(button)
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p2
+				var TextField textField = TextField.new(RangeTextModel.new(app.getModelRecordFrameRate()), 2)
+				textField.setToolTip("Frame rate to use for recording animations")
+				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+				p2.addWidget(textField)
+				
+				var SpinButton spinButton = SpinButton.new(app.getModelRecordFrameRate())
+				spinButton.setToolTip("Frame rate to use for recording animations")
+				p2.addWidget(spinButton)
+				
+				comboBox  = ComboBox.new(app.getModelRecordDevices(), RecordDevicesRenderer.new())
+				comboBox.setToolTip("Record VR device positions too.\n"\
+					+ "none: Not recording.\n"\
+					+ "device: Original device position\n"\
+					+ "reference: Reference slot position\n"\
+					+ "target: Target slot position")
+				p2.addWidget(comboBox)
+			end), BorderLayout.Area.right)
 		end)) 
 		
 		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p

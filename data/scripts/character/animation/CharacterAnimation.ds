@@ -33,9 +33,13 @@ class CharacterAnimation
 	private var String pName
 	private var String pPath
 	private var String pPathMeta
+	private var String pPathDevices
+	private var String pPathDevicesRig
 	private var TimeDate pTimestamp
 	private var FileUsageManager pFileUsage
 	private var Animation pAnimation
+	private var Animation pAnimationDevices
+	private var Rig pRigDevices
 	
 	
 	
@@ -44,6 +48,8 @@ class CharacterAnimation
 		setName(name)
 		pPath = ""
 		pPathMeta = ""
+		pPathDevices = ""
+		pPathDevicesRig = ""
 		pTimestamp = TimeDate.new()
 		pFileUsage = FileUsageManager.new()
 	end
@@ -53,14 +59,20 @@ class CharacterAnimation
 		pName = copy.pName
 		pPath = ""
 		pPathMeta = ""
+		pPathDevices = ""
+		pPathDevicesRig = ""
 		pTimestamp = copy.pTimestamp
 		pAnimation = copy.pAnimation
+		pAnimationDevices = copy.pAnimationDevices
+		pRigDevices = copy.pRigDevices
 		
 		pFileUsage = FileUsageManager.new()
 		pFileUsage.setParent(copy.pFileUsage.getParent())
 		
 		setPath(copy.pPath)
 		setPathMeta(copy.pPathMeta)
+		setPathDevices(copy.pPathDevices)
+		setPathDevicesRig(copy.pPathDevicesRig)
 	end
 	
 	/** Create character animation from file. */
@@ -69,6 +81,8 @@ class CharacterAnimation
 		
 		pPath = ""
 		pPathMeta = ""
+		pPathDevices = ""
+		pPathDevicesRig = ""
 		pFileUsage = FileUsageManager.new()
 		
 		select reader.readByte() // version
@@ -76,6 +90,15 @@ class CharacterAnimation
 			pName = reader.readString8()
 			setPath(reader.readString8())
 			setPathMeta(reader.readString8())
+			pTimestamp = reader.readTimeDate()
+			pFileUsage.readFromFile(reader)
+			
+		case 1
+			pName = reader.readString8()
+			setPath(reader.readString8())
+			setPathMeta(reader.readString8())
+			setPathDevices(reader.readString8())
+			setPathDevicesRig(reader.readString8())
 			pTimestamp = reader.readTimeDate()
 			pFileUsage.readFromFile(reader)
 			
@@ -88,6 +111,8 @@ class CharacterAnimation
 	public func void dispose()
 		setPath("")
 		setPathMeta("")
+		setPathDevices("")
+		setPathDevicesRig("")
 		
 		if pFileUsage != null
 			pFileUsage.setParent(null)
@@ -123,7 +148,8 @@ class CharacterAnimation
 		if not pPath.empty()
 			pFileUsage.removeFileUsage(pPath)
 			if FileUsageManager.debugUsage
-				pFileUsage.log(GameApp.getGameApp().getConsole(), "CharacterAnimation.setPath() old(" + pPath + ")")
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"CharacterAnimation.setPath() old(" + pPath + ")")
 			end
 		end
 		
@@ -132,7 +158,8 @@ class CharacterAnimation
 		if not path.empty()
 			pFileUsage.addFileUsage(path)
 			if FileUsageManager.debugUsage
-				pFileUsage.log(GameApp.getGameApp().getConsole(), "CharacterAnimation.setPath() new(" + path + ")")
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"CharacterAnimation.setPath() new(" + path + ")")
 			end
 		end
 	end
@@ -151,7 +178,8 @@ class CharacterAnimation
 		if not pPathMeta.empty()
 			pFileUsage.removeFileUsage(pPathMeta)
 			if FileUsageManager.debugUsage
-				pFileUsage.log(GameApp.getGameApp().getConsole(), "CharacterAnimation.setPathMeta() old(" + pPathMeta + ")")
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"CharacterAnimation.setPathMeta() old(" + pPathMeta + ")")
 			end
 		end
 		
@@ -160,7 +188,68 @@ class CharacterAnimation
 		if not path.empty()
 			pFileUsage.addFileUsage(path)
 			if FileUsageManager.debugUsage
-				pFileUsage.log(GameApp.getGameApp().getConsole(), "CharacterAnimation.setPathMeta() new(" + path + ")")
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"CharacterAnimation.setPathMeta() new(" + path + ")")
+			end
+		end
+	end
+	
+	/** Devices path relative to project or empty string. */
+	public func String getPathDevices()
+		return pPathDevices
+	end
+	
+	/** Set devices path relative to project or empty string. */
+	public func void setPathDevices(String path)
+		if path.equals(pPathDevices)
+			return
+		end
+		
+		if not pPathDevices.empty()
+			pFileUsage.removeFileUsage(pPathDevices)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"CharacterAnimation.setPathDevices() old(" + pPathDevices + ")")
+			end
+		end
+		
+		pPathDevices = path
+		
+		if not path.empty()
+			pFileUsage.addFileUsage(path)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"CharacterAnimation.setPathDevices() new(" + path + ")")
+			end
+		end
+	end
+	
+	/** Devices rig path relative to project or empty string. */
+	public func String getPathDevicesRig()
+		return pPathDevicesRig
+	end
+	
+	/** Set devices rig path relative to project or empty string. */
+	public func void setPathDevicesRig(String path)
+		if path.equals(pPathDevicesRig)
+			return
+		end
+		
+		if not pPathDevicesRig.empty()
+			pFileUsage.removeFileUsage(pPathDevicesRig)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"CharacterAnimation.setPathDevicesRig() old(" + pPathDevicesRig + ")")
+			end
+		end
+		
+		pPathDevicesRig = path
+		
+		if not path.empty()
+			pFileUsage.addFileUsage(path)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"CharacterAnimation.setPathDevicesRig() new(" + path + ")")
 			end
 		end
 	end
@@ -180,29 +269,61 @@ class CharacterAnimation
 		pAnimation = animation
 	end
 	
-	/** Load animation if present and possible. */
+	/** Devices animation or null if not created. */
+	public func Animation getAnimationDevices()
+		return pAnimationDevices
+	end
+	
+	/** Set devices animation or null if not created. */
+	public func void setAnimationDevices(Animation animation)
+		pAnimationDevices = animation
+	end
+	
+	/** Devices rig or null if not created. */
+	public func Rig getRigDevices()
+		return pRigDevices
+	end
+	
+	/** Set devices rig or null if not created. */
+	public func void setRigDevices(Rig rig)
+		pRigDevices = rig
+	end
+	
+	/** Load animations and rigs if present and possible. */
 	public func void loadAnimation(Project project)
 		if not pPath.empty()
 			pAnimation = Animation.new((project.getDataDirectory() + pPath).getPath())
+		end
+		if not pPathDevices.empty()
+			pAnimationDevices = Animation.new((project.getDataDirectory() + pPathDevices).getPath())
+		end
+		if not pPathDevicesRig.empty()
+			pRigDevices = Rig.new((project.getDataDirectory() + pPathDevicesRig).getPath())
 		end
 	end
 	
 	/** Clear animation. */
 	public func void clear()
+		pRigDevices = null
+		pAnimationDevices = null
 		pAnimation = null
 		setPath("")
 		setPathMeta("")
+		setPathDevices("")
+		setPathDevicesRig("")
 	end
 	
 	
 	
 	/** Write to file. */
 	public func void writeToFile(FileWriter writer)
-		writer.writeByte(0) // version
+		writer.writeByte(1) // version
 		
 		writer.writeString8(pName)
 		writer.writeString8(pPath)
 		writer.writeString8(pPathMeta)
+		writer.writeString8(pPathDevices)
+		writer.writeString8(pPathDevicesRig)
 		writer.writeTimeDate(pTimestamp)
 		pFileUsage.writeToFile(writer)
 	end

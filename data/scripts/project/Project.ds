@@ -43,11 +43,16 @@ class Project
 		private var UniqueID pID
 		private var String pPath
 		private var String pPathMeta
+		private var String pPathDevices
+		private var String pPathDevicesRig
 		
-		public func new(UniqueID id, String path, String pathMeta)
+		public func new(UniqueID id, String path, String pathMeta,\
+		String pathDevices, String pathDevicesRig)
 			pID = id
 			pPath = path
 			pPathMeta = pathMeta
+			pPathDevices = pathDevices
+			pPathDevicesRig = pathDevicesRig
 		end
 		
 		public func UniqueID getID()
@@ -60,6 +65,14 @@ class Project
 		
 		public func String getPathMeta()
 			return pPathMeta
+		end
+		
+		public func String getPathDevices()
+			return pPathDevices
+		end
+		
+		public func String getPathDevicesRig()
+			return pPathDevicesRig
 		end
 	end
 	
@@ -150,10 +163,19 @@ class Project
 	end
 	
 	/** Generate animation path. */
-	public func AnimationPath nextAnimationPath(String extension)
+	public func AnimationPath nextAnimationPath()
+		return nextAnimationPath("deanim", "derig")
+	end
+	
+	/** Generate animation path. */
+	public func AnimationPath nextAnimationPath(String extensionAnim, String extensionRig)
 		var UniqueID id = pAnimationIDGenerator.nextID()
-		var String base = animationDirectory + "/captured-" + id.toHexString() + "."
-		return AnimationPath.new(id, base + extension, base + "demca")
+		var String base = animationDirectory + "/captured-" + id.toHexString()
+		return AnimationPath.new(id,\
+			base + "." + extensionAnim,\
+			base + ".demca",\
+			base + "-devices." + extensionAnim,\
+			base + "-devices." + extensionRig)
 	end
 	
 	/** Get file usage. */

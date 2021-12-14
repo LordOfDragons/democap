@@ -74,7 +74,12 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var Array pRootBoneIndices
 		private var Matrix pTransformRootBones
 		private var RecordAnimation pRecordAnimation
+		private var RecordAnimation pRecordAnimationDevices
+		private var CharacterConfiguration pCharacterConfiguration
 		private var CharacterAnimation pCharacterAnimation
+		private var GameApp.RecordDevices pRecordDevices
+		private var Array pRecordDeviceSlots
+		private var Array pRecordDeviceMatrices
 		private var bool pIsPreparing
 		private var bool pIsRecording
 		private var float pRecordTime
@@ -91,6 +96,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pECBehavior = ecbehavior
 			pBoneIndices = Array.new()
 			pRootBoneIndices = Array.new()
+			pRecordDeviceSlots = Array.new()
+			pRecordDeviceMatrices = Array.new()
 			pListeners = Array.new()
 			pTransformRootBones = Matrix.new()
 			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
@@ -126,6 +133,11 @@ class ECBRecordAnimation extends DefaultECBehavior
 		/** Record animation or null. */
 		public func RecordAnimation getRecordAnimation()
 			return pRecordAnimation
+		end
+		
+		/** Record devices animation or null. */
+		public func RecordAnimation getRecordAnimationDevices()
+			return pRecordAnimationDevices
 		end
 		
 		/** Character animation or null. */
@@ -167,7 +179,42 @@ class ECBRecordAnimation extends DefaultECBehavior
 			var GameApp app = GameApp.getGameApp()
 			app.getPlaybackScene().pause()
 			
+			pCharacterConfiguration = app.getWorldSpawnCharacter().getCharacter()
+			
 			pRecordAnimation = RecordAnimation.new()
+			pRecordAnimation.setFPS(app.getModelRecordFrameRate().getValue())
+			pRecordAnimation.setMoveName("MoCap")
+			
+			pRecordDevices = app.getModelRecordDevices().getAt(\
+				app.getModelRecordDevices().getSelected()) cast GameApp.RecordDevices
+			
+			pRecordDeviceSlots.removeAll()
+			pRecordDeviceMatrices.removeAll()
+			
+			if pRecordDevices != GameApp.RecordDevices.none
+				pRecordAnimationDevices = RecordAnimation.new("-devices")
+				pRecordAnimationDevices.setFPS(pRecordAnimation.getFPS())
+				pRecordAnimationDevices.setMoveName("MoCapDevices")
+				pRecordAnimationDevices.createRig(pCharacterConfiguration)
+				
+				pCharacterConfiguration.getTrackerSlots().forEach(block CharacterTrackerSlot each
+					var ECBTrackerSlot.Instance slot = ECBTrackerSlot.getInstanceIn(getElement(), each.getName())
+					pRecordDeviceSlots.add(slot)
+					
+					select pRecordDevices
+					case GameApp.RecordDevices.device
+						pRecordDeviceMatrices.add(Matrix.new())
+						
+					case GameApp.RecordDevices.reference
+						pRecordDeviceMatrices.add(each.getCalibrateReferenceMatrix() * each.getCalibrateMatrixInverse())
+						
+					case GameApp.RecordDevices.target
+						pRecordDeviceMatrices.add(each.getTargetMatrix() * each.getCalibrateMatrixInverse())
+					end
+					
+					pRecordAnimationDevices.addBone(each.getName())
+				end)
+			end
 			
 			prepareBoneIndices()
 			
@@ -179,8 +226,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pCapturedAnimations = ECBCapturedAnimations.getInstanceIn(selectionElement)
 				
 				if pCapturedAnimations != null
-					if not pCapturedAnimations.getCharacterProfile().equals(\
-					app.getWorldSpawnCharacter().getCharacter().getProfile().getName())
+					if not pCapturedAnimations.getCharacterProfile().equals(pCharacterConfiguration.getProfile().getName())
 						pCapturedAnimations = null
 						throw EInvalidParam.new("character profile mismatch")
 					end
@@ -254,8 +300,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				end
 			end)
 			
-			pRecordAnimation.setOriginBone(GameApp.getGameApp()\
-				.getWorldSpawnCharacter().getCharacter().getProfile().getOriginBone())
+			pRecordAnimation.setOriginBone(pCharacterConfiguration.getProfile().getOriginBone())
 		end
 		
 		/** Start recording animation. */
@@ -288,38 +333,73 @@ class ECBRecordAnimation extends DefaultECBehavior
 				if pRecordAnimation != null
 					pRecordAnimation.createAnimation()
 					
+					if pRecordAnimationDevices != null
+						pRecordAnimationDevices.createAnimation()
+					end
+					
 					if pCharacterAnimation != null
 						var Project project = app.getProject()
 						var File directory = app.getProject().getDataDirectory()
-						var Project.AnimationPath animPath = project.nextAnimationPath("deanim")
+						var Project.AnimationPath animPath = project.nextAnimationPath()
 						
 						pRecordAnimation.getAnimation().save((directory + animPath.getPath()).getPath())
-						writeCaptureInfoFile((directory + animPath.getPathMeta()).getPath(), animPath.getPath())
+						
+						if pRecordAnimationDevices != null
+							pRecordAnimationDevices.getRig().save((directory + animPath.getPathDevicesRig()).getPath())
+							
+							pRecordAnimationDevices.getAnimation().save((directory + animPath.getPathDevices()).getPath())
+						end
+						
+						writeCaptureInfoFile((directory + animPath.getPathMeta()).getPath(),\
+							animPath.getPath(), animPath.getPathDevices(), animPath.getPathDevicesRig())
 						
 						pCharacterAnimation.setPath(animPath.getPath())
 						pCharacterAnimation.setPathMeta(animPath.getPathMeta())
 						pCharacterAnimation.setAnimation(pRecordAnimation.getAnimation())
+						
+						if pRecordAnimationDevices != null
+							pCharacterAnimation.setPathDevices(animPath.getPathDevices())
+							pCharacterAnimation.setPathDevicesRig(animPath.getPathDevicesRig())
+							pCharacterAnimation.setAnimationDevices(pRecordAnimationDevices.getAnimation())
+							pCharacterAnimation.setRigDevices(pRecordAnimationDevices.getRig())
+						end
+						
 						project.save()
 						
 						pCapturedAnimations.getAnimations().notifyAnimationChanged(pCharacterAnimation)
 						
 					else
 						pRecordAnimation.getAnimation().save(pRecordAnimation.getPath())
-						writeCaptureInfoFile(pRecordAnimation.getPathMeta(), pRecordAnimation.getPath())
+						
+						if pRecordAnimationDevices != null
+							pRecordAnimationDevices.getRig().save(pRecordAnimationDevices.getPathRig())
+							
+							pRecordAnimationDevices.getAnimation().save(pRecordAnimationDevices.getPath())
+							
+							writeCaptureInfoFile(pRecordAnimation.getPathMeta(), pRecordAnimation.getPath(),\
+								pRecordAnimationDevices.getPath(), pRecordAnimationDevices.getPathRig())
+							
+						else
+							writeCaptureInfoFile(pRecordAnimation.getPathMeta(), pRecordAnimation.getPath(), "", "")
+						end
 					end
 				end
 				
 				pRecordAnimation = null
+				pRecordAnimationDevices = null
 				pCharacterAnimation = null
 				pCapturedAnimations = null
 				pTransformRootBones = Matrix.new()
+				pCharacterConfiguration = null
 				
 			elif pIsPreparing
 				pIsPreparing = false
 				pRecordAnimation = null
+				pRecordAnimationDevices = null
 				pCharacterAnimation = null
 				pCapturedAnimations = null
 				pTransformRootBones = Matrix.new()
+				pCharacterConfiguration = null
 				
 			else
 				return
@@ -359,11 +439,13 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end
 			pIncrementTime = true
 			
+			// bones
 			pComponent.updateBones()
 			
+			var Matrix matrix
 			pRootBoneIndices.forEach(block int index
-				var Matrix matrix = pComponent.boneGetMatrix(index)\
-					* pTransformRootBones * pComponent.getBoneOriginInverseMatrix(index)
+				matrix = pComponent.boneGetMatrix(index) * pTransformRootBones\
+					* pComponent.getBoneOriginInverseMatrix(index)
 				pRecordAnimation.addKeyframe(pRecordTime, matrix.getPosition(), matrix.toQuaternion())
 			end)
 			
@@ -371,10 +453,23 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pRecordAnimation.addKeyframe(pRecordTime, \
 					pComponent.boneGetPosition(index), pComponent.boneGetRotation(index))
 			end)
+			
+			// devices
+			if pRecordAnimationDevices != null
+				var Rig rig = pRecordAnimationDevices.getRig()
+				
+				pRecordDeviceSlots.forEach(block int index, ECBTrackerSlot.Instance each
+					matrix = pRecordDeviceMatrices.getAt(index) cast Matrix\
+						* each.getMatrixCharacter() * pTransformRootBones\
+						* rig.getBoneInverseMatrix(index)
+					pRecordAnimationDevices.addKeyframe(pRecordTime, matrix.getPosition(), matrix.toQuaternion())
+				end)
+			end
 		end
 		
 		/** Write capture information file. */
-		public func void writeCaptureInfoFile(String path, String animPath)
+		public func void writeCaptureInfoFile(String path, String animPath,\
+		String animDevicesPath, String animDevicesRigPath)
 			var GameApp app = GameApp.getGameApp()
 			var WorldSpawnCharacter wsc = app.getWorldSpawnCharacter()
 			var EasyXML document = EasyXML.new()
@@ -431,7 +526,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			tagAnimation.addDataTag("pathAnimation", animPath)
 			tagAnimation.addDataTag("moveName", moveName)
 			tagAnimation.addDataTag("playtime", animation.getMovePlaytime(moveName))
-			tagAnimation.addDataTag("frameRate", animation.getMoveFPS(moveName))
+			tagAnimation.addDataTag("frameRate", pRecordAnimation.getFPS())
 			
 			if hasOriginBone
 				tagAnimation.addDataTag("boneCount", pRecordAnimation.getBoneCount() + 1)
@@ -447,6 +542,29 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			if hasOriginBone
 				tagBones.addDataTag("boneName", originBone)
+			end
+			
+			// devices animation
+			if pRecordAnimationDevices != null and not animDevicesPath.empty()
+				animation = pRecordAnimationDevices.getAnimation()
+				moveName = animation.getMoveName(0)
+				
+				tagAnimation = root.addTag("capturedAnimationDevices")
+				tagAnimation.addDataTag("pathAnimation", animDevicesPath)
+				
+				if not animDevicesRigPath.empty()
+					tagAnimation.addDataTag("pathRig", animDevicesRigPath)
+				end
+				
+				tagAnimation.addDataTag("moveName", moveName)
+				tagAnimation.addDataTag("playtime", animation.getMovePlaytime(moveName))
+				tagAnimation.addDataTag("frameRate", pRecordAnimationDevices.getFPS())
+				tagAnimation.addDataTag("boneCount", pRecordAnimationDevices.getBoneCount())
+				
+				tagBones = tagAnimation.addTag("bones")
+				pRecordAnimationDevices.forEachBone(block String each
+					tagBones.addDataTag("boneName", each)
+				end)
 			end
 			
 			// write to file

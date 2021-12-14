@@ -48,6 +48,14 @@ class GameApp extends BaseGameApp
 		public static fixed var int interaction = custom
 	end
 	
+	/** Record devices. */
+	enum RecordDevices
+		none /** None. */
+		device /** Device position. */
+		reference /** Reference slot position. */
+		target /** Target slot position. */
+	end
+	
 	/** Toggle Show VR camera listener. */
 	class ToggleShowVRCameraListener extends DefaultToggleModelListener
 		public func new()
@@ -117,6 +125,8 @@ class GameApp extends BaseGameApp
 	private var DefaultToggleModel pModelEnableVR
 	private var DefaultToggleModel pModelEnableHMD
 	private var DefaultToggleModel pModelShowVRCamera
+	private var DefaultRangeModel pModelRecordFrameRate
+	private var DefaultListModel pModelRecordDevices
 	
 	private var MotionTransferFactories pMotionTransferFactories
 	private var LoadActorProfile pLoadActorProfile
@@ -238,6 +248,21 @@ class GameApp extends BaseGameApp
 	/** Show VR camera model. */
 	public func DefaultToggleModel getModelShowVRCamera()
 		return pModelShowVRCamera
+	end
+	
+	/** Record animation frame rate model. */
+	public func DefaultRangeModel getModelRecordFrameRate()
+		return pModelRecordFrameRate
+	end
+	
+	/** Record devices model. */
+	public func DefaultListModel getModelRecordDevices()
+		return pModelRecordDevices
+	end
+	
+	/** Record devices. */
+	public func RecordDevices getRecordDevices()
+		return pModelRecordDevices.getAt(pModelRecordDevices.getSelected()) cast RecordDevices
 	end
 	
 	
@@ -409,6 +434,8 @@ class GameApp extends BaseGameApp
 		pModelEnableVR = DefaultToggleModel.new(false)
 		pModelEnableHMD = DefaultToggleModel.new(true)
 		pModelShowVRCamera = DefaultToggleModel.new(false)
+		pModelRecordFrameRate = DefaultRangeModel.new(5, 90, 10, 25, 1)
+		pModelRecordDevices = DefaultListModel.new(RecordDevices.all().toArray())
 		pDefaultActorProfile = ActorProfile.new("Default")
 		
 		pMotionTransferFactories = MotionTransferFactories.new()
@@ -701,6 +728,8 @@ class GameApp extends BaseGameApp
 		pSelectionTracker = null
 		pLoadCharacterProfile = null
 		pLoadActorProfile = null
+		pModelRecordDevices = null
+		pModelRecordFrameRate = null
 		pModelShowVRCamera = null
 		pModelEnableHMD = null
 		pModelEnableVR = null

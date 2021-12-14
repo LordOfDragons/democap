@@ -37,19 +37,21 @@ class RecordAnimation
 		private var Array pBones
 		private var Array pKeyframes
 		private var float pFPS
+		private var String pMoveName
 		
-		public func new(String originBone, Array bones, Array keyframes, float fps)
+		public func new(String originBone, Array bones, Array keyframes, float fps, String moveName)
 			pOriginBone = originBone
 			pBones = bones
 			pKeyframes = keyframes
 			pFPS = fps
+			pMoveName = moveName
 		end
 		
 		protected func void buildAnimation()
 			var int boneCount = pBones.getCount()
 			
 			if boneCount == 0 or pKeyframes.getCount() == 0
-				addMove("MoCap", 0, pFPS)
+				addMove(pMoveName, 0, pFPS)
 				return
 			end
 			
@@ -61,7 +63,7 @@ class RecordAnimation
 				addBone(pOriginBone)
 			end
 			
-			addMove("MoCap", (pKeyframes.getAt(-1) cast RecordAnimationKeyframe).getTime(), pFPS)
+			addMove(pMoveName, (pKeyframes.getAt(-1) cast RecordAnimationKeyframe).getTime(), pFPS)
 			
 			if pOriginBone != null
 				setKeyframeListCount(0, boneCount + 1)
@@ -81,6 +83,43 @@ class RecordAnimation
 		end
 	end
 	
+	/** Rig builder. */
+	protected class CreateRig extends RigBuilder
+		private var CharacterTrackerSlots pSlots
+		
+		public func new(CharacterTrackerSlots slots)
+			pSlots = slots
+		end
+		
+		protected func void buildRig()
+			select GameApp.getGameApp().getRecordDevices()
+			case GameApp.RecordDevices.device
+				pSlots.forEach(block CharacterTrackerSlot each
+					addBone(each.getName(), each.getCalibratePosition(), each.getCalibrateRotation())
+				end)
+				
+			case GameApp.RecordDevices.reference
+				pSlots.forEach(block CharacterTrackerSlot each
+					addBone(each.getName(), each.getCalibrateReferenceMatrix())
+				end)
+				
+			case GameApp.RecordDevices.target
+				pSlots.forEach(block CharacterTrackerSlot each
+					addBone(each.getName(), each.getTargetPosition(), each.getTargetRotation())
+				end)
+			end
+		end
+		
+		protected func void addBone(String name, Vector position, Vector rotation)
+			addBone(name, -1, position, rotation, Vector.new(), false, 0, Vector.new(),\
+				Vector.new(), Vector.new(), false, false, false, ShapeList.new())
+		end
+		
+		protected func void addBone(String name, Matrix matrix)
+			addBone(name, matrix.getPosition(), matrix.getEulerAngles())
+		end
+	end
+	
 	
 	
 	private var String pOriginBone
@@ -88,25 +127,34 @@ class RecordAnimation
 	private var Array pKeyframes
 	private var int pStride
 	private var Animation pAnimation
+	private var Rig pRig
 	private var float pFPS
 	private var String pPath
 	private var String pPathMeta
+	private var String pPathRig
 	private var TimeDate pTimestamp
+	private var String pMoveName
 	
 	
 	
 	/** Create record animation. */
-	public func new()
+	public func new() this("")
+	end
+	
+	/** Create record animation. */
+	public func new(String pathSuffix)
 		pOriginBone = ""
 		pBones = Array.new()
 		pKeyframes = Array.new()
 		pStride = 0
 		pFPS = 25
 		pTimestamp = TimeDate.new()
+		pMoveName = "MoCap"
 		
 		var File directory = File.new(GameApp.getGameApp().getPathCaptureAnimations())
-		pPath = File.new(directory, pTimestamp.format("%Y-%m-%d_%H-%M-%S") + ".deanim").getPath()
-		pPathMeta = File.new(directory, pTimestamp.format("%Y-%m-%d_%H-%M-%S") + ".demca").getPath()
+		pPath = File.new(directory, pTimestamp.format("%Y-%m-%d_%H-%M-%S") + pathSuffix + ".deanim").getPath()
+		pPathMeta = File.new(directory, pTimestamp.format("%Y-%m-%d_%H-%M-%S") + pathSuffix + ".demca").getPath()
+		pPathRig = File.new(directory, pTimestamp.format("%Y-%m-%d_%H-%M-%S") + pathSuffix + ".derig").getPath()
 	end
 	
 	
@@ -168,6 +216,19 @@ class RecordAnimation
 		return pTimestamp
 	end
 	
+	/** Move name. */
+	public func String getMoveName()
+		return pMoveName
+	end
+	
+	/** Set move name. */
+	public func void setMoveName(String name)
+		if name == null
+			throw ENullPointer.new("name")
+		end
+		pMoveName = name
+	end
+	
 	
 	
 	/** Count of keyframes. */
@@ -214,15 +275,21 @@ class RecordAnimation
 		end
 		
 		if pOriginBone.empty() or pBones.has(pOriginBone)
-			pAnimation = CreateAnimation.new(null, pBones, pKeyframes, pFPS).build("")
+			pAnimation = CreateAnimation.new(null, pBones, pKeyframes, pFPS, pMoveName).build("")
 			
 		else
-			pAnimation = CreateAnimation.new(pOriginBone, pBones, pKeyframes, pFPS).build("")
+			pAnimation = CreateAnimation.new(pOriginBone, pBones, pKeyframes, pFPS, pMoveName).build("")
 		end
 	end
 	
-	/** Load animation from file if present. */
-	public func void loadAnimation()
+	/** Rig or null if not created. */
+	public func Rig getRig()
+		return pRig
+	end
+	
+	/** Create rig. */
+	public func void createRig(CharacterConfiguration config)
+		pRig = CreateRig.new(config.getTrackerSlots()).build("")
 	end
 	
 	/** Path or null. */
@@ -233,5 +300,10 @@ class RecordAnimation
 	/** Meta path or null. */
 	public func String getPathMeta()
 		return pPathMeta
+	end
+	
+	/** Rig path or null. */
+	public func String getPathRig()
+		return pPathRig
 	end
 end
