@@ -68,6 +68,24 @@ class ECBRecordAnimation extends DefaultECBehavior
 	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
+		class RecordDeviceSlot
+			protected var ECBTrackerSlot.Instance pSlot
+			protected var int pBone
+			protected var Matrix pMatrix1, pMatrix2
+			
+			public func new(ECBTrackerSlot.Instance slot, int bone, Matrix matrix1, Matrix matrix2)
+				pSlot = slot
+				pBone = bone
+				pMatrix1 = matrix1
+				pMatrix2 = matrix2
+			end
+			
+			public func Matrix calcMatrix()
+				return pMatrix1 * pSlot.getMatrixCharacter() * pMatrix2
+			end
+		end
+		
+		
 		private var ECBRecordAnimation pECBehavior
 		private var ECBehaviorActorAnimated.Instance pActorAnimated
 		private var Array pBoneIndices
@@ -79,7 +97,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var CharacterAnimation pCharacterAnimation
 		private var GameApp.RecordDevices pRecordDevices
 		private var Array pRecordDeviceSlots
-		private var Array pRecordDeviceMatrices
 		private var bool pIsPreparing
 		private var bool pIsRecording
 		private var float pRecordTime
@@ -97,7 +114,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pBoneIndices = Array.new()
 			pRootBoneIndices = Array.new()
 			pRecordDeviceSlots = Array.new()
-			pRecordDeviceMatrices = Array.new()
 			pListeners = Array.new()
 			pTransformRootBones = Matrix.new()
 			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
@@ -189,31 +205,12 @@ class ECBRecordAnimation extends DefaultECBehavior
 				app.getModelRecordDevices().getSelected()) cast GameApp.RecordDevices
 			
 			pRecordDeviceSlots.removeAll()
-			pRecordDeviceMatrices.removeAll()
 			
 			if pRecordDevices != GameApp.RecordDevices.none
 				pRecordAnimationDevices = RecordAnimation.new("-devices")
 				pRecordAnimationDevices.setFPS(pRecordAnimation.getFPS())
 				pRecordAnimationDevices.setMoveName("MoCapDevices")
 				pRecordAnimationDevices.createRig(pCharacterConfiguration)
-				
-				pCharacterConfiguration.getTrackerSlots().forEach(block CharacterTrackerSlot each
-					var ECBTrackerSlot.Instance slot = ECBTrackerSlot.getInstanceIn(getElement(), each.getName())
-					pRecordDeviceSlots.add(slot)
-					
-					select pRecordDevices
-					case GameApp.RecordDevices.device
-						pRecordDeviceMatrices.add(Matrix.new())
-						
-					case GameApp.RecordDevices.reference
-						pRecordDeviceMatrices.add(each.getCalibrateReferenceMatrix() * each.getCalibrateMatrixInverse())
-						
-					case GameApp.RecordDevices.target
-						pRecordDeviceMatrices.add(each.getTargetMatrix() * each.getCalibrateMatrixInverse())
-					end
-					
-					pRecordAnimationDevices.addBone(each.getName())
-				end)
 			end
 			
 			prepareBoneIndices()
@@ -263,6 +260,34 @@ class ECBRecordAnimation extends DefaultECBehavior
 						(collider cast ColliderComponent).copyStatesFromComponent()
 					end
 				end
+			end
+			
+			if pRecordDevices != GameApp.RecordDevices.none
+				// has to be done after pTransformRootBones has been calculated
+				var Matrix matCalibInv = pCharacterConfiguration.getMatrixCalibrateInverse()
+				var Rig rig = pRecordAnimationDevices.getRig()
+				
+				pCharacterConfiguration.getTrackerSlots().forEach(block int index, CharacterTrackerSlot each
+					var ECBTrackerSlot.Instance slot = ECBTrackerSlot.getInstanceIn(getElement(), each.getName())
+					var Matrix matrix1, matrix2
+					
+					select pRecordDevices
+					case GameApp.RecordDevices.device
+						matrix1 = Matrix.new()
+						
+					case GameApp.RecordDevices.reference
+						matrix1 = each.getCalibrateReferenceMatrix() * each.getCalibrateMatrixInverse()
+						
+					case GameApp.RecordDevices.target
+						matrix1 = each.getCalibrateReferenceMatrix() * each.getCalibrateMatrixInverse()\
+							* each.getTargetMatrix() * each.getCalibrateReferenceMatrixInverse()
+					end
+					
+					matrix2 = matCalibInv * pTransformRootBones * rig.getBoneInverseMatrix(index)
+					
+					pRecordDeviceSlots.add(RecordDeviceSlot.new(slot, index, matrix1, matrix2))
+					pRecordAnimationDevices.addBone(each.getName())
+				end)
 			end
 			
 			pIsPreparing = true
@@ -455,16 +480,10 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end)
 			
 			// devices
-			if pRecordAnimationDevices != null
-				var Rig rig = pRecordAnimationDevices.getRig()
-				
-				pRecordDeviceSlots.forEach(block int index, ECBTrackerSlot.Instance each
-					matrix = pRecordDeviceMatrices.getAt(index) cast Matrix\
-						* each.getMatrixCharacter() * pTransformRootBones\
-						* rig.getBoneInverseMatrix(index)
-					pRecordAnimationDevices.addKeyframe(pRecordTime, matrix.getPosition(), matrix.toQuaternion())
-				end)
-			end
+			pRecordDeviceSlots.forEach(block RecordDeviceSlot each
+				matrix = each.calcMatrix()
+				pRecordAnimationDevices.addKeyframe(pRecordTime, matrix.getPosition(), matrix.toQuaternion())
+			end)
 		end
 		
 		/** Write capture information file. */
