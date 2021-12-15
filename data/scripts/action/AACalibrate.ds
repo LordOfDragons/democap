@@ -75,6 +75,7 @@ class AACalibrate extends AABase
 		stopPointingAtAnything()
 		hideVRMenu()
 		hideVRMirror()
+		hideActorModel()
 		
 		var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
 		var CharacterConfiguration character = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
@@ -104,15 +105,15 @@ class AACalibrate extends AABase
 	
 	/** Deactivate action. */
 	public func void deactivate()
-		if vrHudInfo != null
-			if panelCalibrate != null
-				vrHudInfo.removePanel(panelCalibrate)
-				panelCalibrate.safeDispose()
-				panelCalibrate = null
-			end
+		if vrHudInfo != null and panelCalibrate != null
+			vrHudInfo.removePanel(panelCalibrate)
+			panelCalibrate.safeDispose()
+			panelCalibrate = null
 		end
 		
 		modelProgress = null
+		
+		showActorModel()
 	end
 	
 	
@@ -215,5 +216,22 @@ class AACalibrate extends AABase
 		if modelProgress != null
 			modelProgress.setValue(0)
 		end
+	end
+	
+	/**
+	 * The actor can get in the way during calibrating. If we hide the entire actor then
+	 * the virtual hand devices are hidden too. Instead just hide the component only.
+	 * This can be improvd in the future to hide also attachments if present.
+	 * This requires though some kind of notification
+	 */
+	protected func void hideActorModel()
+		ECBehaviorComponent.getInstanceIn(actor).getComponent().setVisible(false)
+	end
+	
+	/**
+	 * Show actor model..
+	 */
+	protected func void showActorModel()
+		ECBehaviorComponent.getInstanceIn(actor).getComponent().setVisible(true)
 	end
 end
