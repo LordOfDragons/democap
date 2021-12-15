@@ -109,7 +109,8 @@ class ECBToggleVisibility extends DefaultECBehavior
 			var DVector cpos = camera.getPosition()
 			
 			if pPivot != null
-				matrix = matrix * DMatrix.newWorld(actor.getPosition() + DVector.new(pPivot), corient)
+				matrix = matrix * DMatrix.newWorld(actor.getPosition().\
+					combine(cpos, false, true, false) + DVector.new(pPivot), corient)
 				
 			else
 				matrix = matrix * DMatrix.newWorld(cpos, corient)
@@ -118,20 +119,26 @@ class ECBToggleVisibility extends DefaultECBehavior
 			// make object face HMD. keep in mind reposition() expects the matrix to point
 			// away from the camera so "mpos - cpos" is used not "cpos - mpos".
 			var DVector mpos = matrix.getPosition()
-			
-			matrix = DMatrix.newWorld(mpos, (mpos - cpos).normalize(),\
-				DMatrix.newFromQuaternion(corient).getUpVector())
+			var DVector view = (mpos - cpos).normalize()
+			var DVector up = DMatrix.newFromQuaternion(corient).getUpVector()
 			
 			if pLockUpAxis != null
 				var DVector lockUp = DVector.new(pLockUpAxis)
-				var DVector view = matrix.getViewVector()
 				
-				if DEMath.fabs(view * lockUp) > 0.707 // 45 degrees
-					view = matrix.getRightVector() % lockUp
+				if view * lockUp < 0.707 // 45 degrees down
+					view = (lockUp % up) % lockUp
+					
+				elif view * lockUp > 0.707 // 45 degrees up
+					view = (up % lockUp) % lockUp
+					
+				else
+					view = (lockUp % view) % lockUp
 				end
 				
-				matrix = DMatrix.newWorld(mpos, view, lockUp)
+				up = lockUp
 			end
+			
+			matrix = DMatrix.newWorld(mpos, view, up)
 			
 			reposition(matrix)
 		end
