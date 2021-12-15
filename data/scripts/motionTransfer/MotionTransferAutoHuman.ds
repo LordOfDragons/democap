@@ -466,7 +466,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		end
 		
 		findBoneChain(rig, pBoneHandRight, armBaseBone, chain)
-		index = firstBoneNotInChain(chain, armSpineChain)
+		index = firstBoneInChain(chain, armSpineChain)
 		
 		pTransferArmRight.setTipBone(pBoneHandRight)
 		pTransferArmRight.setMoveBaseIK(pMoveBaseIK)
@@ -494,7 +494,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		// left arm. separate guide bone is used if chain has at least 4 bones:
 		// hand, lower arm, upper arm, shoulder. with 3 bones no shoulder is assumed
 		findBoneChain(rig, pBoneHandLeft, armBaseBone, chain)
-		index = firstBoneNotInChain(chain, armSpineChain)
+		index = firstBoneInChain(chain, armSpineChain)
 		
 		pTransferArmLeft.setTipBone(pBoneHandLeft)
 		pTransferArmLeft.setMoveBaseIK(pMoveBaseIK)
@@ -519,21 +519,37 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferArmLeft.setGuideBone(pTransferArmLeft.getBaseBone())
 		end
 		
-		// right leg
-		findBoneChain(rig, pBoneFootRight, pBoneHip, chain)
-		index = firstBoneNotInChain(chain, chainSpine)
+		// legs
+		var Array chainRightLeg = Array.new()
+		findBoneChain(rig, pBoneFootRight, pBoneHip, chainRightLeg)
 		
+		index = firstBoneInChain(chainRightLeg, chainSpine)
+		chainRightLeg = chainRightLeg.slice(0, index)
+		
+		var Array chainLeftLeg = Array.new()
+		findBoneChain(rig, pBoneFootLeft, pBoneHip, chainLeftLeg)
+		
+		index = firstBoneInChain(chainLeftLeg, chainSpine)
+		chainLeftLeg = chainLeftLeg.slice(0, index)
+		
+		while chainRightLeg.getCount() > 0 and chainLeftLeg.getCount() > 0\
+		and chainRightLeg.getAt(-1).equals(chainLeftLeg.getAt(-1))
+			chainRightLeg = chainRightLeg.slice(0, -1)
+			chainLeftLeg = chainLeftLeg.slice(0, -1)
+		end
+		
+		// right leg
 		pTransferLegRight.setTipBone(pBoneFootRight)
 		pTransferLegRight.setMoveBaseIK(pMoveBaseIK)
 		pTransferLegRight.setMoveRetracted(pMoveCrouch)
 		pTransferLegRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
 		pTransferLegRight.setActorReach(MotionTransferIK.ActorReach.leg)
-		pTransferLegRight.setTwistBoneCount(DEMath.max(chain.getCount() - 2, 0))
+		pTransferLegRight.setTwistBoneCount(DEMath.max(chainRightLeg.getCount() - 2, 0))
 		pTransferLegRight.setTwistPropagation(1)
 		pTransferLegRight.setTwistAxisRotation(Vector.new(-90, 0, 0))
 		
-		if index > 1
-			pTransferLegRight.setBaseBone(chain.getAt(index - 1) cast String)
+		if chainRightLeg.getCount() > 0
+			pTransferLegRight.setBaseBone(chainRightLeg.getAt(-1) cast String)
 			
 		else
 			pTransferLegRight.setBaseBone("")
@@ -542,20 +558,17 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegRight.setGuideBone(pTransferLegRight.getBaseBone())
 		
 		// left leg
-		findBoneChain(rig, pBoneFootLeft, pBoneHip, chain)
-		index = firstBoneNotInChain(chain, chainSpine)
-		
 		pTransferLegLeft.setTipBone(pBoneFootLeft)
 		pTransferLegLeft.setMoveBaseIK(pMoveBaseIK)
 		pTransferLegLeft.setMoveRetracted(pMoveCrouch)
 		pTransferLegLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
 		pTransferLegLeft.setActorReach(MotionTransferIK.ActorReach.leg)
-		pTransferLegLeft.setTwistBoneCount(DEMath.max(chain.getCount() - 2, 0))
+		pTransferLegLeft.setTwistBoneCount(DEMath.max(chainLeftLeg.getCount() - 2, 0))
 		pTransferLegLeft.setTwistPropagation(1)
 		pTransferLegLeft.setTwistAxisRotation(Vector.new(-90, 0, 0))
 		
-		if index > 1
-			pTransferLegLeft.setBaseBone(chain.getAt(index - 1) cast String)
+		if chainLeftLeg.getCount() > 0
+			pTransferLegLeft.setBaseBone(chainLeftLeg.getAt(-1) cast String)
 			
 		else
 			pTransferLegLeft.setBaseBone("")
@@ -694,8 +707,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		return chain.getAt( -2 ) cast String
 	end
 	
-	/** Index of first bone not in another chain or chain.getCount(). */
-	protected func int firstBoneNotInChain(Array chain, Array otherChain)
+	/** Index of first bone in another chain or chain.getCount(). */
+	protected func int firstBoneInChain(Array chain, Array otherChain)
 		var int index, count = chain.getCount()
 		for index = 0 to count
 			if otherChain.has(chain.getAt(index))
