@@ -21,6 +21,8 @@
 
 namespace Democap
 
+pin Democap.Characters
+
 pin Dragengine.LoadSave
 pin Dragengine.Scenery
 pin Dragengine.Utils
@@ -35,6 +37,9 @@ pin Dragengine.Utils
 class Project
 	/** Animation directory name. */
 	static public fixed var String animationDirectory = "animation"
+	
+	/** Export directory name. */
+	static public fixed var String exportDirectory = "export"
 	
 	
 	
@@ -83,6 +88,7 @@ class Project
 	private var FileUsageManager pFileUsage
 	private var MutableID pAnimationIDGenerator
 	private var Scenes pScenes
+	private var CharacterAnimations pSavedAnimations
 	private var String pPostLoadActivateScene
 	
 	
@@ -93,6 +99,7 @@ class Project
 		pFileUsage = FileUsageManager.new()
 		pAnimationIDGenerator = MutableID.new(1)
 		pScenes = Scenes.new(pFileUsage)
+		pSavedAnimations = CharacterAnimations.new(pFileUsage)
 		updateDirectories()
 	end
 	
@@ -103,19 +110,13 @@ class Project
 			if FileReader.new(path) else FileReader.newZCompressed(path)
 		
 		var Project project = Project.new(path)
-		var int size, i, count
 		
 		select reader.readByte() // version
 		case 0
-			reader.readByte() // flags
+			project.readV0(env, reader)
 			
-			count = reader.readUShort()
-			for i = 0 to count
-				project.pScenes.add(Scene.new(env, reader))
-			end
-			
-			project.pAnimationIDGenerator.readFromFile(reader)
-			project.pPostLoadActivateScene = reader.readString8()
+		case 1
+			project.readV1(env, reader)
 			
 		else
 			throw EInvalidParam.new("Unsupported scene file version")
@@ -127,11 +128,35 @@ class Project
 		return project
 	end
 	
+	protected func void readV0(PersistencyEnvironment env, FileReader reader)
+		reader.readByte() // flags
+		
+		var int i, count
+		count = reader.readUShort()
+		for i = 0 to count
+			pScenes.add(Scene.new(env, reader))
+		end
+		
+		pAnimationIDGenerator.readFromFile(reader)
+		pPostLoadActivateScene = reader.readString8()
+	end
+	
+	protected func void readV1(PersistencyEnvironment env, FileReader reader)
+		readV0(env, reader)
+		
+		var int i, count
+		count = reader.readUShort()
+		for i = 0 to count
+			pSavedAnimations.add(CharacterAnimation.new(reader))
+		end
+	end
+	
 	/** Dispose of list. */
 	public func void dispose()
 		pFileUsage.setDeleteFiles(false)
 		pFileUsage.setLocked(true)
 		
+		pSavedAnimations.dispose()
 		pScenes.dispose()
 	end
 	
@@ -178,9 +203,41 @@ class Project
 			base + "-devices." + extensionRig)
 	end
 	
+	/** Generate export animation path. */
+	public func AnimationPath exportAnimationPath(String name, String extensionAnim, String extensionRig)
+		/*
+		var String safeName = ""
+		var int i, len = name.getLength()
+		var byte c
+		
+		for i = 0 to len
+			c = name.getAt(i)
+			if (c >= 'A' and c <= 'Z') or (c >= 'a' and c <= 'z') or (c >= '0' and c <= '9') \
+			or c == '-' or c == ' '
+				safeName = safeName + c
+				
+			else
+				safeName = safeName + "%{:02x}".format(Array.newWith(c))
+			end
+		end
+		*/
+		
+		var String base = exportDirectory + "/" + name
+		return AnimationPath.new(null,\
+			base + "." + extensionAnim,\
+			base + ".demca",\
+			base + "-devices." + extensionAnim,\
+			base + "-devices." + extensionRig)
+	end
+	
 	/** Get file usage. */
 	public func FileUsageManager getFileUsage()
 		return pFileUsage
+	end
+	
+	/** Saved animations. */
+	public func CharacterAnimations getSavedAnimations()
+		return pSavedAnimations
 	end
 	
 	
@@ -201,7 +258,7 @@ class Project
 		var FileWriter writer = env.getPersistency().getDebugEnableCanaryValue()\
 			if safe.getWriter(false) else safe.getWriterZCompressed()
 		
-		writer.writeByte(0) // version
+		writer.writeByte(1) // version
 		writer.writeByte(0) // flags
 		
 		writer.writeUShort(pScenes.getCount())
@@ -215,6 +272,11 @@ class Project
 			scene = pScenes.getAt(0)
 		end
 		writer.writeString8(scene.getName())
+		
+		writer.writeUShort(pSavedAnimations.getCount())
+		pSavedAnimations.forEach(block CharacterAnimation each
+			each.writeToFile(writer)
+		end)
 		
 		FileWriter.new(pPath).writeData(safe.getReader())
 	end

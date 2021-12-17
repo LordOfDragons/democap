@@ -57,6 +57,10 @@ class WMPanelProject extends CollapsibleGroup
 		public func void gameWorldChanged(GameApp app)
 			pPanel.updateModelObjects()
 		end
+		
+		public func void savedAnimationsChanged(GameApp app)
+			pPanel.updateSavedAnimations()
+		end
 	end
 	
 	
@@ -316,6 +320,77 @@ class WMPanelProject extends CollapsibleGroup
 	
 	
 	
+	/** Saved animation list element renderer. */
+	class SavedAnimationRenderer extends DefaultListElementRenderer
+		protected var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+			setDefaultMinimumSize(Point.new(50, 10))
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text = ""
+			if element != null
+				var CharacterAnimation animation = element cast CharacterAnimation
+				text = animation.getName()
+				
+				if pPanel.getProject() != null
+					text = text + " [" + animation.getCharacterProfile(pPanel.getProject()) + "]"
+				end
+			end
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	/** Saved animation popup menu. */
+	class SavedAnimationPopupAction extends DefaultActionListener
+		protected var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			var Widget widget = event.getSource() cast Widget
+			var WindowPopup popup = WindowPopup.new()
+			var Button button
+			
+			button = Button.new("Rename", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.renameSavedAnimation()
+			end))
+			button.setToolTip("Rename saved animation")
+			popup.addWidget(button)
+			
+			button = Button.new("Load", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.loadSavedAnimation()
+			end))
+			button.setToolTip("Load saved animation into selected object of type CapturedCharacter")
+			popup.addWidget(button)
+			
+			button = Button.new("Remove", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.removeSavedAnimation()
+			end))
+			button.setToolTip("Remove saved animation")
+			popup.addWidget(button)
+			
+			button = Button.new("Export...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.exportSavedAnimation()
+			end))
+			button.setToolTip("Export saved animation")
+			popup.addWidget(button)
+			
+			pPanel.getDesktop().addWindow(popup)
+			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
+		end
+	end
+	
+	
+	
 	/** Object element renderer. */
 	class ObjectElementRenderer extends DefaultListElementRenderer
 		public func new()
@@ -473,6 +548,7 @@ class WMPanelProject extends CollapsibleGroup
 	protected var DefaultTextModel pModelProjectFilename
 	protected var DefaultListModel pModelScenes
 	protected var DefaultListModel pModelLoadableWorlds
+	protected var DefaultListModel pModelSavedAnimations
 	protected var DefaultListModel pModelObjects
 	protected var DefaultTextModel pModelObjectClass
 	protected var EditVector pEditObjectPosition
@@ -496,6 +572,7 @@ class WMPanelProject extends CollapsibleGroup
 		pModelScenes = DefaultListModel.new()
 		pModelScenes.setAutoSelect(false)
 		pModelLoadableWorlds = DefaultListModel.new()
+		pModelSavedAnimations = DefaultListModel.new()
 		
 		pModelObjects = DefaultListModel.new()
 		pModelObjects.setAutoSelect(false)
@@ -538,6 +615,7 @@ class WMPanelProject extends CollapsibleGroup
 		pModelObjectClass = null
 		pModelObjects = null
 		pModelLoadableWorlds = null
+		pModelSavedAnimations = null
 		pModelScenes = null
 		pModelProjectFilename = null
 		pEditObjectPosition = null
@@ -594,6 +672,7 @@ class WMPanelProject extends CollapsibleGroup
 		end
 		
 		updateModelScenes()
+		updateSavedAnimations()
 	end
 	
 	
@@ -905,6 +984,119 @@ class WMPanelProject extends CollapsibleGroup
 	
 	
 	
+	/** Selected saved animation or null. */
+	public func CharacterAnimation getSavedAnimation()
+		if pModelSavedAnimations.getSelected() == -1
+			return null
+		end
+		return pModelSavedAnimations.getAt(pModelSavedAnimations.getSelected()) cast CharacterAnimation
+	end
+	
+	/** Rename saved animation. */
+	public func void renameSavedAnimation()
+		var CharacterAnimation savedAnimation = getSavedAnimation()
+		if pProject == null or savedAnimation == null
+			return
+		end
+		
+		WindowDialog.input(getWindow(), "Rename Saved Animation", "Name:", null,\
+		savedAnimation.getName(), null, null, WindowDialog.BlockResultListener.new(block String result
+			if result != null and not result.equals(savedAnimation.getName())
+				if result.empty()
+					WindowDialog.message(getWindow(), "Rename Saved Animation", "Name can not be empty.", null, null, null)
+					
+				elif pProject.getSavedAnimations().hasNamed(result)
+					WindowDialog.message(getWindow(), "Rename Saved Animation",\
+						"Saved animation with this name exists already.", null, null, null)
+					
+				else
+					savedAnimation.setName(result)
+					GameApp.getGameApp().notifySavedAnimationsChanged()
+				end
+			end
+		end))
+	end
+	
+	/** Load saved animation. */
+	public func void loadSavedAnimation()
+		var CharacterAnimation savedAnimation = getSavedAnimation()
+		if pObject == null or pProject == null or savedAnimation == null
+			return
+		end
+		
+		var ECBCapturedAnimations.Instance capturedAnimations =\
+			ECBCapturedAnimations.getInstanceIn(pObject.getElement())
+		if capturedAnimations == null
+			return
+		end
+		
+		var CharacterAnimation animation = capturedAnimations.getAnimations().getActive()
+		if animation == null
+			return
+		end
+		
+		var String targetProfile = animation.getCharacterProfile(pProject)
+		var String sourceProfile = savedAnimation.getCharacterProfile(pProject)
+		if targetProfile.empty() or sourceProfile.empty() or not sourceProfile.equals(targetProfile)
+			WindowDialog.message(getWindow(), "Load Saved Animation",\
+				"Scene objects is not compatible (character profile differs).", null, null, null)
+			return
+		end
+		
+		animation.assign(savedAnimation)
+		capturedAnimations.getAnimations().notifyAnimationChanged(animation)
+	end
+	
+	/** Update saved animations model. */
+	public func void updateSavedAnimations()
+		var CharacterAnimation savedAnimation = getSavedAnimation()
+		
+		if pProject != null
+			pModelSavedAnimations.setContent(pProject.getSavedAnimations().toArray().sorted())
+			
+		else
+			pModelSavedAnimations.removeAll()
+		end
+		
+		pModelSavedAnimations.setSelected(pModelSavedAnimations.indexOf(savedAnimation))
+	end
+	
+	/** Remove saved animation. */
+	public func void removeSavedAnimation()
+		var CharacterAnimation savedAnimation = getSavedAnimation()
+		if savedAnimation == null or pProject == null
+			return
+		end
+		
+		WindowDialog.question(getWindow(), "Remove Saved Animation", "Remove Saved Animation '"\
+			+ savedAnimation.getName() + "'?", null, Array.newWith(\
+				WindowDialog.ButtonConfiguration.new("Remove", true),\
+				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					pProject.getSavedAnimations().remove(savedAnimation)
+					GameApp.getGameApp().notifySavedAnimationsChanged()
+				end
+		end))
+	end
+	
+	/** Export saved animation. */
+	public func void exportSavedAnimation()
+		var CharacterAnimation savedAnimation = getSavedAnimation()
+		if savedAnimation == null or pProject == null
+			return
+		end
+		
+		WindowDialog.input(getWindow(), "Export Saved Animation", "Name:", null, "Animation",\
+		null, null, WindowDialog.BlockResultListener.new(block String result
+			if result != null and not result.empty()
+				savedAnimation.export(pProject, result)
+			end
+		end))
+	end
+	
+	
+	
 	/** Selected object or null. */
 	public func ECBSceneObject.Instance getObject()
 		return pObject
@@ -1190,6 +1382,15 @@ class WMPanelProject extends CollapsibleGroup
 				p2.addWidget(ComboBox.new(pModelLoadableWorlds, LoadableWorldRenderer.new()))
 				
 				button = Button.new("...", LoadableWorldPopupAction.new(this))
+				button.setDesignerSelector("Button.Popup")
+				p2.addWidget(button)
+			end))
+			
+			p.addWidget(Label.new("Saved Anims:", "Label.FormCaption"))
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
+				p2.addWidget(ComboBox.new(pModelSavedAnimations, SavedAnimationRenderer.new(this)))
+				
+				button = Button.new("...", SavedAnimationPopupAction.new(this))
 				button.setDesignerSelector("Button.Popup")
 				p2.addWidget(button)
 			end))

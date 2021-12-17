@@ -24,6 +24,7 @@ namespace Democap.Characters
 pin Dragengine.Scenery
 pin Dragengine.Utils
 pin Dragengine.LoadSave
+pin Dragengine.XML
 
 
 /**
@@ -40,6 +41,7 @@ class CharacterAnimation
 	private var Animation pAnimation
 	private var Animation pAnimationDevices
 	private var Rig pRigDevices
+	private var String pCharacterProfile
 	
 	
 	
@@ -65,6 +67,7 @@ class CharacterAnimation
 		pAnimation = copy.pAnimation
 		pAnimationDevices = copy.pAnimationDevices
 		pRigDevices = copy.pRigDevices
+		pCharacterProfile = copy.pCharacterProfile
 		
 		pFileUsage = FileUsageManager.new()
 		pFileUsage.setParent(copy.pFileUsage.getParent())
@@ -184,6 +187,7 @@ class CharacterAnimation
 		end
 		
 		pPathMeta = path
+		pCharacterProfile = null
 		
 		if not path.empty()
 			pFileUsage.addFileUsage(path)
@@ -311,6 +315,94 @@ class CharacterAnimation
 		setPathMeta("")
 		setPathDevices("")
 		setPathDevicesRig("")
+	end
+	
+	/** Character profile or empty string if unknown. */
+	public func String getCharacterProfile(Project project)
+		if pCharacterProfile == null
+			pCharacterProfile = ""
+			
+			if not pPathMeta.empty()
+				var EasyXML document = EasyXML.new((project.getDataDirectory() + pPathMeta).getPath())
+				if document.hasParseFailed()
+					GameApp.getGameApp().getConsole().addMessage(document.getParseLog())
+					throw EInvalidParam.new("parsing document failed")
+				end
+				
+				document.getRootElement().forEachTag(block EasyXMLElement tag, String tagName
+					if tagName.equals("character")
+						tag.forEachTag(block EasyXMLElement tag2, String tagName2
+							if tagName2.equals("profileName")
+								pCharacterProfile = tag2.getFirstCData()
+							end
+						end)
+					end
+				end)
+			end
+		end
+		
+		return pCharacterProfile
+	end
+	
+	/** Assign from another character animation. */
+	public func void assign(CharacterAnimation characterAnimation)
+		pTimestamp = characterAnimation.pTimestamp
+		pAnimation = characterAnimation.pAnimation
+		pAnimationDevices = characterAnimation.pAnimationDevices
+		pRigDevices = characterAnimation.pRigDevices
+		pCharacterProfile = characterAnimation.pCharacterProfile
+		
+		setPath(characterAnimation.pPath)
+		setPathDevices(characterAnimation.pPathDevices)
+		setPathDevicesRig(characterAnimation.pPathDevicesRig)
+		setPathMeta(characterAnimation.pPathMeta)
+	end
+	
+	/** Export character animation. */
+	public func void export(Project project, String name)
+		var Project.AnimationPath path = project.exportAnimationPath(name, "deanim", "derig")
+		var File directory = project.getDataDirectory()
+		
+		FileWriter.new((directory + path.getPath()).getPath()).writeData(\
+			FileReader.new((directory + pPath).getPath()))
+		
+		if not pPathDevices.empty()
+			FileWriter.new((directory + path.getPathDevices()).getPath()).writeData(\
+				FileReader.new((directory + pPathDevices).getPath()))
+		end
+		
+		if not pPathDevicesRig.empty()
+			FileWriter.new((directory + path.getPathDevicesRig()).getPath()).writeData(\
+				FileReader.new((directory + pPathDevicesRig).getPath()))
+		end
+		
+		var EasyXML document = EasyXML.new((directory + pPathMeta).getPath())
+		if document.hasParseFailed()
+			GameApp.getGameApp().getConsole().addMessage(document.getParseLog())
+			throw EInvalidParam.new("parsing document failed")
+		end
+		
+		document.getRootElement().forEachTag(block EasyXMLElement tag, String tagName
+			if tagName.equals("capturedAnimation")
+				tag.forEachTag(block EasyXMLElement tag2, String tagName2
+					if tagName2.equals("pathAnimation")
+						tag2.getElementAt(0).setCDataContent(path.getPath())
+					end
+				end)
+				
+			elif tagName.equals("capturedAnimationDevices")
+				tag.forEachTag(block EasyXMLElement tag2, String tagName2
+					if tagName2.equals("pathAnimation")
+						tag2.getElementAt(0).setCDataContent(path.getPathDevices())
+						
+					elif tagName2.equals("pathRig")
+						tag2.getElementAt(0).setCDataContent(path.getPathDevicesRig())
+					end
+				end)
+			end
+		end)
+		
+		document.writeToFile(FileWriter.new((directory + path.getPathMeta()).getPath()), false)
 	end
 	
 	

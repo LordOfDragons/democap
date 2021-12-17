@@ -32,6 +32,7 @@ pin Dragengine.Gui.Events
 pin Dragengine.Preloading
 pin Dragengine.Scenery
 pin Dragengine.Utils
+pin Dragengine.XML
 
 
 
@@ -153,6 +154,20 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			end))
 			popup.addWidget(button)
 			button.setToolTip("Clear animation")
+			
+			button = Button.new("Save animation...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.saveAnimation()
+			end))
+			popup.addWidget(button)
+			button.setToolTip("Save animation")
+			
+			button = Button.new("Export animation...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.exportAnimation()
+			end))
+			popup.addWidget(button)
+			button.setToolTip("Export animation")
 			
 			pPanel.getDesktop().addWindow(popup)
 			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
@@ -329,6 +344,47 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		
 		pAnimation.clear()
 		pBehaviorCapturedAnimations.getAnimations().notifyAnimationChanged(pAnimation)
+	end
+	
+	/** Save animation. */
+	public func void saveAnimation()
+		if pAnimation == null or pAnimation.getAnimation() == null
+			return
+		end
+		
+		WindowDialog.input(getWindow(), "Save Animation", "Name:", null, "Animation",\
+		null, null, WindowDialog.BlockResultListener.new(block String result
+			if result == null or result.empty()
+				return null
+			end
+			
+			var Project project = GameApp.getGameApp().getProject()
+			if project.getSavedAnimations().hasNamed(result)
+				WindowDialog.message(getWindow(), "Save Animation", "Name exists already", null, null, null)
+				return null
+			end
+			
+			var CharacterAnimation anim = CharacterAnimation.new(pAnimation)
+			anim.setName(result)
+			project.getSavedAnimations().add(anim) // we have to do this before altering any file usage
+			GameApp.getGameApp().notifySavedAnimationsChanged()
+			project.save()
+		end))
+	end
+	
+	/** Export animation. */
+	public func void exportAnimation()
+		var Project project = GameApp.getGameApp().getProject()
+		if pAnimation == null or project == null
+			return
+		end
+		
+		WindowDialog.input(getWindow(), "Export Animation", "Name:", null, "Animation",\
+		null, null, WindowDialog.BlockResultListener.new(block String result
+			if result != null and not result.empty()
+				pAnimation.export(project, result)
+			end
+		end))
 	end
 	
 	
