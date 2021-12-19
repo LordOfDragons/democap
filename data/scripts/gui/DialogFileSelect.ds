@@ -182,6 +182,7 @@ class DialogFileSelect extends WindowDialog
 	protected var DefaultTextModel pModelFilename
 	protected var DefaultListModel pModelPattern
 	protected var Panel pPanelBreadCrumbs
+	protected var bool pSaving
 	
 	public var Image imageDirectory
 	public var Image imageFile
@@ -237,6 +238,7 @@ class DialogFileSelect extends WindowDialog
 	public static func DialogFileSelect showOpenFile(Window window, String title,\
 	Array patterns, String path, ResultListener listener)
 		var DialogFileSelect dialog = DialogFileSelect.new(window, title, listener)
+		dialog.pSaving = false
 		dialog.setPatterns(patterns)
 		dialog.setPath(path)
 		dialog.selectPatternMatchingPath()
@@ -247,13 +249,17 @@ class DialogFileSelect extends WindowDialog
 	/** Show save file dialog for resource type. */
 	public static func DialogFileSelect showSaveFile(Window window, String title,\
 	ResourceLoaderType type, String path, ResultListener listener)
-		return showOpenFile(window, title, type, path, listener)
+		var DialogFileSelect dialog = showOpenFile(window, title, type, path, listener)
+		dialog.pSaving = true
+		return dialog
 	end
 	
 	/** Show save file dialog for array of FileExtension. */
 	public static func DialogFileSelect showSaveFile(Window window, String title,\
 	Array patterns, String path, ResultListener listener)
-		return showOpenFile(window, title, patterns, path, listener)
+		var DialogFileSelect dialog = showOpenFile(window, title, patterns, path, listener)
+		dialog.pSaving = true
+		return dialog
 	end
 	
 	/** Create all files pattern. */
@@ -407,11 +413,18 @@ class DialogFileSelect extends WindowDialog
 		
 		if FileSystem.existsFile(path) and FileSystem.getTypeOfFile(path) == FileType.directory
 			setDirectory(path)
-			
-		else
-			setResult(path)
-			close()
+			return
 		end
+		
+		if pSaving
+			var String defaultExtension = getSelectedPattern().getDefaultExtension()
+			if not path.endsWith(defaultExtension)
+				path = path + defaultExtension
+			end
+		end
+		
+		setResult(path)
+		close()
 	end
 	
 	
