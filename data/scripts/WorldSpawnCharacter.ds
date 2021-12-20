@@ -22,6 +22,7 @@
 namespace Democap
 
 pin Democap.Characters
+pin Democap.Behaviors
 pin Democap.Elements
 
 pin Dragengine.CameraDirectors
@@ -110,6 +111,7 @@ class WorldSpawnCharacter
 	private var UpdateCharacter pUpdateCharacter
 	private var DVector pLastActorPosition
 	private var Quaternion pLastActorOrientation
+	private var bool pLastActorSelected
 	private var BehaviorElement pVRMenu
 	private var BehaviorElement pMirrorLarge
 	private var ElementClass pMoCapActorClass
@@ -172,6 +174,7 @@ class WorldSpawnCharacter
 		pSpawnPoint = null
 		pLastActorPosition = null
 		pLastActorOrientation = null
+		pLastActorSelected = false
 		
 		// set game world
 		pGameWorld = gameWorld
@@ -347,6 +350,11 @@ class WorldSpawnCharacter
 		pLastActorPosition = pActor.getPosition()
 		pLastActorOrientation = pActor.getOrientation()
 		
+		var ECBSelectable.Instance selectable = ECBSelectable.getInstanceIn(pActor)
+		if selectable != null
+			pLastActorSelected = selectable.isSelected()
+		end
+		
 		pActor.safeDispose()
 		pActor = null
 		
@@ -389,6 +397,14 @@ class WorldSpawnCharacter
 			
 			pLastActorPosition = null
 			pLastActorOrientation = null
+		end
+		
+		// select actor if required
+		if pLastActorSelected
+			var ECBSelectable.Instance selectable = ECBSelectable.getInstanceIn(pActor)
+			if selectable != null
+				selectable.selectElement()
+			end
 		end
 		
 		// take control of actor
