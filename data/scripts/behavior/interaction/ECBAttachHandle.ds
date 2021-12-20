@@ -44,6 +44,7 @@ class ECBAttachHandle extends DefaultECBehavior
 		private var Vector pOffset
 		private var Vector pRotation
 		private var float pScale
+		private var bool pAbsolute
 		
 		
 		
@@ -60,6 +61,7 @@ class ECBAttachHandle extends DefaultECBehavior
 			pOffset = pECBehavior.getOffset().getVector(stub, codec)
 			pRotation = pECBehavior.getRotation().getVector(stub, codec)
 			pScale = DEMath.max(pECBehavior.getScale().getValue(stub), 0.0)
+			pAbsolute = pECBehavior.getAbsolute().getValue(stub)
 		end
 		
 		
@@ -90,6 +92,11 @@ class ECBAttachHandle extends DefaultECBehavior
 			return pScale
 		end
 		
+		/** Attach absolute or relative. */
+		public func bool getAbsolute()
+			return pAbsolute
+		end
+		
 		
 		
 		/** Attach to parent. */
@@ -106,29 +113,42 @@ class ECBAttachHandle extends DefaultECBehavior
 				return
 			end
 			
-			var Component parentComponent = ECBehaviorComponent.getInstanceIn(beparent).getComponent()
-			if parentComponent == null
-				return
-			end
+			var DMatrix parentMatrix = parent.getElementMatrix()
+			var Vector parentMinExtend = Vector.new(-0.5, -0.5, -0.5)
+			var Vector parentMaxExtend = Vector.new(0.5, 0.5, 0.5)
 			
-			var Model parentModel = parentComponent.getModel()
-			if parentModel == null
-				return
+			var Component parentComponent = ECBehaviorComponent.getInstanceIn(beparent).getComponent()
+			if parentComponent != null
+				parentMatrix = parentComponent.getMatrix()
+				
+				var Model parentModel = parentComponent.getModel()
+				if parentModel != null
+					parentMinExtend = parentModel.getMinimumExtend()
+					parentMaxExtend = parentModel.getMaximumExtend()
+				end
 			end
 			
 			// scale element
-			var Vector parentMinExtend = parentModel.getMinimumExtend()
-			var Vector parentMaxExtend = parentModel.getMaximumExtend()
 			var Vector parentSize = parentMaxExtend - parentMinExtend
 			var Vector parentCenter = (parentMinExtend + parentMaxExtend) / 2
-			var Vector parentHalfSize = parentSize / 2
+			var Vector parentHalfSize = (parentSize / 2).largest(Vector.new(0.01, 0.01, 0.01))
 			var float scaleValue = DEMath.max(parentSih.getHandleSize() * pScale, 0.01)
 			var Vector scale = Vector.new(scaleValue, scaleValue, scaleValue)
 			
 			// position and rotation
-			var Matrix offset = Matrix.newRT(pRotation, parentCenter \
-				+ parentHalfSize.compMultiply(pPosition) + pOffset * scaleValue)
-			var DMatrix matrix = offset.toDMatrix() * parentComponent.getMatrix()
+			var DMatrix matrix
+			
+			if pAbsolute
+				var Matrix offset = Matrix.newRT(pRotation,\
+					parentHalfSize.compMultiply(pPosition) + pOffset * scaleValue)
+				matrix = offset.toDMatrix() * parentMatrix
+				
+			else
+				var Matrix offset = Matrix.newRT(pRotation, parentCenter \
+					+ parentHalfSize.compMultiply(pPosition) + pOffset * scaleValue)
+				matrix = offset.toDMatrix() * parentMatrix
+			end
+			
 			var DVector position = matrix.getPosition()
 			var Quaternion orientation = matrix.toQuaternion()
 			
@@ -152,6 +172,7 @@ class ECBAttachHandle extends DefaultECBehavior
 	protected var ECPVector pOffset
 	protected var ECPVector pRotation
 	protected var ECPFloat pScale
+	protected var ECPBoolean pAbsolute
 	
 	
 	
@@ -175,6 +196,9 @@ class ECBAttachHandle extends DefaultECBehavior
 		
 		pScale = ECPFloat.new(prefix + "scale", 1, 0)
 		eclass.addProperty(pScale)
+		
+		pAbsolute = ECPBoolean.new(prefix + "absolute", false)
+		eclass.addProperty(pAbsolute)
 		
 		eclass.addBehavior(this)
 	end
@@ -216,6 +240,11 @@ class ECBAttachHandle extends DefaultECBehavior
 	/** Resizes element relative to size of parent. */
 	public func ECPFloat getScale()
 		return pScale
+	end
+	
+	/** Attach absolute or relative. */
+	public func ECPBoolean getAbsolute()
+		return pAbsolute
 	end
 	
 	
