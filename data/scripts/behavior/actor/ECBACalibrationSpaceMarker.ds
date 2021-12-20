@@ -1,0 +1,177 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Motion capture actor calibration space marker.
+ */
+class ECBACalibrationSpaceMarker extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Hide while recording. */
+		class HideWhileRecording extends ECBRecordAnimation.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void startRecording(ECBRecordAnimation.Instance instance)
+				pInstance.hideMarker()
+			end
+			
+			public func void stopRecording(ECBRecordAnimation.Instance instance)
+				pInstance.showMarker()
+			end
+		end
+		
+		
+		
+		private var ECBACalibrationSpaceMarker pECBehavior
+		private var ECBehaviorComponent.Instance pComponent
+		private var ECBehaviorCollider.Instance pCollider
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBACalibrationSpaceMarker ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pComponent = null
+			super.dispose()
+		end
+		
+		/** Init behavior. */
+		public func void init(StubElement stub)
+			var BehaviorElement element = getElement()
+			pComponent = pECBehavior.getComponent().instance(element)
+			
+			var Matrix invMatrix = pECBehavior.getCharacter().instance(element).\
+				getCharacter().getMatrixCalibrateInverse()
+			
+			pECBehavior.getCollider().instance(element).getCollider().attachStatic(\
+				pComponent.getComponent(), invMatrix.getPosition(), invMatrix.toQuaternion())
+			
+			pECBehavior.getRecordAnimation().instance(element).addListener(HideWhileRecording.new(this))
+		end
+		
+		
+		
+		/** Show marker. */
+		public func void showMarker()
+			pComponent.getComponent().setVisible(true)
+		end
+		
+		/** Hide marker. */
+		public func void hideMarker()
+			pComponent.getComponent().setVisible(false)
+		end
+	end
+	
+	
+	
+	protected var ECBCharacterConfiguration pCharacter
+	protected var ECBRecordAnimation pRecordAnimation
+	protected var ECBehaviorComponent pComponent
+	protected var ECBehaviorCollider pCollider
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBRecordAnimation recordAnimation,\
+	ECBehaviorCollider collider) super(eclass)
+		var String subId = "calibrationSpace"
+		var String prefix = subId + "."
+		
+		pCharacter = ECBCharacterConfiguration.getBehaviorIn(eclass)
+		pRecordAnimation = recordAnimation
+		pCollider = collider
+		
+		pComponent = ECBehaviorComponent.new(eclass, null, subId)
+		pComponent.setCommonPath("/content/models/actorMarker",\
+			"actorMarker.demodel", "mocapActorMarker.deskin", "actorMarker.derig")
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pCharacter = null
+		pRecordAnimation = null
+		pCollider = null
+		pComponent = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Character behavior. */
+	public func ECBCharacterConfiguration getCharacter()
+		return pCharacter
+	end
+	
+	/** Record animation behavior. */
+	public func ECBRecordAnimation getRecordAnimation()
+		return pRecordAnimation
+	end
+	
+	/** Component behavior. */
+	public func ECBehaviorComponent getComponent()
+		return pComponent
+	end
+	
+	/** Collider behavior. */
+	public func ECBehaviorCollider getCollider()
+		return pCollider
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
