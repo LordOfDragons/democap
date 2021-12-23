@@ -1,0 +1,180 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Scenery
+
+
+/**
+ * Behavior hide component while playing back if not recording.
+ */
+class ECBHideWhilePlaybackNotRecording extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class RecordingStateChanged extends ECBRecordAnimation.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void prepareRecording(ECBRecordAnimation.Instance instance)
+				pInstance.updateVisibility()
+			end
+			
+			public func void stopRecording(ECBRecordAnimation.Instance instance)
+				pInstance.updateVisibility()
+			end
+		end
+		
+		class PlaybackChanged extends PlaybackScene.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void startPlayback(PlaybackScene playbackScene)
+				pInstance.updateVisibility()
+			end
+			
+			public func void stopPlayback(PlaybackScene playbackScene)
+				pInstance.updateVisibility()
+			end
+			
+			public func void pausePlayback(PlaybackScene playbackScene)
+				pInstance.updateVisibility()
+			end
+		end
+		
+		
+		
+		private var ECBHideWhilePlaybackNotRecording pECBehavior
+		private var ECBRecordAnimation.Instance pRecordAnimation
+		private var PlaybackChanged pPlaybackChanged
+		private var Boolean pRestoreVisibility
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBHideWhilePlaybackNotRecording ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			
+			pRecordAnimation = ecbehavior.getRecordAnimation().instance(element)
+			pRecordAnimation.addListener(RecordingStateChanged.new(this))
+		end
+		
+		/** Dispose of behavior. */
+		public func void dispose()
+			pRecordAnimation = null
+			super.dispose()
+		end
+		
+		
+		
+		/** Update visibility. */
+		public func void updateVisibility()
+			if pRecordAnimation.isPreparingOrRecording() or GameApp.getGameApp().getPlaybackScene().isStopped()
+				show()
+				
+			else
+				hide()
+			end
+		end
+		
+		/** Hide element. */
+		public func void hide()
+			if pRestoreVisibility != null
+				return
+			end
+			
+			var Component component = pRecordAnimation.getActorAnimated().getComponent().getComponent()
+			pRestoreVisibility = Boolean.new(component.getVisible())
+			component.setVisible(false)
+		end
+		
+		/** Show element. */
+		public func void show()
+			if pRestoreVisibility == null
+				return
+			end
+			
+			pRecordAnimation.getActorAnimated().getComponent().getComponent().setVisible(pRestoreVisibility.value())
+			pRestoreVisibility = null
+		end
+		
+		
+		
+		/** Added to game world. */
+		public func void addToGameWorld()
+			pPlaybackChanged = PlaybackChanged.new(this)
+			GameApp.getGameApp().getPlaybackScene().addListener(pPlaybackChanged)
+		end
+		
+		/** Remove from game world. */
+		public func void removeFromGameWorld()
+			if pPlaybackChanged != null
+				GameApp.getGameApp().getPlaybackScene().removeListener(pPlaybackChanged)
+				pPlaybackChanged = null
+			end
+		end
+	end
+	
+	
+	
+	private var ECBRecordAnimation pRecordAnimation
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBRecordAnimation recordAnimation) super(eclass)
+		pRecordAnimation = recordAnimation
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pRecordAnimation = null
+		super.dispose()
+	end
+	
+	
+	
+	public func ECBRecordAnimation getRecordAnimation()
+		return pRecordAnimation
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
