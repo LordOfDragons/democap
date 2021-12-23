@@ -667,10 +667,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 			
 			select pActorReach
 			case ActorReach.arm
-				var float actorReach = (actorProfile.getArmLength() \
-					+ actorProfile.getShoulderWidth() / 2) * config.getCalibrateScale()
+				var float actorShoulderReach = (actorProfile.getShoulderWidth() / 2) * config.getCalibrateScale()
+				var float actorArmReach = actorProfile.getArmLength() * config.getCalibrateScale()
+				var float actorReach = actorShoulderReach + actorArmReach
 				
-				pCalibrateReach = DEMath.fabs(posTip.getX())
+				pCalibrateReach = posTip.absolute().getX()
 				pCalibrateReachScale = pCalibrateReach / actorReach
 				
 				// along Z direction this is always 1.
@@ -684,19 +685,53 @@ class MotionTransferIK extends DefaultMotionTransfer
 				// character center is fixed. the remaining length has to make a turn
 				// to reach the IK point. this length has to be matched with the length
 				// from the turned IK point to the spine attachment point.
-				var float shorten = 0.95
 				
-				var float reachFront = pCalibrateReach * shorten
+				// the reach front can be calculate by using a shortening of the calibrate
+				// reach. this can be done using a fudge factor but that can be wrong.
+				// another solution is to consider the base bone as the shoulder bone
+				// which does not full rotate. the length of all other bones indicates
+				// the maximum reach if the shoulder bone does not rotate. using the
+				// length of the shoulder bone and a maximum rotation range for
+				// forward/backward and up/down the actual reach can be calculated.
+				// we can use the guide bone for this
+				/*
+				var float shortenForward = 0.95
+				var float shortenDown = 0.95
+				*/
 				
 				var Vector pivot = posBase.absolute()
-				var Vector tip = posTip.absolute()
-				var Vector tipFront = pivot + Vector.new(0, 0, reachFront)
-				
 				var Vector actorPivot = Vector.new(0, pivot.getY(), pivot.getZ())
+// 				var float actorRotateFront = 40
+// 				var float actorRotateDown = 40
 				
-				var float scaleSide = reachFront / (tipFront - actorPivot).getLength()
+				var Vector tipFront, tipDown
+				var Vector posRotate = posBase.absolute()
+				var float rotateFront = 40
+				var float rotateDown = 40
 				
-				pCalibrateReachScaleDirection = Vector.new(1, scaleSide, scaleSide)
+				if indexGuide != -1 and indexGuide != indexBase
+					posRotate = component.boneGetMatrix(indexGuide).getPosition().absolute()
+				end
+				
+				var float reachRotateTip = (posTip.absolute() - posRotate).getLength()
+				var float reachBaseRotate = (posRotate - posBase.absolute()).getLength() // can be 0
+				var float scaleFront, scaleDown
+				var Vector tip, actorTip
+				
+				// front
+				tip = pivot + Vector.new(reachBaseRotate * DEMath.cos(rotateFront),\
+					0, reachRotateTip + reachBaseRotate * DEMath.sin(rotateFront))
+				
+				scaleFront = (tip - actorPivot).getLength() / pCalibrateReach
+				
+				// down
+				tip = pivot + Vector.new(reachBaseRotate * DEMath.cos(rotateDown),\
+					-(reachRotateTip + reachBaseRotate * DEMath.sin(rotateDown)), 0)
+				
+				scaleDown = (tip - actorPivot).getLength() / pCalibrateReach
+				
+				// store direction specific scale
+				pCalibrateReachScaleDirection = Vector.new(1, scaleDown, scaleFront)
 				
 			case ActorReach.leg
 				// reach scale is not working well with legs
