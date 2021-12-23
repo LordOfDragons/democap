@@ -667,13 +667,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 			
 			select pActorReach
 			case ActorReach.arm
-				var float actorShoulderReach = (actorProfile.getShoulderWidth() / 2) * config.getCalibrateScale()
-				var float actorArmReach = actorProfile.getArmLength() * config.getCalibrateScale()
-				var float actorReach = actorShoulderReach + actorArmReach
-				
-				pCalibrateReach = posTip.absolute().getX()
-				pCalibrateReachScale = pCalibrateReach / actorReach
-				
 				// along Z direction this is always 1.
 				// along X and Y direction the scaling has to be adjusted. this is due
 				// to the character shoulder joint usually not lining up with the actor
@@ -699,13 +692,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 				var float shortenDown = 0.95
 				*/
 				
-				var Vector pivot = posBase.absolute()
-				var Vector actorPivot = Vector.new(0, pivot.getY(), pivot.getZ())
-// 				var float actorRotateFront = 40
-// 				var float actorRotateDown = 40
-				
-				var Vector tipFront, tipDown
 				var Vector posRotate = posBase.absolute()
+				var Vector tipFront, tipDown
 				var float rotateFront = 40
 				var float rotateDown = 40
 				
@@ -718,17 +706,25 @@ class MotionTransferIK extends DefaultMotionTransfer
 				var float scaleFront, scaleDown
 				var Vector tip, actorTip
 				
+				// reach scaling
+				var float actorShoulderReach = (actorProfile.getShoulderWidth() / 2) * config.getCalibrateScale()
+				var float actorArmReach = actorProfile.getArmLength() * config.getCalibrateScale()
+				var float actorReach = actorShoulderReach + actorArmReach
+				
+				pCalibrateReach = reachBaseRotate + reachRotateTip
+				pCalibrateReachScale = posTip.absolute().getX() / actorReach
+				
 				// front
-				tip = pivot + Vector.new(reachBaseRotate * DEMath.cos(rotateFront),\
+				tip = Vector.new(reachBaseRotate * DEMath.cos(rotateFront),\
 					0, reachRotateTip + reachBaseRotate * DEMath.sin(rotateFront))
 				
-				scaleFront = (tip - actorPivot).getLength() / pCalibrateReach
+				scaleFront = tip.getLength() / pCalibrateReach
 				
 				// down
-				tip = pivot + Vector.new(reachBaseRotate * DEMath.cos(rotateDown),\
+				tip = Vector.new(reachBaseRotate * DEMath.cos(rotateDown),\
 					-(reachRotateTip + reachBaseRotate * DEMath.sin(rotateDown)), 0)
 				
-				scaleDown = (tip - actorPivot).getLength() / pCalibrateReach
+				scaleDown = tip.getLength() / pCalibrateReach
 				
 				// store direction specific scale
 				pCalibrateReachScaleDirection = Vector.new(1, scaleDown, scaleFront)
