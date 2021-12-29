@@ -26,12 +26,14 @@ pin Democap.Behaviors
 pin Dragengine.Gui.Events
 pin Dragengine.Gui.Layouts
 pin Dragengine.Scenery
+pin Dragengine.Utils.StyledText.Definition
+pin Dragengine.Utils.StyledText.Definition.Nodes
 
 
 /**
- * Character preview editor to select a single bone.
+ * Character preview editor to select multiple bones.
  */
-class CPEBone extends CharacterPreviewEditor
+class CPEBoneList extends CharacterPreviewEditor
 	/**
 	 * List element renderer to ask for bone to select. Modified version of
 	 * DefaultListElementRenderer supporting ECBPreviewBones.Instance.Bone
@@ -67,9 +69,9 @@ class CPEBone extends CharacterPreviewEditor
 	
 	/** Element clicked listener. */
 	class ElementClicked extends ClickedActionListener
-		private var CPEBone pEditor
+		private var CPEBoneList pEditor
 		
-		public func new(CPEBone editor)
+		public func new(CPEBoneList editor)
 			pEditor = editor
 		end
 		
@@ -81,47 +83,41 @@ class CPEBone extends CharacterPreviewEditor
 	
 	
 	protected var Label pLabelBone
-	protected var ComboBox pCBBone
+	protected var ListBox pListBones
 	protected var ElementClicked pElementClicked
 	protected var SelectBoneRenderer pSelectBoneRenderer
 	
 	
 	
 	/** Create character preview editor. */
-	public func new(WidgetCharacterPreview preview, Label labelBone, ComboBox cbBone)\
-	this(preview, labelBone, cbBone, true)
+	public func new(WidgetCharacterPreview preview, Label labelBones, ListBox listBones)\
+	this(preview, labelBones, listBones, true)
 	end
 	
-	protected func new(WidgetCharacterPreview preview, Label labelBone, ComboBox cbBone,\
+	protected func new(WidgetCharacterPreview preview, Label labelBones, ListBox listBones,\
 	bool addListeners) super(preview)
-		if cbBone == null
-			throw ENullPointer.new("cbBone")
+		if listBones == null
+			throw ENullPointer.new("listBones")
 		end
-		pCBBone = cbBone
-		pLabelBone = labelBone
+		pListBones = listBones
+		pLabelBone = labelBones
 		pSelectBoneRenderer = SelectBoneRenderer.new()
 		
 		if addListeners
-			if labelBone != null
-				labelBone.addMouseListener(ClickedActivateEditor.new(this, cbBone))
+			if labelBones != null
+				labelBones.addMouseListener(ClickedActivateEditor.new(this, listBones))
 			end
 			
-			if cbBone.getEditor() != null
-				cbBone.getEditor().getWidget().addFocusListener(ReceiveFocusActivateEditor.new(this))
-				cbBone.getEditor().addActionListener(UpdateOnAction.new(this))
-				
-			else
-				cbBone.addFocusListener(ReceiveFocusActivateEditor.new(this))
-			end
-			cbBone.getModel().addListener(UpdateOnListChanged.new(this))
+			listBones.addFocusListener(ReceiveFocusActivateEditor.new(this))
+			listBones.getModel().addListener(UpdateOnListChanged.new(this))
 		end
 	end
 	
 	
 	
-	/** Combo box bone. */
-	public func ComboBox getComboBoxBone()
-		return pCBBone
+	/** List box bone. */
+	public func ListBox getListBoxBone()
+		return pListBones
 	end
 	
 	
@@ -188,11 +184,10 @@ class CPEBone extends CharacterPreviewEditor
 		
 		bones.setAllBoneColor(previewBoneColorDefault)
 		
-		if pCBBone.getEditor() != null
-			var String selected = pCBBone.getEditor().getEditorValue() cast String
-			if selected != null
-				bones.setBoneColor(selected, previewBoneColorSelected)
-			end
+		var ListModel model = pListBones.getModel()
+		var int i, count = model.getCount()
+		for i = 0 to count
+			bones.setBoneColor(model.getAt(i) cast String, previewBoneColorSelected)
 		end
 	end
 	
@@ -212,14 +207,11 @@ class CPEBone extends CharacterPreviewEditor
 			
 			var DefaultListModel model = DefaultListModel.new(bones)
 			
-			// select selected bone if possible
+			// (de)select bone if possible
 			var String selectedName
 			
-			if getEditComboBox().getEditor() != null
-				selectedName = getEditComboBox().getEditor().getEditorValue() cast String
-				
-			elif getEditComboBox().getSelectedElement() != -1
-				selectedName = getEditComboBox().getModel().getAt(getEditComboBox().getSelectedElement()) cast String
+			if pListBones.getSelectedElement() != -1
+				selectedName = pListBones.getModel().getAt(pListBones.getSelectedElement()) cast String
 			end
 			
 			if selectedName != null
@@ -233,7 +225,7 @@ class CPEBone extends CharacterPreviewEditor
 			end
 			
 			// show dialog to make user choose bone
-			WindowDialog.chooseList(getPreview().getWindow(), "Select Bone", "Choose bone to select",\
+			WindowDialog.chooseList(getPreview().getWindow(), "(De)Select Bones", "Choose bone to (de)select",\
 				null, model, pSelectBoneRenderer, null, null, \
 				WindowDialog.BlockResultListener.new(block int result
 					if result != -1
@@ -245,17 +237,24 @@ class CPEBone extends CharacterPreviewEditor
 			return
 		end
 		
-		// if only one bone is hit select it
+		// if only one bone is hit (de)select it
 		if hits.getCount() == 1
 			var WidgetCharacterPreview.HitResult hit = hits.getAt(0) cast WidgetCharacterPreview.HitResult
 			var ECBPreviewBones.Instance.Bone bone = hit.getObject() cast ECBPreviewBones.Instance.Bone
 			
-			getEditComboBox().getEditor().setEditorValue(bone.name)
+			var DefaultListModel model = pListBones.getModel() cast DefaultListModel
+			if model.has(bone.name)
+				model.remove(bone.name)
+				
+			else
+				model.add(bone.name)
+				model.setSelected(model.indexOf(bone.name))
+			end
 		end
 	end
 	
 	/** Edit combo box. */
-	protected func ComboBox getEditComboBox()
-		return pCBBone
+	protected func ListBox getEditListBox()
+		return pListBones
 	end
 end

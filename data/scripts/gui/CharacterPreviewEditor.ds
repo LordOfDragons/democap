@@ -26,7 +26,8 @@ pin Democap.Behaviors
 pin Dragengine.Gui.Events
 pin Dragengine.Gui.Layouts
 pin Dragengine.Scenery
-pin Dragengine.Utils
+pin Dragengine.Utils.StyledText.Definition
+pin Dragengine.Utils.StyledText.Definition.Nodes
 
 
 /**
@@ -174,7 +175,7 @@ class CharacterPreviewEditor
 	
 	/** Preview element bones behavior or null. */
 	public func ECBPreviewBones.Instance getPreviewBones()
-		var BehaviorElement element = getPreview().getCharacterPreview()
+		var BehaviorElement element = pPreview.getCharacterPreview()
 		if element == null
 			return null
 		end
@@ -183,7 +184,7 @@ class CharacterPreviewEditor
 	
 	/** Preview element coordinate system behavior or null. */
 	public func ECBPreviewCoordSystem.Instance getPreviewCoordSystem()
-		var BehaviorElement element = getPreview().getCharacterPreview()
+		var BehaviorElement element = pPreview.getCharacterPreview()
 		if element == null
 			return null
 		end
@@ -192,7 +193,7 @@ class CharacterPreviewEditor
 	
 	/** Preview element level behavior or null. */
 	public func ECBPreviewLevel.Instance getPreviewLevel()
-		var BehaviorElement element = getPreview().getCharacterPreview()
+		var BehaviorElement element = pPreview.getCharacterPreview()
 		if element == null
 			return null
 		end
@@ -220,5 +221,48 @@ class CharacterPreviewEditor
 	
 	/** Model value changed. */
 	public func void onModelValueChanged()
+	end
+	
+	
+	
+	/** Update tool tip. */
+	protected func void updateToolTip()
+		var Array hits = Array.new()
+		pPreview.viewRayCollisions(hits)
+		
+		var StyledTextDefinition std = pPreview.createToolTipStyledTextDefinition()
+		var ECBPreviewBones.Instance.Bone bone
+		var STDNText nodeText
+		
+		hits.forEach(block WidgetCharacterPreview.HitResult each
+			if each.getObject() castable ECBPreviewBones.Instance.Bone
+				bone = each.getObject() cast ECBPreviewBones.Instance.Bone
+				
+				nodeText = STDNText.new()
+				
+				if bone.color.equals(CharacterPreviewEditor.previewBoneColorSelected)
+					nodeText.setStyle("selected")
+					
+				elif bone.color.equals(CharacterPreviewEditor.previewBoneColorChain)
+					nodeText.setStyle("chain")
+					
+				elif bone.color.equals(CharacterPreviewEditor.previewBoneColorEnd)
+					nodeText.setStyle("chainEnd")
+					
+				else
+					nodeText.setStyle("default")
+				end
+				
+				nodeText.addSpan(STDNTextSpan.new("- " + bone.name))
+				std.addNode(nodeText)
+			end
+		end)
+		
+		if std.getNodeCount() > 0
+			pPreview.setToolTip(std)
+			
+		else
+			pPreview.setToolTip(null)
+		end
 	end
 end
