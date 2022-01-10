@@ -96,6 +96,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var CharacterConfiguration pCharacterConfiguration
 		private var CharacterAnimation pCharacterAnimation
 		private var GameApp.RecordDevices pRecordDevices
+		private var float pSmoothAnimationStrength
 		private var Array pRecordDeviceSlots
 		private var bool pIsPreparing
 		private var bool pIsRecording
@@ -201,8 +202,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pRecordAnimation.setFPS(app.getModelRecordFrameRate().getValue())
 			pRecordAnimation.setMoveName("MoCap")
 			
-			pRecordDevices = app.getModelRecordDevices().getAt(\
-				app.getModelRecordDevices().getSelected()) cast GameApp.RecordDevices
+			pRecordDevices = app.getRecordDevices()
+			pSmoothAnimationStrength = app.getSmoothAnimationStrength()
 			
 			pRecordDeviceSlots.removeAll()
 			
@@ -356,6 +357,12 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pRig = null
 				
 				if pRecordAnimation != null
+					if pSmoothAnimationStrength > 0
+						var SmoothAnimationWMM smooth = SmoothAnimationWMM.new()
+						smooth.setStrength(pSmoothAnimationStrength)
+						smooth.smooth(pRecordAnimation)
+					end
+					
 					pRecordAnimation.createAnimation()
 					
 					if pRecordAnimationDevices != null
@@ -499,6 +506,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			// general information
 			root.addDataTag("timestamp", timestamp.format("%Y-%m-%dT%H:%M:%S"))
+			root.addDataTag("smoothAnimationStrength", pSmoothAnimationStrength)
 			
 			// actor
 			var ActorProfile actorProfile = app.getActiveActorProfile()

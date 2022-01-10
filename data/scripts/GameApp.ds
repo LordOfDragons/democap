@@ -111,6 +111,24 @@ class GameApp extends BaseGameApp
 		end
 	end
 	
+	class SaveRecordFrameRate extends DefaultRangeModelListener
+		public func new()
+		end
+		
+		public func void valueChanged(RangeModel rangeModel)
+			GameApp.getGameApp().getSettings().setAt("RecordFrameRate", rangeModel.getValue())
+		end
+	end
+	
+	class SaveSmoothAnimationStrength extends DefaultRangeModelListener
+		public func new()
+		end
+		
+		public func void valueChanged(RangeModel rangeModel)
+			GameApp.getGameApp().getSettings().setAt("SmoothAnimationStrength", 0.1 * rangeModel.getValue())
+		end
+	end
+	
 	
 	
 	private var String pPathCaptureAnimations
@@ -127,6 +145,7 @@ class GameApp extends BaseGameApp
 	private var DefaultToggleModel pModelShowVRCamera
 	private var DefaultRangeModel pModelRecordFrameRate
 	private var DefaultListModel pModelRecordDevices
+	private var DefaultRangeModel pModelSmoothAnimationStrength
 	
 	private var MotionTransferFactories pMotionTransferFactories
 	private var LoadActorProfile pLoadActorProfile
@@ -263,6 +282,16 @@ class GameApp extends BaseGameApp
 	/** Record devices. */
 	public func RecordDevices getRecordDevices()
 		return pModelRecordDevices.getAt(pModelRecordDevices.getSelected()) cast RecordDevices
+	end
+	
+	/** Smooth animation strength model. */
+	public func DefaultRangeModel getModelSmoothAnimationStrength()
+		return pModelSmoothAnimationStrength
+	end
+	
+	/** Smooth animation strength. */
+	public func float getSmoothAnimationStrength()
+		return 0.1 * pModelSmoothAnimationStrength.getValue()
 	end
 	
 	
@@ -441,8 +470,16 @@ class GameApp extends BaseGameApp
 		pModelEnableVR = DefaultToggleModel.new(false)
 		pModelEnableHMD = DefaultToggleModel.new(true)
 		pModelShowVRCamera = DefaultToggleModel.new(false)
-		pModelRecordFrameRate = DefaultRangeModel.new(5, 90, 10, 25, 1)
 		pModelRecordDevices = DefaultListModel.new(RecordDevices.all().toArray())
+		
+		pModelRecordFrameRate = DefaultRangeModel.new(5, 90, 10, 25, 1)
+		pModelRecordFrameRate.setValue(getSettings().getIntAt("RecordFrameRate", 25))
+		pModelRecordFrameRate.addListener(SaveRecordFrameRate.new())
+		
+		pModelSmoothAnimationStrength = DefaultRangeModel.new(0, 10, 5, 10, 1)
+		pModelSmoothAnimationStrength.setValue((10.0 * getSettings().getFloatAt("SmoothAnimationStrength", 1) + 0.5) cast int)
+		pModelSmoothAnimationStrength.addListener(SaveSmoothAnimationStrength.new())
+		
 		pDefaultActorProfile = ActorProfile.new("Default")
 		
 		pMotionTransferFactories = MotionTransferFactories.new()
@@ -740,6 +777,7 @@ class GameApp extends BaseGameApp
 		pLoadCharacterProfile = null
 		pLoadActorProfile = null
 		pModelRecordDevices = null
+		pModelSmoothAnimationStrength = null
 		pModelRecordFrameRate = null
 		pModelShowVRCamera = null
 		pModelEnableHMD = null

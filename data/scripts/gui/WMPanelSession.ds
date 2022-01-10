@@ -337,6 +337,10 @@ class WMPanelSession extends CollapsibleGroup
 		var ComboBox comboBox
 		var CheckBox checkBox
 		var Button button
+		var TextField textField
+		var Label label
+		var SpinButton spinButton
+		var String tooltip
 		
 		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
@@ -383,16 +387,53 @@ class WMPanelSession extends CollapsibleGroup
 				button.setToolTip("Browse motion captured animations")
 				p2.addWidget(button)
 			end), BorderLayout.Area.content)
-			
-			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p2
-				var TextField textField = TextField.new(RangeTextModel.new(app.getModelRecordFrameRate()), 2)
-				textField.setToolTip("Frame rate to use for recording animations")
+		end)) 
+		
+		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x, 5), block Panel p
+			// frame rate
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 3, FlowLayout.Stretch.last), block Panel p2
+				tooltip = "Frame rate to use for recording animations"
+				
+				label = Label.new("Rate:", "Label.FormCaption")
+				label.setToolTip(tooltip)
+				p2.addWidget(label)
+				
+				textField = TextField.new(RangeTextModel.new(app.getModelRecordFrameRate()), 2)
+				textField.setToolTip(tooltip)
 				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
 				p2.addWidget(textField)
+				textField.addMouseListener(ScrollModelWheelMouseListener.new(app.getModelRecordFrameRate()))
 				
-				var SpinButton spinButton = SpinButton.new(app.getModelRecordFrameRate())
-				spinButton.setToolTip("Frame rate to use for recording animations")
+				spinButton = SpinButton.new(app.getModelRecordFrameRate())
+				spinButton.setToolTip(tooltip)
 				p2.addWidget(spinButton)
+			end))
+			
+			// smoothing
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 3, FlowLayout.Stretch.last), block Panel p2
+				tooltip = "Animation smoothing strength (0=none, 10=full)"
+				
+				label = Label.new("Smooth:", "Label.FormCaption")
+				label.setToolTip(tooltip)
+				p2.addWidget(label)
+				
+				textField = TextField.new(RangeTextModel.new(app.getModelSmoothAnimationStrength()), 2)
+				textField.setToolTip(tooltip)
+				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+				p2.addWidget(textField)
+				textField.addMouseListener(ScrollModelWheelMouseListener.new(app.getModelSmoothAnimationStrength()))
+				
+				spinButton = SpinButton.new(app.getModelSmoothAnimationStrength())
+				spinButton.setToolTip(tooltip)
+				p2.addWidget(spinButton)
+			end))
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 3, FlowLayout.Stretch.last), block Panel p2
+				tooltip = "Animation smoothing strength (0=none, 10=full)"
+				
+				label = Label.new("Record:", "Label.FormCaption")
+				label.setToolTip(tooltip)
+				p2.addWidget(label)
 				
 				comboBox  = ComboBox.new(app.getModelRecordDevices(), RecordDevicesRenderer.new())
 				comboBox.setToolTip("Record VR device positions too.\n"\
@@ -401,8 +442,8 @@ class WMPanelSession extends CollapsibleGroup
 					+ "reference: Reference slot position\n"\
 					+ "target: Target slot position")
 				p2.addWidget(comboBox)
-			end), BorderLayout.Area.right)
-		end)) 
+			end))
+		end))
 		
 		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
 			var ProgressBar progress = ProgressBar.new(Orientation.horizontal, pModelPlaybackPosition)
