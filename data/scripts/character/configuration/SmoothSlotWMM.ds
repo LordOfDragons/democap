@@ -1,0 +1,129 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Characters
+
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Smooth slot. Applies a weighted moving mean filter.
+ */
+class SmoothSlotWMM
+	private var float pStrength
+	private var float pWeight1
+	private var float pWeight2
+	private var float pWeight3
+	private var float pSlerpWeight1
+	private var float pSlerpWeight2
+	
+	private var Vector pPosition1
+	private var Vector pPosition2
+	private var Vector pPosition3
+	
+	private var Quaternion pOrientation1
+	private var Quaternion pOrientation2
+	private var Quaternion pOrientation3
+	
+	
+	
+	/** Create smooth slot. */
+	public func new()
+		initWeights()
+	end
+	
+	
+	
+	/** Strength in the range from 0 to 1. */
+	public func float getStrength()
+		return pStrength
+	end
+	
+	/** Set strength in the range from 0 to 1. */
+	public func void setStrength(float strength)
+		if DEMath.fabs(strength - pStrength) < 0.01
+			return
+		end
+		
+		pStrength = DEMath.clamp(strength, 0.0, 1.0)
+		
+		initWeights()
+	end
+	
+	
+	
+	/** Init using matrix. */
+	public func void init(Matrix matrix)
+		pPosition3 = matrix.getPosition()
+		pPosition2 = pPosition3
+		pPosition1 = pPosition2
+		
+		pOrientation3 = matrix.toQuaternion()
+		pOrientation2 = pOrientation3
+		pOrientation1 = pOrientation2
+	end
+	
+	/** Update with matrix returning smoothed matrix. */
+	public func Matrix update(Matrix matrix)
+		if pStrength < 0.01
+			return matrix
+		end
+		
+		pPosition1 = pPosition2
+		pPosition2 = pPosition3
+		pPosition3 = matrix.getPosition()
+		
+		pOrientation1 = pOrientation2
+		pOrientation2 = pOrientation3
+		pOrientation3 = matrix.toQuaternion()
+		
+		var Vector position = pPosition3 * pWeight3 + pPosition2 * pWeight2 + pPosition1 * pWeight1
+		
+		//var Quaternion orientation = pOrientation3 * pWeight3 + pOrientation2 * pWeight2 + pOrientation1 * pWeight1
+		//orientation = orientation.normalize() // this has strange effects
+		var Quaternion orientation = pOrientation3.slerp(pOrientation2, pSlerpWeight2).slerp(pOrientation1, pSlerpWeight1)
+		
+		pPosition3 = position // avoid outliers having too much of effect
+		pOrientation3 = orientation
+		
+		return Matrix.newWorld(position, orientation)
+	end
+	
+	
+	
+	/** Init weights. */
+	protected func void initWeights()
+		var float base = 2 //3
+		
+		pWeight1 = DEMath.mix(0.0, 1.0, pStrength)
+		pWeight2 = DEMath.mix(0.0, base, pStrength)
+		pWeight3 = base * base
+		
+		var float factor = 1.0 / (pWeight1 + pWeight2 + pWeight3)
+		pWeight1 *= factor
+		pWeight2 *= factor
+		pWeight3 *= factor
+		
+		pSlerpWeight2 = pWeight2 / (pWeight3 + pWeight2)
+		pSlerpWeight1 = pWeight1 / (pWeight3 + pWeight2 + pWeight1)
+	end
+end

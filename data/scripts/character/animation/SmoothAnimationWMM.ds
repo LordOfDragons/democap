@@ -33,6 +33,8 @@ class SmoothAnimationWMM
 	private var float pWeight1
 	private var float pWeight2
 	private var float pWeight3
+	private var float pSlerpWeight1
+	private var float pSlerpWeight2
 	
 	
 	
@@ -96,10 +98,16 @@ class SmoothAnimationWMM
 					+ (v2.getPosition() + v4.getPosition()) * pWeight2 \
 					+ (v1.getPosition() + v5.getPosition()) * pWeight1
 				
+				/*
 				orientation = v3.getOrientation() * pWeight3 \
 					+ (v2.getOrientation() + v4.getOrientation()) * pWeight2 \
 					+ (v1.getOrientation() + v5.getOrientation()) * pWeight1
 				orientation = orientation.normalize()
+				*/
+				
+				orientation = v3.getOrientation()\
+					.slerp(v2.getOrientation().slerp(v4.getOrientation(), 0.5), pSlerpWeight2)\
+					.slerp(v1.getOrientation().slerp(v5.getOrientation(), 0.5), pSlerpWeight1)
 				
 				keyframes.setAt(current, RecordAnimationKeyframe.new(v3.getTime(), position, orientation))
 				current += boneCount
@@ -122,5 +130,8 @@ class SmoothAnimationWMM
 		pWeight1 *= factor
 		pWeight2 *= factor
 		pWeight3 *= factor
+		
+		pSlerpWeight2 = pWeight2 / (pWeight3 + pWeight2)
+		pSlerpWeight1 = pWeight1 / (pWeight3 + pWeight2 + pWeight1)
 	end
 end
