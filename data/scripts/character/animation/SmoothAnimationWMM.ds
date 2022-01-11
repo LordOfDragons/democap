@@ -69,14 +69,17 @@ class SmoothAnimationWMM
 		end
 		
 		var Array keyframes = animation.getKeyframes()
-		var int last = frameCount - 1
 		var RecordAnimationKeyframe v1, v2, v3, v4, v5
-		var int i, j, next, current
+		var int strideLast = (frameCount - 1) * boneCount
+		var int i, j, next, current, last
+		var Quaternion orientation
+		var Vector position
 		
 		for i = 0 to boneCount
 			current = i
-			next = current + 2
-			v5 = keyframes.getAt(current + 1) cast RecordAnimationKeyframe
+			last = current + strideLast
+			next = current + 2 * boneCount
+			v5 = keyframes.getAt(current + boneCount) cast RecordAnimationKeyframe
 			v4 = keyframes.getAt(current) cast RecordAnimationKeyframe
 			v3 = v4
 			v2 = v4
@@ -89,13 +92,16 @@ class SmoothAnimationWMM
 				v5 = keyframes.getAt(DEMath.min(next, last)) cast RecordAnimationKeyframe
 				next += boneCount
 				
-				keyframes.setAt(current, RecordAnimationKeyframe.new(v3.getTime(),\
-					v3.getPosition() * pWeight3 \
-						+ (v2.getPosition() + v4.getPosition()) * pWeight2 \
-						+ (v1.getPosition() + v5.getPosition()) * pWeight1,\
-					v3.getOrientation() * pWeight3 \
-						+ (v2.getOrientation() + v4.getOrientation()) * pWeight2 \
-						+ (v1.getOrientation() + v5.getOrientation()) * pWeight1))
+				position = v3.getPosition() * pWeight3 \
+					+ (v2.getPosition() + v4.getPosition()) * pWeight2 \
+					+ (v1.getPosition() + v5.getPosition()) * pWeight1
+				
+				orientation = v3.getOrientation() * pWeight3 \
+					+ (v2.getOrientation() + v4.getOrientation()) * pWeight2 \
+					+ (v1.getOrientation() + v5.getOrientation()) * pWeight1
+				orientation = orientation.normalize()
+				
+				keyframes.setAt(current, RecordAnimationKeyframe.new(v3.getTime(), position, orientation))
 				current += boneCount
 			end
 		end
@@ -106,9 +112,11 @@ class SmoothAnimationWMM
 	/** Init weights. */
 	protected func void initWeights()
 		// weights are symmetric in the form [w1, w2, w3, w2, w1]
+		var float base = 2 //3
+		
 		pWeight1 = DEMath.mix(0.0, 1.0, pStrength)
-		pWeight2 = DEMath.mix(0.0, 3.0, pStrength)
-		pWeight3 = 9.0
+		pWeight2 = DEMath.mix(0.0, base, pStrength)
+		pWeight3 = base * base
 		
 		var float factor = 1.0 / (pWeight1 + pWeight2 + pWeight3 + pWeight2 + pWeight1)
 		pWeight1 *= factor
