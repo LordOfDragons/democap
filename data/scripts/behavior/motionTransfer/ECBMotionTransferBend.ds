@@ -81,6 +81,8 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		private var int pTwistBone
 		private var bool pUseTwistSlot
 		private var Quaternion pTwistQuat, pTwistQuatInv
+		private var CurveBezier pBendCurveX
+		private var CurveBezier pBendCurveY
 		
 		
 		
@@ -95,6 +97,9 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			pZeroRotationY = ecbehavior.getTransfer().getCalibrateZeroRotation().getY()
 			pScaleRotationX = ecbehavior.getTransfer().getScaleRotation().getX()
 			pScaleRotationY = ecbehavior.getTransfer().getScaleRotation().getY()
+			
+			pBendCurveX = ecbehavior.getTransfer().getCalibrateBendCurveX()
+			pBendCurveY = ecbehavior.getTransfer().getCalibrateBendCurveY()
 			
 			pTwistQuat = Quaternion.newFromEuler(ecbehavior.getTransfer().getCalibrateTwistBoneAxisRotation())
 			pTwistQuatInv = pTwistQuat.conjugate()
@@ -211,11 +216,11 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			var Vector position = (targetMatrix * baseMatrix.getInverse()).getPosition()
 			
 			if pControllerBendX != null
-				var float bend = DEMath.atan2(position.getY(), position.getZ()) - pZeroRotationX
+				var float bend = pBendCurveX.evaluateAt(DEMath.atan2(position.getY(), position.getZ()))
 				pControllerBendX.setValue(bend * pScaleRotationX)
 			end
 			if pControllerBendY != null
-				var float bend = -DEMath.atan2(position.getX(), position.getZ()) - pZeroRotationY
+				var float bend = pBendCurveY.evaluateAt(-DEMath.atan2(position.getX(), position.getZ()))
 				pControllerBendY.setValue(bend * pScaleRotationY)
 			end
 			if pControllerTwist != null

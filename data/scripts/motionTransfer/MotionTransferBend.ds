@@ -85,6 +85,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 	private var Vector2 pCalibrateZeroRotation
 	private var Array pCalibrateBendAxesX
 	private var Array pCalibrateBendAxesY
+	private var CurveBezier pCalibrateBendCurveX
+	private var CurveBezier pCalibrateBendCurveY
 	private var Vector pCalibrateTwistRotation
 	private var Array pCalibrateTwistAxes
 	private var Vector pCalibrateTwistBoneAxisRotation
@@ -107,6 +109,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pCalibrateZeroRotation = Vector2.new()
 		pCalibrateBendAxesX = Array.new()
 		pCalibrateBendAxesY = Array.new()
+		pCalibrateBendCurveX = CurveBezier.newDefaultLinear()
+		pCalibrateBendCurveY = CurveBezier.newDefaultLinear()
 		pCalibrateTwistRotation = Vector.new()
 		pCalibrateTwistAxes = Array.new()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
@@ -128,6 +132,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pCalibrateZeroRotation = transfer.pCalibrateZeroRotation
 		pCalibrateBendAxesX = Array.new(transfer.pCalibrateBendAxesX)
 		pCalibrateBendAxesY = Array.new(transfer.pCalibrateBendAxesY)
+		pCalibrateBendCurveX = CurveBezier.new(transfer.pCalibrateBendCurveX)
+		pCalibrateBendCurveY = CurveBezier.new(transfer.pCalibrateBendCurveY)
 		pCalibrateTwistRotation = transfer.pCalibrateTwistRotation
 		pCalibrateTwistAxes = Array.new(transfer.pCalibrateTwistAxes)
 		pCalibrateTwistBoneAxisRotation = transfer.pCalibrateTwistBoneAxisRotation
@@ -256,6 +262,16 @@ class MotionTransferBend extends DefaultMotionTransfer
 		return pCalibrateTwistTransform
 	end
 	
+	/** Calibrate bend curve in X direction. */
+	public func CurveBezier getCalibrateBendCurveX()
+		return pCalibrateBendCurveX
+	end
+	
+	/** Calibrate bend curve in Y direction. */
+	public func CurveBezier getCalibrateBendCurveY()
+		return pCalibrateBendCurveY
+	end
+	
 	
 	
 	/** Init element clas. */
@@ -285,8 +301,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		var String rootBone = pCalibrateBones.getAt(-1) cast String
 		
 		var float fullRotation = 180
-		var float fudgeFactor = 0.85
-		var float rotationStep = fullRotation / (fudgeFactor * pCalibrateBones.getCount())
+		var float rotationStep = fullRotation / pCalibrateBones.getCount()
 		
 		pADControllerBendX = ADController.new()
 		pADControllerBendX.setName(behavior.getControllerNameBendX())
@@ -395,6 +410,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pCalibrateZeroRotation = Vector2.new()
 		pCalibrateBendAxesX.removeAll()
 		pCalibrateBendAxesY.removeAll()
+		pCalibrateBendCurveX.removeAllPoints()
+		pCalibrateBendCurveY.removeAllPoints()
 		pCalibrateTwistRotation = Vector.new()
 		pCalibrateTwistAxes.removeAll()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
@@ -435,7 +452,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 		end
 		
 		if indexBase != -1 and indexTip != -1
-			var Vector position = (targetMatrix * baseMatrix.getInverse()).getPosition()
+			var Matrix matrixBaseInv = baseMatrix.getInverse()
+			var Vector position = (targetMatrix * matrixBaseInv).getPosition()
 			
 			pCalibrateZeroRotation = Vector2.new(\
 				DEMath.atan2(position.getY(), position.getZ()),\
@@ -460,6 +478,55 @@ class MotionTransferBend extends DefaultMotionTransfer
 					pCalibrateBendAxesX.add(Vector.new(1, 0, 0))
 					pCalibrateBendAxesY.add(Vector.new(0, 0, 1))
 				end
+			end
+			
+			// bend target rotations
+			var int bendTargetResolution = 13 // 12 segments
+			var float bendRotationStep = 180.0 / pCalibrateBones.getCount()
+			var Array bendTargetX = Array.new(bendTargetResolution, position)
+			var Array bendTargetY = Array.new(bendTargetResolution, position)
+			var Array bendRotation = Array.new()
+			var Matrix bendMatrix
+			var int j
+			
+			for i = 0 to bendTargetResolution
+				bendRotation.add(DEMath.linearStep(i, 0, bendTargetResolution - 1, -180, 180))
+			end
+			
+			for i = 0 to count
+				var String bone = pCalibrateBones.getAt(i) cast String
+				var int indexBone = component.indexOfBoneNamed(bone)
+				if indexBone == -1
+					continue
+				end
+				
+				var Vector bonePosition = (component.boneGetMatrix(indexBone) * matrixBaseInv).getPosition()
+				var Matrix boneMatrix1 = Matrix.newTranslation(-bonePosition)
+				var Matrix boneMatrix2 = Matrix.newTranslation(bonePosition)
+				var float rotationFactor = 1.0 / pCalibrateBones.getCount()
+				
+				for j = 0 to bendTargetResolution
+					var float rotation = rotationFactor * bendRotation.getAt(j) cast float
+					
+					bendMatrix = boneMatrix1 * Matrix.newRotationX(rotation) * boneMatrix2
+					bendTargetX.setAt(j, bendMatrix * bendTargetX.getAt(j) cast Vector)
+					
+					bendMatrix = boneMatrix1 * Matrix.newRotationY(rotation) * boneMatrix2
+					bendTargetY.setAt(j, bendMatrix * bendTargetY.getAt(j) cast Vector)
+				end
+			end
+			
+			pCalibrateBendCurveX.removeAllPoints()
+			pCalibrateBendCurveY.removeAllPoints()
+			
+			for i = 0 to bendTargetResolution
+				var float rotation = bendRotation.getAt(i) cast float
+				
+				var Vector target = bendTargetX.getAt(i) cast Vector
+				pCalibrateBendCurveX.addPoint(DEMath.atan2(target.getY(), target.getZ()), rotation)
+				
+				target = bendTargetY.getAt(i) cast Vector
+				pCalibrateBendCurveY.addPoint(-DEMath.atan2(target.getX(), target.getZ()), rotation)
 			end
 			
 			// twist rotation. the rotation angle is unimportant since we only examine relative rotation
@@ -573,6 +640,12 @@ class MotionTransferBend extends DefaultMotionTransfer
 			elif tagName.equals("bendAxisY")
 				pCalibrateBendAxesY.add(loader.readVector(element))
 				
+			elif tagName.equals("bendCurveX")
+				pCalibrateBendCurveX = loader.readCurveBezier(element)
+				
+			elif tagName.equals("bendCurveY")
+				pCalibrateBendCurveY = loader.readCurveBezier(element)
+				
 			elif tagName.equals("twistRotation")
 				pCalibrateTwistRotation = loader.readVector(element)
 				
@@ -616,6 +689,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pCalibrateBendAxesY.forEach(block Vector each
 			loader.writeVector(tag, "bendAxisY", each)
 		end)
+		loader.writeCurveBezier(tag, "bendCurveX", pCalibrateBendCurveX)
+		loader.writeCurveBezier(tag, "bendCurveY", pCalibrateBendCurveY)
 		loader.writeVector(tag, "twistRotation", pCalibrateTwistRotation)
 		pCalibrateTwistAxes.forEach(block Vector each
 			loader.writeVector(tag, "twistAxis", each)
