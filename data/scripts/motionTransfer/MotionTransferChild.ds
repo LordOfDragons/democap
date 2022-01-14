@@ -68,6 +68,7 @@ class MotionTransferChild extends DefaultMotionTransfer
 	
 	
 	private var String pBone
+	private var bool pAdjustPosition
 	private var MotionTransferTracker pTracker
 	
 	private var ADRuleInverseKinematic pADRuleIK
@@ -77,12 +78,14 @@ class MotionTransferChild extends DefaultMotionTransfer
 	/** Create motion transfer. */
 	public func new(String factoryID) super(factoryID)
 		pBone = ""
+		pAdjustPosition = true
 		pTracker = MotionTransferTracker.new()
 	end
 	
 	/** Create copy of motion transfer. */
 	public func new(MotionTransferChild transfer) super(transfer)
 		pBone = transfer.pBone
+		pAdjustPosition = transfer.pAdjustPosition
 		pTracker = MotionTransferTracker.new(transfer.pTracker)
 	end
 	
@@ -99,6 +102,16 @@ class MotionTransferChild extends DefaultMotionTransfer
 			throw ENullPointer.new("bone")
 		end
 		pBone = bone
+	end
+	
+	/** Adjust position. */
+	public func bool getAdjustPosition()
+		return pAdjustPosition
+	end
+	
+	/** Set adjust position. */
+	public func void setAdjustPosition(bool adjust)
+		pAdjustPosition = adjust
 	end
 	
 	/** Tracker. */
@@ -129,6 +142,7 @@ class MotionTransferChild extends DefaultMotionTransfer
 		
 		pADRuleIK = ADRuleInverseKinematic.new()
 		pADRuleIK.setName(getName())
+		pADRuleIK.setAdjustPosition(pAdjustPosition)
 		pADRuleIK.setAdjustOrientation(true)
 		pADRuleIK.setLocalPosition(pTracker.getReverseTransformPosition())
 		pADRuleIK.setLocalOrientation(pTracker.getTransformRotation())
@@ -171,6 +185,9 @@ class MotionTransferChild extends DefaultMotionTransfer
 			elif tagName.equals("bone")
 				setBone(element.getFirstCData())
 				
+			elif tagName.equals("adjustPosition")
+				setAdjustPosition(element.getFirstCDataBool())
+				
 			elif tagName.equals("tracker")
 				pTracker.load(loader, element)
 				
@@ -192,6 +209,7 @@ class MotionTransferChild extends DefaultMotionTransfer
 	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("name", getName())
 		tag.addDataTag("bone", pBone)
+		tag.addDataTag("adjustPosition", pAdjustPosition)
 		pTracker.save(loader, tag.addTag("tracker"))
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
