@@ -48,6 +48,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 	private var DefaultTextModel pModelTextBoneFootRight
 	private var DefaultListModel pModelListBoneFootLeft
 	private var DefaultTextModel pModelTextBoneFootLeft
+	private var DefaultRangeModel pModelBendShapeSpine
+	private var DefaultRangeModel pModelBendShapeNeck
 	private var DefaultListModel pModelListMoveBaseIK
 	private var DefaultTextModel pModelTextMoveBaseIK
 	private var DefaultListModel pModelListMoveCrouch
@@ -87,6 +89,9 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		pModelListBoneFootLeft.setAutoSelect(false)
 		pModelTextBoneFootLeft = DefaultTextModel.new()
 		
+		pModelBendShapeSpine = DefaultRangeModel.new(0, 20, 5, 10, 1)
+		pModelBendShapeNeck = DefaultRangeModel.new(0, 20, 5, 10, 1)
+		
 		pModelListMoveBaseIK = DefaultListModel.new()
 		pModelListMoveBaseIK.setAutoSelect(false)
 		pModelTextMoveBaseIK = DefaultTextModel.new()
@@ -123,6 +128,9 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		pModelListBoneFootLeft = null
 		pModelTextBoneFootLeft = null
 		
+		pModelBendShapeSpine = null
+		pModelBendShapeNeck = null
+		
 		pModelListMoveBaseIK = null
 		pModelTextMoveBaseIK = null
 		
@@ -147,6 +155,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelTextBoneHip.setText(mt.getBoneHip())
 				pModelTextBoneFootRight.setText(mt.getBoneFootRight())
 				pModelTextBoneFootLeft.setText(mt.getBoneFootLeft())
+				pModelBendShapeSpine.setValue((mt.getBendShapeSpine() * 20 + 0.5) cast int)
+				pModelBendShapeNeck.setValue((mt.getBendShapeNeck() * 20 + 0.5) cast int)
 				pModelTextMoveBaseIK.setText(mt.getMoveBaseIK())
 				pModelTextMoveCrouch.setText(mt.getMoveCrouch())
 				
@@ -158,6 +168,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelTextBoneHip.setText("")
 				pModelTextBoneFootRight.setText("")
 				pModelTextBoneFootLeft.setText("")
+				pModelBendShapeSpine.setValue(10)
+				pModelBendShapeNeck.setValue(10)
 				pModelTextMoveBaseIK.setText("")
 				pModelTextMoveCrouch.setText("")
 			end
@@ -180,6 +192,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		mt.setBoneHip(pModelTextBoneHip.getText())
 		mt.setBoneFootRight(pModelTextBoneFootRight.getText())
 		mt.setBoneFootLeft(pModelTextBoneFootLeft.getText())
+		mt.setBendShapeSpine(0.05 * pModelBendShapeSpine.getValue())
+		mt.setBendShapeNeck(0.05 * pModelBendShapeNeck.getValue())
 		mt.setMoveBaseIK(pModelTextMoveBaseIK.getText())
 		mt.setMoveCrouch(pModelTextMoveCrouch.getText())
 	end
@@ -199,6 +213,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		var Button button
 		var ListBox listBox
 		var Label label
+		var String toolTip
+		var ScrollBar scrollBar
 		
 		super.createContent()
 		
@@ -298,6 +314,50 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 			+ "Percentage of capture bone chain length to original bone chain length is used "\
 			+ "to blend move (start=relaxed, end=retracted).")
 		pPanelForm.addWidget(comboBox)
+		
+		// fine tuning parameters
+		addWidget(CollapsibleGroup.new("Fine Tuning", CollapsibleGroup.persistModel(\
+		optionPrefix + "/GroupFineTuning"), FormLayout.new(true, 10, 2), block Panel p
+			// bend shape neck
+			toolTip = "Weight distribution across neck bones. 0=base, 10=equal, 20=tip"
+			
+			label = Label.new("Neck Bend Shape:", "Label.FormCaption")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+				scrollBar = ScrollBar.new(Orientation.horizontal, pModelBendShapeNeck)
+				scrollBar.setReverseWheel(true)
+				scrollBar.setToolTip(toolTip)
+				p.addWidget(scrollBar)
+				
+				textField = TextField.new(RangeTextModel.new(pModelBendShapeNeck), 2)
+				textField.setToolTip(toolTip)
+				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+				p.addWidget(textField)
+				textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelBendShapeNeck))
+			end))
+			
+			// bend shape spine
+			toolTip = "Weight distribution across spine bones. 0=base, 10=equal, 20=tip"
+			
+			label = Label.new("Spine Bend Shape:", "Label.FormCaption")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+				scrollBar = ScrollBar.new(Orientation.horizontal, pModelBendShapeSpine)
+				scrollBar.setReverseWheel(true)
+				scrollBar.setToolTip(toolTip)
+				p.addWidget(scrollBar)
+				
+				textField = TextField.new(RangeTextModel.new(pModelBendShapeSpine), 2)
+				textField.setToolTip(toolTip)
+				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+				p.addWidget(textField)
+				textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelBendShapeSpine))
+			end))
+		end))
 	end
 	
 	/** Update bone lists. */

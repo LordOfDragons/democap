@@ -65,12 +65,15 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	private var String pBoneHip
 	private var String pBoneFootRight
 	private var String pBoneFootLeft
+	private var float pBendShapeSpine
+	private var float pBendShapeNeck
 	private var String pMoveBaseIK
 	private var String pMoveCrouch
 	
 	private var MotionTransferChild pTransferWaist
 	//private var MotionTransferIK pTransferSpineHead
 	private var MotionTransferIK pTransferHead
+	private var MotionTransferBend pTransferNeck
 	private var MotionTransferBend pTransferSpine
 	private var MotionTransferIK pTransferArmRight
 	private var MotionTransferIK pTransferArmLeft
@@ -88,6 +91,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pBoneHip = ""
 		pBoneFootRight = ""
 		pBoneFootLeft = ""
+		pBendShapeSpine = 0.667
+		pBendShapeNeck = 0.667
 		pMoveBaseIK = ""
 		pMoveCrouch = ""
 		
@@ -108,6 +113,11 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		pTransferHead = MotionTransferIK.new(factoryIK.factoryID())
 		pTransferHead.setName("AutoHuman: Head")
+		
+		pTransferNeck = MotionTransferBend.new(factoryBend.factoryID())
+		pTransferNeck.setName("AutoHuman: Neck")
+		pTransferNeck.setTwistPropagation(0.5)
+		pTransferNeck.setTwistAxisRotation(Vector.new(90, 0, 0))
 		
 		pTransferSpine = MotionTransferBend.new(factoryBend.factoryID())
 		pTransferSpine.setName("AutoHuman: Spine")
@@ -156,11 +166,14 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pBoneHip = transfer.pBoneHip
 		pBoneFootRight = transfer.pBoneFootRight
 		pBoneFootLeft = transfer.pBoneFootLeft
+		pBendShapeSpine = transfer.pBendShapeSpine
+		pBendShapeNeck = transfer.pBendShapeNeck
 		pMoveBaseIK = transfer.pMoveBaseIK
 		pMoveCrouch = transfer.pMoveCrouch
 		
 		pTransferWaist = MotionTransferChild.new(transfer.pTransferWaist)
 		//pTransferSpineHead = MotionTransferIK.new(transfer.pTransferSpineHead)
+		pTransferNeck = MotionTransferBend.new(transfer.pTransferNeck)
 		pTransferSpine = MotionTransferBend.new(transfer.pTransferSpine)
 		pTransferHead = MotionTransferIK.new(transfer.pTransferHead)
 		pTransferArmRight = MotionTransferIK.new(transfer.pTransferArmRight)
@@ -262,6 +275,38 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pBoneFootLeft = bone
 	end
 	
+	/**
+	 * Spine bend shape in the range from 0 to 1. 0 bends only at the base bone. 1 bends only at the
+	 * tip bone. 0.5 bends all bones equally. Values in between gradually blend between.
+	 */
+	public func float getBendShapeSpine()
+		return pBendShapeSpine
+	end
+	
+	/**
+	 * Set spine bend shape in the range from 0 to 1. 0 bends only at the base bone. 1 bends only at the
+	 * tip bone. 0.5 bends all bones equally. Values in between gradually blend between.
+	 */
+	public func void setBendShapeSpine(float shape)
+		pBendShapeSpine = DEMath.clamp(shape, 0.0, 1.0)
+	end
+	
+	/**
+	 * Neck bend shape in the range from 0 to 1. 0 bends only at the base bone. 1 bends only at the
+	 * tip bone. 0.5 bends all bones equally. Values in between gradually blend between.
+	 */
+	public func float getBendShapeNeck()
+		return pBendShapeNeck
+	end
+	
+	/**
+	 * Set neck bend shape in the range from 0 to 1. 0 bends only at the base bone. 1 bends only at the
+	 * tip bone. 0.5 bends all bones equally. Values in between gradually blend between.
+	 */
+	public func void setBendShapeNeck(float shape)
+		pBendShapeNeck = DEMath.clamp(shape, 0.0, 1.0)
+	end
+	
 	/** Name of move to use to init base IK state for better results. */
 	public func String getMoveBaseIK()
 		return pMoveBaseIK
@@ -305,6 +350,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		return pTransferHead
 	end
 	
+	public func MotionTransferBend getTransferNeck()
+		return pTransferNeck
+	end
+	
 	public func MotionTransferBend getTransferSpine()
 		return pTransferSpine
 	end
@@ -332,6 +381,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferWaist.initElementClass(config, eclass)
 		//pTransferSpineHead.initElementClass(config, eclass)
 		pTransferSpine.initElementClass(config, eclass)
+		pTransferNeck.initElementClass(config, eclass)
 		pTransferHead.initElementClass(config, eclass)
 		pTransferArmRight.initElementClass(config, eclass)
 		pTransferArmLeft.initElementClass(config, eclass)
@@ -344,6 +394,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferWaist.resetCalibration()
 		//pTransferSpineHead.resetCalibration()
 		pTransferSpine.resetCalibration()
+		pTransferNeck.resetCalibration()
 		pTransferHead.resetCalibration()
 		pTransferArmRight.resetCalibration()
 		pTransferArmLeft.resetCalibration()
@@ -359,6 +410,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferWaist.calibrate(config, actorProfile, actor, component)
 		//pTransferSpineHead.calibrate(config, actorProfile, actor, component)
 		pTransferSpine.calibrate(config, actorProfile, actor, component)
+		pTransferNeck.calibrate(config, actorProfile, actor, component)
 		pTransferHead.calibrate(config, actorProfile, actor, component)
 		pTransferArmRight.calibrate(config, actorProfile, actor, component)
 		pTransferArmLeft.calibrate(config, actorProfile, actor, component)
@@ -404,9 +456,14 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		end
 		*/
 		
+		// spine
+		
 		pTransferSpine.setTipBone(pBoneChest)
 		pTransferSpine.setTargetBone("")
-		pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new(0, 0, 0))
+		pTransferSpine.setTargetBaseBone("")
+		
+		pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new())
+		pTransferSpine.getTargetTracker().resolveRealSlot(config)
 		
 		if pTransferSpine.getTargetTracker().getRealSlot() != null \
 		and pTransferSpine.getTargetTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.chest
@@ -417,7 +474,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		end
 		
 		pTransferSpine.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		pTransferSpine.getBaseTracker().setOffsetRotation(Vector.new(90, 0, 0))
 		
+		pTransferSpine.setBendShape(pBendShapeSpine)
 		pTransferSpine.setTwistPropagation(0.5)
 		pTransferSpine.setTwistAxisRotation(Vector.new(90, 0, 0))
 		
@@ -436,16 +495,71 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferSpine.setBaseBone("")
 		end
 		
-		pTransferHead.setTipBone(pBoneHead)
-		pTransferHead.getTipTracker().setOffsetPosition(Vector.new(0, 0, 0))
-		pTransferHead.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
-		
+		// neck
 		if chainHead.getCount() > 1
-			pTransferHead.setBaseBone(chainHead.getAt(-2) cast String)
+			pTransferNeck.setTipBone(chainHead.getAt(1) cast String)
 			
 		else
-			pTransferHead.setBaseBone("")
+			pTransferNeck.setTipBone(pBoneHead)
 		end
+		
+// 		pTransferNeck.setTargetBone(pBoneHead)
+		pTransferNeck.setTargetBone("")
+		pTransferNeck.setTargetBaseBone("")
+		
+		//pTransferNeck.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
+		pTransferNeck.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		
+		pTransferNeck.getBaseTracker().setOffsetRotation(Vector.new(90, 0, 0))
+		pTransferNeck.getBaseTracker().resolveRealSlot(config)
+		
+		pTransferNeck.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		/*
+		if pTransferNeck.getBaseTracker().getRealSlot() != null \
+		and pTransferNeck.getBaseTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.chest
+			pTransferNeck.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+			
+		else
+			pTransferNeck.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
+		end
+		*/
+		
+		pTransferNeck.setBendShape(pBendShapeNeck)
+		pTransferNeck.setTwistPropagation(1)
+		pTransferNeck.setTwistAxisRotation(Vector.new(90, 0, 0))
+		
+		if chainHead.getCount() > 1
+			pTransferNeck.setBaseBone(chainHead.getAt(-2) cast String)
+			pTransferNeck.setTwistBoneCount(DEMath.max(chainHead.getCount() - 2, 0))
+			
+		else
+			pTransferNeck.setBaseBone("")
+			pTransferNeck.setTwistBoneCount(0)
+		end
+		
+		if pTransferNeck.getBaseBone().empty() or pTransferNeck.getTipBone().empty()
+			pTransferNeck.setTipBone("")
+			pTransferNeck.setBaseBone("")
+		end
+		
+		// head
+// 		pTransferHead.setTipBone(pBoneHead)
+// 		pTransferHead.getTipTracker().setOffsetPosition(Vector.new(0, 0, 0))
+// 		pTransferHead.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
+// 		pTransferHead.setAdjustPosition(true)
+// 		
+// 		if chainHead.getCount() > 1
+// 			pTransferHead.setBaseBone(chainHead.getAt(-2) cast String)
+// 			
+// 		else
+// 			pTransferHead.setBaseBone("")
+// 		end
+		
+		pTransferHead.setTipBone(pBoneHead)
+		pTransferHead.setBaseBone(pBoneHead)
+		pTransferHead.getTipTracker().setOffsetPosition(Vector.new())
+		pTransferHead.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+		pTransferHead.setAdjustPosition(false)
 		
 		// right arm. separate guide bone is used if chain has at least 4 bones:
 		// hand, lower arm, upper arm, shoulder. with 3 bones no shoulder is assumed
@@ -584,6 +698,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		list.add(pTransferWaist.createCopy())
 		//list.add(pTransferSpineHead.createCopy())
 		list.add(pTransferSpine.createCopy())
+		list.add(pTransferNeck.createCopy())
 		list.add(pTransferHead.createCopy())
 		list.add(pTransferArmRight.createCopy())
 		list.add(pTransferArmLeft.createCopy())
@@ -619,6 +734,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			elif tagName.equals("boneFootLeft")
 				setBoneFootLeft(element.getFirstCData())
 				
+			elif tagName.equals("bendShapeSpine")
+				setBendShapeSpine(element.getFirstCDataFloat())
+				
+			elif tagName.equals("bendShapeNeck")
+				setBendShapeNeck(element.getFirstCDataFloat())
+				
 			elif tagName.equals("moveBaseIK")
 				setMoveBaseIK(element.getFirstCData())
 				
@@ -643,6 +764,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 				
 			elif tagName.equals("head")
 				pTransferHead.load(loader, element)
+				
+			elif tagName.equals("neck")
+				pTransferNeck.load(loader, element)
 				
 			elif tagName.equals("spine")
 				pTransferSpine.load(loader, element)
@@ -672,6 +796,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		tag.addDataTag("boneHip", pBoneHip)
 		tag.addDataTag("boneFootRight", pBoneFootRight)
 		tag.addDataTag("boneFootLeft", pBoneFootLeft)
+		tag.addDataTag("bendShapeSpine", pBendShapeSpine)
+		tag.addDataTag("bendShapeNeck", pBendShapeNeck)
 		tag.addDataTag("moveBaseIK", pMoveBaseIK)
 		tag.addDataTag("moveCrouch", pMoveCrouch)
 		
@@ -679,6 +805,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferWaist.save(loader, tagTransfers.addTag("waist"))
 		//pTransferSpineHead.save(loader, tagTransfers.addTag("spineHead"))
 		pTransferSpine.save(loader, tagTransfers.addTag("spine"))
+		pTransferNeck.save(loader, tagTransfers.addTag("neck"))
 		pTransferHead.save(loader, tagTransfers.addTag("head"))
 		pTransferArmRight.save(loader, tagTransfers.addTag("armRight"))
 		pTransferArmLeft.save(loader, tagTransfers.addTag("armLeft"))
@@ -736,6 +863,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		*/
 		
 		pTransferHead.getTipTracker().setSlot(slotHead)
+		
+		pTransferNeck.getTargetTracker().setSlot(slotHead)
+		pTransferNeck.getBaseTracker().setSlot(spineSlotTarget)
 		
 		pTransferSpine.getTargetTracker().setSlot(spineSlotTarget)
 		pTransferSpine.getBaseTracker().setSlot(slotWaist)
