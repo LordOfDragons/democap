@@ -424,7 +424,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 			slotReach = config.getTrackerSlots().getNamed(pBaseTracker.getSlot())
 		end
 		
-		if slotTip == null or pCalibrateBones.getCount() < 2 or pTipBone.empty()
+		var int boneCount = pCalibrateBones.getCount()
+		if slotTip == null or boneCount < 1 or pTipBone.empty()
 			return
 		end
 		
@@ -473,8 +474,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(pADRuleRetracted)
 		end
 		
-		if pTwistBoneCount > 0 and pTwistPropagation > 0.01
-			var int count = DEMath.min(pTwistBoneCount, pCalibrateBones.getCount() - 1)
+		if pTwistBoneCount > 0 and pTwistPropagation > 0.01 and boneCount >= 2
+			var int count = DEMath.min(pTwistBoneCount, boneCount - 1)
 			var ADRuleBoneTransformator rule
 			var String name = getName() + ".twist"
 			var float maxAngle = 180
@@ -587,8 +588,10 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.blendFactor, linkBlend))
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, linkTipPosition))
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkTipOrientation))
-		pADRuleIK.addBone(pBaseBone)
 		pADRuleIK.addBone(pTipBone)
+		if not pBaseBone.equals(pTipBone)
+			pADRuleIK.addBone(pBaseBone)
+		end
 		adef.addRule(pADRuleIK)
 		
 		if false
