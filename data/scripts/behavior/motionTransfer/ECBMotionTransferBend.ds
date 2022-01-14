@@ -139,14 +139,11 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			pControllerBendY = actorAnimated.getControllerNamed(pECBehavior.getControllerNameBendY())
 			pControllerTwist = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTwist())
 			
-			pTwistBone = -1
-			pUseTwistSlot = false
+			pUseTwistSlot = pECBehavior.getTransfer().getTargetTracker().getRealSlot() != null
 			
+			pTwistBone = -1
 			if not pECBehavior.getTransfer().getTargetBone().empty()
 				pTwistBone = pComponent.indexOfBoneNamed(pECBehavior.getTransfer().getTargetBone())
-				
-			else
-				pUseTwistSlot = pECBehavior.getTransfer().getTargetTracker().getRealSlot() != null
 			end
 			
 			pMoCapAnimator.addListener(UpdateControllers.new(this))
@@ -236,11 +233,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 				//var Quaternion orientation = pTwistQuat
 				var Matrix matrix = Matrix.newFromQuaternion(pTwistQuat)
 				
-				if pTwistBone != -1
-					//orientation = orientation * pComponent.boneGetRotation(pTwistBone)
-					matrix = matrix * pComponent.boneGetMatrix(pTwistBone).getRotation()
-					
-				else // pUseTwistSlot
+				if pUseTwistSlot
 					var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixCharacter()
 					var Matrix targetMatrix = pTransformTarget * pSlotTarget.getMatrixCharacter()
 					
@@ -248,6 +241,10 @@ class ECBMotionTransferBend extends DefaultECBehavior
 					//	* pTransformTwist).normalize().getRotation().toQuaternion()
 					matrix = matrix * (targetMatrix * baseMatrix.getInverse()\
 						* pTransformTwist).normalize().getRotation()
+					
+				elif pTwistBone != -1
+					//orientation = orientation * pComponent.boneGetRotation(pTwistBone)
+					matrix = matrix * pComponent.boneGetMatrix(pTwistBone).getRotation()
 				end
 				
 				//orientation = orientation * pTwistQuatInv
@@ -262,6 +259,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 				var float rotation = (orientation.slerp(Quaternion.new(), factor)).getEulerAngles().getZ() / factor
 				
 				pControllerTwist.setValue(rotation)
+// 				GameApp.getGameApp().getConsole().addMessage("bend2(" + pECBehavior.getTransfer().getName() + "): twist=" + rotation)
 				
 				/*
 				var Matrix matrix = Matrix.newFromQuaternion(orientation)
