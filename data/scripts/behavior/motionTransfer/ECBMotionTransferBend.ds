@@ -73,8 +73,8 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		private var Matrix pTransformTarget
 		private var Matrix pTransformBase
 		private var Matrix pTransformTwist
-		private var float pZeroRotationX
-		private var float pZeroRotationY
+		private var Matrix pZeroRotationX
+		private var Matrix pZeroRotationY
 		private var float pScaleRotationX
 		private var float pScaleRotationY
 		private var Component pComponent
@@ -93,8 +93,11 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
 			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
 			
-			pZeroRotationX = ecbehavior.getTransfer().getCalibrateZeroRotation().getX()
-			pZeroRotationY = ecbehavior.getTransfer().getCalibrateZeroRotation().getY()
+			pZeroRotationX = ecbehavior.getTransfer().getCalibrateBendAxisMatrix()\
+				* Matrix.newRotationX(-ecbehavior.getTransfer().getCalibrateZeroRotation().getX())
+			pZeroRotationY = ecbehavior.getTransfer().getCalibrateBendAxisMatrix()\
+				* Matrix.newRotationY(-ecbehavior.getTransfer().getCalibrateZeroRotation().getY())
+			
 			pScaleRotationX = ecbehavior.getTransfer().getScaleRotation().getX()
 			pScaleRotationY = ecbehavior.getTransfer().getScaleRotation().getY()
 			
@@ -210,40 +213,38 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixCharacter()
 			var Matrix targetMatrix = pTransformTarget * pSlotTarget.getMatrixCharacter()
 			
-			var Vector position = (targetMatrix * baseMatrix.getInverse()).getPosition()
+			var Matrix bendMatrix = targetMatrix * baseMatrix.getInverse()
 			
 			if pControllerBendX != null
+				var Vector position = (bendMatrix * pZeroRotationX).getPosition()
 				var float bend = pBendCurveX.evaluateAt(DEMath.atan2(position.getY(), position.getZ()))
 				pControllerBendX.setValue(bend * pScaleRotationX)
 			end
+			
 			if pControllerBendY != null
+				var Vector position = (bendMatrix * pZeroRotationY).getPosition()
 				var float bend = pBendCurveY.evaluateAt(-DEMath.atan2(position.getX(), position.getZ()))
 				pControllerBendY.setValue(bend * pScaleRotationY)
 			end
+			
 			if pControllerTwist != null
 				pControllerTwist.setValue(0)
 			end
-			
-// 			updateControllersPhase2()
 		end
 		
 		public func void updateControllersPhase2()
 			if pSlotTarget != null and pSlotBase != null and pControllerTwist != null\
 			and (pTwistBone != -1 or pUseTwistSlot)
-				//var Quaternion orientation = pTwistQuat
 				var Matrix matrix = Matrix.newFromQuaternion(pTwistQuat)
 				
 				if pUseTwistSlot
 					var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixCharacter()
 					var Matrix targetMatrix = pTransformTarget * pSlotTarget.getMatrixCharacter()
 					
-					//orientation = orientation * (targetMatrix * baseMatrix.getInverse()\
-					//	* pTransformTwist).normalize().getRotation().toQuaternion()
 					matrix = matrix * (targetMatrix * baseMatrix.getInverse()\
 						* pTransformTwist).normalize().getRotation()
 					
 				elif pTwistBone != -1
-					//orientation = orientation * pComponent.boneGetRotation(pTwistBone)
 					matrix = matrix * pComponent.boneGetMatrix(pTwistBone).getRotation()
 				end
 				
@@ -259,48 +260,6 @@ class ECBMotionTransferBend extends DefaultECBehavior
 				var float rotation = (orientation.slerp(Quaternion.new(), factor)).getEulerAngles().getZ() / factor
 				
 				pControllerTwist.setValue(rotation)
-// 				GameApp.getGameApp().getConsole().addMessage("bend2(" + pECBehavior.getTransfer().getName() + "): twist=" + rotation)
-				
-				/*
-				var Matrix matrix = Matrix.newFromQuaternion(orientation)
-				var Vector view = matrix.getViewVector()
-				
-				if view.getY() > 0.99939 // roughly 88 degrees
-					if view.getZ() > 0
-						matrix = Matrix.newFromQuaternion(orientation * Quaternion.newFromEulerX(-2))
-						
-					else
-						matrix = Matrix.newFromQuaternion(orientation * Quaternion.newFromEulerX(2))
-					end
-					view = matrix.getViewVector()
-					
-				elif view.getY() < -0.99939 // roughly 88 degrees
-					if view.getZ() > 0
-						matrix = Matrix.newFromQuaternion(orientation * Quaternion.newFromEulerX(2))
-						
-					else
-						matrix = Matrix.newFromQuaternion(orientation * Quaternion.newFromEulerX(-2))
-					end
-					view = matrix.getViewVector()
-				end
-				
-				var float azimuth = DEMath.atan2(-view.getX(), view.getZ())
-				matrix = matrix * Matrix.newRotationY(-azimuth)
-				view = matrix.getViewVector()
-				
-				var float elevation = DEMath.atan2(view.getY(), view.getZ())
-				matrix = matrix * Matrix.newRotationX(-elevation)
-				var Vector up = matrix.getUpVector()
-				
-				var float rotation = DEMath.atan2(up.getX(), up.getY())
-				pControllerTwist.setValue(rotation)
-				
-				
-				matrix = Matrix.newFromQuaternion(orientation)
-				GameApp.getGameApp().getConsole().addMessage("bend2: M view=" + matrix.getViewVector() \
-					+ " up=" + matrix.getUpVector() + " old=" + orientation.getEulerAngles().getZ() \
-					+ " az=" + azimuth + " el=" + elevation + " rot=" + rotation)
-				*/
 			end
 		end
 	end

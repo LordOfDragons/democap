@@ -139,6 +139,11 @@ class MotionTransferTracker
 		pOffsetRotation = rotation
 	end
 	
+	/** Offset matrix. */
+	public func Matrix getOffsetMatrix()
+		return Matrix.newRT(pOffsetRotation, pOffsetPosition)
+	end
+	
 	/** How to calculate transformation during calibration.. */
 	public func AutoTransform getAutoTransform()
 		return pAutoTransform
@@ -217,7 +222,7 @@ class MotionTransferTracker
 		// getCalibrateMatrix() is the same as getCharacterMatrix() during capturing
 		// getCalibrateReferenceMatrix() is the same as getReferenceMatrix() in tracker slot
 		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
-		var Matrix slotTargetMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) * pRealSlot.getTargetMatrix()
+		var Matrix slotTargetMatrix = getOffsetMatrix() * pRealSlot.getTargetMatrix()
 		var Matrix slotTargetMatrixInv = slotTargetMatrix.getInverse()
 		var Matrix slotRefMatrix = pRealSlot.getCalibrateReferenceMatrix()
 		var Matrix slotRefMatrixInv = pRealSlot.getCalibrateReferenceMatrixInverse()
@@ -229,7 +234,7 @@ class MotionTransferTracker
 			targetBoneTransform = component.boneGetMatrix(index) * slotTargetMatrixInv
 			
 		else
-			targetBoneTransform = Matrix.new() //Matrix.newRT(pOffsetRotation, pOffsetPosition)
+			targetBoneTransform = Matrix.new() //getOffsetMatrix()
 		end
 		
 		var Matrix deviceReferenceTransform = slotRefMatrix * slotInvMatrix
@@ -271,7 +276,7 @@ class MotionTransferTracker
 		end
 		
 		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
-		var Matrix slotTargetMatrix = Matrix.newRT(pOffsetRotation, pOffsetPosition) * pRealSlot.getTargetMatrix()
+		var Matrix slotTargetMatrix = getOffsetMatrix() * pRealSlot.getTargetMatrix()
 		var Matrix slotTargetMatrixInv = slotTargetMatrix.getInverse()
 		var Matrix slotRefMatrix = pRealSlot.getCalibrateReferenceMatrix()
 		var Matrix boneMatrix = component.boneGetMatrix(index)

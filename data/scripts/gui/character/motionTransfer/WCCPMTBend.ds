@@ -46,6 +46,8 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	private var WCCPMTTracker pEditBaseTracker
 	private var EditVector2 pEditScaleRotation
 	private var DefaultRangeModel pModelBendShape
+	private var EditVector pEditBendAxisRotation
+	private var DefaultToggleModel pModelFitCurveToTarget
 	
 	
 	
@@ -70,6 +72,7 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pModelTextBaseBone = DefaultTextModel.new()
 		
 		pModelBendShape = DefaultRangeModel.new(0, 20, 5, 10, 1)
+		pModelFitCurveToTarget = DefaultToggleModel.new(false)
 		
 		runWhileBlockingLayout(block
 			createContent(optionPrefix)
@@ -91,6 +94,7 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pModelTextBaseBone = null
 		
 		pModelBendShape = null
+		pModelFitCurveToTarget = null
 		
 		pEditTargetTracker.setTracker(null)
 		pEditTargetTracker = null
@@ -99,6 +103,7 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pEditBaseTracker = null
 		
 		pEditScaleRotation = null
+		pEditBendAxisRotation = null
 		super.dispose()
 	end
 	
@@ -121,6 +126,8 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 				pEditBaseTracker.loadValues()
 				pEditScaleRotation.setVector2(mt.getScaleRotation())
 				pModelBendShape.setValue((mt.getBendShape() * 20 + 0.5) cast int)
+				pEditBendAxisRotation.setVector(mt.getBendAxisRotation())
+				pModelFitCurveToTarget.setToggled(mt.getFitCurveToTarget())
 				
 			else
 				pModelTextTargetBone.setText("")
@@ -131,6 +138,8 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 				pEditBaseTracker.setTracker(null)
 				pEditScaleRotation.setVector2(Vector2.new())
 				pModelBendShape.setValue(10)
+				pEditBendAxisRotation.setVector(Vector.new())
+				pModelFitCurveToTarget.setToggled(false)
 			end
 		end)
 		doLayoutIfBlocked()
@@ -153,6 +162,8 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pEditBaseTracker.saveValues()
 		mt.setScaleRotation(pEditScaleRotation.getVector2())
 		mt.setBendShape(0.05 * pModelBendShape.getValue())
+		mt.setBendAxisRotation(pEditBendAxisRotation.getVector())
+		mt.setFitCurveToTarget(pModelFitCurveToTarget.getToggled())
 	end
 	
 	/** Supports motion transfer type. */
@@ -172,6 +183,7 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		var ListBox listBox
 		var String toolTip
 		var ScrollBar scrollBar
+		var CheckBox checkBox
 		
 		super.createContent()
 		
@@ -243,6 +255,26 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 			p.addWidget(textField)
 			textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelBendShape))
 		end))
+		
+		// bend axis rotation
+		toolTip = "Bend coordinate system. Bends along X (red) and Y (green) axis and twists along Z (blue) axis."
+		label = Label.new("Bend Axis:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditBendAxisRotation = EditVector.new()
+		pEditBendAxisRotation.setToolTip(toolTip)
+		pPanelForm.addWidget(pEditBendAxisRotation)
+		
+		CPECoordinateSystem.new(preview, null, null, label, pEditBendAxisRotation, null, null)
+		
+		// fit curve to target
+		pPanelForm.addWidget(Label.new("", "Label.FormCaption"))
+		
+		checkBox = CheckBox.new(pModelFitCurveToTarget, "Fit Curve To Target")
+		checkBox.setToolTip("Calculate bending angles for curve to touch target. "\
+			+ "Use only if target is at or beyond tip bone.")
+		pPanelForm.addWidget(checkBox)
 		
 		// trackers
 		pEditTargetTracker = WCCPMTTracker.new(optionPrefix + "/TargetTracker", this, "Target Tracker", false)

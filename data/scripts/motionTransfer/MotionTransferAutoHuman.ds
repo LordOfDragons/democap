@@ -107,8 +107,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		/*
 		pTransferSpineHead = MotionTransferIK.new(factoryIK.factoryID())
 		pTransferSpineHead.setName("AutoHuman: SpineHead")
+		pTransferSpineHead.setBendAxisRotation(Vector.new(90, 0, 0))
 		pTransferSpineHead.setTwistPropagation(1)
-		pTransferSpineHead.setTwistAxisRotation(Vector.new(90, 0, 0))
 		*/
 		
 		pTransferHead = MotionTransferIK.new(factoryIK.factoryID())
@@ -116,13 +116,13 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		pTransferNeck = MotionTransferBend.new(factoryBend.factoryID())
 		pTransferNeck.setName("AutoHuman: Neck")
+		pTransferNeck.setBendAxisRotation(Vector.new(90, 0, 0))
 		pTransferNeck.setTwistPropagation(0.5)
-		pTransferNeck.setTwistAxisRotation(Vector.new(90, 0, 0))
 		
 		pTransferSpine = MotionTransferBend.new(factoryBend.factoryID())
 		pTransferSpine.setName("AutoHuman: Spine")
+		pTransferSpine.setBendAxisRotation(Vector.new(90, 0, 0))
 		pTransferSpine.setTwistPropagation(0.5)
-		pTransferSpine.setTwistAxisRotation(Vector.new(90, 0, 0))
 		
 		pTransferArmRight = MotionTransferIK.new(factoryIK.factoryID())
 		pTransferArmRight.setName("AutoHuman: ArmRight")
@@ -457,7 +457,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		*/
 		
 		// spine
-		
 		pTransferSpine.setTipBone(pBoneChest)
 		pTransferSpine.setTargetBone("")
 		pTransferSpine.setTargetBaseBone("")
@@ -465,50 +464,82 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new())
 		pTransferSpine.getTargetTracker().resolveRealSlot(config)
 		
-		if pTransferSpine.getTargetTracker().getRealSlot() != null \
-		and pTransferSpine.getTargetTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.chest
+		var bool hasSlotChest = pTransferSpine.getTargetTracker().getRealSlot() != null \
+			and pTransferSpine.getTargetTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.chest
+		var bool isSlotChestAttached = hasSlotChest \
+			and pTransferSpine.getTargetTracker().getRealSlot().isDeviceAttached()
+		
+// 		if hasSlotChest
 			pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
-			
-		else
-			pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
-		end
+// 			
+// 		else
+// 			pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
+// 		end
 		
 		pTransferSpine.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 		pTransferSpine.getBaseTracker().setOffsetRotation(Vector.new(90, 0, 0))
 		
 		pTransferSpine.setBendShape(pBendShapeSpine)
-		pTransferSpine.setTwistPropagation(0.5)
-		pTransferSpine.setTwistAxisRotation(Vector.new(90, 0, 0))
+		pTransferSpine.setBendAxisRotation(Vector.new(90, 0, 0))
+		pTransferSpine.setFitCurveToTarget(true)
+		
+		if isSlotChestAttached
+			pTransferSpine.setTwistPropagation(1)
+			
+		else
+			pTransferSpine.setTwistPropagation(0.5)
+		end
 		
 		if chainSpine.getCount() > 1
-			pTransferSpine.setBaseBone(chainSpine.getAt(-2) cast String)
+			var String baseBone = chainSpine.getAt(-2) cast String
+			
+			// if base bone has the same position as the hip bone the spine can be properly
+			// bend. if not bending can cause troubles. in this case include the hip bone
+			// in the chain. this has the side effect of rotating the hip depending on the
+			// shape but it avoids problems with strong bending
+			// 
+			// NOTE to avoid problems the distance along the Y axis is checked not if the
+			//      bones have equal position. this protects against situations where the
+			//      base bone is offset along the Z axis but still would be at the same Y.
+			var int indexBaseBone = component.indexOfBoneNamed(baseBone)
+			var int indexHipBone = component.indexOfBoneNamed(pBoneHip)
+			
+			if indexBaseBone != -1 and indexHipBone != -1
+				var Vector basePosition = component.boneGetMatrix(indexBaseBone).getPosition()
+				var Vector hipPosition = component.boneGetMatrix(indexHipBone).getPosition()
+				
+				if basePosition.getY() > hipPosition.getY() + 0.05
+					baseBone = pBoneHip
+				end
+			end
+			
+			pTransferSpine.setBaseBone(baseBone)
 			pTransferSpine.setTwistBoneCount(DEMath.max(chainSpine.getCount() - 1, 0))
+			
+			if chainHead.getCount() > 1
+				pTransferSpine.setTargetBone(chainHead.getAt(-2) cast String)
+				
+			else
+				pTransferSpine.setTargetBone("")
+			end
+			
+			pTransferSpine.setTargetBaseBone(pTransferSpine.getBaseBone())
 			
 		else
 			pTransferSpine.setBaseBone("")
 			pTransferSpine.setTwistBoneCount(0)
+			pTransferSpine.setTargetBaseBone("")
 		end
 		pTransferSpine.setScaleRotation(Vector2.new(1, 1))
 		
 		if pTransferSpine.getBaseBone().empty() or pTransferSpine.getTipBone().empty()
 			pTransferSpine.setTipBone("")
 			pTransferSpine.setBaseBone("")
+			pTransferSpine.setTargetBaseBone("")
 		end
 		
 		// neck
-		if chainHead.getCount() > 1
-			pTransferNeck.setTipBone(chainHead.getAt(1) cast String)
-			
-		else
-			pTransferNeck.setTipBone(pBoneHead)
-		end
-		
-// 		pTransferNeck.setTargetBone(pBoneHead)
-		pTransferNeck.setTargetBone("")
-		pTransferNeck.setTargetBaseBone("")
-		
-		//pTransferNeck.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
-		pTransferNeck.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		pTransferNeck.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
 		
 		pTransferNeck.getBaseTracker().setOffsetRotation(Vector.new(90, 0, 0))
 		pTransferNeck.getBaseTracker().resolveRealSlot(config)
@@ -525,21 +556,31 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		*/
 		
 		pTransferNeck.setBendShape(pBendShapeNeck)
+		pTransferNeck.setBendAxisRotation(Vector.new(90, 0, 0))
+		pTransferNeck.setFitCurveToTarget(false)
 		pTransferNeck.setTwistPropagation(1)
-		pTransferNeck.setTwistAxisRotation(Vector.new(90, 0, 0))
 		
 		if chainHead.getCount() > 1
+			pTransferNeck.setTipBone(chainHead.getAt(1) cast String)
 			pTransferNeck.setBaseBone(chainHead.getAt(-2) cast String)
 			pTransferNeck.setTwistBoneCount(DEMath.max(chainHead.getCount() - 2, 0))
+			pTransferNeck.setTargetBone(""/*pBoneHead*/)
+			pTransferNeck.setTargetBaseBone(""/*pTransferNeck.getBaseBone()*/)
 			
 		else
+			pTransferNeck.setTipBone("")
 			pTransferNeck.setBaseBone("")
 			pTransferNeck.setTwistBoneCount(0)
+			pTransferNeck.setTargetBone("")
+			pTransferNeck.setTargetBaseBone("")
 		end
 		
 		if pTransferNeck.getBaseBone().empty() or pTransferNeck.getTipBone().empty()
 			pTransferNeck.setTipBone("")
 			pTransferNeck.setBaseBone("")
+			pTransferNeck.setTwistBoneCount(0)
+			pTransferNeck.setTargetBone("")
+			pTransferNeck.setTargetBaseBone("")
 		end
 		
 		// head
@@ -658,11 +699,25 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegRight.setTwistPropagation(1)
 		pTransferLegRight.setTwistAxisRotation(Vector.new(-90, 0, 0))
 		
+		pTransferLegRight.getTipTracker().resolveRealSlot(config)
+		
 		if chainRightLeg.getCount() > 0
 			pTransferLegRight.setBaseBone(chainRightLeg.getAt(-1) cast String)
 			
 		else
 			pTransferLegRight.setBaseBone("")
+		end
+		
+		var bool hasSlotRightFoot = pTransferLegRight.getTipTracker().getRealSlot() != null \
+			and pTransferLegRight.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightFoot
+		var bool isSlotRightFootAttached = hasSlotRightFoot \
+			and pTransferLegRight.getTipTracker().getRealSlot().isDeviceAttached()
+		
+		if isSlotRightFootAttached
+			pTransferLegRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+			
+		else
+			pTransferLegRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 		end
 		
 		pTransferLegRight.setGuideBone(pTransferLegRight.getBaseBone())
@@ -671,17 +726,30 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegLeft.setTipBone(pBoneFootLeft)
 		pTransferLegLeft.setMoveBaseIK(pMoveBaseIK)
 		pTransferLegLeft.setMoveRetracted(pMoveCrouch)
-		pTransferLegLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
 		pTransferLegLeft.setActorReach(MotionTransferIK.ActorReach.leg)
 		pTransferLegLeft.setTwistBoneCount(DEMath.max(chainLeftLeg.getCount() - 2, 0))
 		pTransferLegLeft.setTwistPropagation(1)
 		pTransferLegLeft.setTwistAxisRotation(Vector.new(-90, 0, 0))
+		
+		pTransferLegLeft.getTipTracker().resolveRealSlot(config)
 		
 		if chainLeftLeg.getCount() > 0
 			pTransferLegLeft.setBaseBone(chainLeftLeg.getAt(-1) cast String)
 			
 		else
 			pTransferLegLeft.setBaseBone("")
+		end
+		
+		var bool hasSlotLeftFoot = pTransferLegLeft.getTipTracker().getRealSlot() != null \
+			and pTransferLegLeft.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.leftFoot
+		var bool isSlotLeftFootAttached = hasSlotLeftFoot \
+			and pTransferLegLeft.getTipTracker().getRealSlot().isDeviceAttached()
+		
+		if isSlotLeftFootAttached
+			pTransferLegLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+			
+		else
+			pTransferLegLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 		end
 		
 		pTransferLegLeft.setGuideBone(pTransferLegLeft.getBaseBone())
