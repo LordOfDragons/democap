@@ -103,6 +103,12 @@ class WCCPTrackerSlot extends Panel
 			end))
 			popup.addWidget(button)
 			
+			button = Button.new("Mirror to opposite slot", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.mirrorToOppositeSlot()
+			end))
+			popup.addWidget(button)
+			
 			pPanel.getDesktop().addWindow(popup)
 			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
 		end
@@ -248,6 +254,29 @@ class WCCPTrackerSlot extends Panel
 		
 		pEditTargetPosition.setVector(matrix.getPosition())
 		pEditTargetRotation.setVector(matrix.getEulerAngles())
+	end
+	
+	/** Mirror to opposite slot. */
+	public func void mirrorToOppositeSlot()
+		if pTrackerSlot == null
+			return
+		end
+		
+		var CharacterTrackerSlot.Type oppositeType = pTrackerSlot.getOppositeType()
+		if oppositeType == null
+			return
+		end
+		
+		var CharacterTrackerSlot oppositeSlot = pWindowCharacterConfiguration.getTrackerSlotWithType(oppositeType)
+		if oppositeSlot == null
+			return
+		end
+		
+		var Matrix matrix = (Matrix.newRT(pEditTargetRotation.getVector(), pEditTargetPosition.getVector())\
+			* Matrix.newScaling(-1, 1, 1)).normalize()
+		
+		oppositeSlot.setTargetPosition(matrix.getPosition())
+		oppositeSlot.setTargetRotation(matrix.getEulerAngles())
 	end
 	
 	
