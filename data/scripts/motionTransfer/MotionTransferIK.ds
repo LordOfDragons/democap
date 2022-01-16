@@ -665,11 +665,20 @@ class MotionTransferIK extends DefaultMotionTransfer
 			var Matrix baseMatrix = component.boneGetMatrix(indexBase)
 			var Matrix tipMatrix = component.boneGetMatrix(indexTip)
 			
+			var CharacterTrackerSlot slotBase = pBaseTracker.getRealSlot()
+			var CharacterTrackerSlot slotTip = pTipTracker.getRealSlot()
+			
 			var Vector posBase = baseMatrix.getPosition()
-			var Vector posTip = tipMatrix * pTipTracker.getReverseTransformPosition()
+			var Vector posTip = tipMatrix.getPosition()
 			
 			select pActorReach
 			case ActorReach.arm
+				// actor arm reach parameter matches tracker target not target bone
+				if slotTip != null
+					// matrix = bone * transform^-1 * (ref * slot^1) * (target * ref^-1)
+					posTip = (pTipTracker.getOffsetMatrix() * slotTip.getTargetMatrix()).getPosition()
+				end
+				
 				// along Z direction this is always 1.
 				// along X and Y direction the scaling has to be adjusted. this is due
 				// to the character shoulder joint usually not lining up with the actor
@@ -744,9 +753,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 				pCalibrateReachScale = 1
 				pCalibrateReachScaleDirection = Vector.new(1, 1, 1)
 			end
-			
-			var CharacterTrackerSlot slotBase = pBaseTracker.getRealSlot()
-			var CharacterTrackerSlot slotTip = pTipTracker.getRealSlot()
 			
 			if slotTip != null and pTipTracker.getAutoTransform() == MotionTransferTracker.AutoTransform.orientationTarget
 				var Vector displacement = slotTip.getTargetPosition()\
@@ -831,9 +837,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			
 			// measure the reach and store it
 			var Vector posRoot = tcomponent.boneGetMatrix(indexGuide).getPosition()
-			
-			var Vector posTip = tcomponent.boneGetMatrix(indexTip) \
-				* pTipTracker.getReverseTransformPosition()
+			var Vector posTip = tcomponent.boneGetMatrix(indexTip).getPosition()
 			
 			pCalibrateReachRetracted = (posTip - posRoot).getLength()
 		end
