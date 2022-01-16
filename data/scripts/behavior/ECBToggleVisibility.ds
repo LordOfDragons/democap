@@ -125,14 +125,19 @@ class ECBToggleVisibility extends DefaultECBehavior
 			if pLockUpAxis != null
 				var DVector lockUp = DVector.new(pLockUpAxis)
 				
-				if view * lockUp < 0.707 // 45 degrees down
-					view = (lockUp % up) % lockUp
-					
-				elif view * lockUp > 0.707 // 45 degrees up
-					view = (up % lockUp) % lockUp
+				view = mpos - (cpos + lockUp * (lockUp * (mpos - cpos)))
+				
+				if view.isZero()
+					if DEMath.fabs(lockUp.getY()) > DEMath.fabs(lockUp.getX())\
+					and DEMath.fabs(lockUp.getY()) > DEMath.fabs(lockUp.getZ())
+						view = DVector.new(0, 0, 1)
+						
+					else
+						view = DVector.new(0, 1, 0)
+					end 
 					
 				else
-					view = (lockUp % view) % lockUp
+					view = view.normalize()
 				end
 				
 				up = lockUp
@@ -154,7 +159,7 @@ class ECBToggleVisibility extends DefaultECBehavior
 				matrix = DMatrix.newRT(matrix.getEulerAngles().compSelect(true, true, false), matrix.getPosition())
 			end
 			
-			matrix = DMatrix.newRotationY(180) * DMatrix.newTranslation(0, 0, pDistance) * matrix
+			matrix = DMatrix.newRotationY(180) * matrix
 			
 			if pLockUpAxis != null
 				var DVector lockUp = DVector.new(pLockUpAxis)
@@ -166,6 +171,8 @@ class ECBToggleVisibility extends DefaultECBehavior
 				
 				matrix = DMatrix.newWorld(matrix.getPosition(), view, lockUp)
 			end
+			
+			matrix = DMatrix.newTranslation(0, 0, -pDistance) * matrix
 			
 			getElement().setGeometry(matrix.getPosition(), matrix.toQuaternion())
 		end
