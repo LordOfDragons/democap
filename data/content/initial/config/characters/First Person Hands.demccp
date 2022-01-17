@@ -12,8 +12,8 @@
 	<configuration name='Example'>
 		<scaleMode>actor</scaleMode>
 		<moveCalibrate>calibrate</moveCalibrate>
-		<cameraBone></cameraBone>
-		<cameraPosition x='0' y='0' z='0'/>
+		<cameraBone>origin</cameraBone>
+		<cameraPosition x='0' y='0' z='0.2'/>
 		<cameraRotation x='0' y='0' z='0'/>
 		<trackerSlot name='Chest'>
 			<type>chest</type>
@@ -27,9 +27,9 @@
 		</trackerSlot>
 		<trackerSlot name='Head HMD'>
 			<type>headHmd</type>
-			<position x='0' y='1.55' z='0'/>
+			<position x='0' y='1.6' z='0'/>
 			<rotation x='0' y='0' z='0'/>
-			<targetPosition x='0' y='1.55' z='0'/>
+			<targetPosition x='0' y='1.6' z='0'/>
 			<targetRotation x='0' y='0' z='0'/>
 			<inputDeviceType>vrHMD</inputDeviceType>
 			<offsetPosition x='0' y='0' z='0'/>
@@ -38,9 +38,9 @@
 		</trackerSlot>
 		<trackerSlot name='Head Tracker'>
 			<type>headTracker</type>
-			<position x='0' y='1.55' z='0'/>
+			<position x='0' y='1.6' z='0'/>
 			<rotation x='0' y='0' z='0'/>
-			<targetPosition x='0' y='1.55' z='0'/>
+			<targetPosition x='0' y='1.6' z='0'/>
 			<targetRotation x='0' y='0' z='0'/>
 			<inputDeviceType>vrTracker</inputDeviceType>
 			<offsetPosition x='0' y='0' z='0'/>
@@ -60,7 +60,7 @@
 			<type>leftHandController</type>
 			<position x='-0.8' y='1.4' z='0'/>
 			<rotation x='0' y='90' z='0'/>
-			<targetPosition x='-0.78492' y='1.3693' z='6.5904e-10'/>
+			<targetPosition x='-0.78492' y='1.3693' z='0'/>
 			<targetRotation x='0' y='90' z='-0'/>
 			<inputDeviceType>vrLeftHand</inputDeviceType>
 			<offsetPosition x='0' y='0' z='-0.11'/>
@@ -80,23 +80,107 @@
 			<type>rightHandController</type>
 			<position x='0.8' y='1.4' z='0'/>
 			<rotation x='0' y='-90' z='0'/>
-			<targetPosition x='0.78492' y='1.3693' z='6.5904e-10'/>
+			<targetPosition x='0.78492' y='1.3693' z='0'/>
 			<targetRotation x='0' y='-90' z='0'/>
 			<inputDeviceType>vrRightHand</inputDeviceType>
 			<offsetPosition x='0' y='0' z='-0.11'/>
 			<offsetRotation x='0' y='0' z='0'/>
 		</trackerSlot>
-		<motionTransfer type='autoHuman'>
-			<name>Automatic Human</name>
-			<boneHead></boneHead>
-			<boneChest>origin</boneChest>
+		<motionTransfer type='autoFPV'>
+			<name>Automatic First Person View</name>
+			<boneHead>origin</boneHead>
+			<boneChest>chest</boneChest>
 			<boneHandRight>mixamorig:RightHand</boneHandRight>
 			<boneHandLeft>mixamorig:LeftHand</boneHandLeft>
-			<boneHip></boneHip>
-			<boneFootRight></boneFootRight>
-			<boneFootLeft></boneFootLeft>
 			<moveBaseIK>base ik</moveBaseIK>
-			<moveCrouch></moveCrouch>
+			<transfers>
+				<head>
+					<name>AutoFPV: Head</name>
+					<bone>origin</bone>
+					<adjustPosition>true</adjustPosition>
+					<tracker>
+						<slot>Head Tracker</slot>
+						<offsetPosition x='0' y='0' z='0'/>
+						<offsetRotation x='0' y='0' z='0'/>
+						<deviceBoneTransform>full</deviceBoneTransform>
+					</tracker>
+				</head>
+				<chest>
+					<name>AutoFPV: Chest</name>
+					<bone>chest</bone>
+					<adjustPosition>true</adjustPosition>
+					<tracker>
+						<slot>Chest</slot>
+						<offsetPosition x='0' y='0' z='0'/>
+						<offsetRotation x='0' y='0' z='0'/>
+						<deviceBoneTransform>full</deviceBoneTransform>
+					</tracker>
+				</chest>
+				<armRight>
+					<name>AutoFPV: ArmRight</name>
+					<tipBone>mixamorig:RightHand</tipBone>
+					<baseBone>mixamorig:RightShoulder</baseBone>
+					<guideBone>mixamorig:RightShoulder</guideBone>
+					<tipTracker>
+						<slot>Right Hand Controller</slot>
+						<offsetPosition x='0' y='0' z='0'/>
+						<offsetRotation x='0' y='0' z='0'/>
+						<deviceBoneTransform>orientation</deviceBoneTransform>
+					</tipTracker>
+					<guideTracker>
+						<slot>Right Elbow</slot>
+						<offsetPosition x='0' y='0' z='0'/>
+						<offsetRotation x='0' y='0' z='0'/>
+						<deviceBoneTransform>full</deviceBoneTransform>
+					</guideTracker>
+					<baseTracker>
+						<slot>Chest</slot>
+						<offsetPosition x='0' y='0' z='0'/>
+						<offsetRotation x='0' y='0' z='0'/>
+						<deviceBoneTransform>full</deviceBoneTransform>
+					</baseTracker>
+					<actorReach>arm</actorReach>
+					<reachLimit>1</reachLimit>
+					<adjustPosition>true</adjustPosition>
+					<moveBaseIK>base ik</moveBaseIK>
+					<moveRetracted></moveRetracted>
+					<twistPropagation>0.5</twistPropagation>
+					<twistBoneCount>1</twistBoneCount>
+					<twistAxisRotation x='0' y='-90' z='0'/>
+				</armRight>
+				<armLeft>
+					<name>AutoFPV: ArmLeft</name>
+					<tipBone>mixamorig:LeftHand</tipBone>
+					<baseBone>mixamorig:LeftShoulder</baseBone>
+					<guideBone>mixamorig:LeftShoulder</guideBone>
+					<tipTracker>
+						<slot>Left Hand Controller</slot>
+						<offsetPosition x='0' y='0' z='0'/>
+						<offsetRotation x='0' y='0' z='0'/>
+						<deviceBoneTransform>orientation</deviceBoneTransform>
+					</tipTracker>
+					<guideTracker>
+						<slot>Left Elbow</slot>
+						<offsetPosition x='0' y='0' z='0'/>
+						<offsetRotation x='0' y='0' z='0'/>
+						<deviceBoneTransform>full</deviceBoneTransform>
+					</guideTracker>
+					<baseTracker>
+						<slot>Chest</slot>
+						<offsetPosition x='0' y='0' z='0'/>
+						<offsetRotation x='0' y='0' z='0'/>
+						<deviceBoneTransform>full</deviceBoneTransform>
+					</baseTracker>
+					<actorReach>arm</actorReach>
+					<reachLimit>1</reachLimit>
+					<adjustPosition>true</adjustPosition>
+					<moveBaseIK>base ik</moveBaseIK>
+					<moveRetracted></moveRetracted>
+					<twistPropagation>0.5</twistPropagation>
+					<twistBoneCount>1</twistBoneCount>
+					<twistAxisRotation x='0' y='90' z='0'/>
+				</armLeft>
+			</transfers>
 		</motionTransfer>
 		<motionTransfer type='fingers'>
 			<name>Left Fingers</name>
