@@ -45,6 +45,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	private var WCCPMTTracker pEditTrackerBase
 	private var DefaultListModel pModelActorReach
 	private var DefaultTextModel pModelReachLimit
+	private var EditVector pEditReachScaling
 	private var DefaultToggleModel pModelAdjustPosition
 	private var DefaultListModel pModelListMoveBaseIK
 	private var DefaultTextModel pModelTextMoveBaseIK
@@ -105,6 +106,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pEditTrackerBase = null
 		pModelActorReach = null
 		pModelReachLimit = null
+		pEditReachScaling = null
 		pModelAdjustPosition = null
 		pModelListMoveBaseIK = null
 		pModelTextMoveBaseIK = null
@@ -136,6 +138,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pEditTrackerBase.loadValues()
 				pModelActorReach.setSelected(pModelActorReach.indexOf(mt.getActorReach()))
 				pModelReachLimit.setText(mt.getReachLimit().toString())
+				pEditReachScaling.setVector(mt.getReachScaling())
 				pModelAdjustPosition.setToggled(mt.getAdjustPosition())
 				pModelTextMoveBaseIK.setText(mt.getMoveBaseIK())
 				pModelTextMoveRetracted.setText(mt.getMoveRetracted())
@@ -152,6 +155,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pEditTrackerBase.setTracker(null)
 				pModelActorReach.setSelected(pModelActorReach.indexOf(MotionTransferIK.ActorReach.none))
 				pModelReachLimit.setText("")
+				pEditReachScaling.setVector(Vector.new(1, 1, 1))
 				pModelAdjustPosition.setToggled(false)
 				pModelTextMoveBaseIK.setText("")
 				pModelTextMoveRetracted.setText("")
@@ -179,6 +183,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pEditTrackerBase.saveValues()
 		mt.setActorReach(pModelActorReach.getAt(pModelActorReach.getSelected()) cast MotionTransferIK.ActorReach)
 		mt.setReachLimit(pModelReachLimit.getText().toFloat())
+		mt.setReachScaling(pEditReachScaling.getVector())
 		mt.setAdjustPosition(pModelAdjustPosition.getToggled())
 		mt.setMoveBaseIK(pModelTextMoveBaseIK.getText())
 		mt.setMoveRetracted(pModelTextMoveRetracted.getText())
@@ -203,6 +208,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		var Button button
 		var ListBox listBox
 		var CheckBox checkBox
+		var String toolTip
 		
 		super.createContent()
 		
@@ -264,6 +270,17 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
 		textField.setToolTip("Limit reach to percentage of bone chain reach. Avoids overstretching.")
 		pPanelForm.addWidget(textField)
+		
+		// reach scaling
+		toolTip = "Scale reach along axis"
+		
+		label = Label.new("Reach Scaling:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditReachScaling = EditVector.new()
+		pEditReachScaling.setToolTip(toolTip)
+		pPanelForm.addWidget(pEditReachScaling)
 		
 		// adjust position
 		pPanelForm.addWidget(Label.new(""))

@@ -54,6 +54,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 	private var DefaultTextModel pModelTextMoveBaseIK
 	private var DefaultListModel pModelListMoveCrouch
 	private var DefaultTextModel pModelTextMoveCrouch
+	private var EditVector pEditReachScalingArmRight
+	private var EditVector pEditReachScalingArmLeft
 	
 	
 	
@@ -136,6 +138,9 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		
 		pModelListMoveCrouch = null
 		pModelTextMoveCrouch = null
+		
+		pEditReachScalingArmRight = null
+		pEditReachScalingArmLeft = null
 		super.dispose()
 	end
 	
@@ -159,6 +164,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelBendShapeNeck.setValue((mt.getBendShapeNeck() * 20 + 0.5) cast int)
 				pModelTextMoveBaseIK.setText(mt.getMoveBaseIK())
 				pModelTextMoveCrouch.setText(mt.getMoveCrouch())
+				pEditReachScalingArmRight.setVector(mt.getReachScalingArmRight())
+				pEditReachScalingArmLeft.setVector(mt.getReachScalingArmLeft())
 				
 			else
 				pModelTextBoneHead.setText("")
@@ -172,6 +179,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelBendShapeNeck.setValue(10)
 				pModelTextMoveBaseIK.setText("")
 				pModelTextMoveCrouch.setText("")
+				pEditReachScalingArmRight.setVector(Vector.new(1, 1, 1))
+				pEditReachScalingArmLeft.setVector(Vector.new(1, 1, 1))
 			end
 		end)
 		doLayoutIfBlocked()
@@ -196,6 +205,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		mt.setBendShapeNeck(0.05 * pModelBendShapeNeck.getValue())
 		mt.setMoveBaseIK(pModelTextMoveBaseIK.getText())
 		mt.setMoveCrouch(pModelTextMoveCrouch.getText())
+		mt.setReachScalingArmRight(pEditReachScalingArmRight.getVector())
+		mt.setReachScalingArmLeft(pEditReachScalingArmLeft.getVector())
 	end
 	
 	/** Supports motion transfer type. */
@@ -357,6 +368,28 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				p.addWidget(textField)
 				textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelBendShapeSpine))
 			end))
+			
+			// right arm reach scaling
+			toolTip = "Right arm scale reach along axis"
+			
+			label = Label.new("Reach Scaling RA:", "Label.FormCaption")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			pEditReachScalingArmRight = EditVector.new()
+			pEditReachScalingArmRight.setToolTip(toolTip)
+			p.addWidget(pEditReachScalingArmRight)
+			
+			// left arm reach scaling
+			toolTip = "Left arm scale reach along axis"
+			
+			label = Label.new("Reach Scaling LA:", "Label.FormCaption")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			pEditReachScalingArmLeft = EditVector.new()
+			pEditReachScalingArmLeft.setToolTip(toolTip)
+			p.addWidget(pEditReachScalingArmLeft)
 		end))
 	end
 	

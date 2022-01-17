@@ -84,6 +84,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var MotionTransferTracker pBaseTracker
 	private var ActorReach pActorReach
 	private var float pReachLimit
+	private var Vector pReachScaling
 	private var bool pAdjustPosition
 	private var String pMoveBaseIK
 	private var String pMoveRetracted
@@ -131,6 +132,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBaseTracker = MotionTransferTracker.new()
 		pActorReach = ActorReach.none
 		pReachLimit = 1
+		pReachScaling = Vector.new(1, 1, 1)
 		pAdjustPosition = true
 		pMoveBaseIK = ""
 		pMoveRetracted = ""
@@ -161,6 +163,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBaseTracker = MotionTransferTracker.new(transfer.pBaseTracker)
 		pActorReach = transfer.pActorReach
 		pReachLimit = transfer.pReachLimit
+		pReachScaling = transfer.pReachScaling
 		pAdjustPosition = transfer.pAdjustPosition
 		pMoveBaseIK = transfer.pMoveBaseIK
 		pMoveRetracted = transfer.pMoveRetracted
@@ -258,6 +261,19 @@ class MotionTransferIK extends DefaultMotionTransfer
 	/** Set limit reach to percentage of bone chain reach. */
 	public func void setReachLimit(float limit)
 		pReachLimit = DEMath.max(limit, 0.1)
+	end
+	
+	/** Reach scaling along axis for fine tune. */
+	public func Vector getReachScaling()
+		return pReachScaling
+	end
+	
+	/** Set reach scaling along axis for fine tuning. */
+	public func void setReachScaling(Vector scaling)
+		if scaling == null
+			throw ENullPointer.new("scaling")
+		end
+		pReachScaling = scaling
 	end
 	
 	/** Adjust position if chain is of length 1. */
@@ -699,10 +715,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 				// length of the shoulder bone and a maximum rotation range for
 				// forward/backward and up/down the actual reach can be calculated.
 				// we can use the guide bone for this
-				/*
-				var float shortenForward = 0.95
-				var float shortenDown = 0.95
-				*/
 				
 				var Vector posRotate = posBase.absolute()
 				var Vector tipFront, tipDown
@@ -739,7 +751,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 				scaleDown = tip.getLength() / pCalibrateReach
 				
 				// store direction specific scale
-				pCalibrateReachScaleDirection = Vector.new(1, scaleDown, scaleFront)
+				pCalibrateReachScaleDirection = Vector.new(1, scaleDown, scaleFront).compMultiply(pReachScaling)
 				
 			case ActorReach.leg
 				// reach scale is not working well with legs
@@ -963,6 +975,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("reachLimit")
 				setReachLimit(element.getFirstCDataFloat())
 				
+			elif tagName.equals("reachScaling")
+				pReachScaling = loader.readVector(element)
+				
 			elif tagName.equals("adjustPosition")
 				setAdjustPosition(element.getFirstCDataBool())
 				
@@ -1046,6 +1061,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBaseTracker.save(loader, tag.addTag("baseTracker"))
 		tag.addDataTag("actorReach", pActorReach.name())
 		tag.addDataTag("reachLimit", pReachLimit)
+		loader.writeVector(tag, "reachScaling", pReachScaling)
 		tag.addDataTag("adjustPosition", pAdjustPosition)
 		tag.addDataTag("moveBaseIK", pMoveBaseIK)
 		tag.addDataTag("moveRetracted", pMoveRetracted)

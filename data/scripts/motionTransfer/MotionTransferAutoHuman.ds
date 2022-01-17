@@ -69,6 +69,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	private var float pBendShapeNeck
 	private var String pMoveBaseIK
 	private var String pMoveCrouch
+	private var Vector pReachScalingArmRight
+	private var Vector pReachScalingArmLeft
 	
 	private var MotionTransferChild pTransferWaist
 	//private var MotionTransferIK pTransferSpineHead
@@ -95,6 +97,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pBendShapeNeck = 0.667
 		pMoveBaseIK = ""
 		pMoveCrouch = ""
+		pReachScalingArmRight = Vector.new(1, 1, 1)
+		pReachScalingArmLeft = Vector.new(1, 1, 1)
 		
 		// create child motion transfers
 		var MotionTransferChild.Factory factoryChild = MotionTransferChild.Factory.new()
@@ -170,6 +174,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pBendShapeNeck = transfer.pBendShapeNeck
 		pMoveBaseIK = transfer.pMoveBaseIK
 		pMoveCrouch = transfer.pMoveCrouch
+		pReachScalingArmRight = transfer.pReachScalingArmRight
+		pReachScalingArmLeft = transfer.pReachScalingArmLeft
 		
 		pTransferWaist = MotionTransferChild.new(transfer.pTransferWaist)
 		//pTransferSpineHead = MotionTransferIK.new(transfer.pTransferSpineHead)
@@ -333,6 +339,32 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pMoveCrouch = move
 	end
 	
+	/** Right arm reach scaling. */
+	public func Vector getReachScalingArmRight()
+		return pReachScalingArmRight
+	end
+	
+	/** Set right arm reach scaling. */
+	public func void setReachScalingArmRight(Vector scaling)
+		if scaling == null
+			throw ENullPointer.new("scaling")
+		end
+		pReachScalingArmRight = scaling
+	end
+	
+	/** Left arm reach scaling. */
+	public func Vector getReachScalingArmLeft()
+		return pReachScalingArmLeft
+	end
+	
+	/** Set left arm reach scaling. */
+	public func void setReachScalingArmLeft(Vector scaling)
+		if scaling == null
+			throw ENullPointer.new("scaling")
+		end
+		pReachScalingArmLeft = scaling
+	end
+	
 	
 	
 	/** Child motion transfer. */
@@ -428,6 +460,33 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		assignSlots(config)
 		
+		// determine what devices are attached
+		pTransferWaist.getTracker().resolveRealSlot(config)
+		pTransferSpine.getTargetTracker().resolveRealSlot(config)
+		pTransferNeck.getBaseTracker().resolveRealSlot(config)
+		pTransferLegRight.getTipTracker().resolveRealSlot(config)
+		pTransferLegLeft.getTipTracker().resolveRealSlot(config)
+		
+		var bool hasSlotWaist = pTransferWaist.getTracker().getRealSlot() != null \
+			and pTransferWaist.getTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.waist
+		var bool isSlotWaistAttached = hasSlotWaist \
+			and pTransferWaist.getTracker().getRealSlot().isDeviceAttached()
+		
+		var bool hasSlotChest = pTransferSpine.getTargetTracker().getRealSlot() != null \
+			and pTransferSpine.getTargetTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.chest
+		var bool isSlotChestAttached = hasSlotChest \
+			and pTransferSpine.getTargetTracker().getRealSlot().isDeviceAttached()
+		
+		var bool hasSlotRightFoot = pTransferLegRight.getTipTracker().getRealSlot() != null \
+			and pTransferLegRight.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightFoot
+		var bool isSlotRightFootAttached = hasSlotRightFoot \
+			and pTransferLegRight.getTipTracker().getRealSlot().isDeviceAttached()
+		
+		var bool hasSlotLeftFoot = pTransferLegLeft.getTipTracker().getRealSlot() != null \
+			and pTransferLegLeft.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.leftFoot
+		var bool isSlotLeftFootAttached = hasSlotLeftFoot \
+			and pTransferLegLeft.getTipTracker().getRealSlot().isDeviceAttached()
+		
 		// waist
 		pTransferWaist.setBone(pBoneHip)
 		
@@ -462,12 +521,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferSpine.setTargetBaseBone("")
 		
 		pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new())
-		pTransferSpine.getTargetTracker().resolveRealSlot(config)
-		
-		var bool hasSlotChest = pTransferSpine.getTargetTracker().getRealSlot() != null \
-			and pTransferSpine.getTargetTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.chest
-		var bool isSlotChestAttached = hasSlotChest \
-			and pTransferSpine.getTargetTracker().getRealSlot().isDeviceAttached()
 		
 // 		if hasSlotChest
 			pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
@@ -542,7 +595,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferNeck.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
 		
 		pTransferNeck.getBaseTracker().setOffsetRotation(Vector.new(90, 0, 0))
-		pTransferNeck.getBaseTracker().resolveRealSlot(config)
 		
 		pTransferNeck.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 		/*
@@ -623,7 +675,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmRight.setMoveBaseIK(pMoveBaseIK)
 		pTransferArmRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
 		pTransferArmRight.setActorReach(MotionTransferIK.ActorReach.arm)
-		pTransferArmRight.setReachLimit(1/*0.9*/)
+		pTransferArmRight.setReachLimit(1)
+		pTransferArmRight.setReachScaling(pReachScalingArmRight)
 		pTransferArmRight.setTwistBoneCount(1)
 		pTransferArmRight.setTwistPropagation(0.5)
 		pTransferArmRight.setTwistAxisRotation(Vector.new(0, -90, 0))
@@ -651,7 +704,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.setMoveBaseIK(pMoveBaseIK)
 		pTransferArmLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
 		pTransferArmLeft.setActorReach(MotionTransferIK.ActorReach.arm)
-		pTransferArmLeft.setReachLimit(1/*0.9*/)
+		pTransferArmLeft.setReachLimit(1)
+		pTransferArmLeft.setReachScaling(pReachScalingArmLeft)
 		pTransferArmLeft.setTwistBoneCount(1)
 		pTransferArmLeft.setTwistPropagation(0.5)
 		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))
@@ -699,19 +753,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegRight.setTwistPropagation(1)
 		pTransferLegRight.setTwistAxisRotation(Vector.new(-90, 0, 0))
 		
-		pTransferLegRight.getTipTracker().resolveRealSlot(config)
-		
 		if chainRightLeg.getCount() > 0
 			pTransferLegRight.setBaseBone(chainRightLeg.getAt(-1) cast String)
 			
 		else
 			pTransferLegRight.setBaseBone("")
 		end
-		
-		var bool hasSlotRightFoot = pTransferLegRight.getTipTracker().getRealSlot() != null \
-			and pTransferLegRight.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightFoot
-		var bool isSlotRightFootAttached = hasSlotRightFoot \
-			and pTransferLegRight.getTipTracker().getRealSlot().isDeviceAttached()
 		
 		if isSlotRightFootAttached
 			pTransferLegRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
@@ -731,19 +778,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegLeft.setTwistPropagation(1)
 		pTransferLegLeft.setTwistAxisRotation(Vector.new(-90, 0, 0))
 		
-		pTransferLegLeft.getTipTracker().resolveRealSlot(config)
-		
 		if chainLeftLeg.getCount() > 0
 			pTransferLegLeft.setBaseBone(chainLeftLeg.getAt(-1) cast String)
 			
 		else
 			pTransferLegLeft.setBaseBone("")
 		end
-		
-		var bool hasSlotLeftFoot = pTransferLegLeft.getTipTracker().getRealSlot() != null \
-			and pTransferLegLeft.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.leftFoot
-		var bool isSlotLeftFootAttached = hasSlotLeftFoot \
-			and pTransferLegLeft.getTipTracker().getRealSlot().isDeviceAttached()
 		
 		if isSlotLeftFootAttached
 			pTransferLegLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
@@ -763,15 +803,48 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	/** Decompose motion transfer. Returns Array of MotionTranfer or empty list if not supported. */
 	public func Array decompose()
 		var Array list = Array.new()
-		list.add(pTransferWaist.createCopy())
+		
+		if not pTransferWaist.getTracker().getSlot().empty()
+			list.add(pTransferWaist.createCopy())
+		end
+		
 		//list.add(pTransferSpineHead.createCopy())
-		list.add(pTransferSpine.createCopy())
-		list.add(pTransferNeck.createCopy())
-		list.add(pTransferHead.createCopy())
-		list.add(pTransferArmRight.createCopy())
-		list.add(pTransferArmLeft.createCopy())
-		list.add(pTransferLegRight.createCopy())
-		list.add(pTransferLegLeft.createCopy())
+		
+		if not pTransferSpine.getBaseTracker().getSlot().empty()\
+		and not pTransferSpine.getTargetTracker().getSlot().empty()
+			list.add(pTransferSpine.createCopy())
+		end
+		
+		if not pTransferNeck.getBaseTracker().getSlot().empty()\
+		and not pTransferNeck.getTargetTracker().getSlot().empty()
+			list.add(pTransferNeck.createCopy())
+		end
+		
+		if not pTransferHead.getBaseTracker().getSlot().empty()\
+		and not pTransferHead.getTipTracker().getSlot().empty()
+			list.add(pTransferHead.createCopy())
+		end
+		
+		if not pTransferArmRight.getBaseTracker().getSlot().empty()\
+		and not pTransferArmRight.getTipTracker().getSlot().empty()
+			list.add(pTransferArmRight.createCopy())
+		end
+		
+		if not pTransferArmLeft.getBaseTracker().getSlot().empty()\
+		and not pTransferArmLeft.getTipTracker().getSlot().empty()
+			list.add(pTransferArmLeft.createCopy())
+		end
+		
+		if not pTransferLegRight.getBaseTracker().getSlot().empty()\
+		and not pTransferLegRight.getTipTracker().getSlot().empty()
+			list.add(pTransferLegRight.createCopy())
+		end
+		
+		if not pTransferLegLeft.getBaseTracker().getSlot().empty()\
+		and not pTransferLegLeft.getTipTracker().getSlot().empty()
+			list.add(pTransferLegLeft.createCopy())
+		end
+		
 		return list
 	end
 	
@@ -813,6 +886,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 				
 			elif tagName.equals("moveCrouch")
 				setMoveCrouch(element.getFirstCData())
+				
+			elif tagName.equals("reachScalingArmRight")
+				pReachScalingArmRight = loader.readVector(element)
+				
+			elif tagName.equals("reachScalingArmLeft")
+				pReachScalingArmLeft = loader.readVector(element)
 				
 			elif tagName.equals("transfers")
 				loadTransfers(loader, element)
@@ -868,6 +947,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		tag.addDataTag("bendShapeNeck", pBendShapeNeck)
 		tag.addDataTag("moveBaseIK", pMoveBaseIK)
 		tag.addDataTag("moveCrouch", pMoveCrouch)
+		loader.writeVector(tag, "reachScalingArmRight", pReachScalingArmRight)
+		loader.writeVector(tag, "reachScalingArmLeft", pReachScalingArmLeft)
 		
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
 		pTransferWaist.save(loader, tagTransfers.addTag("waist"))
