@@ -821,6 +821,31 @@ class WMPanelCharacter extends CollapsibleGroup
 		end
 	end
 	
+	/** Recalibrate character. */
+	public func void recalibrateCharacter()
+		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+		if actor == null
+			return
+		end
+		
+		var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
+		if actorProfile == null
+			return
+		end
+		
+		var CharacterConfiguration character = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
+		if character == null or not character.isCalibrated() or character.getElementClass() == null
+			return
+		end
+		
+		character.recalibrate(actor, actorProfile)
+		try
+			character.getProfile().save()
+		catch Exception e
+			GameApp.getGameApp().getConsole().addError("Recalibrate failed", e)
+		end
+	end
+	
 	
 	
 	/** Create panel content. */
@@ -861,7 +886,7 @@ class WMPanelCharacter extends CollapsibleGroup
 			end))
 		end), BorderLayout.Area.content)
 		
-		content.addWidget(Panel.new(GridLayout.new(2, 0), block Panel p
+		content.addWidget(Panel.new(GridLayout.new(3, 0), block Panel p
 			button = Button.new("Activate", BlockActionListener.new(block ActionEvent event
 				activateCharacterConfiguration()
 			end))
@@ -872,6 +897,12 @@ class WMPanelCharacter extends CollapsibleGroup
 				calibrateCharacter()
 			end))
 			button.setToolTip("Start calibrating character. Follow instructions displayed in HMD")
+			p.addWidget(button)
+			
+			button = Button.new("Recalibrate", BlockActionListener.new(block ActionEvent event
+				recalibrateCharacter()
+			end))
+			button.setToolTip("Instant recalibrate character for fine tuning")
 			p.addWidget(button)
 		end), BorderLayout.Area.bottom)
 	end

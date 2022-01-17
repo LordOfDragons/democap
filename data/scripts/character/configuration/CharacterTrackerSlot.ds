@@ -79,6 +79,8 @@ class CharacterTrackerSlot
 	private var Matrix pCalibrateReferenceMatrix
 	private var Matrix pCalibrateReferenceMatrixInverse
 	
+	private var Matrix pRecalibrateMatrix
+	
 	private var ADController pADControllerPosition
 	private var ADController pADControllerRotation
 	private var ADLink pADLinkPosition
@@ -116,6 +118,8 @@ class CharacterTrackerSlot
 		pCalibrateReferenceMatrix = Matrix.new()
 		pCalibrateReferenceMatrixInverse = Matrix.new()
 		
+		pRecalibrateMatrix = Matrix.new()
+		
 		resetCalibration()
 	end
 	
@@ -148,6 +152,8 @@ class CharacterTrackerSlot
 		pCalibrateMatrixInverse = slot.pCalibrateMatrixInverse
 		pCalibrateReferenceMatrix = slot.pCalibrateReferenceMatrix
 		pCalibrateReferenceMatrixInverse = slot.pCalibrateReferenceMatrixInverse
+		
+		pRecalibrateMatrix = slot.pRecalibrateMatrix
 		
 		resetCalibration()
 	end
@@ -608,6 +614,19 @@ class CharacterTrackerSlot
 		pCalibrateReferenceMatrixInverse = matrix.getInverse()
 	end
 	
+	/** Recalibrate matrix. */
+	public func Matrix getRecalibrateMatrix()
+		return pRecalibrateMatrix
+	end
+	
+	/** Set recalibrate matrix. */
+	public func void setRecalibrateMatrix(Matrix matrix)
+		if matrix == null
+			throw ENullPointer.new("matrix")
+		end
+		pRecalibrateMatrix = matrix
+	end
+	
 	
 	
 	/** Reset calibration. */
@@ -618,6 +637,7 @@ class CharacterTrackerSlot
 		pCalibrateMatrixInverse = pMatrix.getInverse()
 		pCalibrateReferenceMatrix = pMatrix
 		pCalibrateReferenceMatrixInverse = pMatrix.getInverse()
+		pRecalibrateMatrix = pMatrix
 	end
 	
 	/** Calibrate character. */
@@ -644,6 +664,27 @@ class CharacterTrackerSlot
 			behavior.setMatrixCharacter(position, Vector.new())
 		end
 		
+		pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
+		pCalibratePosition = pCalibrateMatrix.getPosition()
+		pCalibrateRotation = pCalibrateMatrix.normalize().getEulerAngles()
+		
+		pRecalibrateMatrix = pCalibrateMatrix
+	end
+	
+	/** Recalibrate character. */
+	public func void recalibrate(ActorProfile actorProfile, BaseVRActor actor)
+		var ECBTrackerSlot.Instance behavior = ECBTrackerSlot.getInstanceIn(actor, pName)
+		if behavior == null
+			return
+		end
+		
+		behavior.setMatrixReference(pMatrix * pConfiguration.getMatrixScale())
+		behavior.setMatrixCharacter(pRecalibrateMatrix)
+		
+		pCalibrateReferenceMatrix = behavior.getMatrixReference()
+		pCalibrateReferenceMatrixInverse = pCalibrateReferenceMatrix.getInverse()
+		
+		pCalibrateMatrix = behavior.getMatrixCharacter()
 		pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
 		pCalibratePosition = pCalibrateMatrix.getPosition()
 		pCalibrateRotation = pCalibrateMatrix.normalize().getEulerAngles()

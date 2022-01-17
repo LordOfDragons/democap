@@ -523,6 +523,26 @@ class CharacterConfiguration
 		pProfile.notifyCalibrated(this)
 	end
 	
+	/** Recalibrate character. */
+	public func void recalibrate(BaseVRActor actor, ActorProfile actorProfile)
+		if not pIsCalibrated or pElementClass == null
+			return
+		end
+		
+		dropElementClass()
+		
+		pTrackerSlots.forEach(block CharacterTrackerSlot each
+			each.recalibrate(actorProfile, actor)
+		end)
+		
+		var Component component = createCalibrationComponent()
+		pMotionTransfers.forEach(block MotionTransfer each
+			each.calibrate(this, actorProfile, actor, component)
+		end)
+		
+		pProfile.notifyCalibrated(this)
+	end
+	
 	/** Assign input devices to closest slot with matching type. */
 	public func void assignInputDevices(ActorProfile actorProfile)
 		var BindingManager bindings = GameApp.getGameApp().getBindingManager()

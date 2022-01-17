@@ -248,6 +248,14 @@ class ECBTrackerSlot extends DefaultECBehavior
 			return pReferenceMatrix
 		end
 		
+		/** Set character reference matrix. */
+		public func void setMatrixReference(Matrix matrix)
+			if matrix == null
+				throw ENullPointer.new("matrix")
+			end
+			pReferenceMatrix = matrix
+		end
+		
 		/** World position. */
 		public func DVector getPosition()
 			return pVRPlayspace.getMatrix() * DVector.new(pPosition)
@@ -273,8 +281,13 @@ class ECBTrackerSlot extends DefaultECBehavior
 			if matrix == null
 				throw ENullPointer.new("matrix")
 			end
+			
 			pMatrix = matrix
 			pPosition = matrix.getPosition()
+			pOrientation = pMatrix.normalize().toQuaternion()
+			
+			pControllerPosition.setVector(pPosition)
+			pControllerRotation.setRotation(pOrientation.getEulerAngles())
 		end
 		
 		/** Set playspace local matrix. */
@@ -285,8 +298,13 @@ class ECBTrackerSlot extends DefaultECBehavior
 			if rotation == null
 				throw ENullPointer.new("rotation")
 			end
+			
 			pPosition = position
 			pMatrix = Matrix.newRT(rotation, position)
+			pOrientation = pMatrix.toQuaternion()
+			
+			pControllerPosition.setVector(pPosition)
+			pControllerRotation.setRotation(rotation)
 		end
 		
 		/** Find input device. */
