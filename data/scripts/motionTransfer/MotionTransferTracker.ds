@@ -354,26 +354,17 @@ class MotionTransferTracker
 				pAutoTransform = AutoTransform.named(element.getFirstCData())
 			end
 		end)
-		
-		setTransform(pTransformPosition, pTransformRotation)
 	end
 	
 	public func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
 		root.forEachTag(block EasyXMLElement element, String tagName
-			if tagName.equals("transformPosition")
-				pTransformPosition = loader.readVector(element)
-				
-			elif tagName.equals("transformRotation")
-				pTransformRotation = loader.readVector(element)
+			if tagName.equals("transform")
+				setTransform(GameApp.getGameApp().getLoadCharacterProfile().readMatrix(element))
 			end
 		end)
-		
-		setTransform(pTransformPosition, pTransformRotation)
 	end
 	
-	/**
-	 * Save to XML.
-	 */
+	/** Save to XML. */
 	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("slot", pSlot)
 		loader.writeVector(tag, "offsetPosition", pOffsetPosition)
@@ -382,7 +373,6 @@ class MotionTransferTracker
 	end
 	
 	public func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
-		loader.writeVector(tag, "transformPosition", pTransformPosition)
-		loader.writeVector(tag, "transformRotation", pTransformRotation)
+		GameApp.getGameApp().getLoadCharacterProfile().writeMatrix(tag, "transform", pTransformMatrix)
 	end
 end
