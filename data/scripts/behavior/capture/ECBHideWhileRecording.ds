@@ -24,6 +24,7 @@ namespace Democap.Behaviors
 pin Democap.Characters
 
 pin Dragengine.Scenery
+pin Dragengine.LoadSave
 
 
 /**
@@ -74,12 +75,14 @@ class ECBHideWhileRecording extends DefaultECBehavior
 		private var AttachRecordAnimation pAttachRecordAnimation
 		private var RecordingStateChanged pRecordingStateChanged
 		private var Boolean pRestoreVisibility
+		private var bool pEnabled
 		
 		
 		
 		/** Create behavior instance. */
 		public func new(ECBHideWhileRecording ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
+			pEnabled = true
 			pRecordingStateChanged = RecordingStateChanged.new(this)
 		end
 		
@@ -90,6 +93,11 @@ class ECBHideWhileRecording extends DefaultECBehavior
 		end
 		
 		
+		
+		/** Behavior. */
+		public func ECBHideWhileRecording getECBehavior()
+			return pECBehavior
+		end
 		
 		/** Record animation or null. */
 		public func ECBRecordAnimation.Instance getRecordAnimation()
@@ -123,9 +131,34 @@ class ECBHideWhileRecording extends DefaultECBehavior
 		
 		
 		
+		/** Enable hiding if recording. */
+		public func bool getEnabled()
+			return pEnabled
+		end
+		
+		/** Set enable hiding if recording. */
+		public func void setEnabled(bool enabled)
+			if enabled == pEnabled
+				return
+			end
+			
+			pEnabled = enabled
+			
+			if enabled
+				if pRecordAnimation != null and pRecordAnimation.isPreparingOrRecording()
+					hide()
+				end
+				
+			else
+				show()
+			end
+		end
+		
+		
+		
 		/** Hide element. */
 		public func void hide()
-			if pRecordAnimation == null or pRestoreVisibility != null
+			if pRecordAnimation == null or pRestoreVisibility != null or not pEnabled
 				return
 			end
 			
@@ -164,6 +197,31 @@ class ECBHideWhileRecording extends DefaultECBehavior
 			setRecordAnimation(null)
 			GameApp.getGameApp().getPlayerControlledActor().removeListener(pAttachRecordAnimation)
 			pAttachRecordAnimation = null
+		end
+		
+		
+		
+		/** Read from file. */
+		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+			var int i, count
+			
+			select reader.readByte() // version
+			case 0
+				var PersistencyFlags flags = PersistencyFlags.new(1, reader)
+				pEnabled = flags.getAt(0)
+				
+			else
+				throw EInvalidParam.new("unsupported version")
+			end
+		end
+		
+		/** Write to file. */
+		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+			writer.writeByte(0) // version
+			
+			var PersistencyFlags flags = PersistencyFlags.new(1)
+			flags.setAt(0, pEnabled)
+			flags.writeToFile(writer)
 		end
 	end
 	

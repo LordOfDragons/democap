@@ -1,0 +1,111 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Actors
+pin Democap.Actions
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * Main window project panel.
+ */
+class WMPSOHideWhileRecording extends WMPPanelSceneObject
+	class EnabledChanged extends DefaultToggleModelListener
+		protected var WMPSOHideWhileRecording pPanel
+		
+		public func new(WMPSOHideWhileRecording panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorHideWhileRecording().setEnabled(model.getToggled())
+		end
+	end
+	
+	
+	
+	protected var ECBHideWhileRecording.Instance pBehaviorHideWhileRecording
+	protected var DefaultToggleModel pModelEnabled
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelProject panelProject, ECBHideWhileRecording.Instance behavior)\
+	super(panelProject, behavior, behavior.getECBehavior().getID(), "HideWhileRecording", "WMPSOHideWhileRecording")
+		pBehaviorHideWhileRecording = behavior
+		
+		pModelEnabled = DefaultToggleModel.new(true)
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+		
+		pModelEnabled.addListener(EnabledChanged.new(this))
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		pModelEnabled = null
+		super.dispose()
+	end
+	
+	
+	
+	/** HideWhileRecording behavior. */
+	public func ECBHideWhileRecording.Instance getBehaviorHideWhileRecording()
+		return pBehaviorHideWhileRecording
+	end
+	
+	/** Update behavior. */
+	public func void updateBehavior()
+		pModelEnabled.setToggled(pBehaviorHideWhileRecording.getEnabled())
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var TextField textField
+		var CheckBox checkBox
+		
+		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			// enabled
+			p.addWidget(Label.new("", "Label.FormCaption"))
+			
+			checkBox = CheckBox.new(pModelEnabled, "Enabled")
+			checkBox.setToolTip("Enable hiding while recording.")
+			p.addWidget(checkBox)
+		end))
+	end
+end
