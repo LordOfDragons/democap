@@ -42,6 +42,9 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	
 	protected var Camera pVRCamera
 	
+	protected var Quaternion pStallProtection
+	protected var float pStallProtectionTimer
+	
 	
 	
 	/** Create director. */
@@ -52,10 +55,12 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	public func void activate()
 		super.activate()
 		VRSystem.setCamera(pVRCamera)
+		pStallProtection = null
 	end
 	
 	/** Camera director has been deactivated. */
 	public func void deactivate()
+		pStallProtection = null
 		VRSystem.setCamera(null)
 		super.deactivate()
 	end
@@ -70,6 +75,8 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 		else
 			pHMD = null
 		end
+		
+		pStallProtection = null
 	end
 	
 	/** Init behaviors. */
@@ -98,6 +105,9 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	
 	/** Update camera. */
 	public func void updateCamera(float elapsed)
+		// update stalling protection timer
+		pStallProtectionTimer += elapsed
+		
 		// update VR camera
 		//pVRCamera.setEnableGI(false)
 		
@@ -152,7 +162,6 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 		end
 		
 		var String bone = config.getCameraBone()
-		
 		if bone.empty()
 			return pHMD.getMatrix()
 		end
@@ -164,6 +173,36 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 		
 		var Matrix matrix = config.getCameraMatrix() * component.getComponent().boneGetMatrix(boneIndex)
 		
+		// protect against stalling. stalling can happen for various reasons:
+		// - activate a configuration previously calibrated against head tracker
+		// - calibrating a configuration with broken setup
+		// - tracking device getting lost
+		// 
+		// in all these situations the bone the HDM is attached to can stop moving and rotating.
+		// this can prevent the user from using the VR menu to fix the problem.
+		// 
+		// to solve this problem the orientation of the HMD bone is tracked. if the orientation
+		// does not change for a certain amount of time the tracking is considered stalled and
+		// the camera is switched to HMD matrix. once the bone starts rotating again the stalling
+		// is cleared. tracking the orientation is enough. tracking the position is not required
+		if pStallProtection != null
+			var Quaternion orientation = matrix.toQuaternion()
+			if orientation.isEqualTo(pStallProtection, 0.001)
+				if pStallProtectionTimer > 1
+					return pHMD.getMatrix() // stalled
+				end
+				
+			else
+				pStallProtection = orientation
+				pStallProtectionTimer = 0
+			end
+			
+		else
+			pStallProtection = matrix.toQuaternion()
+			pStallProtectionTimer = 0
+		end
+		
+		// attach to bone
 		return (matrix.toDMatrix() * getActor().getElement().getElementMatrix()).normalize()
 	end
 end
