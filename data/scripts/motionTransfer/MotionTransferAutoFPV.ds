@@ -63,6 +63,8 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 	private var String pBoneHandRight
 	private var String pBoneHandLeft
 	private var String pMoveBaseIK
+	private var Vector pReachScalingArmRight
+	private var Vector pReachScalingArmLeft
 	
 	private var MotionTransferChild pTransferHead
 	private var MotionTransferChild pTransferChest
@@ -78,6 +80,8 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 		pBoneHandRight = ""
 		pBoneHandLeft = ""
 		pMoveBaseIK = ""
+		pReachScalingArmRight = Vector.new(1, 1, 1)
+		pReachScalingArmLeft = Vector.new(1, 1, 1)
 		
 		// create child motion transfers
 		var MotionTransferChild.Factory factoryChild = MotionTransferChild.Factory.new()
@@ -113,6 +117,8 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 		pBoneHandRight = transfer.pBoneHandRight
 		pBoneHandLeft = transfer.pBoneHandLeft
 		pMoveBaseIK = transfer.pMoveBaseIK
+		pReachScalingArmRight = transfer.pReachScalingArmRight
+		pReachScalingArmLeft = transfer.pReachScalingArmLeft
 		
 		pTransferHead = MotionTransferChild.new(transfer.pTransferHead)
 		pTransferChest = MotionTransferChild.new(transfer.pTransferChest)
@@ -187,6 +193,32 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 		pMoveBaseIK = move
 	end
 	
+	/** Right arm reach scaling. */
+	public func Vector getReachScalingArmRight()
+		return pReachScalingArmRight
+	end
+	
+	/** Set right arm reach scaling. */
+	public func void setReachScalingArmRight(Vector scaling)
+		if scaling == null
+			throw ENullPointer.new("scaling")
+		end
+		pReachScalingArmRight = scaling
+	end
+	
+	/** Left arm reach scaling. */
+	public func Vector getReachScalingArmLeft()
+		return pReachScalingArmLeft
+	end
+	
+	/** Set left arm reach scaling. */
+	public func void setReachScalingArmLeft(Vector scaling)
+		if scaling == null
+			throw ENullPointer.new("scaling")
+		end
+		pReachScalingArmLeft = scaling
+	end
+	
 	
 	
 	/** Child motion transfer. */
@@ -257,7 +289,8 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 		pTransferArmRight.setMoveBaseIK(pMoveBaseIK)
 		pTransferArmRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
 		pTransferArmRight.setActorReach(MotionTransferIK.ActorReach.arm)
-		pTransferArmRight.setReachLimit(1/*0.9*/)
+		pTransferArmRight.setReachLimit(1)
+		pTransferArmRight.setReachScaling(pReachScalingArmRight)
 		pTransferArmRight.setTwistBoneCount(1)
 		pTransferArmRight.setTwistPropagation(0.5)
 		pTransferArmRight.setTwistAxisRotation(Vector.new(0, -90, 0))
@@ -284,7 +317,8 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 		pTransferArmLeft.setMoveBaseIK(pMoveBaseIK)
 		pTransferArmLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
 		pTransferArmLeft.setActorReach(MotionTransferIK.ActorReach.arm)
-		pTransferArmLeft.setReachLimit(1/*0.9*/)
+		pTransferArmLeft.setReachLimit(1)
+		pTransferArmLeft.setReachScaling(pReachScalingArmLeft)
 		pTransferArmLeft.setTwistBoneCount(1)
 		pTransferArmLeft.setTwistPropagation(0.5)
 		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))
@@ -355,6 +389,12 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 			elif tagName.equals("moveBaseIK")
 				setMoveBaseIK(element.getFirstCData())
 				
+			elif tagName.equals("reachScalingArmRight")
+				pReachScalingArmRight = loader.readVector(element)
+				
+			elif tagName.equals("reachScalingArmLeft")
+				pReachScalingArmLeft = loader.readVector(element)
+				
 			elif tagName.equals("transfers")
 				loadTransfers(loader, element)
 			end
@@ -394,6 +434,8 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 		tag.addDataTag("boneHandRight", pBoneHandRight)
 		tag.addDataTag("boneHandLeft", pBoneHandLeft)
 		tag.addDataTag("moveBaseIK", pMoveBaseIK)
+		loader.writeVector(tag, "reachScalingArmRight", pReachScalingArmRight)
+		loader.writeVector(tag, "reachScalingArmLeft", pReachScalingArmLeft)
 		
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
 		pTransferHead.save(loader, tagTransfers.addTag("head"))
