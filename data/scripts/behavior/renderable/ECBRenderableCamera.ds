@@ -1,0 +1,161 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+
+
+/**
+ * Behavior adding a WorldRenderer widget to a ECBehaviorRenderablePanel showing the content
+ * of an ECBehaviorCamera.
+ * 
+ * TODO: show interaction handles and the camera only in the main view but hide it on all
+ *       camera views. add for this a new render layer mask bit with the main camera having
+ *       both bits and the camera views only the regular one.
+ */
+class ECBRenderableCamera extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBRenderableCamera pECBehavior
+		private var ECBehaviorRenderablePanel.Instance pRenderablePanel
+		private var ECBehaviorCamera.Instance pCamera
+		private var WorldRenderer pWorldRenderer
+		private var DisplayImage pImageReticle
+		
+		
+		
+		/** Create instance. */
+		public func new(ECBRenderableCamera ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pRenderablePanel = pECBehavior.renderablePanel.instance(element)
+			pCamera = pECBehavior.camera.instance(element)
+		end
+		
+		/** Dispose of instance. */
+		public func void dispose()
+			pWorldRenderer = null
+			pRenderablePanel = null
+			pCamera = null
+			super.dispose()
+		end
+		
+		/** Init behavior. */
+		public func void init(StubElement stub)
+			pWorldRenderer = WorldRenderer.new()
+			pWorldRenderer.setCamera(pCamera.getCamera())
+			pWorldRenderer.setVisible(false)
+			pRenderablePanel.getPanel().addWidget(pWorldRenderer)
+			
+			pImageReticle = DisplayImage.new(Image.new("/content/models/videocamera/finder_reticle.webp"),\
+				RepeatMode.stretch, "Image.WMPSORenderableCamera.ViewReticle")
+			//pImageReticle.setTransparency(0.5)
+			pRenderablePanel.getPanel().addWidget(pImageReticle)
+		end
+		
+		
+		
+		/** Behavior. */
+		public func ECBRenderableCamera getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Renderable panel behavior instance. */
+		public func ECBehaviorRenderablePanel.Instance getRenderablePanel()
+			return pRenderablePanel
+		end
+		
+		/** Camera behavior instance. */
+		public func ECBehaviorCamera.Instance getCamera()
+			return pCamera
+		end
+		
+		/** World renderer. */
+		public func WorldRenderer getWorldRenderer()
+			return pWorldRenderer
+		end
+		
+		
+		
+		/** Camera image is shown. */
+		public func bool getVisible()
+			return pWorldRenderer.getVisible()
+		end
+		
+		/** Show/hide camer image. */
+		public func void setVisible(bool visible)
+			pWorldRenderer.setVisible(visible)
+		end
+	end
+	
+	
+	
+	public var ECBehaviorRenderablePanel renderablePanel
+	public var ECBehaviorCamera camera
+	
+	
+	/** Create behavior element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorRenderablePanel renderablePanel,\
+	ECBehaviorCamera camera, String id) super(eclass, id)
+		if renderablePanel == null
+			throw ENullPointer.new("renderablePanel")
+		end
+		if camera == null
+			throw ENullPointer.new("camera")
+		end
+		
+		var String prefix = id.empty() if "renderableCamera." else "renderableCamera(" + id + ")."
+		
+		this.renderablePanel = renderablePanel
+		this.camera = camera
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		camera = null
+		renderablePanel = null
+		super.dispose()
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element, String id)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getID().equals(id)
+		end) cast Instance
+	end
+	
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

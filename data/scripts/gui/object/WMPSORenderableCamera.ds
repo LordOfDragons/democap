@@ -1,0 +1,99 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Actors
+pin Democap.Actions
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * Main window project panel.
+ */
+class WMPSORenderableCamera extends WMPPanelSceneObject
+	protected var ECBRenderableCamera.Instance pBehaviorRenderableCamera
+	protected var WorldRenderer pWorldRenderer
+	protected var DisplayImage pImageReticle
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelProject panelProject, ECBRenderableCamera.Instance behavior)\
+	super(panelProject, behavior, behavior.getECBehavior().getID(), "RenderableCamera", "WMPSORenderableCamera")
+		pBehaviorRenderableCamera = behavior
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		pWorldRenderer = null
+		super.dispose()
+	end
+	
+	
+	
+	/** RenderableCamera behavior. */
+	public func ECBRenderableCamera.Instance getBehaviorRenderableCamera()
+		return pBehaviorRenderableCamera
+	end
+	
+	/** Update behavior. */
+	public func void updateBehavior()
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var TextField textField
+		var CheckBox checkBox
+		
+		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+		end))
+		
+		content.addWidget(Panel.new(StackLayout.new(StackLayout.AspectRatio.fit), block Panel p
+			pWorldRenderer = WorldRenderer.new()
+			pWorldRenderer.setCamera(pBehaviorRenderableCamera.getCamera().getCamera())
+			pWorldRenderer.setDesignerSelector("WorldRenderer.WMPSORenderableCamera.View")
+			p.addWidget(pWorldRenderer)
+			
+			pImageReticle = DisplayImage.new(Image.new("/content/models/videocamera/finder_reticle.webp"),\
+				RepeatMode.stretch, "Image.WMPSORenderableCamera.ViewReticle")
+			//pImageReticle.setTransparency(0.5)
+			p.addWidget(pImageReticle)
+		end))
+	end
+end
