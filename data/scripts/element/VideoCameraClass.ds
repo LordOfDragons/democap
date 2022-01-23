@@ -37,6 +37,9 @@ class VideoCameraClass extends DynamicPropClass
 	public var ECBehaviorDynamicSkin dynamicSkin
 	public var ECBehaviorRenderablePanel renderablePanel
 	public var ECBRenderableCamera renderableCamera
+	public var ECBehaviorGrabSpot grabSpotHand
+	public var ECBGrabAttach grabAttachHand
+	public var ECBGrabbedEnableCamera grabbedEnableCamera
 	
 	
 	/** Create element class. */
@@ -48,6 +51,7 @@ class VideoCameraClass extends DynamicPropClass
 			"videocamera.demodel", "videocamera.deskin", "videocamera.derig")
 		
 		collider.getCollider().getPhysicsType().setEnumeration(CollisionResponse.kinematic)
+		collider.getCollider().getLocalGravity().setVector(Vector.new())
 		
 		showInteractHandles.getHandleSize().setValue(0.1)
 		
@@ -64,6 +68,16 @@ class VideoCameraClass extends DynamicPropClass
 		renderablePanel.getGuiTheme().setPath("/content/models/videocamera/videocamera.guitheme.xml")
 		
 		renderableCamera = ECBRenderableCamera.new(this, renderablePanel, camera, "")
+		
+		grabSpotHand = ECBehaviorGrabSpot.new(this, collider, "hand")
+		grabSpotHand.getAttachTouchCollider().getBone().setValue("grab hand")
+		
+		var ShapeList shape = ShapeList.new()
+		shape.addSphere(Vector.new(), 0.05)
+		grabSpotHand.getTouchCollider().getShape().setShapeList(shape)
+		
+		grabAttachHand = ECBGrabAttach.new(this, grabSpotHand, attachable, "hand")
+		grabbedEnableCamera = ECBGrabbedEnableCamera.new(this, grabSpotHand, renderableCamera, "hand")
 	end
 	
 	

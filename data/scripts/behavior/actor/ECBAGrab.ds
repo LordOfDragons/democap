@@ -1,0 +1,189 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Actor behavior using grab spots.
+ */
+class ECBAGrab extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBAGrab pECBehavior
+		private var ECBehaviorGrabber.Instance pGrabber
+		private var ECBehaviorAttachSlot.Instance pAttachSlot
+		private var ECBGrabAttach.Instance pGrabAttach
+		private var bool pTriggerPulled
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBAGrab ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pGrabber = ecbehavior.getGrabber().instance(element)
+			pAttachSlot = ecbehavior.getAttachSlot().instance(element)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pGrabber = null
+			pAttachSlot = null
+			pGrabAttach = null
+			super.dispose()
+		end
+		
+		
+		
+		public func ECBAGrab getECBehavior()
+			return pECBehavior
+		end
+		
+		public func ECBehaviorGrabber.Instance getGrabber()
+			return pGrabber
+		end
+		
+		public func ECBehaviorAttachSlot.Instance getAttachSlot()
+			return pAttachSlot
+		end
+		
+		public func ECBGrabAttach.Instance getGrabAttach()
+			return pGrabAttach
+		end
+		
+		
+		
+		/** Start grabbing. Returns true if grab succeeded. */
+		public func bool grab()
+			var ECBehaviorGrabSpot.Instance grabSpot = pGrabber.closestTouchingGrabSpot()
+			if grabSpot == null
+				return false
+			end
+			
+			var BehaviorElement element = grabSpot.getElement()
+			
+			pGrabAttach = element.findInstance(block ECBGrabAttach.Instance each
+				return tryGrabAttach(each)
+			end) cast ECBGrabAttach.Instance
+			if pGrabAttach != null
+				return true
+			end
+			
+			return false
+		end
+		
+		/** Update grabbing. */
+		public func void updateGrab()
+		end
+		
+		/** Stop grabbing. */
+		public func void ungrab()
+			if pGrabAttach != null
+				ungrabGrabAttach()
+				pGrabAttach = null
+			end
+		end
+		
+		
+		
+		protected func bool tryGrabAttach(ECBGrabAttach.Instance grabAttach)
+			var ECBehaviorAttachable.Instance attachable = grabAttach.getAttachable()
+			
+			pGrabber.regrab(grabAttach.getGrabSpot())
+			
+			// grab using predefined position
+			/*
+			var ECBehaviorGrabSpot.Instance grabSpot = grabAttach.getGrabSpot()
+			var Matrix matrix = (grabSpot.getElement().getElementMatrix()\
+				* grabSpot.getTouchCollider().getInverseMatrix()).toMatrix()
+			
+			attachable.reattach(pAttachSlot, matrix.getPosition(), matrix.toQuaternion())
+			*/
+			
+			// grab using world position
+			attachable.reattachWorld(pAttachSlot)
+			
+			return true
+		end
+		
+		protected func void ungrabGrabAttach()
+			pGrabAttach.getAttachable().detach()
+			pGrabAttach.getGrabSpot().release()
+			// TODO if object is dynamic give it linear/angular velocity while recording?
+		end
+	end
+	
+	
+	
+	private var ECBehaviorGrabber pGrabber
+	private var ECBehaviorAttachSlot pAttachSlot
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorGrabber grabber,\
+	ECBehaviorAttachSlot attachSlot, String id) super(eclass, id)
+		pGrabber = grabber
+		pAttachSlot = attachSlot
+		eclass.addBehavior(this)
+	end
+	
+	public func void dispose()
+		pGrabber = null
+		pAttachSlot = null
+		super.dispose()
+	end
+	
+	
+	public func ECBehaviorGrabber getGrabber()
+		return pGrabber
+	end
+	
+	public func ECBehaviorAttachSlot getAttachSlot()
+		return pAttachSlot
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element, String id)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getID().equals(id)
+		end) cast Instance
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

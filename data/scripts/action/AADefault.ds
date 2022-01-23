@@ -22,6 +22,7 @@
 namespace Democap.Actions
 
 pin Democap.Behaviors
+pin Democap.Elements
 
 pin Dragengine.LoadSave
 pin Dragengine.Preloading
@@ -58,6 +59,8 @@ class AADefault extends AABase
 	
 	protected var ECBAControlDesktop.Instance controlDesktop
 	protected var ECBAInteractHandle.Instance interactHandle
+	protected var ECBAGrab.Instance grabRightHand
+	protected var ECBAGrab.Instance grabLeftHand
 	protected var ECBASelectable.Instance actorSelectable
 	protected var ECBVRHudInfo.Instance vrHudInfo
 	
@@ -73,10 +76,23 @@ class AADefault extends AABase
 	protected func void initBehaviors()
 		super.initBehaviors()
 		
-		controlDesktop = ECBAControlDesktop.getInstanceIn(actor)
-		interactHandle = ECBAInteractHandle.getInstanceIn(actor)
-		actorSelectable = ECBASelectable.getInstanceIn(actor)
-		vrHudInfo = ECBVRHudInfo.getInstanceIn(actor)
+		var MoCapActor actor = getActor() cast MoCapActor
+		controlDesktop = actor.controlDesktop
+		interactHandle = actor.interactHandle
+		grabRightHand = actor.grabRightHand
+		grabLeftHand = actor.grabLeftHand
+		actorSelectable = actor.actorSelectable
+		vrHudInfo = actor.vrHudInfo
+	end
+	
+	
+	
+	/** Action has been activated. */
+	public func void activate(BehaviorElement actor)
+		super.activate(actor)
+		
+		grabRightHand.getGrabber().setEnabled(true)
+		grabLeftHand.getGrabber().setEnabled(true)
 	end
 	
 	
@@ -184,6 +200,32 @@ class AADefault extends AABase
 	
 	
 	
+	/** Grip grab. */
+	public func void gripGrab(bool rightHand)
+		if rightHand
+			if grabRightHand.grab()
+				return
+			end
+			
+		else
+			if grabLeftHand.grab()
+				return
+			end
+		end
+	end
+	
+	/** Grip ungrab. */
+	public func void gripUngrab(bool rightHand)
+		if rightHand
+			grabRightHand.ungrab()
+			
+		else
+			grabLeftHand.ungrab()
+		end
+	end
+	
+	
+	
 	/** Pointing at element. */
 	public func void pointAt(ECBehaviorVRHandPointAt.Instance behavior)
 		// pulled trigger locks action to be used
@@ -233,6 +275,9 @@ class AADefault extends AABase
 	/** Frame update thinking. */
 	public func void playerThink(float elapsed)
 		super.playerThink(elapsed)
+		
+		grabRightHand.updateGrab()
+		grabLeftHand.updateGrab()
 		
 		// interact with pointed at elements
 		if vrRightHandPointAt.getEnabled()

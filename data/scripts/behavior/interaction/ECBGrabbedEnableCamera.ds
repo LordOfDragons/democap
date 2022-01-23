@@ -1,0 +1,155 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding support to enable camera if grabbed by actor.
+ * 
+ * TODO better add an interaction handle to toggle visible/invisible of camera. this way the
+ *      user can also look at the image without grabbing the camera.
+ */
+class ECBGrabbedEnableCamera extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class EnableCameraListener extends ECBehaviorGrabSpot.DefaultListener
+			protected var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void spotGrabbed(ECBehaviorGrabSpot.Instance instance, ECBehaviorGrabber.Instance grabber)
+				pInstance.grab(grabber)
+			end
+			
+			public func void spotReleased(ECBehaviorGrabSpot.Instance instance, ECBehaviorGrabber.Instance grabber)
+				pInstance.ungrab(grabber)
+			end
+		end
+		
+		
+		
+		protected var ECBGrabbedEnableCamera pECBehavior
+		protected var ECBehaviorGrabSpot.Instance pGrabSpot
+		protected var ECBRenderableCamera.Instance pRenderableCamera
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBGrabbedEnableCamera ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pGrabSpot = ecbehavior.getGrabSpot().instance(element)
+			pRenderableCamera = ecbehavior.getRenderableCamera().instance(element)
+			
+			pGrabSpot.addListener(EnableCameraListener.new(this))
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pGrabSpot = null
+			pRenderableCamera = null
+			super.dispose()
+		end
+		
+		
+		
+		public func ECBGrabbedEnableCamera getECBehavior()
+			return pECBehavior
+		end
+		
+		public func ECBehaviorGrabSpot.Instance getGrabSpot()
+			return pGrabSpot
+		end
+		
+		public func ECBRenderableCamera.Instance getAttachable()
+			return pRenderableCamera
+		end
+		
+		
+		
+		/** Grabbed by actor. */
+		public func void grab(ECBehaviorGrabber.Instance grabber)
+			pRenderableCamera.setVisible(true)
+		end
+		
+		/** Ungrabbed by actor. */
+		public func void ungrab(ECBehaviorGrabber.Instance grabber)
+			pRenderableCamera.setVisible(false)
+		end
+	end
+	
+	
+	
+	private var ECBehaviorGrabSpot pGrabSpot
+	private var ECBRenderableCamera pRenderableCamera
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorGrabSpot grabSpot,\
+	ECBRenderableCamera renderableCamera, String id) super(eclass, id)
+		if grabSpot == null
+			throw ENullPointer.new("grabSpot")
+		end
+		if renderableCamera == null
+			throw ENullPointer.new("renderableCamera")
+		end
+		
+		pGrabSpot = grabSpot
+		pRenderableCamera = renderableCamera
+		
+		var String prefix = "GrabbedEnableCamera."
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pGrabSpot = null
+		pRenderableCamera = null
+		super.dispose()
+	end
+	
+	
+	
+	public func ECBehaviorGrabSpot getGrabSpot()
+		return pGrabSpot
+	end
+	
+	public func ECBRenderableCamera getRenderableCamera()
+		return pRenderableCamera
+	end
+	
+	
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

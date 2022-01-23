@@ -1,0 +1,122 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding support to attach object to actor while being grabbed.
+ */
+class ECBGrabAttach extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		protected var ECBGrabAttach pECBehavior
+		protected var ECBehaviorGrabSpot.Instance pGrabSpot
+		protected var ECBehaviorAttachable.Instance pAttachable
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBGrabAttach ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pGrabSpot = ecbehavior.getGrabSpot().instance(element)
+			pAttachable = ecbehavior.getAttachable().instance(element)
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pGrabSpot = null
+			pAttachable = null
+			super.dispose()
+		end
+		
+		
+		
+		public func ECBGrabAttach getECBehavior()
+			return pECBehavior
+		end
+		
+		public func ECBehaviorGrabSpot.Instance getGrabSpot()
+			return pGrabSpot
+		end
+		
+		public func ECBehaviorAttachable.Instance getAttachable()
+			return pAttachable
+		end
+	end
+	
+	
+	
+	private var ECBehaviorGrabSpot pGrabSpot
+	private var ECBehaviorAttachable pAttachable
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorGrabSpot grabSpot,\
+	ECBehaviorAttachable attachable, String id) super(eclass, id)
+		if grabSpot == null
+			throw ENullPointer.new("grabSpot")
+		end
+		if attachable == null
+			throw ENullPointer.new("attachable")
+		end
+		
+		pGrabSpot = grabSpot
+		pAttachable = attachable
+		
+		var String prefix = "grabAttach."
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pGrabSpot = null
+		pAttachable = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Grab spot behavior. */
+	public func ECBehaviorGrabSpot getGrabSpot()
+		return pGrabSpot
+	end
+	
+	/** Attachable behavior. */
+	public func ECBehaviorAttachable getAttachable()
+		return pAttachable
+	end
+	
+	
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
