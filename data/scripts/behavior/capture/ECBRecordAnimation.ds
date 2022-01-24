@@ -95,7 +95,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var RecordAnimation pRecordAnimationDevices
 		private var CharacterConfiguration pCharacterConfiguration
 		private var CharacterAnimation pCharacterAnimation
-		private var GameApp.RecordDevices pRecordDevices
+		private var SessionSettings.RecordDevices pRecordDevices
 		private var Array pRecordDeviceSlots
 		private var bool pIsPreparing
 		private var bool pIsRecording
@@ -198,14 +198,14 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pCharacterConfiguration = app.getWorldSpawnCharacter().getCharacter()
 			
 			pRecordAnimation = RecordAnimation.new()
-			pRecordAnimation.setFPS(app.getModelRecordFrameRate().getValue())
+			pRecordAnimation.setFPS(SessionSettings.get().getModelRecordFrameRate().getValue())
 			pRecordAnimation.setMoveName("MoCap")
 			
-			pRecordDevices = app.getRecordDevices()
+			pRecordDevices = SessionSettings.get().getRecordDevices()
 			
 			pRecordDeviceSlots.removeAll()
 			
-			if pRecordDevices != GameApp.RecordDevices.none
+			if pRecordDevices != SessionSettings.RecordDevices.none
 				pRecordAnimationDevices = RecordAnimation.new("-devices")
 				pRecordAnimationDevices.setFPS(pRecordAnimation.getFPS())
 				pRecordAnimationDevices.setMoveName("MoCapDevices")
@@ -261,7 +261,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				end
 			end
 			
-			if pRecordDevices != GameApp.RecordDevices.none
+			if pRecordDevices != SessionSettings.RecordDevices.none
 				// has to be done after pTransformRootBones has been calculated
 				var Matrix matCalibInv = pCharacterConfiguration.getMatrixCalibrateInverse()
 				var Rig rig = pRecordAnimationDevices.getRig()
@@ -271,13 +271,13 @@ class ECBRecordAnimation extends DefaultECBehavior
 					var Matrix matrix1, matrix2
 					
 					select pRecordDevices
-					case GameApp.RecordDevices.device
+					case SessionSettings.RecordDevices.device
 						matrix1 = Matrix.new()
 						
-					case GameApp.RecordDevices.reference
+					case SessionSettings.RecordDevices.reference
 						matrix1 = each.getCalibrateReferenceMatrix() * each.getCalibrateMatrixInverse()
 						
-					case GameApp.RecordDevices.target
+					case SessionSettings.RecordDevices.target
 						matrix1 = each.getCalibrateReferenceMatrix() * each.getCalibrateMatrixInverse()\
 							* each.getTargetMatrix() * each.getCalibrateReferenceMatrixInverse()
 					end

@@ -31,16 +31,41 @@ pin Dragengine.Utils
 
 
 /**
- * Actor behavior support to show ECBehaviorCamera in a small panel in ECBVRHudInfo.
+ * Actor behavior support to show ECBRemoteCamera in a small panel in ECBVRHudInfo.
  */
 class ECBAHudShowCamera extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
+		class SwitchCamera extends DefaultListModelListener
+			protected var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+				selectionChanged(model)
+			end
+			
+			public func void selectionChanged(ListModel model)
+				var int index = model.getSelected()
+				if index != -1
+					pInstance.setCamera(model.getAt(index) cast ECBRemoteCamera.Instance)
+					
+				else
+					pInstance.setCamera(null)
+				end
+			end
+		end
+		
+		
+		
 		private var ECBAHudShowCamera pECBehavior
 		private var ECBVRHudInfo.Instance pVRHudInfo
-		private var ECBehaviorCamera.Instance pCamera
+		private var ECBRemoteCamera.Instance pCamera
 		private var Panel pPanel
 		private var WorldRenderer pWorldRenderer
+		private var SwitchCamera pSwitchCamera
 		
 		
 		
@@ -58,6 +83,10 @@ class ECBAHudShowCamera extends DefaultECBehavior
 			super.dispose()
 		end
 		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			setCamera(SessionSettings.get().getHudCamera())
+		end
 		
 		
 		/** Behavior instance VR HUD Info. */
@@ -68,12 +97,12 @@ class ECBAHudShowCamera extends DefaultECBehavior
 		
 		
 		/** Camera to show or null. */
-		public func ECBehaviorCamera.Instance getCamera()
+		public func ECBRemoteCamera.Instance getCamera()
 			return pCamera
 		end
 		
 		/** Set camera to show or null. */
-		public func void setCamera(ECBehaviorCamera.Instance camera)
+		public func void setCamera(ECBRemoteCamera.Instance camera)
 			if camera == pCamera
 				return
 			end
@@ -82,7 +111,7 @@ class ECBAHudShowCamera extends DefaultECBehavior
 			
 			if camera != null
 				showPanel()
-				pWorldRenderer.setCamera(camera.getCamera())
+				pWorldRenderer.setCamera(camera.getCamera().getCamera())
 				
 			else
 				hidePanel()
@@ -131,6 +160,19 @@ class ECBAHudShowCamera extends DefaultECBehavior
 			pVRHudInfo.removePanel(pPanel)
 			pPanel.safeDispose()
 			pPanel = null
+		end
+		
+		
+		public func void addToGameWorld()
+			pSwitchCamera = SwitchCamera.new(this)
+			SessionSettings.get().getModelHudCamera().addListener(pSwitchCamera)
+		end
+		
+		public func void removeFromGameWorld()
+			if pSwitchCamera != null
+				SessionSettings.get().getModelHudCamera().removeListener(pSwitchCamera)
+				pSwitchCamera = null
+			end
 		end
 	end
 	

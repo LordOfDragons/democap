@@ -1,0 +1,238 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Democap.Behaviors
+
+pin Dragengine.Gui.Events
+pin Dragengine.Utils
+pin Dragengine.Scenery
+
+
+/**
+ * Session settings.
+ */
+public class SessionSettings
+	/** Record devices. */
+	enum RecordDevices
+		none /** None. */
+		device /** Device position. */
+		reference /** Reference slot position. */
+		target /** Target slot position. */
+	end
+	
+	/** Toggle Show VR camera listener. */
+	class ToggleShowVRCameraListener extends DefaultToggleModelListener
+		public func new()
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			var WindowGameWorld window = GameApp.getGameApp().getWindowGameWorld()
+			
+			if model.getToggled()
+				window.getWorldRenderer().setCamera(GameApp.getGameApp().getVRCamera())
+				
+			else
+				window.getWorldRenderer().setCamera(window.getCamera())
+			end
+		end
+	end
+	
+	/** Toggle Enable VR listener. */
+	class ToggleEnableVRListener extends DefaultToggleModelListener
+		public func new()
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			var GameApp app = GameApp.getGameApp()
+			var Console console = app.getConsole()
+			
+			// VR runtimes can be crashy. save project just in case
+			app.getProject().save()
+			
+			if model.getToggled()
+				console.addMessage("Start VR Runtime...")
+				try
+					VRSystem.startRuntime()
+					
+				catch Exception e
+					console.addMessage("Failed starting VR Runtime")
+				end
+				
+				app.getSessionSettings().getModelShowVRCamera().setToggled(VRSystem.isRuntimeRunning())
+				
+			else
+				console.addMessage("Stop VR Runtime...")
+				
+				try
+					VRSystem.stopRuntime()
+					
+				catch Exception e
+					console.addMessage("Failed stopping VR Runtime")
+				end
+				
+				app.getSessionSettings().getModelShowVRCamera().setToggled(false)
+			end
+		end
+	end
+	
+	class SaveRecordFrameRate extends DefaultRangeModelListener
+		public func new()
+		end
+		
+		public func void valueChanged(RangeModel rangeModel)
+			GameApp.getGameApp().getSettings().setAt("RecordFrameRate", rangeModel.getValue())
+		end
+	end
+	
+	class SaveSmoothSlotStrength extends DefaultRangeModelListener
+		public func new()
+		end
+		
+		public func void valueChanged(RangeModel rangeModel)
+			GameApp.getGameApp().getSettings().setAt("SmoothSlotStrength", 0.1 * rangeModel.getValue())
+		end
+	end
+	
+	
+	
+	private var DefaultToggleModel pModelEnableVR
+	private var DefaultToggleModel pModelEnableHMD
+	private var DefaultToggleModel pModelShowVRCamera
+	private var DefaultRangeModel pModelRecordFrameRate
+	private var DefaultListModel pModelRecordDevices
+	private var DefaultRangeModel pModelSmoothSlotStrength
+	
+	private var DefaultListModel pModelHudCamera
+	
+	
+	
+	/** Create listener. */
+	public func new()
+		var ParameterTree s = GameApp.getGameApp().getSettings()
+		
+		pModelEnableVR = DefaultToggleModel.new(false)
+		pModelEnableVR.addListener(ToggleEnableVRListener.new())
+		
+		pModelEnableHMD = DefaultToggleModel.new(true)
+		
+		pModelShowVRCamera = DefaultToggleModel.new(false)
+		pModelShowVRCamera.addListener(ToggleShowVRCameraListener.new())
+		
+		pModelRecordDevices = DefaultListModel.new(RecordDevices.all().toArray())
+		
+		pModelRecordFrameRate = DefaultRangeModel.new(5, 90, 10, 25, 1)
+		pModelRecordFrameRate.setValue(s.getIntAt("RecordFrameRate", 25))
+		pModelRecordFrameRate.addListener(SaveRecordFrameRate.new())
+		
+		pModelSmoothSlotStrength = DefaultRangeModel.new(0, 10, 5, 10, 1)
+		pModelSmoothSlotStrength.setValue((10.0 * s.getFloatAt("SmoothSlotStrength", 1) + 0.5) cast int)
+		pModelSmoothSlotStrength.addListener(SaveSmoothSlotStrength.new())
+		
+		pModelHudCamera = DefaultListModel.new()
+		pModelHudCamera.add(null)
+	end
+	
+	
+	
+	/** Get session settings. */
+	public static func SessionSettings get()
+		return GameApp.getGameApp().getSessionSettings()
+	end
+	
+	
+	
+	/** Enable VR model. */
+	public func DefaultToggleModel getModelEnableVR()
+		return pModelEnableVR
+	end
+	
+	/** Enable HMD. */
+	public func DefaultToggleModel getModelEnableHMD()
+		return pModelEnableHMD
+	end
+	
+	/** Show VR camera model. */
+	public func DefaultToggleModel getModelShowVRCamera()
+		return pModelShowVRCamera
+	end
+	
+	/** Record animation frame rate model. */
+	public func DefaultRangeModel getModelRecordFrameRate()
+		return pModelRecordFrameRate
+	end
+	
+	/** Record devices model. */
+	public func DefaultListModel getModelRecordDevices()
+		return pModelRecordDevices
+	end
+	
+	/** Record devices. */
+	public func RecordDevices getRecordDevices()
+		return pModelRecordDevices.getAt(pModelRecordDevices.getSelected()) cast RecordDevices
+	end
+	
+	/** Smooth slot strength model. */
+	public func DefaultRangeModel getModelSmoothSlotStrength()
+		return pModelSmoothSlotStrength
+	end
+	
+	/** Smooth slot strength. */
+	public func float getSmoothSlotStrength()
+		return 0.1 * pModelSmoothSlotStrength.getValue()
+	end
+	
+	
+	
+	/** Actor HUD Camera. */
+	public func DefaultListModel getModelHudCamera()
+		return pModelHudCamera
+	end
+	
+	/** Selected Actor HUD Camera or null. */
+	public func ECBRemoteCamera.Instance getHudCamera()
+		return pModelHudCamera.getSelectedElement() cast ECBRemoteCamera.Instance
+	end
+	
+	/** Update actor HUD camera model. */
+	public func void updateModelHudCamera()
+		var Array content = Array.new()
+		
+		var ECBRemoteCamera.Instance selection = getHudCamera()
+		
+		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+		if gameWorld != null
+			gameWorld.forEachElement(block BehaviorElement each
+				content.addAll(ECBRemoteCamera.getAllInstancesIn(each))
+			end)
+		end
+		
+		content.sort(block ECBRemoteCamera.Instance a, ECBRemoteCamera.Instance b
+			return a.getName().compare(b.getName())
+		end)
+		
+		content.insert(0, null)
+		
+		pModelHudCamera.setContent(content)
+		pModelHudCamera.setSelectedElement(selection)
+	end
+end

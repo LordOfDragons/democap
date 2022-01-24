@@ -115,11 +115,11 @@ class WMPanelSession extends CollapsibleGroup
 	
 	class RecordDevicesRenderer extends DefaultListElementRenderer
 		public func new()
-			setDefaultObject(GameApp.RecordDevices.reference) // longest name
+			setDefaultObject(SessionSettings.RecordDevices.reference) // longest name
 		end
 		
 		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
-			super.updateRenderer(listBox, renderer, (element cast GameApp.RecordDevices).name(), selected, focused)
+			super.updateRenderer(listBox, renderer, (element cast SessionSettings.RecordDevices).name(), selected, focused)
 		end
 	end
 	
@@ -333,7 +333,7 @@ class WMPanelSession extends CollapsibleGroup
 	
 	/** Create panel content. */
 	protected func void createContent(Panel content)
-		var GameApp app = GameApp.getGameApp()
+		var SessionSettings sessionSettings = SessionSettings.get()
 		var ComboBox comboBox
 		var CheckBox checkBox
 		var Button button
@@ -345,15 +345,15 @@ class WMPanelSession extends CollapsibleGroup
 		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
 		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
-			checkBox = CheckBox.new(app.getModelEnableVR(), "VR")
+			checkBox = CheckBox.new(sessionSettings.getModelEnableVR(), "VR")
 			checkBox.setToolTip("Enable VR System")
 			p.addWidget(checkBox)
 			
-			checkBox = CheckBox.new(app.getModelEnableHMD(), "HMD")
+			checkBox = CheckBox.new(sessionSettings.getModelEnableHMD(), "HMD")
 			checkBox.setToolTip("Enable HMD. If disabled shows placeholder model. For only tracker use")
 			p.addWidget(checkBox)
 			
-			checkBox = CheckBox.new(app.getModelShowVRCamera(), "VR View")
+			checkBox = CheckBox.new(sessionSettings.getModelShowVRCamera(), "VR View")
 			checkBox.setToolTip("Show VR View (HMD left eye) or Free Camera in 3D View. "\
 				+ "Showing VR View is faster. Use Free Camera to set up scene.")
 			p.addWidget(checkBox)
@@ -398,13 +398,13 @@ class WMPanelSession extends CollapsibleGroup
 				label.setToolTip(tooltip)
 				p2.addWidget(label)
 				
-				textField = TextField.new(RangeTextModel.new(app.getModelRecordFrameRate()), 2)
+				textField = TextField.new(RangeTextModel.new(sessionSettings.getModelRecordFrameRate()), 2)
 				textField.setToolTip(tooltip)
 				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
 				p2.addWidget(textField)
-				textField.addMouseListener(ScrollModelWheelMouseListener.new(app.getModelRecordFrameRate()))
+				textField.addMouseListener(ScrollModelWheelMouseListener.new(sessionSettings.getModelRecordFrameRate()))
 				
-				spinButton = SpinButton.new(app.getModelRecordFrameRate())
+				spinButton = SpinButton.new(sessionSettings.getModelRecordFrameRate())
 				spinButton.setToolTip(tooltip)
 				p2.addWidget(spinButton)
 			end))
@@ -417,13 +417,13 @@ class WMPanelSession extends CollapsibleGroup
 				label.setToolTip(tooltip)
 				p2.addWidget(label)
 				
-				textField = TextField.new(RangeTextModel.new(app.getModelSmoothSlotStrength()), 2)
+				textField = TextField.new(RangeTextModel.new(sessionSettings.getModelSmoothSlotStrength()), 2)
 				textField.setToolTip(tooltip)
 				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
 				p2.addWidget(textField)
-				textField.addMouseListener(ScrollModelWheelMouseListener.new(app.getModelSmoothSlotStrength()))
+				textField.addMouseListener(ScrollModelWheelMouseListener.new(sessionSettings.getModelSmoothSlotStrength()))
 				
-				spinButton = SpinButton.new(app.getModelSmoothSlotStrength())
+				spinButton = SpinButton.new(sessionSettings.getModelSmoothSlotStrength())
 				spinButton.setToolTip(tooltip)
 				p2.addWidget(spinButton)
 			end))
@@ -435,7 +435,7 @@ class WMPanelSession extends CollapsibleGroup
 				label.setToolTip(tooltip)
 				p2.addWidget(label)
 				
-				comboBox  = ComboBox.new(app.getModelRecordDevices(), RecordDevicesRenderer.new())
+				comboBox  = ComboBox.new(sessionSettings.getModelRecordDevices(), RecordDevicesRenderer.new())
 				comboBox.setToolTip("Record VR device positions too.\n"\
 					+ "none: Not recording.\n"\
 					+ "device: Original device position\n"\

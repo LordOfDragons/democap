@@ -48,87 +48,6 @@ class GameApp extends BaseGameApp
 		public static fixed var int interaction = custom
 	end
 	
-	/** Record devices. */
-	enum RecordDevices
-		none /** None. */
-		device /** Device position. */
-		reference /** Reference slot position. */
-		target /** Target slot position. */
-	end
-	
-	/** Toggle Show VR camera listener. */
-	class ToggleShowVRCameraListener extends DefaultToggleModelListener
-		public func new()
-		end
-		
-		public func void toggledChanged(ToggleModel model)
-			var WindowGameWorld window = GameApp.getGameApp().getWindowGameWorld()
-			
-			if model.getToggled()
-				window.getWorldRenderer().setCamera(GameApp.getGameApp().getVRCamera())
-				
-			else
-				window.getWorldRenderer().setCamera(window.getCamera())
-			end
-		end
-	end
-	
-	/** Toggle Enable VR listener. */
-	class ToggleEnableVRListener extends DefaultToggleModelListener
-		public func new()
-		end
-		
-		public func void toggledChanged(ToggleModel model)
-			var GameApp app = GameApp.getGameApp()
-			var Console console = app.getConsole()
-			
-			// VR runtimes can be crashy. save project just in case
-			app.getProject().save()
-			
-			if model.getToggled()
-				console.addMessage("Start VR Runtime...")
-				try
-					VRSystem.startRuntime()
-					
-				catch Exception e
-					console.addMessage("Failed starting VR Runtime")
-				end
-				
-				app.getModelShowVRCamera().setToggled(VRSystem.isRuntimeRunning())
-				
-			else
-				console.addMessage("Stop VR Runtime...")
-				
-				try
-					VRSystem.stopRuntime()
-					
-				catch Exception e
-					console.addMessage("Failed stopping VR Runtime")
-				end
-				
-				app.getModelShowVRCamera().setToggled(false)
-			end
-		end
-	end
-	
-	class SaveRecordFrameRate extends DefaultRangeModelListener
-		public func new()
-		end
-		
-		public func void valueChanged(RangeModel rangeModel)
-			GameApp.getGameApp().getSettings().setAt("RecordFrameRate", rangeModel.getValue())
-		end
-	end
-	
-	class SaveSmoothSlotStrength extends DefaultRangeModelListener
-		public func new()
-		end
-		
-		public func void valueChanged(RangeModel rangeModel)
-			GameApp.getGameApp().getSettings().setAt("SmoothSlotStrength", 0.1 * rangeModel.getValue())
-		end
-	end
-	
 	
 	
 	private var String pPathCaptureAnimations
@@ -140,12 +59,7 @@ class GameApp extends BaseGameApp
 	private var ActorProfile pDefaultActorProfile
 	private var CharacterProfiles pCharacterProfiles
 	private var LoadableWorlds pLoadableWorlds
-	private var DefaultToggleModel pModelEnableVR
-	private var DefaultToggleModel pModelEnableHMD
-	private var DefaultToggleModel pModelShowVRCamera
-	private var DefaultRangeModel pModelRecordFrameRate
-	private var DefaultListModel pModelRecordDevices
-	private var DefaultRangeModel pModelSmoothSlotStrength
+	private var SessionSettings pSessionSettings
 	
 	private var MotionTransferFactories pMotionTransferFactories
 	private var LoadActorProfile pLoadActorProfile
@@ -254,44 +168,9 @@ class GameApp extends BaseGameApp
 		return pVRCameraDirector
 	end
 	
-	/** Enable VR model. */
-	public func DefaultToggleModel getModelEnableVR()
-		return pModelEnableVR
-	end
-	
-	/** Enable HMD. */
-	public func DefaultToggleModel getModelEnableHMD()
-		return pModelEnableHMD
-	end
-	
-	/** Show VR camera model. */
-	public func DefaultToggleModel getModelShowVRCamera()
-		return pModelShowVRCamera
-	end
-	
-	/** Record animation frame rate model. */
-	public func DefaultRangeModel getModelRecordFrameRate()
-		return pModelRecordFrameRate
-	end
-	
-	/** Record devices model. */
-	public func DefaultListModel getModelRecordDevices()
-		return pModelRecordDevices
-	end
-	
-	/** Record devices. */
-	public func RecordDevices getRecordDevices()
-		return pModelRecordDevices.getAt(pModelRecordDevices.getSelected()) cast RecordDevices
-	end
-	
-	/** Smooth slot strength model. */
-	public func DefaultRangeModel getModelSmoothSlotStrength()
-		return pModelSmoothSlotStrength
-	end
-	
-	/** Smooth slot strength. */
-	public func float getSmoothSlotStrength()
-		return 0.1 * pModelSmoothSlotStrength.getValue()
+	/** Session settings. */
+	public func SessionSettings getSessionSettings()
+		return pSessionSettings
 	end
 	
 	
@@ -375,6 +254,7 @@ class GameApp extends BaseGameApp
 		end
 		
 		pPlaybackScene.stop()
+		pSelectionTracker.clear()
 		
 		if pScene != null
 			pScene.getFileUsage().setLocked(true)
@@ -468,18 +348,7 @@ class GameApp extends BaseGameApp
 		addECListHandles()
 		addECListSceneObjects()
 		
-		pModelEnableVR = DefaultToggleModel.new(false)
-		pModelEnableHMD = DefaultToggleModel.new(true)
-		pModelShowVRCamera = DefaultToggleModel.new(false)
-		pModelRecordDevices = DefaultListModel.new(RecordDevices.all().toArray())
-		
-		pModelRecordFrameRate = DefaultRangeModel.new(5, 90, 10, 25, 1)
-		pModelRecordFrameRate.setValue(getSettings().getIntAt("RecordFrameRate", 25))
-		pModelRecordFrameRate.addListener(SaveRecordFrameRate.new())
-		
-		pModelSmoothSlotStrength = DefaultRangeModel.new(0, 10, 5, 10, 1)
-		pModelSmoothSlotStrength.setValue((10.0 * getSettings().getFloatAt("SmoothSlotStrength", 1) + 0.5) cast int)
-		pModelSmoothSlotStrength.addListener(SaveSmoothSlotStrength.new())
+		pSessionSettings = SessionSettings.new()
 		
 		pDefaultActorProfile = ActorProfile.new("Default")
 		
@@ -575,10 +444,6 @@ class GameApp extends BaseGameApp
 		pVRCameraDirector.setHighestIntensity(20)
 		pVRCameraDirector.setAdaptionTime(30)
 		pVRCameraDirector.setVRCamera(pVRCamera)
-		
-		// add model listeners
-		pModelShowVRCamera.addListener(ToggleShowVRCameraListener.new())
-		pModelEnableVR.addListener(ToggleEnableVRListener.new())
 		
 		// add support to navigate the view
 		var WindowGameWorld windowGameWorld = getWindowGameWorld()
@@ -779,12 +644,7 @@ class GameApp extends BaseGameApp
 		pSelectionTracker = null
 		pLoadCharacterProfile = null
 		pLoadActorProfile = null
-		pModelRecordDevices = null
-		pModelSmoothSlotStrength = null
-		pModelRecordFrameRate = null
-		pModelShowVRCamera = null
-		pModelEnableHMD = null
-		pModelEnableVR = null
+		pSessionSettings = null
 		pVRCameraDirector = null
 		pECListHandles = null
 		pECListSceneObjects = null
@@ -811,6 +671,7 @@ class GameApp extends BaseGameApp
 		end)
 		
 		pPlaybackScene.updatePlaytime()
+		pSessionSettings.updateModelHudCamera()
 	end
 	
 	/** Set split input processor. */

@@ -111,8 +111,10 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		public func void dispose()
 			pHandleElements = null
 			pHandleClasses = null
-			pRecordingStateChanged = null
 			pSelectable = null
+			pRecordAnimation = null
+			pAttachRecordAnimation = null
+			pRecordingStateChanged = null
 			super.dispose()
 		end
 		
@@ -232,8 +234,12 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		
 		/** Update visibility. */
 		public func void updateVisibility()
-			if getElement() != null \
-			and getElement().getVisible() \
+			var BehaviorElement element = getElement()
+			if element == null or element.getGameWorld() == null
+				return
+			end
+			
+			if element.getVisible() \
 			and pSelectable != null \
 			and pSelectable.isSelected()\
 			and (pRecordAnimation == null or pRecordAnimation.isNotRecording())

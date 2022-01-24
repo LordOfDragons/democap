@@ -1,0 +1,190 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+
+
+/**
+ * Behavior adding support for ECBehaviorCamera to be used remotely. Defines a name used
+ * to select the camera in remote view list models. Upon being added to game worlds adds
+ * itself to the global list of available remote views.
+ */
+class ECBRemoteCamera extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBRemoteCamera pECBehavior
+		private var ECBehaviorCamera.Instance pCamera
+		private var String pName
+		
+		
+		/** Create instance. */
+		public func new(ECBRemoteCamera ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pCamera = pECBehavior.camera.instance(element)
+		end
+		
+		/** Dispose of instance. */
+		public func void dispose()
+			pCamera = null
+			super.dispose()
+		end
+		
+		/** Init behavior. */
+		public func void init(StubElement stub)
+			pName = pECBehavior.name.getValue(stub)
+		end
+		
+		
+		/** Behavior. */
+		public func ECBRemoteCamera getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Camera behavior instance. */
+		public func ECBehaviorCamera.Instance getCamera()
+			return pCamera
+		end
+		
+		
+		/** Name. */
+		public func String getName()
+			return pName
+		end
+		
+		/** Set name. */
+		public func void setName(String name)
+			if name.equals(pName)
+				return
+			end
+			
+			var bool inGameWorld = getElement().getGameWorld() != null
+			
+			if inGameWorld
+				unregister()
+			end
+			
+			pName = name
+			
+			if inGameWorld
+				register()
+			end
+		end
+		
+		
+		/** Add to game world. */
+		public func void addToGameWorld()
+			register()
+		end
+		
+		/** Remove from game world. */
+		public func void removeFromGameWorld()
+			unregister()
+		end
+		
+		
+		/** Register. */
+		protected func void register()
+			SessionSettings.get().updateModelHudCamera()
+		end
+		
+		/** Unregister. */
+		protected func void unregister()
+			SessionSettings.get().updateModelHudCamera()
+		end
+		
+		
+		
+		/** Read behavior from file. */
+		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+			select reader.readByte() // version
+			case 0
+				pName = reader.readString8()
+				
+			else
+				throw EInvalidParam.new("unsupported version")
+			end
+		end
+		
+		/** Write behavior to file. */
+		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+			writer.writeByte(0) // version
+			writer.writeString8(pName)
+		end
+	end
+	
+	
+	public var ECBehaviorCamera camera
+	public var ECPString name
+	
+	
+	/** Create behavior element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorCamera camera, String id) super(eclass, id)
+		if camera == null
+			throw ENullPointer.new("camera")
+		end
+		
+		var String prefix = id.empty() if "remoteCamera." else "remoteCamera(" + id + ")."
+		
+		this.camera = camera
+		
+		name = ECPString.new(prefix + "name", "Camera")
+		eclass.addProperty(name)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		camera = null
+		super.dispose()
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element, String id)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getID().equals(id)
+		end) cast Instance
+	end
+	
+	/** Get list of all instances in element. */
+	static public func Array getAllInstancesIn(BehaviorElement element)
+		return element.collectInstances(block Instance each
+			return true
+		end)
+	end
+	
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

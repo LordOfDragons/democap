@@ -1,0 +1,113 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Actors
+pin Democap.Actions
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+
+/**
+ * Main window character panel.
+ */
+class WMPanelActor extends CollapsibleGroup
+	class RemoteCameraElementRenderer extends DefaultListElementRenderer
+		public func new()
+			setDefaultMinimumSize(Point.new(80, 20))
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text = ""
+			
+			if element != null
+				text = (element cast ECBRemoteCamera.Instance).getName()
+				
+			else
+				text = "< None >"
+			end
+			
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	
+	protected var bool pInVR
+	
+	
+	
+	/** Create session panel. */
+	public func new(bool inVR) super("Session", CollapsibleGroup.persistModel(prefixUIOptions(inVR)))
+		pInVR = inVR
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+	end
+	
+	/** UI options prefix. */
+	static public func String prefixUIOptions(bool inVR)
+		return inVR if "UI/VR/WMPanelActor" else "UI/WMPanelActor"
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		super.dispose()
+	end
+	
+	
+	
+	/** Shown in VR. */
+	public func bool getInVR()
+		return pInVR
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var SessionSettings sessionSettings = SessionSettings.get()
+		var ComboBox comboBox
+		var Label label
+		var String toolTip
+		
+		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			// remote camera
+			toolTip = "Remote camera to show in HUD."
+			label = Label.new("Remote Camera:", "Label.FormCaption")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			comboBox = ComboBox.new(sessionSettings.getModelHudCamera(), RemoteCameraElementRenderer.new())
+			comboBox.setToolTip(toolTip)
+			p.addWidget(comboBox)
+		end))
+	end
+end
