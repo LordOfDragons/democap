@@ -106,7 +106,7 @@ class WorldSpawnCharacter
 	private var GameWorld pGameWorld
 	private var SpawnPoint pSpawnPoint
 	private var CharacterConfiguration pCharacter
-	private var BaseVRActor pActor
+	private var MoCapActor pActor
 	private var UpdateCheck pUpdateCheck
 	private var UpdateCharacter pUpdateCharacter
 	private var DVector pLastActorPosition
@@ -266,7 +266,7 @@ class WorldSpawnCharacter
 	end
 	
 	/** Actor or null. */
-	public func BaseVRActor getActor()
+	public func MoCapActor getActor()
 		return pActor
 	end
 	
@@ -349,11 +349,7 @@ class WorldSpawnCharacter
 		
 		pLastActorPosition = pActor.getPosition()
 		pLastActorOrientation = pActor.getOrientation()
-		
-		var ECBSelectable.Instance selectable = ECBSelectable.getInstanceIn(pActor)
-		if selectable != null
-			pLastActorSelected = selectable.isSelected()
-		end
+		pLastActorSelected = pActor.selectable.isSelected()
 		
 		pActor.safeDispose()
 		pActor = null
@@ -380,7 +376,7 @@ class WorldSpawnCharacter
 			stub = StubElement.new(pMoCapActorClass) // no generated ID on purpose
 		end
 		
-		pActor = stub.createElement() cast BaseVRActor
+		pActor = stub.createElement() cast MoCapActor
 		pSpawnPoint.spawn(pGameWorld, pActor)
 		
 		if pLastActorPosition != null
@@ -401,10 +397,7 @@ class WorldSpawnCharacter
 		
 		// select actor if required
 		if pLastActorSelected
-			var ECBSelectable.Instance selectable = ECBSelectable.getInstanceIn(pActor)
-			if selectable != null
-				selectable.selectElement()
-			end
+			pActor.selectable.selectElement()
 		end
 		
 		// take control of actor

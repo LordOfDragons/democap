@@ -63,6 +63,7 @@ class AADefault extends AABase
 	protected var ECBAGrab.Instance grabLeftHand
 	protected var ECBASelectable.Instance actorSelectable
 	protected var ECBVRHudInfo.Instance vrHudInfo
+	protected var ECBAResetCalibrationWatcher.Instance resetCalibrationWatcher
 	
 	
 	
@@ -83,6 +84,7 @@ class AADefault extends AABase
 		grabLeftHand = actor.grabLeftHand
 		actorSelectable = actor.actorSelectable
 		vrHudInfo = actor.vrHudInfo
+		resetCalibrationWatcher = actor.resetCalibrationWatcher
 	end
 	
 	
@@ -91,14 +93,22 @@ class AADefault extends AABase
 	public func void activate(BehaviorElement actor)
 		super.activate(actor)
 		
+		resetCalibrationWatcher.reset()
 		grabRightHand.getGrabber().setEnabled(true)
 		grabLeftHand.getGrabber().setEnabled(true)
 	end
 	
+	/** Action has been deactivated. */
+	public func void deactivate()
+		resetCalibrationWatcher.reset()
+		super.deactivate()
+	end
 	
 	
 	/** Trigger pulled. */
 	public func void triggerPull(bool rightHand)
+		resetCalibrationWatcher.triggerPulled(rightHand)
+		
 		if rightHand
 			if grabRightHand.triggerPull()
 				
@@ -123,6 +133,8 @@ class AADefault extends AABase
 	
 	/** Trigger released. */
 	public func void triggerRelease(bool rightHand)
+		resetCalibrationWatcher.triggerRelease(rightHand)
+		
 		if rightHand
 			grabRightHand.triggerRelease()
 			pointAtRelease(vrRightHandPointAt)
@@ -137,6 +149,10 @@ class AADefault extends AABase
 	
 	/** Menu button pressed. */
 	public func void menuPress(bool rightHand)
+		if resetCalibrationWatcher.menuPress(rightHand)
+			return
+		end
+		
 		if rightHand
 			if grabRightHand.menuPress()
 				return
@@ -169,6 +185,8 @@ class AADefault extends AABase
 	
 	/** Menu button released. */
 	public func void menuRelease(bool rightHand)
+		resetCalibrationWatcher.menuRelease(rightHand)
+		
 		if rightHand
 			grabRightHand.menuRelease()
 			

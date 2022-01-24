@@ -1,0 +1,157 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Actions
+pin Democap.Characters
+pin Democap.Elements
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Actor behavior watching for reset calibration button press.
+ */
+class ECBAResetCalibrationWatcher extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBAResetCalibrationWatcher pECBehavior
+		private var bool pRightTriggerPulled
+		private var bool pLeftTriggerPulled
+		private var bool pRightMenuPressed
+		private var bool pLeftMenuPressed
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBAResetCalibrationWatcher ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+		end
+		
+		
+		
+		public func ECBAResetCalibrationWatcher getECBehavior()
+			return pECBehavior
+		end
+		
+		
+		
+		public func bool menuPress(bool rightHand)
+			if not pRightTriggerPulled or not pLeftTriggerPulled
+				return false
+			end
+			
+			if rightHand
+				pRightMenuPressed = true
+				
+			else
+				pLeftMenuPressed = true
+			end
+			
+			if pRightMenuPressed and pLeftMenuPressed
+				reset()
+				resetCalibration()
+			end
+			return true
+		end
+		
+		public func void menuRelease(bool rightHand)
+			if rightHand
+				pRightMenuPressed = false
+				
+			else
+				pLeftMenuPressed = false
+			end
+		end
+		
+		public func void triggerPulled(bool rightHand)
+			if rightHand
+				pRightTriggerPulled = true
+				
+			else
+				pLeftTriggerPulled = true
+			end
+		end
+		
+		public func void triggerRelease(bool rightHand)
+			if rightHand
+				pRightTriggerPulled = false
+				
+			else
+				pLeftTriggerPulled = false
+			end
+		end
+		
+		
+		
+		/** Reset. */
+		public func void reset()
+			pRightTriggerPulled = false
+			pLeftTriggerPulled = false
+			pRightMenuPressed = false
+			pLeftMenuPressed = false
+		end
+		
+		
+		
+		protected func void resetCalibration()
+			var MoCapActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+			if actor == null
+				return
+			end
+			
+			var AAControlCommands aacc = actor.getAIAction().getAction() cast AAControlCommands
+			if aacc != null
+				aacc.startCalibrate()
+			end
+		end
+	end
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass) super(eclass)
+		eclass.addBehavior(this)
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element, String id)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getID().equals(id)
+		end) cast Instance
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
