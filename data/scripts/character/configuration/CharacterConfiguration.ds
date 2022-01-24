@@ -651,6 +651,23 @@ class CharacterConfiguration
 				end)
 			end
 			
+			// add behaviors to adjust VR Hand position to match tracker slot component.
+			// this is used to make place the VR Hand where the character hands are after
+			// applying motion transfers. this makes it less confusing for actors
+			var CharacterTrackerSlot slot = pTrackerSlots.find(block CharacterTrackerSlot each
+				return each.getInputDeviceType() == InputDeviceType.vrRightHand
+			end)
+			if slot != null and slot.getBehavior() != null
+				ECBAdjustVRHandCollider.new(eclass, eclass.getVRRightHand(), slot.getBehavior(), "right")
+			end
+			
+			slot = pTrackerSlots.find(block CharacterTrackerSlot each
+				return each.getInputDeviceType() == InputDeviceType.vrLeftHand
+			end)
+			if slot != null and slot.getBehavior() != null
+				ECBAdjustVRHandCollider.new(eclass, eclass.getVRLeftHand(), slot.getBehavior(), "left")
+			end
+			
 			// add behavior moving from calibrate space to playspace. for this find the unique
 			// root bones of all captured bones excluding the origin bone if present
 			var Rig rig = pProfile.getAppearance().getRig()

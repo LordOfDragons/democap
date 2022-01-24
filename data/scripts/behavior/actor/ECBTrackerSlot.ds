@@ -362,6 +362,36 @@ class ECBTrackerSlot extends DefaultECBehavior
 			end
 		end
 		
+		/** Set component position from character matrix. */
+		public func void setComponentFromMatrixCharacter(Matrix matrix)
+			var CharacterTrackerSlot slot = pECBehavior.getTrackerSlot()
+			var CharacterConfiguration config = slot.getConfiguration()
+			
+			if pDDCoordSystem != null
+				var DMatrix m = matrix.toDMatrix() * pVRPlayspace.getMatrix()
+				pDDCoordSystem.setPosition(m.getPosition())
+				pDDCoordSystem.setOrientation(m.toQuaternion())
+			end
+			
+			if pInputDevice != null
+				matrix = slot.getOffsetMatrixInverse() * matrix
+			end
+			
+			if config.getScaleMode() == CharacterConfiguration.ScaleMode.actor
+				matrix = matrix * config.getMatrixCalibrateInverse()
+				
+			else
+				matrix = matrix * config.getMatrixScaleInverse() * config.getMatrixCalibrateInverse()
+			end
+			
+			var Component component = pComponent.getComponent()
+			if component != null
+				var DMatrix m = matrix.toDMatrix() * pVRPlayspace.getMatrix()
+				component.setPosition(m.getPosition())
+				component.setOrientation(m.toQuaternion())
+			end
+		end
+		
 		
 		
 		/** Update component model and skin. */

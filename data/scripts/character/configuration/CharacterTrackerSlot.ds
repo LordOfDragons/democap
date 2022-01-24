@@ -85,6 +85,7 @@ class CharacterTrackerSlot
 	private var ADController pADControllerRotation
 	private var ADLink pADLinkPosition
 	private var ADLink pADLinkRotation
+	private var ECBTrackerSlot pBehavior
 	
 	
 	
@@ -161,6 +162,7 @@ class CharacterTrackerSlot
 	/** Dispose. */
 	public func void dispose()
 		pConfiguration = null
+		pBehavior = null
 	end
 	
 	
@@ -431,14 +433,19 @@ class CharacterTrackerSlot
 		return pADLinkRotation
 	end
 	
+	/** Behavior or null. */
+	public func ECBTrackerSlot getBehavior()
+		return pBehavior
+	end
+	
 	
 	
 	/** Init element class. */
 	public func void initElementClass(BaseVRActorClass eclass, AnimatorDefinition adef)
-		var ECBTrackerSlot behavior = ECBTrackerSlot.new(eclass, this)
+		pBehavior = ECBTrackerSlot.new(eclass, this)
 		
 		pADControllerPosition = ADController.new()
-		pADControllerPosition.setName(behavior.getControllerNamePosition())
+		pADControllerPosition.setName(pBehavior.getControllerNamePosition())
 		adef.addController(pADControllerPosition)
 		
 		pADLinkPosition = ADLink.new()
@@ -446,21 +453,12 @@ class CharacterTrackerSlot
 		adef.addLink(pADLinkPosition)
 		
 		pADControllerRotation = ADController.new()
-		pADControllerRotation.setName(behavior.getControllerNameRotation())
+		pADControllerRotation.setName(pBehavior.getControllerNameRotation())
 		adef.addController(pADControllerRotation)
 		
 		pADLinkRotation = ADLink.new()
 		pADLinkRotation.setController(pADControllerRotation)
 		adef.addLink(pADLinkRotation)
-		
-		// if tracker slot is the right or left hand add also an adjustment behavior
-		select pInputDeviceType
-		case InputDeviceType.vrRightHand
-			ECBAdjustVRHandCollider.new(eclass, eclass.getVRRightHand(), behavior, "right")
-			
-		case InputDeviceType.vrLeftHand
-			ECBAdjustVRHandCollider.new(eclass, eclass.getVRLeftHand(), behavior, "left")
-		end
 	end
 	
 	/** Init from type. */
@@ -638,6 +636,7 @@ class CharacterTrackerSlot
 		pCalibrateReferenceMatrix = pMatrix
 		pCalibrateReferenceMatrixInverse = pMatrix.getInverse()
 		pRecalibrateMatrix = pMatrix
+		pBehavior = null
 	end
 	
 	/** Calibrate character. */

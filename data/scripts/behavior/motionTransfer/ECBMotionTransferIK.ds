@@ -91,6 +91,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var bool pEnableScaleReach
 		private var bool pEnableTipOffset
 		private var bool pEnableTwist
+		private var Matrix pMatrixAdjustSlotComponent
 		
 		
 		
@@ -276,31 +277,40 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			
 			var Matrix matrix = pTransformTip * pSlotTip.getMatrixCharacter()
 			
-			if pControllerTipPosition != null
-				var Vector targetPosition = matrix.getPosition()
+			// position, retracted length
+			var Vector targetPosition = matrix.getPosition()
+			var float retractedLength = 1
+			
+			if pEnableScaleReach
+				var Matrix boneMatrix = pComponent.boneGetMatrix(pBaseBone)
 				
-				if pEnableScaleReach
-					var Matrix boneMatrix = pComponent.boneGetMatrix(pBaseBone)
-					
-					if pEnableTipOffset
-						targetPosition = targetPosition + boneMatrix.transformNormal(pTipOffset)
-					end
-					
-					var Vector basePosition = boneMatrix.getPosition()
-					
-					targetPosition = basePosition + (targetPosition - basePosition).compMultiply(pScaleReach)
-					
-					if pControllerRetracted != null
-						pControllerRetracted.setValue((targetPosition - basePosition).getLength())
-					end
+				if pEnableTipOffset
+					targetPosition = targetPosition + boneMatrix.transformNormal(pTipOffset)
 				end
 				
-				pControllerTipPosition.setVector(targetPosition)
+				var Vector basePosition = boneMatrix.getPosition()
+				
+				targetPosition = basePosition + (targetPosition - basePosition).compMultiply(pScaleReach)
+				
+				retractedLength = (targetPosition - basePosition).getLength()
 			end
 			
-			if pControllerTipOrientation != null
-				pControllerTipOrientation.setRotation(matrix.normalize().getEulerAngles())
+			// orientation
+			var Vector targetRotation = matrix.normalize().getEulerAngles()
+			
+			// update controllers
+			if pControllerTipPosition != null
+				pControllerTipPosition.setVector(targetPosition)
 			end
+			if pControllerTipOrientation != null
+				pControllerTipOrientation.setRotation(targetRotation)
+			end
+			if pControllerRetracted != null
+				pControllerRetracted.setValue(retractedLength)
+			end
+			
+			// adjust slot component if required
+			adjustSlotComponentPosition(targetPosition, targetRotation)
 		end
 		
 		protected func void updateControllerGuide()
@@ -331,6 +341,27 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			
 //			GameApp.getGameApp().getConsole().addMessage("Phase2 " + pECBehavior.getTransfer().getName() \
 //				+ " " + pControllerTwist.getValue() + " " + pComponent.boneGetName(pTwistBone))
+		end
+		
+		protected func void adjustSlotComponentPosition(Vector position, Vector rotation)
+			if pMatrixAdjustSlotComponent != null
+				pSlotTip.setComponentFromMatrixCharacter(\
+					pMatrixAdjustSlotComponent * Matrix.newRT(rotation, position))
+			end
+		end
+		
+		
+		
+		/** Element added to game world. */
+		public func void addToGameWorld()
+			// slot input device is valid only once the tracker slot processed addToGameWorld
+			if pSlotTip != null\
+			and pSlotTip.getInputDevice() != null\
+			and pSlotTip.getComponent() != null\
+			and (pSlotTip.getInputDevice().getType() == InputDeviceType.vrRightHand\
+			or pSlotTip.getInputDevice().getType() == InputDeviceType.vrLeftHand)
+				pMatrixAdjustSlotComponent = pECBehavior.getTransfer().getTipTracker().getReverseTransformMatrix()
+			end
 		end
 	end
 	
