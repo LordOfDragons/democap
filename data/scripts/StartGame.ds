@@ -49,7 +49,8 @@ class StartGame extends WindowGameWorld.Loader
 		// load initial data from save state
 		if scene.getSaveState() != null
 			setPersistency(PersistencyEnvironment.new(\
-				GameApp.getGameApp().getLoaders().getPersistency()), scene.getSaveState().getReader())
+				GameApp.getGameApp().getLoaders().getPersistency()),\
+				scene.getSaveState().getReader())
 			
 			select getPersistencyReader().readByte() // version
 			case 0
@@ -100,16 +101,34 @@ class StartGame extends WindowGameWorld.Loader
 		// assign camera director attaching the camera to the player controlled actor
 		getWindow().setCameraDirector(app.getVRCameraDirector())
 		
-		// finish loading world. sets the game world disposing of the previous one
-		super.onLoadWorldFinished()
+		// finish loading world. super.onLoadWorldFinished() sets the game world and
+		// disposes of the previous one. this can lead to problems since certain code
+		// expects the game world and objects inside to be valid (not disposed) until
+		// game world changed notification has been send. so set the game world without
+		// disposing of it and dispose after finishLoadGameWorld
+		//super.onLoadWorldFinished()
+		var GameWorld oldGameWorld = getWindow().getGameWorld()
+		getWindow().setGameWorld(getStubWorld().getGameWorld(), false)
 		
-		// activate vr camera if required
-		if app.getModelShowVRCamera().getToggled()
-			getWindow().getWorldRenderer().setCamera(app.getVRCamera())
+		try
+			// activate vr camera if required
+			if app.getModelShowVRCamera().getToggled()
+				getWindow().getWorldRenderer().setCamera(app.getVRCamera())
+			end
+			
+			// finish loading
+			app.finishLoadGameWorld()
+			
+		catch Exception e
+			if oldGameWorld != null
+				oldGameWorld.dispose()
+			end
+			throw
 		end
 		
-		// finish loading
-		app.finishLoadGameWorld()
+		if oldGameWorld != null
+			oldGameWorld.dispose()
+		end
 	end
 	
 	/** Loading world failed. */

@@ -31,6 +31,7 @@ pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Preloading
 pin Dragengine.Scenery
+pin Dragengine.Utils
 
 
 
@@ -408,6 +409,9 @@ class WMPanelProject extends CollapsibleGroup
 			var String text = ""
 			if element != null
 				text = (element cast ECBSceneObject.Instance).getDisplayName()
+				
+			else
+				text = "< None >"
 			end
 			super.updateRenderer(listBox, renderer, text, selected, focused)
 		end
@@ -445,18 +449,7 @@ class WMPanelProject extends CollapsibleGroup
 		end
 		
 		public func void selectedElementChanged(ECBSelectable.Tracker tracker)
-			if tracker.getElement() == null
-				pPanel.getModelObjects().setSelected(-1)
-				return
-			end
-			
-			var ECBSceneObject.Instance sceneObject = ECBSceneObject.getInstanceIn(tracker.getElement().getElement())
-			if sceneObject == null
-				pPanel.getModelObjects().setSelected(-1)
-				return
-			end
-			
-			pPanel.getModelObjects().setSelected(pPanel.getModelObjects().indexOf(sceneObject))
+			pPanel.selectObjectFromTracker()
 		end
 	end
 	
@@ -823,7 +816,6 @@ class WMPanelProject extends CollapsibleGroup
 		end
 		
 		selectScene()
-		updateModelObjects()
 		
 		if scene != null and not noLoad
 			var Object world = pModelLoadableWorlds.find(block LoadableWorld each
@@ -833,6 +825,8 @@ class WMPanelProject extends CollapsibleGroup
 				pModelLoadableWorlds.setSelected(pModelLoadableWorlds.indexOf(world))
 			end
 		end
+		
+		updateModelObjects()
 	end
 	
 	/** Add scene. */
@@ -1130,16 +1124,24 @@ class WMPanelProject extends CollapsibleGroup
 		var ECBSelectable.Instance selectable
 		if object != null
 			selectable = ECBSelectable.getInstanceIn(object.getElement())
-			if selectable != null
-				GameApp.getGameApp().getSelectionTracker().setElement(selectable)
-			end
 		end
+		GameApp.getGameApp().getSelectionTracker().setElement(selectable)
 		
 		if object != null
 			var bool noBehaviors = object.getECBehavior().editPanelNoBehaviors.getValue()
 			var bool noPhysics = object.getECBehavior().editPanelNoPhysics.getValue()
 			
-			if not noBehaviors
+			if noBehaviors
+				pPanelBehaviors.runWhileBlockingLayout(block
+					(object.getElement() cast BehaviorElement).forEachInstance(block ECBehaviorInstance each
+						if each castable ECBAHudShowCamera.Instance
+							pPanelBehaviors.addWidget(WMPSOHudShowCamera.new(this,\
+								each cast ECBAHudShowCamera.Instance))
+						end
+					end)
+				end)
+				
+			else
 				pPanelBehaviors.runWhileBlockingLayout(block
 					(object.getElement() cast BehaviorElement).forEachInstance(block ECBehaviorInstance each
 						if each castable ECBehaviorComponent.Instance
@@ -1171,14 +1173,33 @@ class WMPanelProject extends CollapsibleGroup
 						elif each castable ECBRenderableCamera.Instance
 							pPanelBehaviors.addWidget(WMPSORenderableCamera.new(this,\
 								each cast ECBRenderableCamera.Instance))
+							
+						elif each castable ECBAHudShowCamera.Instance
+							pPanelBehaviors.addWidget(WMPSOHudShowCamera.new(this,\
+								each cast ECBAHudShowCamera.Instance))
 						end
 					end)
 				end)
-				pPanelBehaviors.doLayoutIfBlocked()
 			end
+			
+			pPanelBehaviors.doLayoutIfBlocked()
 		end
 		
 		updateObject()
+	end
+	
+	/** Get selected scene object from tracker. */
+	public func ECBSceneObject.Instance getTrackerSelectedObject()
+		var ECBSelectable.Tracker tracker = GameApp.getGameApp().getSelectionTracker()
+		if tracker.getElement() != null
+			return ECBSceneObject.getInstanceIn(tracker.getElement().getElement())
+		end
+		return null
+	end
+	
+	/** Select object from tracker. */
+	public func void selectObjectFromTracker()
+		pModelObjects.setSelectedElement(getTrackerSelectedObject())
 	end
 	
 	/** Update objects model. */
@@ -1187,18 +1208,16 @@ class WMPanelProject extends CollapsibleGroup
 			return // dispose protection
 		end
 		
-		var ECBSceneObject.Instance selection = pObject
+		var ECBSceneObject.Instance selection = getTrackerSelectedObject()
 		
 		var Array content = Array.new()
 		
 		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
 		if gameWorld != null
 			gameWorld.forEachElement(block BehaviorElement each
-				if each castable BehaviorElement
-					var ECBSceneObject.Instance sceneObject = ECBSceneObject.getInstanceIn(each cast BehaviorElement)
-					if sceneObject != null
-						content.add(sceneObject)
-					end
+				var ECBSceneObject.Instance sceneObject = ECBSceneObject.getInstanceIn(each)
+				if sceneObject != null
+					content.add(sceneObject)
 				end
 			end)
 		end
@@ -1207,12 +1226,13 @@ class WMPanelProject extends CollapsibleGroup
 			return a.getDisplayName().compare(b.getDisplayName())
 		end)
 		
+		content.insert(0, null)
+		
 		pModelObjects.setContent(content)
 		
-		var int index = pModelObjects.indexOf(selection)
-		if index != -1
-			pModelObjects.setSelected(index)
-			pModelObjects.notifyContentChanged(index, index)
+		pModelObjects.setSelectedElement(selection)
+		if pModelObjects.getSelected() != -1
+			pModelObjects.notifyElementChanged(pModelObjects.getSelected())
 		end
 	end
 	

@@ -1,0 +1,273 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Actors
+pin Democap.Actions
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * Main window project panel.
+ */
+class WMPSOHudShowCamera extends WMPPanelSceneObject
+	/** Game changes listener. */
+	class GameChangedListener extends DefaultGameListener
+		protected var WMPSOHudShowCamera pPanel
+		
+		public func new(WMPSOHudShowCamera panel)
+			pPanel = panel
+		end
+		
+		public func void sceneChanged(GameApp app)
+			pPanel.setScene(app.getScene())
+		end
+		
+		public func void gameWorldChanged(GameApp app)
+			pPanel.updateModelCameras()
+		end
+	end
+	
+	/** Scene changed listener. */
+	class SceneChangedListener extends DefaultSceneListener
+		protected var WMPSOHudShowCamera pPanel
+		
+		public func new(WMPSOHudShowCamera panel)
+			pPanel = panel
+		end
+		
+		public func void objectAdded(Scene scene, ECBSceneObject.Instance object)
+			if pPanel.getScene() == scene
+				pPanel.updateModelCameras()
+			end
+		end
+		
+		public func void objectRemoved(Scene scene, ECBSceneObject.Instance object)
+			if pPanel.getScene() == scene
+				pPanel.updateModelCameras()
+			end
+		end
+		
+		public func void allObjectsRemoved(Scene scene)
+			if pPanel.getScene() == scene
+				pPanel.updateModelCameras()
+			end
+		end
+		
+		public func void objectNameChanged(Scene scene, ECBSceneObject.Instance object)
+			if pPanel.getScene() == scene
+				pPanel.updateModelCameras()
+			end
+		end
+	end
+	
+	/** Camera element renderer. */
+	class CameraElementRenderer extends DefaultListElementRenderer
+		public func new()
+			setDefaultMinimumSize(Point.new(80, 20))
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text = ""
+			
+			if element != null
+				var ECBehaviorCamera.Instance camera = element cast ECBehaviorCamera.Instance
+				var ECBSceneObject.Instance sceneObject = ECBSceneObject.getInstanceIn(camera.getElement())
+				text = camera.getECBehavior().getID() + "(" + sceneObject.getDisplayName() + ")"
+				
+			else
+				text = "< None >"
+			end
+			
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	/** Select camera listener. */
+	class SelectedCameraChanged extends DefaultListModelListener
+		protected var WMPSOHudShowCamera pPanel
+		
+		public func new(WMPSOHudShowCamera panel)
+			pPanel = panel
+		end
+		
+		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+			selectionChanged(model)
+		end
+		
+		public func void selectionChanged(ListModel model)
+			var int index = model.getSelected()
+			if index != -1
+				pPanel.getBehaviorHudShowCamera().setCamera(\
+					model.getAt(index) cast ECBehaviorCamera.Instance)
+				
+			else
+				pPanel.getBehaviorHudShowCamera().setCamera(null)
+			end
+		end
+	end
+	
+	
+	
+	protected var ECBAHudShowCamera.Instance pBehaviorHudShowCamera
+	protected var DefaultListModel pModelCameras
+	protected var GameChangedListener pGameChangedListener
+	protected var SceneChangedListener pSceneChangedListener
+	protected var Scene pScene
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelProject panelProject, ECBAHudShowCamera.Instance behavior)\
+	super(panelProject, behavior, "", "HudShowCamera", "WMPSOHudShowCamera")
+		pBehaviorHudShowCamera = behavior
+		
+		pModelCameras = DefaultListModel.new()
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+		
+		pSceneChangedListener = SceneChangedListener.new(this)
+		pGameChangedListener = GameChangedListener.new(this)
+		
+		GameApp.getGameApp().addListener(pGameChangedListener)
+		
+		setScene(GameApp.getGameApp().getScene())
+		
+		pModelCameras.addListener(SelectedCameraChanged.new(this))
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		if pGameChangedListener != null
+			GameApp.getGameApp().removeListener(pGameChangedListener)
+			pGameChangedListener = null
+		end
+		
+		setScene(null)
+		
+		pSceneChangedListener = null
+		pGameChangedListener = null
+		
+		pModelCameras = null
+		super.dispose()
+	end
+	
+	
+	
+	/** HudShowCamera behavior. */
+	public func ECBAHudShowCamera.Instance getBehaviorHudShowCamera()
+		return pBehaviorHudShowCamera
+	end
+	
+	/** Update behavior. */
+	public func void updateBehavior()
+		pModelCameras.setSelected(pModelCameras.indexOf(pBehaviorHudShowCamera.getCamera()))
+	end
+	
+	/** Active scene or null. */
+	public func Scene getScene()
+		return pScene
+	end
+	
+	/** Set active scene or null. */
+	public func void setScene(Scene scene)
+		if scene == pScene
+			return
+		end
+		
+		if pScene != null
+			// this method can be called from inside Scene listener processing. removing
+			// listeners while they are processed is not allowed. delay this until the
+			// next frame update to be on the safe side
+			TimerBlock.new(0, false, block
+				try
+					pScene.removeListener(pSceneChangedListener)
+				catch Exception e
+				end
+			end)
+		end
+		
+		pScene = scene
+		
+		if scene != null
+			// this method can be called from inside Scene listener processing. removing
+			// listeners while they are processed is not allowed. delay this until the
+			// next frame update to be on the safe side
+			TimerBlock.new(0, false, block
+				try
+					scene.addListener(pSceneChangedListener)
+				catch Exception e
+				end
+			end)
+		end
+		
+		updateModelCameras()
+	end
+	
+	
+	
+	/** Update cameras model. */
+	public func void updateModelCameras()
+		var ECBehaviorCamera.Instance selection = pBehaviorHudShowCamera.getCamera()
+		var Array content = Array.new()
+		
+		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+		if gameWorld != null
+			gameWorld.forEachElement(block BehaviorElement each
+				var ECBSceneObject.Instance sceneObject = ECBSceneObject.getInstanceIn(each)
+				if sceneObject != null
+					content.addAll(ECBehaviorCamera.getAllInstancesIn(each))
+				end
+			end)
+		end
+		
+		content.sort(block ECBehaviorCamera.Instance a, ECBehaviorCamera.Instance b
+			return a.getECBehavior().getID().compare(b.getECBehavior().getID())
+		end)
+		
+		content.insert(0, null)
+		
+		pModelCameras.setContent(content)
+		pModelCameras.setSelected(pModelCameras.indexOf(selection))
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			p.addWidget(Label.new("Camera:", "Label.FormCaption"))
+			p.addWidget(ComboBox.new(pModelCameras, CameraElementRenderer.new()))
+		end))
+	end
+end

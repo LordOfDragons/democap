@@ -1,0 +1,175 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Actor behavior support to show ECBehaviorCamera in a small panel in ECBVRHudInfo.
+ */
+class ECBAHudShowCamera extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBAHudShowCamera pECBehavior
+		private var ECBVRHudInfo.Instance pVRHudInfo
+		private var ECBehaviorCamera.Instance pCamera
+		private var Panel pPanel
+		private var WorldRenderer pWorldRenderer
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBAHudShowCamera ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pVRHudInfo = ecbehavior.getVRHudInfo().instance(element)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			hidePanel()
+			pCamera = null
+			pVRHudInfo = null
+			super.dispose()
+		end
+		
+		
+		
+		/** Behavior instance VR HUD Info. */
+		public func ECBVRHudInfo.Instance getVRHudInfo()
+			return pVRHudInfo
+		end
+		
+		
+		
+		/** Camera to show or null. */
+		public func ECBehaviorCamera.Instance getCamera()
+			return pCamera
+		end
+		
+		/** Set camera to show or null. */
+		public func void setCamera(ECBehaviorCamera.Instance camera)
+			if camera == pCamera
+				return
+			end
+			
+			pCamera = camera
+			
+			if camera != null
+				showPanel()
+				pWorldRenderer.setCamera(camera.getCamera())
+				
+			else
+				hidePanel()
+			end
+		end
+		
+		/** Create panel and add it to the HUD if absent. */
+		protected func void showPanel()
+			if pPanel != null
+				return
+			end
+			
+			var float placementX = 0.5
+			var float placementY = 0.4
+			
+			var Point hudSize = pVRHudInfo.getRenderablePanel().getPanel().getSize()
+			var float renderSizePercentage = 0.3
+			var int renderSizeX = (renderSizePercentage * hudSize.getX()) cast int
+			var int renderSizeY = ((364.0 / 600.0) * renderSizeX) cast int
+			
+			var float transparency = 0.9
+			
+			pPanel = Panel.new(CentrizedBoxLayout.new(LayoutAxis.y, placementX, placementY), block Panel p
+				p.addWidget(Panel.new(StackLayout.new(StackLayout.AspectRatio.fit), block Panel p2
+					p2.setDesignerSelector("Panel.HudInfo.Camera")
+					
+					pWorldRenderer = WorldRenderer.new()
+					pWorldRenderer.setDesignerSelector("WorldRenderer.HudInfoCamera")
+					pWorldRenderer.setRenderMinimumSize(Point.new(renderSizeX, renderSizeY))
+					pWorldRenderer.setTransparency(transparency)
+					
+					p2.addWidget(pWorldRenderer)
+				end))
+			end)
+			
+			pVRHudInfo.addPanel(pPanel)
+		end
+		
+		/** Remove panel from HUD and dispose of it if present. */
+		protected func void hidePanel()
+			if pPanel == null
+				return
+			end
+			
+			pWorldRenderer = null
+			pVRHudInfo.removePanel(pPanel)
+			pPanel.safeDispose()
+			pPanel = null
+		end
+	end
+	
+	
+	
+	protected var ECBVRHudInfo pVRHudInfo
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBVRHudInfo vrHudInfo) super(eclass)
+		pVRHudInfo = vrHudInfo
+		
+		eclass.addBehavior(this)
+	end
+	
+	
+	
+	/** VR Hud Info behavior. */
+	public func ECBVRHudInfo getVRHudInfo()
+		return pVRHudInfo
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

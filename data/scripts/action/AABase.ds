@@ -22,6 +22,7 @@
 namespace Democap.Actions
 
 pin Democap.Behaviors
+pin Democap.Elements
 
 pin Dragengine.Scenery
 
@@ -153,18 +154,19 @@ abstract class AABase extends BAAFirstPersonVR implements AAControllerInput, AAC
 	
 	/** Stop pointing at anything. */
 	public func void stopPointingAtAnything()
-		var ECBAControlDesktop.Instance controlDesktop = ECBAControlDesktop.getInstanceIn(actor)
-		if controlDesktop != null
-			controlDesktop.cancel()
-		end
-		
-		var ECBAInteractHandle.Instance interactHandle = ECBAInteractHandle.getInstanceIn(actor)
-		if interactHandle != null
-			interactHandle.cancel()
-		end
+		var MoCapActor actor = getActor() cast MoCapActor
+		actor.controlDesktop.cancel()
+		actor.interactHandle.cancel()
 		
 		vrRightHandPointAt.setEnabled(false)
 		vrLeftHandPointAt.setEnabled(false)
+	end
+	
+	/** Stop grabbing. */
+	public func void stopGrabbing()
+		var MoCapActor actor = getActor() cast MoCapActor
+		actor.grabRightHand.ungrab()
+		actor.grabRightHand.ungrab()
 	end
 	
 	/** Hide VR Menu. */

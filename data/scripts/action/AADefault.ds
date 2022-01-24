@@ -100,7 +100,9 @@ class AADefault extends AABase
 	/** Trigger pulled. */
 	public func void triggerPull(bool rightHand)
 		if rightHand
-			if vrRightHandPointAt.hasVRHandPointAtElement()
+			if grabRightHand.triggerPull()
+				
+			elif vrRightHandPointAt.hasVRHandPointAtElement()
 				pointAtPull(vrRightHandPointAt)
 				
 			else
@@ -108,7 +110,9 @@ class AADefault extends AABase
 			end
 			
 		else
-			if vrLeftHandPointAt.hasVRHandPointAtElement()
+			if grabLeftHand.triggerPull()
+				
+			elif vrLeftHandPointAt.hasVRHandPointAtElement()
 				pointAtPull(vrLeftHandPointAt)
 				
 			else
@@ -120,9 +124,11 @@ class AADefault extends AABase
 	/** Trigger released. */
 	public func void triggerRelease(bool rightHand)
 		if rightHand
+			grabRightHand.triggerRelease()
 			pointAtRelease(vrRightHandPointAt)
 			
 		else
+			grabLeftHand.triggerRelease()
 			pointAtRelease(vrLeftHandPointAt)
 		end
 	end
@@ -131,6 +137,17 @@ class AADefault extends AABase
 	
 	/** Menu button pressed. */
 	public func void menuPress(bool rightHand)
+		if rightHand
+			if grabRightHand.menuPress()
+				return
+			end
+			
+		else
+			if grabLeftHand.menuPress()
+				return
+			end
+		end
+		
 		var BehaviorElement vrmenu = GameApp.getGameApp().getWorldSpawnCharacter().getVRMenu()
 		if vrmenu == null
 			return
@@ -152,6 +169,12 @@ class AADefault extends AABase
 	
 	/** Menu button released. */
 	public func void menuRelease(bool rightHand)
+		if rightHand
+			grabRightHand.menuRelease()
+			
+		else
+			grabLeftHand.menuRelease()
+		end
 	end
 	
 	
@@ -169,32 +192,42 @@ class AADefault extends AABase
 	/** Touch track pad. */
 	public func void trackPadTouch(bool rightHand)
 		if rightHand
-			vrRightHandPointAt.setEnabled(true)
+			if grabRightHand.trackPadTouch()
+				
+			else
+				vrRightHandPointAt.setEnabled(true)
+			end
 			
 		else
-			vrLeftHandPointAt.setEnabled(true)
+			if grabLeftHand.trackPadTouch()
+				
+			else
+				vrLeftHandPointAt.setEnabled(true)
+			end
 		end
 	end
 	
 	/** Untouch track pad. */
 	public func void trackPadUntouch(bool rightHand)
 		if rightHand
-			if controlDesktop != null and controlDesktop.getPointAt() == vrRightHandPointAt
+			if controlDesktop.getPointAt() == vrRightHandPointAt
 				controlDesktop.cancel()
 			end
-			if interactHandle != null and interactHandle.getPointAt() == vrRightHandPointAt
+			if interactHandle.getPointAt() == vrRightHandPointAt
 				interactHandle.cancel()
 			end
 			vrRightHandPointAt.setEnabled(false)
+			grabRightHand.trackPadUntouch()
 			
 		else
-			if controlDesktop != null and controlDesktop.getPointAt() == vrLeftHandPointAt
+			if controlDesktop.getPointAt() == vrLeftHandPointAt
 				controlDesktop.cancel()
 			end
-			if interactHandle != null and interactHandle.getPointAt() == vrLeftHandPointAt
+			if interactHandle.getPointAt() == vrLeftHandPointAt
 				interactHandle.cancel()
 			end
 			vrLeftHandPointAt.setEnabled(false)
+			grabLeftHand.trackPadUntouch()
 		end
 	end
 	
@@ -203,13 +236,13 @@ class AADefault extends AABase
 	/** Grip grab. */
 	public func void gripGrab(bool rightHand)
 		if rightHand
-			if grabRightHand.grab()
-				return
+			if vrRightHandPointAt.getEnabled()
+			elif grabRightHand.grab()
 			end
 			
 		else
-			if grabLeftHand.grab()
-				return
+			if vrLeftHandPointAt.getEnabled()
+			elif grabLeftHand.grab()
 			end
 		end
 	end
@@ -229,44 +262,37 @@ class AADefault extends AABase
 	/** Pointing at element. */
 	public func void pointAt(ECBehaviorVRHandPointAt.Instance behavior)
 		// pulled trigger locks action to be used
-		if controlDesktop != null and controlDesktop.getTriggerPulled()
+		if controlDesktop.getTriggerPulled()
 			controlDesktop.pointAt(behavior)
-			return
-		end
-		if interactHandle != null and interactHandle.getTriggerPulled()
+			
+		elif interactHandle.getTriggerPulled()
 			interactHandle.pointAt(behavior)
-			return
-		end
-		
+			
 		// try all actions
-		if controlDesktop != null and controlDesktop.pointAt(behavior)
-			return
-		end
-		if interactHandle != null and interactHandle.pointAt(behavior)
-			return
+		elif controlDesktop.pointAt(behavior)
+			
+		elif interactHandle.pointAt(behavior)
+			
 		end
 	end
 	
 	/** Pull trigger on pointed at element. */
 	public func void pointAtPull(ECBehaviorVRHandPointAt.Instance behavior)
-		if controlDesktop != null and controlDesktop.pointAtPull(behavior)
-			return
-		end
-		if interactHandle != null and interactHandle.pointAtPull(behavior)
-			return
-		end
-		if actorSelectable != null and actorSelectable.pointAtPull(behavior)
-			return
+		if controlDesktop.pointAtPull(behavior)
+			
+		elif interactHandle.pointAtPull(behavior)
+			
+		elif actorSelectable.pointAtPull(behavior)
+			
 		end
 	end
 	
 	/** Release trigger on pointed at element. */
 	public func void pointAtRelease(ECBehaviorVRHandPointAt.Instance behavior)
-		if controlDesktop != null and controlDesktop.pointAtRelease(behavior)
-			return
-		end
-		if interactHandle != null and interactHandle.pointAtRelease(behavior)
-			return
+		if controlDesktop.pointAtRelease(behavior)
+			
+		elif interactHandle.pointAtRelease(behavior)
+			
 		end
 	end
 	
