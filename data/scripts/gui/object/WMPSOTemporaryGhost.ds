@@ -1,7 +1,7 @@
 /* 
  * Drag[en]gine Motion Capture
  *
- * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
  * 
  * This program is free software; you can redistribute it and/or 
  * modify it under the terms of the GNU General Public License 
@@ -38,38 +38,38 @@ pin Dragengine.Utils
 /**
  * Main window project panel.
  */
-class WMPSOHideWhileRecording extends WMPPanelSceneObject
+class WMPSOTemporaryGhost extends WMPPanelSceneObject
 	class EnabledChanged extends DefaultToggleModelListener
-		protected var WMPSOHideWhileRecording pPanel
+		protected var ECBTemporaryGhost.Instance pBehavior
 		
-		public func new(WMPSOHideWhileRecording panel)
-			pPanel = panel
+		public func new(ECBTemporaryGhost.Instance behavior)
+			pBehavior = behavior
 		end
 		
 		public func void toggledChanged(ToggleModel model)
-			pPanel.getBehaviorHideWhileRecording().setEnabled(model.getToggled())
+			pBehavior.setEnabled(model.getToggled())
 		end
 	end
 	
 	
 	
-	protected var ECBHideWhileRecording.Instance pBehaviorHideWhileRecording
+	protected var ECBTemporaryGhost.Instance pBehaviorTemporaryGhost
 	protected var DefaultToggleModel pModelEnabled
 	
 	
 	
 	/** Create panel. */
-	public func new(WMPanelProject panelProject, ECBHideWhileRecording.Instance behavior)\
-	super(panelProject, behavior, behavior.getECBehavior().getID(), "Hide While Recording", "WMPSOHideWhileRecording")
-		pBehaviorHideWhileRecording = behavior
+	public func new(WMPanelProject panelProject, ECBTemporaryGhost.Instance behavior)\
+	super(panelProject, behavior, "", "Temporary Ghost", "WMPSOTemporaryGhost")
+		pBehaviorTemporaryGhost = behavior
 		
-		pModelEnabled = DefaultToggleModel.new(true)
+		pModelEnabled = DefaultToggleModel.new(false)
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
 		end)
 		
-		pModelEnabled.addListener(EnabledChanged.new(this))
+		pModelEnabled.addListener(EnabledChanged.new(behavior))
 	end
 	
 	/** Dispose of widget. */
@@ -80,21 +80,20 @@ class WMPSOHideWhileRecording extends WMPPanelSceneObject
 	
 	
 	
-	/** HideWhileRecording behavior. */
-	public func ECBHideWhileRecording.Instance getBehaviorHideWhileRecording()
-		return pBehaviorHideWhileRecording
+	/** TemporaryGhost behavior. */
+	public func ECBTemporaryGhost.Instance getBehaviorTemporaryGhost()
+		return pBehaviorTemporaryGhost
 	end
 	
 	/** Update behavior. */
 	public func void updateBehavior()
-		pModelEnabled.setToggled(pBehaviorHideWhileRecording.getEnabled())
+		pModelEnabled.setToggled(pBehaviorTemporaryGhost.getEnabled())
 	end
 	
 	
 	
 	/** Create panel content. */
 	protected func void createContent(Panel content)
-		var TextField textField
 		var CheckBox checkBox
 		
 		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
@@ -103,8 +102,8 @@ class WMPSOHideWhileRecording extends WMPPanelSceneObject
 			// enabled
 			p.addWidget(Label.new("", "Label.FormCaption"))
 			
-			checkBox = CheckBox.new(pModelEnabled, "Enabled")
-			checkBox.setToolTip("Enable hiding while recording.")
+			checkBox = CheckBox.new(pModelEnabled, "Enable")
+			checkBox.setToolTip("Replaces component textures with ghost textures")
 			p.addWidget(checkBox)
 		end))
 	end

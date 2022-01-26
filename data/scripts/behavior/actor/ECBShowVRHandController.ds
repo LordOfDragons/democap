@@ -1,0 +1,130 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior showing ECBehaviorVRHand model if user wants to.
+ */
+class ECBShowVRHandController extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class ShowController extends DefaultToggleModelListener
+			protected var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void toggledChanged(ToggleModel model)
+				pInstance.updateVRHandVisible()
+			end
+		end
+		
+		
+		private var ECBShowVRHandController pECBehavior
+		private var ECBehaviorVRHand.Instance pVRHand
+		private var ShowController pShowController
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBShowVRHandController ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pVRHand = ecbehavior.getVRHand().instance(element)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pVRHand = null
+			super.dispose()
+		end
+		
+		
+		/** Update VR hand model visibility. */
+		public func void updateVRHandVisible()
+			var bool show = SessionSettings.get().getModelShowVRControllers().getToggled()
+			var CharacterConfiguration config = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
+			
+			pVRHand.setShowHand(show or config == null)
+		end
+		
+		
+		public func void addToGameWorld()
+			pShowController = ShowController.new(this)
+			SessionSettings.get().getModelShowVRControllers().addListener(pShowController)
+			updateVRHandVisible()
+		end
+		
+		public func void removeFromGameWorld()
+			if pShowController != null
+				SessionSettings.get().getModelShowVRControllers().removeListener(pShowController)
+				pShowController = null
+			end
+		end
+	end
+	
+	
+	protected var ECBehaviorVRHand pVRHand
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorVRHand vrHand, String id) super(eclass, id)
+		if vrHand == null
+			throw ENullPointer.new("vrHand")
+		end
+		
+		pVRHand = vrHand
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pVRHand = null
+		super.dispose()
+	end
+	
+	
+	public func ECBehaviorVRHand getVRHand()
+		return pVRHand
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

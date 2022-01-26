@@ -1,0 +1,228 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding support to temporarily display object as ghost. If enabled replaces
+ * all component textures with ghost texture. If disabled restored previous textures.
+ */
+class ECBTemporaryGhost extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Component texture. */
+		class Texture
+			private var Component pComponent
+			private var String pName
+			private var int pIndex
+			private var Skin pSkin
+			private var int pSkinTexture
+			private var DynamicSkin pDynamicSkin
+			
+			/** Create component texture for restoring. */
+			public func new(Component component, int index)
+				pComponent = component
+				pIndex = index
+				pName = component.getTextureNameAt(index)
+				pSkin = component.getTextureSkinAt(index)
+				pSkinTexture = component.getTextureTextureAt(index)
+				pDynamicSkin = component.getTextureDynamicSkinAt(index)
+			end
+			
+			/** Replace component texture with ghose skin. */
+			public func void replace(Skin skin)
+				pComponent.setTextureSkinAt(pIndex, skin, 0)
+				pComponent.setTextureDynamicSkinAt(pIndex, null)
+			end
+			
+			/** Restore component texture. */
+			public func void restore()
+				// it is possible the component changed in the mean time so ignore errors but log them
+				try
+					pComponent.setTextureSkinAt(pIndex, pSkin, pSkinTexture)
+					pComponent.setTextureDynamicSkinAt(pIndex, pDynamicSkin)
+					
+				catch Exception e
+					GameApp.getGameApp().getConsole().addError("Failed restoring texture: " + pName, e)
+				end
+			end
+		end
+		
+		
+		
+		private var ECBTemporaryGhost pECBehavior
+		private var Array pComponents // ECBehaviorComponent.Instance
+		private var Array pTextures // Texture
+		private var Skin pSkin
+		private var bool pEnabled
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBTemporaryGhost ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			
+			pComponents = ecbehavior.getComponents().map(block ECBehaviorComponent each
+				return each.instance(element)
+			end)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pTextures = null
+			pComponents = null
+			super.dispose()
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			pSkin = pECBehavior.getSkin().getSkin(stub, getElement().getClass())
+		end
+		
+		
+		
+		/** Enabled. */
+		public func bool getEnabled()
+			return pEnabled
+		end
+		
+		/** Set enabled. */
+		public func void setEnabled(bool enabled)
+			if enabled == pEnabled
+				return
+			end
+			
+			pEnabled = enabled
+			
+			if enabled
+				replaceTextures()
+				
+			else
+				restoreTextures()
+			end
+		end
+		
+		
+		
+		/** Set ghost textures. */
+		protected func void replaceTextures()
+			if pTextures != null
+				throw EInvalidParam.new("textures already replaced")
+			end
+			
+			pTextures = Array.new()
+			
+			pComponents.forEach(block ECBehaviorComponent.Instance each
+				var Component component = each.getComponent()
+				var int i, count = component.getTextureCount()
+				for i = 0 to count
+					pTextures.add(Texture.new(component, i))
+				end
+			end)
+			
+			pTextures.forEach(block Texture each
+				each.replace(pSkin)
+			end)
+		end
+		
+		/** Restore textures. */
+		protected func void restoreTextures()
+			if pTextures == null
+				throw EInvalidParam.new("no textures to restore")
+			end
+			
+			pTextures.forEach(block Texture each
+				each.restore()
+			end)
+			pTextures = null
+		end
+	end
+	
+	
+	
+	private var Array pComponents
+	private var ECPSkin pSkin
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorComponent component) super(eclass)
+		var String prefix = "temporaryGhost."
+		
+		pComponents = Array.new()
+		if component != null
+			pComponents.add(component)
+		end
+		
+		pSkin = ECPSkin.new(prefix + "skin", "/content/materials/ghost/ghost.deskin")
+		eclass.addProperty(pSkin)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pComponents = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Array of ECBehaviorComponent. */
+	public func Array getComponents()
+		return pComponents
+	end
+	
+	/** Ghost skin. */
+	public func ECPSkin getSkin()
+		return pSkin
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(this.getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

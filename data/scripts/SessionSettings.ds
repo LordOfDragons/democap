@@ -95,12 +95,15 @@ public class SessionSettings
 		end
 	end
 	
-	class SaveRecordFrameRate extends DefaultRangeModelListener
-		public func new()
+	class SaveRangeModelChanged extends DefaultRangeModelListener
+		private var String pSettingPath
+		
+		public func new(String settingPath)
+			pSettingPath = settingPath
 		end
 		
 		public func void valueChanged(RangeModel rangeModel)
-			GameApp.getGameApp().getSettings().setAt("RecordFrameRate", rangeModel.getValue())
+			GameApp.getGameApp().getSettings().setAt(pSettingPath, rangeModel.getValue())
 		end
 	end
 	
@@ -110,6 +113,18 @@ public class SessionSettings
 		
 		public func void valueChanged(RangeModel rangeModel)
 			GameApp.getGameApp().getSettings().setAt("SmoothSlotStrength", 0.1 * rangeModel.getValue())
+		end
+	end
+	
+	class SaveToggleModelChanged extends DefaultToggleModelListener
+		private var String pSettingPath
+		
+		public func new(String settingPath)
+			pSettingPath = settingPath
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			GameApp.getGameApp().getSettings().setAt(pSettingPath, model.getToggled())
 		end
 	end
 	
@@ -123,6 +138,7 @@ public class SessionSettings
 	private var DefaultRangeModel pModelSmoothSlotStrength
 	
 	private var DefaultListModel pModelHudCamera
+	private var DefaultToggleModel pModelShowVRControllers
 	
 	
 	
@@ -142,7 +158,7 @@ public class SessionSettings
 		
 		pModelRecordFrameRate = DefaultRangeModel.new(5, 90, 10, 25, 1)
 		pModelRecordFrameRate.setValue(s.getIntAt("RecordFrameRate", 25))
-		pModelRecordFrameRate.addListener(SaveRecordFrameRate.new())
+		pModelRecordFrameRate.addListener(SaveRangeModelChanged.new("RecordFrameRate"))
 		
 		pModelSmoothSlotStrength = DefaultRangeModel.new(0, 10, 5, 10, 1)
 		pModelSmoothSlotStrength.setValue((10.0 * s.getFloatAt("SmoothSlotStrength", 1) + 0.5) cast int)
@@ -150,6 +166,9 @@ public class SessionSettings
 		
 		pModelHudCamera = DefaultListModel.new()
 		pModelHudCamera.add(null)
+		
+		pModelShowVRControllers = DefaultToggleModel.new(s.getBoolAt("ShowVRControllers", true))
+		pModelShowVRControllers.addListener(SaveToggleModelChanged.new("ShowVRControllers"))
 	end
 	
 	
@@ -234,5 +253,10 @@ public class SessionSettings
 		
 		pModelHudCamera.setContent(content)
 		pModelHudCamera.setSelectedElement(selection)
+	end
+	
+	/** Show VR Controllers model. */
+	public func DefaultToggleModel getModelShowVRControllers()
+		return pModelShowVRControllers
 	end
 end
