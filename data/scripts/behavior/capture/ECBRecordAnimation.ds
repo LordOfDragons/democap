@@ -105,6 +105,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var Rig pRig
 		private var Array pListeners
 		private var ECBCapturedAnimations.Instance pCapturedAnimations
+		private var bool pFullRecording
 		
 		
 		
@@ -212,13 +213,12 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pRecordAnimationDevices.createRig(pCharacterConfiguration)
 			end
 			
-			prepareBoneIndices()
-			
-			pTransformRootBones = Matrix.new()
-			
 			var ECBSelectable.Instance selection = app.getSelectionTracker().getElement()
+			var BehaviorElement selectionElement
+			var bool firstAnimation
+			
 			if selection != null
-				var BehaviorElement selectionElement = selection.getElement()
+				selectionElement = selection.getElement()
 				pCapturedAnimations = ECBCapturedAnimations.getInstanceIn(selectionElement)
 				
 				if pCapturedAnimations != null
@@ -234,30 +234,45 @@ class ECBRecordAnimation extends DefaultECBehavior
 					
 					pCharacterAnimation = pCapturedAnimations.getAnimations().getActive()
 					
-					if pCharacterAnimation != null
-						pCharacterAnimation.clear()
-						GameApp.getGameApp().getProject().save()
-					end
-					
-					// ensure actor element lines up with selection element. if this is not
-					// the case the captured animation would be played back at the wrong
-					// position. we could calculate the transformation matrix from actor
-					// element in selection element coordinate system but this hides the
-					// problem and causes troubles later on while using the animation
-					var BehaviorElement element = getElement()
-// 					element.setGeometry(selectionElement.getPosition(), selectionElement.getOrientation())
-					
-					pTransformRootBones = (element.getElementMatrix()\
-						* selectionElement.getInverseElementMatrix()).toMatrix()
-					
-					// if physics attachments are used init collider bone states from component.
-					// this is required since collider bone states are in world space and do not
-					// move if the actor moves due to teleportation
-					var Collider collider = ECBehaviorCollider.getInstanceIn(element).getCollider()
-					if collider.getResponseType() == CollisionResponse.dynamic\
-					and collider castable ColliderComponent
-						(collider cast ColliderComponent).copyStatesFromComponent()
-					end
+					firstAnimation = pCapturedAnimations.getAnimations().getAt(0) == pCharacterAnimation
+				end
+			end
+			
+			pFullRecording = pCapturedAnimations == null or firstAnimation
+			
+			if pFullRecording
+				prepareAllBoneIndices()
+				
+			else
+				prepareBoneIndices()
+			end
+			
+			pTransformRootBones = Matrix.new()
+			
+			if pCapturedAnimations != null
+				if pCharacterAnimation != null
+					pCharacterAnimation.clear()
+					GameApp.getGameApp().getProject().save()
+				end
+				
+				// ensure actor element lines up with selection element. if this is not
+				// the case the captured animation would be played back at the wrong
+				// position. we could calculate the transformation matrix from actor
+				// element in selection element coordinate system but this hides the
+				// problem and causes troubles later on while using the animation
+				var BehaviorElement element = getElement()
+// 				element.setGeometry(selectionElement.getPosition(), selectionElement.getOrientation())
+				
+				pTransformRootBones = (element.getElementMatrix()\
+					* selectionElement.getInverseElementMatrix()).toMatrix()
+				
+				// if physics attachments are used init collider bone states from component.
+				// this is required since collider bone states are in world space and do not
+				// move if the actor moves due to teleportation
+				var Collider collider = ECBehaviorCollider.getInstanceIn(element).getCollider()
+				if collider.getResponseType() == CollisionResponse.dynamic\
+				and collider castable ColliderComponent
+					(collider cast ColliderComponent).copyStatesFromComponent()
 				end
 			end
 			
@@ -323,6 +338,34 @@ class ECBRecordAnimation extends DefaultECBehavior
 					pRecordAnimation.addBone(bone)
 				end
 			end)
+			
+			pRecordAnimation.setOriginBone(pCharacterConfiguration.getProfile().getOriginBone())
+		end
+		
+		/**
+		 * Prepare all bone indices. For each bone find also the root bone. Root bones are also
+		 * added as bones to be recorded. Also find the origin bone if defined. The origin
+		 * bone is always recorded as being 0.
+		 */
+		protected func void prepareAllBoneIndices()
+			pComponent = pActorAnimated.getComponent().getComponent()
+			pRig = pComponent.getRig()
+			
+			pBoneIndices.removeAll()
+			pRootBoneIndices.removeAll()
+			
+			var int i, count = pRig.getBoneCount()
+			for i = 0 to count
+				if pRig.boneGetParent(i) == -1
+					pRootBoneIndices.add(i)
+					
+				else
+					pBoneIndices.add(i)
+					
+				end
+				
+				pRecordAnimation.addBone(pRig.boneGetName(i))
+			end
 			
 			pRecordAnimation.setOriginBone(pCharacterConfiguration.getProfile().getOriginBone())
 		end
