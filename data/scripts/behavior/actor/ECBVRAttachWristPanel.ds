@@ -1,0 +1,152 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Gui
+
+pin Dragengine.Gui
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding support to attach wrist panel. Adds an attach slot and attaches matching
+ * wrist menu upon being added to game world.
+ */
+class ECBVRAttachWristPanel extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBVRAttachWristPanel pECBehavior
+		private var ECBehaviorVRHand.Instance pVRHand
+		private var ECBehaviorAttachSlot.Instance pAttachSlot
+		
+		
+		/** Create instance. */
+		public func new(ECBVRAttachWristPanel ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pVRHand = ecbehavior.getVRHand().instance(element)
+			pAttachSlot = ecbehavior.getAttachSlot().instance(element)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pVRHand = null
+			pAttachSlot = null
+			super.dispose()
+		end
+		
+		
+		/** Behavior. */
+		public func ECBVRAttachWristPanel getECBehavior()
+			return pECBehavior
+		end
+		
+		
+		/** Add to game world. */
+		public func void addToGameWorld()
+			ECBehaviorAttachable.getInstanceIn(pECBehavior.getRightHand()\
+				if GameApp.getGameApp().getWorldSpawnCharacter().getWristMenuRight() \
+				else GameApp.getGameApp().getWorldSpawnCharacter().getWristMenuLeft()).\
+					reattach(pAttachSlot, Vector.new(), Quaternion.new())
+		end
+		
+		/** Remove from game world. */
+		public func void removeFromGameWorld()
+			pAttachSlot.detach()
+		end
+	end
+	
+	
+	private var ECBehaviorVRHand pVRHand
+	private var ECBehaviorAttachSlot pAttachSlot
+	private var bool pRightHand
+	
+	
+	/** Create behavior element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorVRHand vrhand, bool rightHand) super(eclass)
+		if vrhand == null
+			throw ENullPointer.new("vrhand")
+		end
+		
+		pVRHand = vrhand
+		pRightHand = rightHand
+		
+		var Matrix matrix
+		
+		if rightHand
+			matrix = Matrix.newRT(Vector.new(-20, -60, 0), Vector.new(0.06, 0.04, -0.05))\
+				* Matrix.newRotationX(-45)
+			
+			pAttachSlot = ECBehaviorAttachSlot.new(eclass, null, vrhand,\
+				BaseVRActorClass.idVRRightHand,\
+				"attachSlot(" + BaseVRActorClass.idVRRightHand + ")")
+			
+		else
+			matrix = Matrix.newRT(Vector.new(-20, 60, 0), Vector.new(-0.06, 0.04, -0.05))\
+				* Matrix.newRotationX(-45)
+			
+			pAttachSlot = ECBehaviorAttachSlot.new(eclass, null, vrhand,\
+				BaseVRActorClass.idVRLeftHand,\
+				"attachSlot(" + BaseVRActorClass.idVRLeftHand + ")")
+		end
+		
+		pAttachSlot.getPosition().setVector(matrix.getPosition())
+		pAttachSlot.getOrientation().setVector(matrix.getEulerAngles())
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pVRHand = null
+		pAttachSlot = null
+		super.dispose()
+	end
+	
+	
+	/** VR Hand behavior. */
+	public func ECBehaviorVRHand getVRHand()
+		return pVRHand
+	end
+	
+	/** Attach slot behavior. */
+	public func ECBehaviorAttachSlot getAttachSlot()
+		return pAttachSlot
+	end
+	
+	/** Right hand. */
+	public func bool getRightHand()
+		return pRightHand
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

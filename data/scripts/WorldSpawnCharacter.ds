@@ -113,6 +113,8 @@ class WorldSpawnCharacter
 	private var Quaternion pLastActorOrientation
 	private var bool pLastActorSelected
 	private var BehaviorElement pVRMenu
+	private var BehaviorElement pWristMenuRight
+	private var BehaviorElement pWristMenuLeft
 	private var BehaviorElement pMirrorLarge
 	private var ElementClass pMoCapActorClass
 	private var bool pRequiresRecreateCharacter
@@ -129,6 +131,14 @@ class WorldSpawnCharacter
 	
 	/** Dispose. */
 	public func void dispose()
+		if pWristMenuLeft != null
+			pWristMenuLeft.safeDispose()
+			pWristMenuLeft = null
+		end
+		if pWristMenuRight != null
+			pWristMenuRight.safeDispose()
+			pWristMenuRight = null
+		end
 		if pVRMenu != null
 			pVRMenu.safeDispose()
 			pVRMenu = null
@@ -158,9 +168,15 @@ class WorldSpawnCharacter
 			return
 		end
 		
-		// remove VR menu from game world. it will be reused
+		// remove VR menus from game world. they will be reused
 		if pVRMenu != null
 			pVRMenu.removeFromGameWorldIfPresent()
+		end
+		if pWristMenuRight != null
+			pWristMenuRight.removeFromGameWorldIfPresent()
+		end
+		if pWristMenuLeft != null
+			pWristMenuLeft.removeFromGameWorldIfPresent()
 		end
 		
 		// remove large mirror from game world. it will be reused
@@ -183,13 +199,23 @@ class WorldSpawnCharacter
 			// find spawn point
 			pSpawnPoint = gameWorld.getSpawnPoints().getNamed("player")
 			
-			// add VR menu creating it if required
+			// add VR menus creating them if required
 			if pVRMenu == null
 				pVRMenu = createVRMenu()
 			end
 			pVRMenu.setVisible(false)
 			pVRMenu.setTouchable(false)
 			gameWorld.addElement(pVRMenu)
+			
+			if pWristMenuRight == null
+				pWristMenuRight = createWristMenu(true)
+			end
+			gameWorld.addElement(pWristMenuRight)
+			
+			if pWristMenuLeft == null
+				pWristMenuLeft = createWristMenu(false)
+			end
+			gameWorld.addElement(pWristMenuLeft)
 			
 			// add large mirror creating it if required
 			if pMirrorLarge == null
@@ -275,6 +301,16 @@ class WorldSpawnCharacter
 	/** VR Menu or null if not created yet. */
 	public func BehaviorElement getVRMenu()
 		return pVRMenu
+	end
+	
+	/** Right hand wrist menu Menu or null if not created yet. */
+	public func BehaviorElement getWristMenuRight()
+		return pWristMenuRight
+	end
+	
+	/** Left hand wrist menu or null if not created yet. */
+	public func BehaviorElement getWristMenuLeft()
+		return pWristMenuLeft
 	end
 	
 	/** Large mirror or null if not created yet. */
@@ -411,6 +447,17 @@ class WorldSpawnCharacter
 	/** Create VR menu. */
 	protected func BehaviorElement createVRMenu()
 		var ElementClass eclass = GameApp.getGameApp().getElementClassList().getNamed("VRMenu")
+		var StubElement stub = StubElement.new(eclass) // no generated ID on purpose
+		
+		// add properties if required
+		
+		return stub.createElement() cast BehaviorElement
+	end
+	
+	/** Create wrist menu. */
+	protected func BehaviorElement createWristMenu(bool rightHand)
+		var ElementClass eclass = GameApp.getGameApp().getElementClassList().getNamed(\
+			rightHand if "VRWristMenuRight" else "VRWristMenuLeft")
 		var StubElement stub = StubElement.new(eclass) // no generated ID on purpose
 		
 		// add properties if required

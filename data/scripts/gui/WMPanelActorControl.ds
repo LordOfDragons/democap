@@ -36,7 +36,7 @@ pin Dragengine.Scenery
 /**
  * Main window character panel.
  */
-class WMPanelActor extends Panel
+class WMPanelActorControl extends Panel
 	class RemoteCameraElementRenderer extends DefaultListElementRenderer
 		public func new()
 			setDefaultMinimumSize(Point.new(80, 20))
@@ -65,7 +65,7 @@ class WMPanelActor extends Panel
 	/** Create session panel. */
 	public func new(bool inVR, String prefixUIOptions)
 		pInVR = inVR
-		pPrefixUIOptions = prefixUIOptions + "/WMPanelActor"
+		pPrefixUIOptions = prefixUIOptions + "/WMPanelActorControl"
 		
 		runWhileBlockingLayout(block
 			createContent()
@@ -117,6 +117,7 @@ class WMPanelActor extends Panel
 	/** Create panel content. */
 	protected func void createContent()
 		var SessionSettings sessionSettings = SessionSettings.get()
+		var EnumListElementRenderer enumRenderer
 		var ComboBox comboBox
 		var CheckBox checkBox
 		var Label label
@@ -147,6 +148,29 @@ class WMPanelActor extends Panel
 		end))
 		
 		addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			// wrist menu panels
+			label = Label.new("Wrist Menu:", "Label.FormCaption")
+			label.setToolTip("Panel to show for left/right wrist menu.")
+			p.addWidget(label)
+			
+			p.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x, 3), block Panel p2
+				enumRenderer = EnumListElementRenderer.new()
+				enumRenderer.setNameFor(SessionSettings.WristMenuPanel.none, "None")
+				enumRenderer.setNameFor(SessionSettings.WristMenuPanel.settings, "Settings")
+				enumRenderer.setNameFor(SessionSettings.WristMenuPanel.character, "Character")
+				enumRenderer.setNameFor(SessionSettings.WristMenuPanel.project, "Project, Object")
+				enumRenderer.setNameFor(SessionSettings.WristMenuPanel.actorControl, "Actor Control")
+				enumRenderer.setNameFor(SessionSettings.WristMenuPanel.session, "Session, Playback")
+				
+				comboBox = ComboBox.new(sessionSettings.getModelLeftWristMenuPanel(), enumRenderer)
+				comboBox.setToolTip("Left wrist menu panel to show.")
+				p2.addWidget(comboBox)
+				
+				comboBox = ComboBox.new(sessionSettings.getModelRightWristMenuPanel(), enumRenderer)
+				comboBox.setToolTip("Right wrist menu panel to show.")
+				p2.addWidget(comboBox)
+			end))
+			
 			// remote camera
 			toolTip = "Remote camera to show in HUD."
 			label = Label.new("Remote Camera:", "Label.FormCaption")

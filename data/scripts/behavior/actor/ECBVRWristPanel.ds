@@ -1,0 +1,248 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Gui
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding wrist panel matching list model selection to renderable desktop.
+ * Also shows/hides owner element if a panel is selected or not.
+ */
+class ECBVRWristPanel extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class ShowPanelListener extends DefaultListModelListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void selectionChanged(ListModel listModel)
+				var SessionSettings.WristMenuPanel panel = SessionSettings.WristMenuPanel.none
+				if listModel.getSelected() != -1
+					panel = listModel.getAt(listModel.getSelected()) cast SessionSettings.WristMenuPanel
+				end
+				
+				// delay this by a frame since this call can potentially add listeners to the
+				// model which send this event. modifying listeners while listeners are
+				// iterated is not allowed
+				TimerBlock.new(0, false, block
+					pInstance.setPanel(panel)
+				end)
+			end
+		end
+		
+		
+		private var ECBVRWristPanel pECBehavior
+		private var Window pWindow
+		private var ShowPanelListener pShowPanelListener
+		private var SessionSettings.WristMenuPanel pPanel
+		
+		
+		/** Create instance. */
+		public func new(ECBVRWristPanel ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			var Desktop desktop = pECBehavior.getRenderableDesktop().instance(getElement()).getDesktop()
+			
+			if desktop.getWindowVirtualKeyboard() == null
+				desktop.setWindowVirtualKeyboard(WindowVirtualKeyboard.new())
+			end
+			
+			pWindow = Window.new(Point.new(), desktop.getSize())
+			pWindow.runWhileBlockingLayout(block
+				pWindow.setDesignerSelector("Window.Main")
+				pWindow.setCanClose(false)
+				pWindow.setCanMaximize(true)
+				pWindow.setCanMinimize(false)
+				pWindow.setCanMove(false)
+				pWindow.setCanResize(false)
+				pWindow.setCanReorder(false)
+				pWindow.setWindowState(Window.WindowState.maximized)
+			end)
+			desktop.addWindow(pWindow)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pWindow = null
+			super.dispose()
+		end
+		
+		
+		/** Behavior. */
+		public func ECBVRWristPanel getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Prefix UI Options. */
+		protected func String getPrefixUIOptions()
+			if pECBehavior.getRightHand()
+				return "UI/VR/WristMenu/Right"
+				
+			else
+				return "UI/VR/WristMenu/Left"
+			end
+		end
+		
+		/** Panel list model. */
+		protected func DefaultListModel getModelPanel()
+			if pECBehavior.getRightHand()
+				return SessionSettings.get().getModelRightWristMenuPanel()
+				
+			else
+				return SessionSettings.get().getModelLeftWristMenuPanel()
+			end
+		end
+		
+		/** Window. */
+		public func Window getWindow()
+			return pWindow
+		end
+		
+		/** Panel. */
+		public func SessionSettings.WristMenuPanel getPanel()
+			return pPanel
+		end
+		
+		/** Set panel. */
+		public func void setPanel(SessionSettings.WristMenuPanel panel)
+			if panel == pPanel
+				return
+			end
+			
+			pWindow.removeAllWidgets()
+			
+			pPanel = panel
+			
+			var Panel panelWidget
+			
+			select panel
+			case SessionSettings.WristMenuPanel.settings
+				panelWidget = WMPanelSettings.new(true, getPrefixUIOptions())
+				
+			case SessionSettings.WristMenuPanel.character
+				panelWidget = WMPanelCharacter.new(true, getPrefixUIOptions())
+				
+			case SessionSettings.WristMenuPanel.project
+				panelWidget = WMPanelProject.new(true, getPrefixUIOptions())
+				
+			case SessionSettings.WristMenuPanel.actorControl
+				panelWidget = WMPanelActorControl.new(true, getPrefixUIOptions())
+				
+			case SessionSettings.WristMenuPanel.session
+				panelWidget = WMPanelSession.new(true, getPrefixUIOptions())
+			end
+			
+			if panelWidget != null
+				pWindow.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p
+					p.addWidget(panelWidget)
+				end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
+				getElement().setVisible(true)
+				
+			else
+				getElement().setVisible(false)
+			end
+		end
+		
+		
+		/** Add to game world. */
+		public func void addToGameWorld()
+			pShowPanelListener = ShowPanelListener.new(this)
+			pShowPanelListener.selectionChanged(getModelPanel())
+			getModelPanel().addListener(pShowPanelListener)
+		end
+		
+		/** Remove from game world. */
+		public func void removeFromGameWorld()
+			if pShowPanelListener != null
+				getModelPanel().removeListener(pShowPanelListener)
+				pShowPanelListener = null
+			end
+			setPanel(null)
+		end
+	end
+	
+	
+	private var ECBehaviorRenderableDesktop pRenderableDesktop
+	private var bool pRightHand
+	
+	
+	/** Create behavior element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorRenderableDesktop renderabledesktop,\
+	bool rightHand) super(eclass)
+		if renderabledesktop == null
+			throw ENullPointer.new("renderabledesktop")
+		end
+		
+		pRenderableDesktop = renderabledesktop
+		pRightHand = rightHand
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pRenderableDesktop = null
+		super.dispose()
+	end
+	
+	
+	/** Renderable desktop. */
+	public func ECBehaviorRenderableDesktop getRenderableDesktop()
+		return pRenderableDesktop
+	end
+	
+	/** Right hand. */
+	public func bool getRightHand()
+		return pRightHand
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

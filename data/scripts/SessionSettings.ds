@@ -40,6 +40,16 @@ public class SessionSettings
 		target /** Target slot position. */
 	end
 	
+	/** Wrist menu panel. */
+	enum WristMenuPanel
+		none /** No panel. Hide wrist menu. */
+		settings /** WMPanelSettings. */
+		character /** WMPanelCharacter. */
+		project /** WMPanelProject. */
+		actorControl /** WMPanelActorControl. */
+		session /** WMPanelSession. */
+	end
+	
 	/** Toggle Show VR camera listener. */
 	class ToggleShowVRCameraListener extends DefaultToggleModelListener
 		public func new()
@@ -128,6 +138,24 @@ public class SessionSettings
 		end
 	end
 	
+	class SaveWristMenuChanged extends DefaultListModelListener
+		private var String pSettingPath
+		
+		public func new(String settingPath)
+			pSettingPath = settingPath
+		end
+		
+		public func void selectionChanged(ListModel listModel)
+			if listModel.getSelected() != -1
+				GameApp.getGameApp().getSettings().setAt(pSettingPath,\
+					(listModel.getAt(listModel.getSelected()) cast WristMenuPanel).name())
+					
+			else
+				GameApp.getGameApp().getSettings().setAt(pSettingPath, "none")
+			end
+		end
+	end
+	
 	
 	
 	private var DefaultToggleModel pModelEnableVR
@@ -139,6 +167,8 @@ public class SessionSettings
 	
 	private var DefaultListModel pModelHudCamera
 	private var DefaultToggleModel pModelShowVRControllers
+	private var DefaultListModel pModelRightWristMenuPanel
+	private var DefaultListModel pModelLeftWristMenuPanel
 	
 	
 	
@@ -169,6 +199,14 @@ public class SessionSettings
 		
 		pModelShowVRControllers = DefaultToggleModel.new(s.getBoolAt("ShowVRControllers", true))
 		pModelShowVRControllers.addListener(SaveToggleModelChanged.new("ShowVRControllers"))
+		
+		pModelRightWristMenuPanel = DefaultListModel.new(WristMenuPanel.all().toArray())
+		pModelRightWristMenuPanel.setSelectedElement(WristMenuPanel.named(s.getStringAt("RightWristMenuPanel", "none")))
+		pModelRightWristMenuPanel.addListener(SaveWristMenuChanged.new("RightWristMenuPanel"))
+		
+		pModelLeftWristMenuPanel = DefaultListModel.new(WristMenuPanel.all().toArray())
+		pModelLeftWristMenuPanel.setSelectedElement(WristMenuPanel.named(s.getStringAt("LeftWristMenuPanel", "none")))
+		pModelLeftWristMenuPanel.addListener(SaveWristMenuChanged.new("LeftWristMenuPanel"))
 	end
 	
 	
@@ -258,5 +296,25 @@ public class SessionSettings
 	/** Show VR Controllers model. */
 	public func DefaultToggleModel getModelShowVRControllers()
 		return pModelShowVRControllers
+	end
+	
+	/** Model right wrist menu panel. */
+	public func DefaultListModel getModelRightWristMenuPanel()
+		return pModelRightWristMenuPanel
+	end
+	
+	/** Right wrist menu panel. */
+	public func WristMenuPanel getRightWristMenuPanel()
+		return pModelRightWristMenuPanel.getSelectedElement() cast WristMenuPanel
+	end
+	
+	/** Model left wrist menu panel. */
+	public func DefaultListModel getModelLeftWristMenuPanel()
+		return pModelLeftWristMenuPanel
+	end
+	
+	/** Left wrist menu panel. */
+	public func WristMenuPanel getLeftWristMenuPanel()
+		return pModelLeftWristMenuPanel.getSelectedElement() cast WristMenuPanel
 	end
 end
