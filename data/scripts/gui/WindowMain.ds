@@ -97,31 +97,73 @@ class WindowMain extends Window
 	
 	/** Create window content. */
 	protected func void createContent(Desktop desktop)
-		setLayout(BorderLayout.new())
+		setLayout(BorderLayout.new(2))
 		
-		// category buttons at top
+		// switch panel buttons
+		var ToggleButtonGroup tbgroup = ToggleButtonGroup.new()
+		var ToggleButton tbutton
 		
-		// TODO add category for scene content.
-		//      add combobox to select *.deworld file from worlds directory
-		//      needs later also a way to add props
-		
-		// content
-		addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p
-			// application buttons
-			p.addWidget(Button.new("Settings...", BlockActionListener.new(block ActionEvent event
-				var WindowSettings window = WindowSettings.new(Point.new(800, 600))
-				window.addSheet(WSSModuleParameters.new())
-				window.show(this, false, WindowModal.Placement.desktop)
-			end)))
+		addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p2
+			tbutton = ToggleButton.new(" ")
+			tbutton.setDesignerSelector("Button.Category.Settings")
+			tbutton.setToolTip("Settings and VR Control")
+			p2.addWidget(tbutton)
+			tbutton.setButtonGroup(tbgroup)
 			
-			// panels
-			p.addWidget(WMPanelCharacter.new(pInVR))
-			p.addWidget(WMPanelSession.new(pInVR))
-			p.addWidget(WMPanelActor.new(pInVR))
-			p.addWidget(WMPanelProject.new(pInVR))
-		end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.visible), BorderLayout.Area.content)
+			tbutton = ToggleButton.new(" ")
+			tbutton.setDesignerSelector("Button.Category.Character")
+			tbutton.setToolTip("Character Configuration")
+			p2.addWidget(tbutton)
+			tbutton.setButtonGroup(tbgroup)
+			
+			tbutton = ToggleButton.new(" ")
+			tbutton.setDesignerSelector("Button.Category.Project")
+			tbutton.setToolTip("Project, Scenes and Objects")
+			p2.addWidget(tbutton)
+			tbutton.setButtonGroup(tbgroup)
+			
+			tbutton = ToggleButton.new(" ")
+			tbutton.setDesignerSelector("Button.Category.ActorControl")
+			tbutton.setToolTip("Actor Controls")
+			p2.addWidget(tbutton)
+			tbutton.setButtonGroup(tbgroup)
+			
+			tbutton = ToggleButton.new(" ")
+			tbutton.setDesignerSelector("Button.Category.Capture")
+			tbutton.setToolTip("Session, Recording and Playback")
+			p2.addWidget(tbutton)
+			tbutton.setButtonGroup(tbgroup)
+			
+			p2.addMouseListener(SwitchPanel.ScrollHeaderToggleButtons.new(tbgroup))
+		end), BorderLayout.Area.top)
 		
-		// button bar at bottom
+		// switch panels
+		var String prefixUIOptions = pInVR if "UI/VR/WindowMain" else "UI/WindowMain"
+		
+		addWidget(SwitchPanel.new(block SwitchPanel p
+			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
+				p2.addWidget(WMPanelSettings.new(pInVR, prefixUIOptions))
+			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
+			
+			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
+				p2.addWidget(WMPanelCharacter.new(pInVR, prefixUIOptions))
+			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
+			
+			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
+				p2.addWidget(WMPanelProject.new(pInVR, prefixUIOptions))
+			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
+			
+			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
+				p2.addWidget(WMPanelActor.new(pInVR, prefixUIOptions))
+			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
+			
+			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
+				p2.addWidget(WMPanelSession.new(pInVR, prefixUIOptions))
+			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
+			
+			tbgroup.addListener(SwitchPanel.SwitchToggleGroup.new(p))
+		end), BorderLayout.Area.content)
+		
 		addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
 			p.addWidget(Button.new("Quit", QuitGameActionListener.new()))
 			

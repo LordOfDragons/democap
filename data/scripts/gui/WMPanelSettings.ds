@@ -1,0 +1,109 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Settingss
+pin Democap.Actions
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+
+/**
+ * Main window character panel.
+ */
+class WMPanelSettings extends Panel
+	protected var bool pInVR
+	protected var String pPrefixUIOptions
+	
+	
+	
+	/** Create session panel. */
+	public func new(bool inVR, String prefixUIOptions)
+		pInVR = inVR
+		pPrefixUIOptions = prefixUIOptions + "/WMPanelSettings"
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		super.dispose()
+	end
+	
+	
+	
+	/** Shown in VR. */
+	public func bool getInVR()
+		return pInVR
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent()
+		var SessionSettings sessionSettings = SessionSettings.get()
+		var CheckBox checkBox
+		var Label label
+		var String toolTip
+		var Button button
+		
+		setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 5, FlowLayout.Stretch.last), block Panel p
+			p.setDesignerSelector("Panel.CollapsibleGroup.Header")
+			p.addWidget(Label.new("Settings / VR Control", "Label.CollapsibleGroup"))
+		end))
+		
+		addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
+			checkBox = CheckBox.new(sessionSettings.getModelEnableVR(), "VR")
+			checkBox.setToolTip("Enable VR System")
+			p.addWidget(checkBox)
+			
+			checkBox = CheckBox.new(sessionSettings.getModelEnableHMD(), "HMD")
+			checkBox.setToolTip("Enable HMD. If disabled shows placeholder model. For only tracker use")
+			p.addWidget(checkBox)
+			
+			checkBox = CheckBox.new(sessionSettings.getModelShowVRCamera(), "VR View")
+			checkBox.setToolTip("Show VR View (HMD left eye) or Free Camera in 3D View. "\
+				+ "Showing VR View is faster. Use Free Camera to set up scene.")
+			p.addWidget(checkBox)
+		end)) 
+		
+		addWidget(Panel.new(GridLayout.new(1, 0), block Panel p
+			button = Button.new("Module Parameters", BlockActionListener.new(block ActionEvent event
+				var WindowSettings window = WindowSettings.new(Point.new(800, 600))
+				window.addSheet(WSSModuleParameters.new())
+				window.show(getWindow(), false, WindowModal.Placement.desktop)
+			end))
+			button.setToolTip("Edit game engine module parameters")
+			p.addWidget(button)
+		end))
+	end
+end

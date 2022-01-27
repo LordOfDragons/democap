@@ -36,7 +36,7 @@ pin Dragengine.Scenery
 /**
  * Main window character panel.
  */
-class WMPanelSession extends CollapsibleGroup
+class WMPanelSession extends Panel
 	/** Playback changed. */
 	class PlaybackChanged extends PlaybackScene.DefaultListener
 		protected var WMPanelSession pPanel
@@ -126,6 +126,7 @@ class WMPanelSession extends CollapsibleGroup
 	
 	
 	protected var bool pInVR
+	protected var String pPrefixUIOptions
 	protected var DefaultRangeModel pModelPlaybackPosition
 	protected var DefaultListModel pModelListPlaybackSpeed
 	protected var DefaultTextModel pModelTextPlaybackSpeed
@@ -138,8 +139,9 @@ class WMPanelSession extends CollapsibleGroup
 	
 	
 	/** Create session panel. */
-	public func new(bool inVR) super("Session", CollapsibleGroup.persistModel(prefixUIOptions(inVR)))
+	public func new(bool inVR, String prefixUIOptions)
 		pInVR = inVR
+		pPrefixUIOptions = prefixUIOptions + "/WMPanelSession"
 		
 		pModelPlaybackPosition = DefaultRangeModel.new(0, 1000, 100, 0, 1)
 		
@@ -149,18 +151,13 @@ class WMPanelSession extends CollapsibleGroup
 		
 		pModelTextPlaybackSpeed = DefaultTextModel.new("100")
 		
-		getPanelContent().runWhileBlockingLayout(block
-			createContent(getPanelContent())
+		runWhileBlockingLayout(block
+			createContent()
 			updatePlaybackState()
 		end)
 		
 		pPlaybackChanged = PlaybackChanged.new(this)
 		GameApp.getGameApp().getPlaybackScene().addListener(pPlaybackChanged)
-	end
-	
-	/** UI options prefix. */
-	static public func String prefixUIOptions(bool inVR)
-		return inVR if "UI/VR/WMPanelSession" else "UI/WMPanelSession"
 	end
 	
 	/** Dispose of widget. */
@@ -184,34 +181,6 @@ class WMPanelSession extends CollapsibleGroup
 	/** Shown in VR. */
 	public func bool getInVR()
 		return pInVR
-	end
-	
-	
-	
-	/** Toggle large mirror. */
-	public func void toggleLargeMirror()
-		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
-		if actor == null
-			return
-		end
-		
-		var BehaviorElement mirror = GameApp.getGameApp().getWorldSpawnCharacter().getMirrorLarge()
-		if mirror == null
-			return
-		end
-		
-		var ECBToggleVisibility.Instance toggleVisibility = ECBToggleVisibility.getInstanceIn(mirror)
-		if toggleVisibility == null
-			return
-		end
-		
-		if toggleVisibility.getVisible()
-			toggleVisibility.setVisible(false)
-			
-		else
-			toggleVisibility.repositionHmd(actor, Vector.new(0, 0, 0.5)) //Vector.new(0.35, 0, 0.35))
-			toggleVisibility.setVisible(true)
-		end
 	end
 	
 	
@@ -332,7 +301,7 @@ class WMPanelSession extends CollapsibleGroup
 	
 	
 	/** Create panel content. */
-	protected func void createContent(Panel content)
+	protected func void createContent()
 		var SessionSettings sessionSettings = SessionSettings.get()
 		var ComboBox comboBox
 		var CheckBox checkBox
@@ -342,31 +311,15 @@ class WMPanelSession extends CollapsibleGroup
 		var SpinButton spinButton
 		var String tooltip
 		
-		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
-		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
-			checkBox = CheckBox.new(sessionSettings.getModelEnableVR(), "VR")
-			checkBox.setToolTip("Enable VR System")
-			p.addWidget(checkBox)
-			
-			checkBox = CheckBox.new(sessionSettings.getModelEnableHMD(), "HMD")
-			checkBox.setToolTip("Enable HMD. If disabled shows placeholder model. For only tracker use")
-			p.addWidget(checkBox)
-			
-			checkBox = CheckBox.new(sessionSettings.getModelShowVRCamera(), "VR View")
-			checkBox.setToolTip("Show VR View (HMD left eye) or Free Camera in 3D View. "\
-				+ "Showing VR View is faster. Use Free Camera to set up scene.")
-			p.addWidget(checkBox)
-		end)) 
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 5, FlowLayout.Stretch.last), block Panel p
+			p.setDesignerSelector("Panel.CollapsibleGroup.Header")
+			p.addWidget(Label.new("Session", "Label.CollapsibleGroup"))
+		end))
 		
-		content.addWidget(Panel.new(BorderLayout.new(), block Panel p
+		addWidget(Panel.new(BorderLayout.new(), block Panel p
 			p.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p2
-				button = Button.new("Mirror", BlockActionListener.new(block ActionEvent event
-					toggleLargeMirror()
-				end))
-				button.setToolTip("Show/hide large VR mirror")
-				p2.addWidget(button)
-				
 				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
 					startRecording()
 				end))
@@ -389,7 +342,7 @@ class WMPanelSession extends CollapsibleGroup
 			end), BorderLayout.Area.content)
 		end)) 
 		
-		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x, 5), block Panel p
+		addWidget(Panel.new(BoxLayout.new(LayoutAxis.x, 5), block Panel p
 			// frame rate
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 3, FlowLayout.Stretch.last), block Panel p2
 				tooltip = "Frame rate to use for recording animations"
@@ -445,14 +398,14 @@ class WMPanelSession extends CollapsibleGroup
 			end))
 		end))
 		
-		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
+		addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
 			var ProgressBar progress = ProgressBar.new(Orientation.horizontal, pModelPlaybackPosition)
 			progress.setDesignerSelector("ProgressBar.PlaybackTime")
 			progress.addMouseListener(ClickAndDragPlaybackBar.new(this, progress))
 			p.addWidget(progress)
 		end))
 		
-		content.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.first), block Panel p
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.first), block Panel p
 			p.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p2
 				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
 					playbackRewind()

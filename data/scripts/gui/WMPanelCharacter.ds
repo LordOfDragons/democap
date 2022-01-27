@@ -34,7 +34,7 @@ pin Dragengine.Scenery
 /**
  * Main window character panel.
  */
-class WMPanelCharacter extends CollapsibleGroup
+class WMPanelCharacter extends Panel
 	/** Actor profile list element renderer. */
 	class ActorProfileRenderer extends DefaultListElementRenderer
 		public func new()
@@ -371,19 +371,21 @@ class WMPanelCharacter extends CollapsibleGroup
 	protected var CharacterProfile pCharacterProfile
 	protected var CharacterConfiguration pCharacterConfiguration
 	protected var bool pInVR
+	protected var String pPrefixUIOptions
 	
 	
 	/** Create character panel. */
-	public func new(bool inVR) super("Character Selection", CollapsibleGroup.persistModel(prefixUIOptions(inVR)))
+	public func new(bool inVR, String prefixUIOptions)
 		pInVR = inVR
+		pPrefixUIOptions = prefixUIOptions + "/WMPanelCharacter"
 		
 		pModelActorProfiles = DefaultListModel.new()
 		pModelCharacterProfiles = DefaultListModel.new()
 		pModelCharacterConfigurations = DefaultListModel.new()
 		pListenCharacterConfigurations = ListenCharacterConfigurations.new(this)
 		
-		getPanelContent().runWhileBlockingLayout(block
-			createContent(getPanelContent())
+		runWhileBlockingLayout(block
+			createContent()
 		end)
 		
 		pModelActorProfiles.addListener(ActorProfileSelection.new(this))
@@ -408,11 +410,6 @@ class WMPanelCharacter extends CollapsibleGroup
 		pListenCharacterConfigurations = null
 		
 		super.dispose()
-	end
-	
-	/** UI options prefix. */
-	static public func String prefixUIOptions(bool inVR)
-		return inVR if "UI/VR/WMPanelCharacter" else "UI/WMPanelCharacter"
 	end
 	
 	
@@ -854,12 +851,17 @@ class WMPanelCharacter extends CollapsibleGroup
 	
 	
 	/** Create panel content. */
-	protected func void createContent(Panel content)
+	protected func void createContent()
 		var Button button
 		
-		content.setLayout(BorderLayout.new(2))
+		setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
-		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 5, FlowLayout.Stretch.last), block Panel p
+			p.setDesignerSelector("Panel.CollapsibleGroup.Header")
+			p.addWidget(Label.new("Character Selection", "Label.CollapsibleGroup"))
+		end))
+		
+		addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
 			p.addWidget(Label.new("Actors:", "Label.FormCaption"))
 			
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
@@ -889,9 +891,9 @@ class WMPanelCharacter extends CollapsibleGroup
 				button.setDesignerSelector("Button.Popup")
 				p2.addWidget(button)
 			end))
-		end), BorderLayout.Area.content)
+		end))
 		
-		content.addWidget(Panel.new(GridLayout.new(4, 0), block Panel p
+		addWidget(Panel.new(GridLayout.new(2, 0), block Panel p
 			button = Button.new("Activate", BlockActionListener.new(block ActionEvent event
 				activateCharacterConfiguration()
 			end))
@@ -915,6 +917,6 @@ class WMPanelCharacter extends CollapsibleGroup
 			end))
 			button.setToolTip("Instant recalibrate character for fine tuning")
 			p.addWidget(button)
-		end), BorderLayout.Area.bottom)
+		end))
 	end
 end

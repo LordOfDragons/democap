@@ -38,7 +38,7 @@ pin Dragengine.Utils
 /**
  * Main window project panel.
  */
-class WMPanelProject extends CollapsibleGroup
+class WMPanelProject extends Panel
 	/** Game changes listener. */
 	class GameChangedListener extends DefaultGameListener
 		protected var WMPanelProject pPanel
@@ -555,6 +555,7 @@ class WMPanelProject extends CollapsibleGroup
 	protected var EditVector pEditObjectRotation
 	protected var ECBSceneObject.Instance pObject
 	protected var bool pInVR
+	protected var String pPrefixUIOptions
 	protected var Project pProject
 	protected var Scene pScene
 	protected var ScenesChangedListener pScenesChangedListener
@@ -565,8 +566,9 @@ class WMPanelProject extends CollapsibleGroup
 	
 	
 	/** Create panel. */
-	public func new(bool inVR) super("Project", CollapsibleGroup.persistModel(prefixUIOptions(inVR)))
+	public func new(bool inVR, String prefixUIOptions)
 		pInVR = inVR
+		pPrefixUIOptions = prefixUIOptions + "/WMPanelProject"
 		
 		pModelProjectFilename = DefaultTextModel.new("")
 		pModelScenes = DefaultListModel.new()
@@ -579,8 +581,8 @@ class WMPanelProject extends CollapsibleGroup
 		
 		pModelObjectClass = DefaultTextModel.new("")
 		
-		getPanelContent().runWhileBlockingLayout(block
-			createContent(getPanelContent())
+		runWhileBlockingLayout(block
+			createContent()
 		end)
 		
 		var GameApp app = GameApp.getGameApp()
@@ -625,16 +627,16 @@ class WMPanelProject extends CollapsibleGroup
 		super.dispose()
 	end
 	
-	/** UI options prefix. */
-	static public func String prefixUIOptions(bool inVR)
-		return inVR if "UI/VR/WMPanelProject" else "UI/WMPanelProject"
-	end
-	
 	
 	
 	/** Shown in VR. */
 	public func bool getInVR()
 		return pInVR
+	end
+	
+	/** UI Option Prefix. */
+	public func String getPrefixUIOptions()
+		return pPrefixUIOptions
 	end
 	
 	/** Scene objects model. */
@@ -1382,14 +1384,15 @@ class WMPanelProject extends CollapsibleGroup
 	
 	
 	/** Create panel content. */
-	protected func void createContent(Panel content)
+	protected func void createContent()
 		var TextField textField
 		var Button button
 		var Label label
 		
-		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
-		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+		addWidget(CollapsibleGroup.new("Project", CollapsibleGroup.persistModel(pPrefixUIOptions + "/Project"),\
+		FormLayout.new(true, 5, 2), block Panel p
 			p.addWidget(Label.new("Project:", "Label.FormCaption"))
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
 				label = Label.new(pModelProjectFilename, "Label.FormText")
@@ -1427,7 +1430,9 @@ class WMPanelProject extends CollapsibleGroup
 				button.setDesignerSelector("Button.Popup")
 				p2.addWidget(button)
 			end))
-			
+		end))
+		
+		addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
 			p.addWidget(Label.new("Object:", "Label.FormCaption"))
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
 				p2.addWidget(ComboBox.new(pModelObjects, ObjectElementRenderer.new()))
@@ -1436,7 +1441,11 @@ class WMPanelProject extends CollapsibleGroup
 				button.setDesignerSelector("Button.Popup")
 				p2.addWidget(button)
 			end))
-			
+		end))
+		
+		addWidget(CollapsibleGroup.new("Geometry",\
+		CollapsibleGroup.persistModel(pPrefixUIOptions + "/ObjectGeometry"),\
+		FormLayout.new(true, 5, 2), block Panel p
 			p.addWidget(Label.new("Class:", "Label.FormCaption"))
 			label = Label.new(pModelObjectClass, "Label.FormText")
 			label.setToolTip("Object class. Defines behaviors shown below")
@@ -1456,6 +1465,6 @@ class WMPanelProject extends CollapsibleGroup
 		end))
 		
 		pPanelBehaviors = Panel.new(FlowLayout.new(LayoutAxis.y, 2))
-		content.addWidget(pPanelBehaviors)
+		addWidget(pPanelBehaviors)
 	end
 end

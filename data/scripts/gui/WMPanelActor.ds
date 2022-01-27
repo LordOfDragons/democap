@@ -36,7 +36,7 @@ pin Dragengine.Scenery
 /**
  * Main window character panel.
  */
-class WMPanelActor extends CollapsibleGroup
+class WMPanelActor extends Panel
 	class RemoteCameraElementRenderer extends DefaultListElementRenderer
 		public func new()
 			setDefaultMinimumSize(Point.new(80, 20))
@@ -58,21 +58,18 @@ class WMPanelActor extends CollapsibleGroup
 	
 	
 	protected var bool pInVR
+	protected var String pPrefixUIOptions
 	
 	
 	
 	/** Create session panel. */
-	public func new(bool inVR) super("Actor Controls", CollapsibleGroup.persistModel(prefixUIOptions(inVR)))
+	public func new(bool inVR, String prefixUIOptions)
 		pInVR = inVR
+		pPrefixUIOptions = prefixUIOptions + "/WMPanelActor"
 		
-		getPanelContent().runWhileBlockingLayout(block
-			createContent(getPanelContent())
+		runWhileBlockingLayout(block
+			createContent()
 		end)
-	end
-	
-	/** UI options prefix. */
-	static public func String prefixUIOptions(bool inVR)
-		return inVR if "UI/VR/WMPanelActor" else "UI/WMPanelActor"
 	end
 	
 	/** Dispose of widget. */
@@ -89,17 +86,67 @@ class WMPanelActor extends CollapsibleGroup
 	
 	
 	
+	/** Toggle large mirror. */
+	public func void toggleLargeMirror()
+		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+		if actor == null
+			return
+		end
+		
+		var BehaviorElement mirror = GameApp.getGameApp().getWorldSpawnCharacter().getMirrorLarge()
+		if mirror == null
+			return
+		end
+		
+		var ECBToggleVisibility.Instance toggleVisibility = ECBToggleVisibility.getInstanceIn(mirror)
+		if toggleVisibility == null
+			return
+		end
+		
+		if toggleVisibility.getVisible()
+			toggleVisibility.setVisible(false)
+			
+		else
+			toggleVisibility.repositionHmd(actor, Vector.new(0, 0, 0.5)) //Vector.new(0.35, 0, 0.35))
+			toggleVisibility.setVisible(true)
+		end
+	end
+	
+	
+	
 	/** Create panel content. */
-	protected func void createContent(Panel content)
+	protected func void createContent()
 		var SessionSettings sessionSettings = SessionSettings.get()
 		var ComboBox comboBox
 		var CheckBox checkBox
 		var Label label
 		var String toolTip
+		var Button button
 		
-		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
-		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 5, FlowLayout.Stretch.last), block Panel p
+			p.setDesignerSelector("Panel.CollapsibleGroup.Header")
+			p.addWidget(Label.new("Actor Controls", "Label.CollapsibleGroup"))
+		end))
+		
+		addWidget(Panel.new(GridLayout.new(1, 0), block Panel p
+			// show/hide mirror
+			button = Button.new("Toggle VR Mirror", BlockActionListener.new(block ActionEvent event
+				toggleLargeMirror()
+			end))
+			button.setToolTip("Show/hide large VR mirror")
+			p.addWidget(button)
+		end))
+		
+		addWidget(Panel.new(GridLayout.new(2, 0), block Panel p
+			// show vr controllers
+			checkBox = CheckBox.new(sessionSettings.getModelShowVRControllers(), "Show VR Controllers")
+			checkBox.setToolTip("Show VR Controllers if character is active")
+			p.addWidget(checkBox)
+		end))
+		
+		addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
 			// remote camera
 			toolTip = "Remote camera to show in HUD."
 			label = Label.new("Remote Camera:", "Label.FormCaption")
@@ -109,13 +156,6 @@ class WMPanelActor extends CollapsibleGroup
 			comboBox = ComboBox.new(sessionSettings.getModelHudCamera(), RemoteCameraElementRenderer.new())
 			comboBox.setToolTip(toolTip)
 			p.addWidget(comboBox)
-			
-			// show vr controllers
-			p.addWidget(Label.new("", "Label.FormCaption"))
-			
-			checkBox = CheckBox.new(sessionSettings.getModelShowVRControllers(), "Show VR Controllers")
-			checkBox.setToolTip("Show VR Controllers if character is active")
-			p.addWidget(checkBox)
 		end))
 	end
 end

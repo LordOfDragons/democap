@@ -1,0 +1,101 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Group panel. Group header shows text.
+ */
+class StaticGroup extends Panel
+	private var Label pLabel
+	private var Panel pPanelHeader
+	private var Panel pPanelContent
+	
+	
+	/** Create widget. */
+	public func new(String label)
+		if label == null
+			throw ENullPointer.new("label")
+		end
+		
+		runWhileBlockingLayout(block
+			setLayout(BorderLayout.new())
+			
+			pPanelHeader = Panel.new(FlowLayout.new(LayoutAxis.x, 5, FlowLayout.Stretch.last), block Panel p
+				pLabel = Label.new(label)
+				p.addWidget(pLabel)
+			end)
+			addWidget(pPanelHeader, BorderLayout.Area.top)
+			
+			pPanelContent = Panel.new(FlowLayout.new(LayoutAxis.y))
+			addWidget(pPanelContent, BorderLayout.Area.content)
+			
+			setDesignerSelector("CollapsibleGroup")
+		end)
+	end
+	
+	/** Create widget. */
+	public func new(String label, Layout layout, Block addContent) this(label)
+		pPanelContent.runWhileBlockingLayout(block
+			pPanelContent.setLayout(layout)
+			addContent.run(pPanelContent)
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		pLabel = null
+		pPanelHeader = null
+		pPanelContent = null
+		
+		super.dispose()
+	end
+	
+	
+	/** Label. */
+	public func Label getLabel()
+		return pLabel
+	end
+	
+	/** Header panel. */
+	public func Panel getPanelHeader()
+		return pPanelHeader
+	end
+	
+	/** Content panel. */
+	public func Panel getPanelContent()
+		return pPanelContent
+	end
+	
+	
+	/** Set designer selector. */
+	public func void setDesignerSelector(String selector)
+		super.setDesignerSelector(selector)
+		pPanelHeader.setDesignerSelector("Panel." + selector + ".Header")
+		pLabel.setDesignerSelector("Label." + selector)
+		pPanelContent.setDesignerSelector("Panel." + selector + ".Content")
+	end
+end
