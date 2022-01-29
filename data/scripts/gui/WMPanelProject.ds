@@ -1372,6 +1372,26 @@ class WMPanelProject extends Panel
 		FileSystem.browseOverlay(GameApp.getGameApp().getPathObjects())
 	end
 	
+	/** Move object. */
+	public func void moveObject(DVector direction)
+		if pObject != null
+			var Element element = pObject.getElement()
+			var DMatrix matrix = DMatrix.newFromQuaternion(element.getOrientation())
+			element.setPosition(element.getPosition() + matrix.transformNormal(direction)\
+				* SessionSettings.get().getManualMovementStep())
+		end
+	end
+	
+	/** Rotate object. */
+	public func void rotateObject(Vector axis)
+		if pObject != null
+			var Element element = pObject.getElement()
+			var Matrix matrix = Matrix.newFromQuaternion(element.getOrientation())
+			element.setOrientation(element.getOrientation() * Quaternion.newFromAxis(\
+				matrix.transformNormal(axis), -SessionSettings.get().getManualRotationStep()))
+		end
+	end
+	
 	
 	
 	/** Behavior panel matching prefix UI options value or null. */
@@ -1385,7 +1405,9 @@ class WMPanelProject extends Panel
 	
 	/** Create panel content. */
 	protected func void createContent()
+		var DefaultListModel comboBoxListModel
 		var TextField textField
+		var ComboBox comboBox
 		var Button button
 		var Label label
 		
@@ -1462,6 +1484,133 @@ class WMPanelProject extends Panel
 			pEditObjectRotation.setToolTip("Object rotation in euler angles")
 			p.addWidget(pEditObjectRotation)
 			pEditObjectRotation.addActionListener(ObjectRotationChanged.new(this, pEditObjectRotation))
+			
+			// manual movement
+			label = Label.new("Manual Move:", "Label.FormCaption")
+			label.setToolTip("Manually move object by step width")
+			p.addWidget(label)
+			
+			p.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x, 2), block Panel p2
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					moveObject(DVector.new(-1, 0, 0))
+				end))
+				button.setDesignerSelector("Button.MovementLeft")
+				button.setToolTip("Move object left by step width")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					moveObject(DVector.new(0, 1, 0))
+				end))
+				button.setDesignerSelector("Button.MovementUp")
+				button.setToolTip("Move object up by step width")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					moveObject(DVector.new(0, 0, 1))
+				end))
+				button.setDesignerSelector("Button.MovementForward")
+				button.setToolTip("Move object forward by step width")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					moveObject(DVector.new(0, 0, -1))
+				end))
+				button.setDesignerSelector("Button.MovementBackwards")
+				button.setToolTip("Move object backwards by step width")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					moveObject(DVector.new(0, -1, 0))
+				end))
+				button.setDesignerSelector("Button.MovementDown")
+				button.setToolTip("Move object down by step width")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					moveObject(DVector.new(1, 0, 0))
+				end))
+				button.setDesignerSelector("Button.MovementRight")
+				button.setToolTip("Move object right by step width")
+				p2.addWidget(button)
+				
+				comboBoxListModel = DefaultListModel.new()
+				comboBoxListModel.setAutoSelect(false)
+				comboBoxListModel.add("10")
+				comboBoxListModel.add("1")
+				comboBoxListModel.add("0.1")
+				comboBoxListModel.add("0.01")
+				comboBoxListModel.add("0.001")
+				
+				comboBox = ComboBox.new(comboBoxListModel, DefaultComboBoxEditor.new(\
+					SessionSettings.get().getModelManualMovementStep(), 4))
+				comboBox.setToolTip("Step width in meters for manual movement")
+				p2.addWidget(comboBox)
+			end))
+			
+			// manual rotation
+			label = Label.new("Manual Rotate:", "Label.FormCaption")
+			label.setToolTip("Manually rotate object by step angle")
+			p.addWidget(label)
+			
+			p.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x, 2), block Panel p2
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					rotateObject(Vector.new(1, 0, 0))
+				end))
+				button.setDesignerSelector("Button.RotationXPositive")
+				button.setToolTip("Rotate object around positive X axis")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					rotateObject(Vector.new(-1, 0, 0))
+				end))
+				button.setDesignerSelector("Button.RotationXNegative")
+				button.setToolTip("Rotate object around negative X axis")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					rotateObject(Vector.new(0, 1, 0))
+				end))
+				button.setDesignerSelector("Button.RotationYPositive")
+				button.setToolTip("Rotate object around positive Y axis")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					rotateObject(Vector.new(0, -1, 0))
+				end))
+				button.setDesignerSelector("Button.RotationYNegative")
+				button.setToolTip("Rotate object negative Y axis")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					rotateObject(Vector.new(0, 0, 1))
+				end))
+				button.setDesignerSelector("Button.RotationZPositive")
+				button.setToolTip("Rotate object around positive Z axis")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					rotateObject(Vector.new(0, 0, -1))
+				end))
+				button.setDesignerSelector("Button.RotationZNegative")
+				button.setToolTip("Rotate object around negative Z axis")
+				p2.addWidget(button)
+				
+				comboBoxListModel = DefaultListModel.new()
+				comboBoxListModel.setAutoSelect(false)
+				comboBoxListModel.add("90")
+				comboBoxListModel.add("45")
+				comboBoxListModel.add("30")
+				comboBoxListModel.add("15")
+				comboBoxListModel.add("10")
+				comboBoxListModel.add("5")
+				comboBoxListModel.add("1")
+				comboBoxListModel.add("0.1")
+				
+				comboBox = ComboBox.new(comboBoxListModel, DefaultComboBoxEditor.new(\
+					SessionSettings.get().getModelManualRotationStep(), 4))
+				comboBox.setToolTip("Step width in meters for manual rotation")
+				p2.addWidget(comboBox)
+			end))
 		end))
 		
 		pPanelBehaviors = Panel.new(FlowLayout.new(LayoutAxis.y, 2))

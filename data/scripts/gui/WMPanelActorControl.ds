@@ -112,12 +112,33 @@ class WMPanelActorControl extends Panel
 		end
 	end
 	
+	/** Move actor. */
+	public func void moveActor(DVector direction)
+		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+		if actor != null
+			var DMatrix matrix = DMatrix.newFromQuaternion(actor.getOrientation())
+			actor.setPosition(actor.getPosition() + matrix.transformNormal(direction)\
+				* SessionSettings.get().getManualMovementStep())
+		end
+	end
+	
+	/** Rotate actor. */
+	public func void rotateActor(Vector axis)
+		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+		if actor != null
+			var Matrix matrix = Matrix.newFromQuaternion(actor.getOrientation())
+			actor.setOrientation(actor.getOrientation() * Quaternion.newFromAxis(\
+				matrix.transformNormal(axis), -SessionSettings.get().getManualRotationStep()))
+		end
+	end
+	
 	
 	
 	/** Create panel content. */
 	protected func void createContent()
 		var SessionSettings sessionSettings = SessionSettings.get()
 		var EnumListElementRenderer enumRenderer
+		var DefaultListModel comboBoxListModel
 		var ComboBox comboBox
 		var CheckBox checkBox
 		var Label label
@@ -185,6 +206,137 @@ class WMPanelActorControl extends Panel
 			comboBox = ComboBox.new(sessionSettings.getModelHudCamera(), RemoteCameraElementRenderer.new())
 			comboBox.setToolTip(toolTip)
 			p.addWidget(comboBox)
+			
+			// manual movement
+			label = Label.new("Manual Move:", "Label.FormCaption")
+			label.setToolTip("Manually move actor by step width")
+			p.addWidget(label)
+			
+			p.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x, 2), block Panel p2
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					moveActor(DVector.new(-1, 0, 0))
+				end))
+				button.setDesignerSelector("Button.MovementLeft")
+				button.setToolTip("Move actor left by step width")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					moveActor(DVector.new(0, 1, 0))
+				end))
+				button.setDesignerSelector("Button.MovementUp")
+				button.setToolTip("Move actor up by step width")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					moveActor(DVector.new(0, 0, 1))
+				end))
+				button.setDesignerSelector("Button.MovementForward")
+				button.setToolTip("Move actor forward by step width")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					moveActor(DVector.new(0, 0, -1))
+				end))
+				button.setDesignerSelector("Button.MovementBackwards")
+				button.setToolTip("Move actor backwards by step width")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					moveActor(DVector.new(0, -1, 0))
+				end))
+				button.setDesignerSelector("Button.MovementDown")
+				button.setToolTip("Move actor down by step width")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					moveActor(DVector.new(1, 0, 0))
+				end))
+				button.setDesignerSelector("Button.MovementRight")
+				button.setToolTip("Move actor right by step width")
+				p2.addWidget(button)
+				
+				comboBoxListModel = DefaultListModel.new()
+				comboBoxListModel.setAutoSelect(false)
+				comboBoxListModel.add("10")
+				comboBoxListModel.add("1")
+				comboBoxListModel.add("0.1")
+				comboBoxListModel.add("0.01")
+				comboBoxListModel.add("0.001")
+				
+				comboBox = ComboBox.new(comboBoxListModel, DefaultComboBoxEditor.new(\
+					sessionSettings.getModelManualMovementStep(), 4))
+				comboBox.setToolTip("Step width in meters for manual movement")
+				p2.addWidget(comboBox)
+			end))
+			
+			// manual rotation
+			label = Label.new("Manual Rotate:", "Label.FormCaption")
+			label.setToolTip("Manually rotate actor by step angle")
+			p.addWidget(label)
+			
+			p.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x, 2), block Panel p2
+				/*
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					rotateActor(Vector.new(1, 0, 0))
+				end))
+				button.setDesignerSelector("Button.RotationXPositive")
+				button.setToolTip("Rotate actor around positive X axis")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					rotateActor(Vector.new(-1, 0, 0))
+				end))
+				button.setDesignerSelector("Button.RotationXNegative")
+				button.setToolTip("Rotate actor around negative X axis")
+				p2.addWidget(button)
+				*/
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					rotateActor(Vector.new(0, 1, 0))
+				end))
+				button.setDesignerSelector("Button.RotationYPositive")
+				button.setToolTip("Rotate actor around positive Y axis")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					rotateActor(Vector.new(0, -1, 0))
+				end))
+				button.setDesignerSelector("Button.RotationYNegative")
+				button.setToolTip("Rotate actor around negative Y axis")
+				p2.addWidget(button)
+				
+				/*
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					rotateActor(Vector.new(0, 0, 1))
+				end))
+				button.setDesignerSelector("Button.RotationZPositive")
+				button.setToolTip("Rotate actor around positive Z axis")
+				p2.addWidget(button)
+				
+				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					rotateActor(Vector.new(0, 0, -1))
+				end))
+				button.setDesignerSelector("Button.RotationZNegative")
+				button.setToolTip("Rotate around negative Z axis")
+				p2.addWidget(button)
+				*/
+				
+				comboBoxListModel = DefaultListModel.new()
+				comboBoxListModel.setAutoSelect(false)
+				comboBoxListModel.add("90")
+				comboBoxListModel.add("45")
+				comboBoxListModel.add("30")
+				comboBoxListModel.add("15")
+				comboBoxListModel.add("10")
+				comboBoxListModel.add("5")
+				comboBoxListModel.add("1")
+				comboBoxListModel.add("0.1")
+				
+				comboBox = ComboBox.new(comboBoxListModel, DefaultComboBoxEditor.new(\
+					sessionSettings.getModelManualRotationStep(), 4))
+				comboBox.setToolTip("Step width in meters for manual rotation")
+				p2.addWidget(comboBox)
+			end))
 		end))
 	end
 end

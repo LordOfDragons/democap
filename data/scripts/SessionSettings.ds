@@ -138,6 +138,18 @@ public class SessionSettings
 		end
 	end
 	
+	class SaveTextModelChanged extends DefaultTextModelListener
+		private var String pSettingPath
+		
+		public func new(String settingPath)
+			pSettingPath = settingPath
+		end
+		
+		public func void textChanged(TextModel model)
+			GameApp.getGameApp().getSettings().setAt(pSettingPath, model.getText())
+		end
+	end
+	
 	class SaveWristMenuChanged extends DefaultListModelListener
 		private var String pSettingPath
 		
@@ -170,6 +182,8 @@ public class SessionSettings
 	private var DefaultListModel pModelRightWristMenuPanel
 	private var DefaultListModel pModelLeftWristMenuPanel
 	private var DefaultToggleModel pModelProjectToGround
+	private var DefaultTextModel pModelManualMovementStep
+	private var DefaultTextModel pModelManualRotationStep
 	
 	
 	
@@ -211,6 +225,12 @@ public class SessionSettings
 		
 		pModelProjectToGround = DefaultToggleModel.new(s.getBoolAt("ProjectToGround", true))
 		pModelProjectToGround.addListener(SaveToggleModelChanged.new("ProjectToGround"))
+		
+		pModelManualMovementStep = DefaultTextModel.new(s.getStringAt("ManualMovementStep", "0.1"))
+		pModelManualMovementStep.addListener(SaveTextModelChanged.new("ManualMovementStep"))
+		
+		pModelManualRotationStep = DefaultTextModel.new(s.getStringAt("ManualRotationStep", "10"))
+		pModelManualRotationStep.addListener(SaveTextModelChanged.new("ManualRotationStep"))
 	end
 	
 	
@@ -330,5 +350,25 @@ public class SessionSettings
 	/** Project actor to ground. */
 	public func bool getProjectToGround()
 		return pModelProjectToGround.getToggled()
+	end
+	
+	/** Model manual movement step. */
+	public func DefaultTextModel getModelManualMovementStep()
+		return pModelManualMovementStep
+	end
+	
+	/** Manual movement step. */
+	public func float getManualMovementStep()
+		return pModelManualMovementStep.getText().toFloat()
+	end
+	
+	/** Model manual rotation step. */
+	public func DefaultTextModel getModelManualRotationStep()
+		return pModelManualRotationStep
+	end
+	
+	/** Manual rotation step. */
+	public func float getManualRotationStep()
+		return pModelManualRotationStep.getText().toFloat()
 	end
 end
