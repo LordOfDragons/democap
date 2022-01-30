@@ -126,9 +126,12 @@ class AATeleport extends AABase
 			var MoCapActor mcactor = getActor() cast MoCapActor
 			
 			// teleport actor element. place center at target point not playspace center
-			var DMatrix matrix = ECBCharacterConfiguration.getInstanceIn(mcactor)\
-				.getCharacter().getMatrixCalibrate().toDMatrix()\
-					* DMatrix.newWorld(pPosition, actor.getOrientation())
+			var ECBCharacterConfiguration.Instance character = ECBCharacterConfiguration.getInstanceIn(mcactor)
+			var DMatrix matrix = DMatrix.newWorld(pPosition, actor.getOrientation())
+			
+			if character != null
+				matrix = character.getCharacter().getMatrixCalibrate().toDMatrix() * matrix
+			end
 			
 			mcactor.setGeometry(matrix.getPosition(), matrix.toQuaternion())
 			
