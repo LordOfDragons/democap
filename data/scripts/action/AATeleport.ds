@@ -1,0 +1,148 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Actions
+
+pin Democap.Behaviors
+pin Democap.Elements
+
+pin Dragengine.Scenery
+
+
+/**
+ * BaseVRActor action teleporting actor to pointed at location.
+ */
+class AATeleport extends AABase
+	protected var ECBehaviorVRHandPointAt.Instance pointAt
+	protected var ECBATeleportDestination.Instance teleportDestination
+	protected var DVector pPosition
+	protected var Quaternion pOrientation
+	
+	
+	/** Create action. */
+	public func new()
+	end
+	
+	
+	
+	/** Action has been activated. */
+	public func void activate(BehaviorElement actor)
+		super.activate(actor)
+		
+		pOrientation = actor.getOrientation()
+		
+		stopPointingAtAnything()
+		
+		// TODO: bullet physics seems to not handle capsule/cylinder as collision shape
+		//       correctly. the resulting hit-point moves towards the wall with increasing
+		//       altitude. most probably bullet messes up hit-distance calculation.
+		//       need to investigate this problem.
+		//       interestingly sphere is not affected which is funny since capsule is
+		//       a convex hull sphere so bullet should not fail this one
+		//pointAt.setTestCollider(colliderAI.getCollider().getShape())
+		
+		pointAt.setSphereTestCollider(0.35)
+		
+		/*
+		var ShapeList shape = ShapeList.new()
+		shape.addCylinder(0.9, 0.3, Vector.new(0, 0.9, 0))
+		pointAt.setTestCollider(shape)
+		*/
+		
+		pointAt.setEnabled(true)
+		
+		teleportDestination.setVisible(false)
+	end
+	
+	/** Init behaviors. */
+	protected func void initBehaviors()
+		super.initBehaviors()
+		
+		var MoCapActor mcactor = actor cast MoCapActor
+		pointAt = mcactor.teleportPointAt
+		teleportDestination = mcactor.teleportDestination
+	end
+	
+	/** Player update thinking. */
+	public func void playerThink(float elapsed)
+		var SessionSettings settings = SessionSettings.get()
+		projectToGround.setEnabled(settings.getProjectToGround())
+		playerInputMove.setCanMove(not settings.getTeleportMovement())
+		
+		updateTeleportDestination()
+		checkFinishTeleport()
+	end
+	
+	
+	
+	/** Update teleport destination. */
+	protected func void updateTeleportDestination()
+		pPosition = pointAt.getPointAtHitPoint()
+		
+		if pPosition != null
+			teleportDestination.setGeometry(pPosition, pOrientation)
+			teleportDestination.setVisible(true)
+			
+		else
+			teleportDestination.setVisible(false)
+		end
+	end
+	
+	/** Check end teleport. */
+	protected func void checkFinishTeleport()
+		var float moveFB = playerInputMove.getAnalogMoveForwardBackwardSticky()
+		var float moveLR = playerInputMove.getAnalogMoveLeftRightSticky()
+		var float move = Vector2.new(moveLR, moveFB).getLength()
+		if move < 0.2
+			finish()
+		end
+	end
+	
+	
+	
+	/** Finish. */
+	protected func void finish()
+		teleportDestination.setVisible(false)
+		pointAt.setEnabled(false)
+		
+		if pPosition != null
+			var MoCapActor mcactor = getActor() cast MoCapActor
+			
+			// teleport actor element. place center at target point not playspace center
+			var DMatrix matrix = ECBCharacterConfiguration.getInstanceIn(mcactor)\
+				.getCharacter().getMatrixCalibrate().toDMatrix()\
+					* DMatrix.newWorld(pPosition, pOrientation)
+			
+			mcactor.setGeometry(matrix.getPosition(), matrix.toQuaternion())
+			
+			// if physics attachments are used init collider bone states from component.
+			// this is required since collider bone states are in world space and do not
+			// move if the actor moves due to teleportation
+			var Collider collider = mcactor.getCollider().getCollider()
+			if collider.getResponseType() == CollisionResponse.dynamic\
+			and collider castable ColliderComponent
+				(collider cast ColliderComponent).copyStatesFromComponent()
+			end
+		end
+		
+		aiAction.setAction(AADefault.new())
+	end
+end

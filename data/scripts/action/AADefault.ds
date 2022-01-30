@@ -77,14 +77,14 @@ class AADefault extends AABase
 	protected func void initBehaviors()
 		super.initBehaviors()
 		
-		var MoCapActor actor = getActor() cast MoCapActor
-		controlDesktop = actor.controlDesktop
-		interactHandle = actor.interactHandle
-		grabRightHand = actor.grabRightHand
-		grabLeftHand = actor.grabLeftHand
-		actorSelectable = actor.actorSelectable
-		vrHudInfo = actor.vrHudInfo
-		resetCalibrationWatcher = actor.resetCalibrationWatcher
+		var MoCapActor mcactor = actor cast MoCapActor
+		controlDesktop = mcactor.controlDesktop
+		interactHandle = mcactor.interactHandle
+		grabRightHand = mcactor.grabRightHand
+		grabLeftHand = mcactor.grabLeftHand
+		actorSelectable = mcactor.actorSelectable
+		vrHudInfo = mcactor.vrHudInfo
+		resetCalibrationWatcher = mcactor.resetCalibrationWatcher
 	end
 	
 	
@@ -277,6 +277,43 @@ class AADefault extends AABase
 	
 	
 	
+	/** Player update thinking. */
+	public func void playerThink(float elapsed)
+		super.playerThink(elapsed)
+		
+		grabRightHand.updateGrab()
+		grabLeftHand.updateGrab()
+		
+		if vrRightHandPointAt.getEnabled()
+			pointAt(vrRightHandPointAt)
+		end
+		if vrLeftHandPointAt.getEnabled()
+			pointAt(vrLeftHandPointAt)
+		end
+		
+		var SessionSettings settings = SessionSettings.get()
+		projectToGround.setEnabled(settings.getProjectToGround())
+		playerInputMove.setCanMove(not settings.getTeleportMovement())
+		
+		checkBeginTeleport()
+	end
+	
+	
+	
+	/** Start teleporting if required. */
+	public func void checkBeginTeleport()
+		if not SessionSettings.get().getTeleportMovement()
+			return
+		end
+		
+		var float moveFB = playerInputMove.getAnalogMoveForwardBackwardSticky()
+		var float moveLR = playerInputMove.getAnalogMoveLeftRightSticky()
+		var float move = Vector2.new(moveLR, moveFB).getLength()
+		if move > 0.5
+			aiAction.setAction(AATeleport.new())
+		end
+	end
+	
 	/** Pointing at element. */
 	public func void pointAt(ECBehaviorVRHandPointAt.Instance behavior)
 		// pulled trigger locks action to be used
@@ -312,26 +349,6 @@ class AADefault extends AABase
 		elif interactHandle.pointAtRelease(behavior)
 			
 		end
-	end
-	
-	
-	
-	/** Frame update thinking. */
-	public func void playerThink(float elapsed)
-		super.playerThink(elapsed)
-		
-		grabRightHand.updateGrab()
-		grabLeftHand.updateGrab()
-		
-		if vrRightHandPointAt.getEnabled()
-			pointAt(vrRightHandPointAt)
-		end
-		if vrLeftHandPointAt.getEnabled()
-			pointAt(vrLeftHandPointAt)
-		end
-		
-		var SessionSettings settings = SessionSettings.get()
-		projectToGround.setEnabled(settings.getProjectToGround())
 	end
 	
 	

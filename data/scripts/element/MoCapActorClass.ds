@@ -30,6 +30,9 @@ pin Dragengine.Scenery
  * Base element class for motion capture actor.
  */
 class MoCapActorClass extends BaseVRActorClass
+	public var ECBehaviorVRHandPointAt teleportPointAt
+	public var ECBehaviorVRHandLaserPointer teleportLasterPointer
+	public var ECBATeleportDestination teleportDestination
 	public var ECBAControlDesktop controlDesktop
 	public var ECBAInteractHandle interactHandle
 	public var ECBAGrab grabRightHand
@@ -71,6 +74,21 @@ class MoCapActorClass extends BaseVRActorClass
 		getVRRightHandPointAt().getCollisionFilter().setCollisionFilter(cfPointAt)
 		
 		getAIAction().setActionFactory(Actions.AADefault.Factory.new())
+		
+		// add behaviors
+		teleportPointAt = ECBehaviorVRHandPointAt.new(this, getVRLeftHand(), "teleport")
+		teleportPointAt.getRange().setValue(10)
+		
+		cfcategory = LayerMask.newWith(BaseGameApp.CollisionFilterBit.actorAI)
+		
+		cffilter = LayerMask.new()
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.geometry)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.dynamic)
+		
+		teleportPointAt.getCollisionFilter().setCollisionFilter(CollisionFilter.new(cfcategory, cffilter))
+		
+		teleportLasterPointer = ECBehaviorVRHandLaserPointer.new(this, teleportPointAt, "teleport")
+		teleportDestination = ECBATeleportDestination.new(this, getComponent())
 		
 		ECBShowVRHandController.new(this, getVRRightHand(), idVRRightHand)
 		ECBShowVRHandController.new(this, getVRLeftHand(), idVRLeftHand)

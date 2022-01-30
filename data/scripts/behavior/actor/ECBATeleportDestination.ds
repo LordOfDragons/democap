@@ -1,0 +1,219 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Motion capture actor teleport destination.
+ */
+class ECBATeleportDestination extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBATeleportDestination pECBehavior
+		private var ECBehaviorComponent.Instance pComponent
+		private var Component pComponentMarker
+		private var Component pComponentActor
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBATeleportDestination ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pComponent = ecbehavior.getComponent().instance(element)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pComponent = null
+			super.dispose()
+		end
+		
+		/** Init behavior. */
+		public func void init(StubElement stub)
+			var BehaviorElement element = getElement()
+			var ElementClass eclass = element.getClass()
+			
+			var Skin skin = pECBehavior.getSkin().getSkin(stub, eclass)
+			
+			var LayerMask layerMask = LayerMask.newWith(BaseGameApp.WorldLayerBit.default)
+			
+			var Model model = pECBehavior.getModelMarker().getModel(stub, eclass)
+			if model != null
+				pComponentMarker = Component.new(model, null)
+				pComponentMarker.setLayerMask(layerMask)
+				pComponentMarker.setVisible(false)
+				
+				replaceAllTextures(pComponentMarker, skin)
+			end
+			
+			model = pComponent.getComponent().getModel()
+			if model != null
+				pComponentActor = Component.new(model, null)
+				pComponentActor.setRig(pComponent.getComponent().getRig())
+				pComponentActor.setLayerMask(layerMask)
+				pComponentActor.setVisible(false)
+				
+				replaceAllTextures(pComponentActor, skin)
+			end
+		end
+		
+		/** Replace all textures with skin. */
+		protected func void replaceAllTextures(Component component, Skin skin)
+			var int i, count = component.getTextureCount()
+			for i = 0 to count
+				component.setTextureSkinAt(i, skin, 0)
+				component.setTextureDynamicSkinAt(i, null)
+			end
+		end
+		
+		
+		
+		/** Set visibility. */
+		public func void setVisible(bool visible)
+			if pComponentMarker != null
+				pComponentMarker.setVisible(visible)
+			end
+			if pComponentActor != null
+				pComponentActor.setVisible(visible)
+				setRequiresThink(visible)
+			end
+		end
+		
+		/** Set teleport destination position. */
+		public func void setGeometry(DVector position, Quaternion orientation)
+			if pComponentMarker != null
+				pComponentMarker.setPosition(position)
+				pComponentMarker.setOrientation(orientation)
+			end
+			if pComponentActor != null
+				pComponentActor.setPosition(position)
+				pComponentActor.setOrientation(orientation)
+			end
+		end
+		
+		
+		
+		/** Frame update. */
+		public func void think(float elapsed)
+			if pComponentActor != null
+				pComponent.getComponent().copyBonesToComponent(pComponentActor)
+			end
+		end
+		
+		/** Add to game world. */
+		public func void addToGameWorld()
+			var World world = getElement().getGameWorld().getWorld()
+			
+			if pComponentMarker != null
+				world.addComponent(pComponentMarker)
+			end
+			if pComponentActor != null
+				world.addComponent(pComponentActor)
+			end
+		end
+		
+		/** Remove from fame world. */
+		public func void removeFromGameWorld()
+			var World world = getElement().getGameWorld().getWorld()
+			
+			if pComponentMarker != null
+				world.removeComponent(pComponentMarker)
+			end
+			if pComponentActor != null
+				world.removeComponent(pComponentActor)
+			end
+		end
+	end
+	
+	
+	
+	protected var ECBehaviorComponent pComponent
+	protected var ECPModel pModelMarker
+	protected var ECPSkin pSkin
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorComponent component) super(eclass)
+		var String prefix = "teleportDestination."
+		
+		pComponent = component
+		
+		pModelMarker = ECPModel.new(prefix + "modelMarker", "/content/models/actorMarker/actorMarker.demodel")
+		eclass.addProperty(pModelMarker)
+		
+		pSkin = ECPSkin.new(prefix + "skin", "/content/materials/ghost/ghost.deskin")
+		eclass.addProperty(pSkin)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pComponent = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Component behavior. */
+	public func ECBehaviorComponent getComponent()
+		return pComponent
+	end
+	
+	/** Marker model. */
+	public func ECPModel getModelMarker()
+		return pModelMarker
+	end
+	
+	/** Skin. */
+	public func ECPSkin getSkin()
+		return pSkin
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
