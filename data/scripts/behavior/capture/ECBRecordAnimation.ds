@@ -317,6 +317,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		 * bone is always recorded as being 0.
 		 */
 		protected func void prepareBoneIndices()
+			// order is important: add first all root bones then all non-root bones
 			pComponent = pActorAnimated.getComponent().getComponent()
 			pRig = pComponent.getRig()
 			
@@ -348,6 +349,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		 * bone is always recorded as being 0.
 		 */
 		protected func void prepareAllBoneIndices()
+			// order is important: add first all root bones then all non-root bones
 			pComponent = pActorAnimated.getComponent().getComponent()
 			pRig = pComponent.getRig()
 			
@@ -358,13 +360,15 @@ class ECBRecordAnimation extends DefaultECBehavior
 			for i = 0 to count
 				if pRig.boneGetParent(i) == -1
 					pRootBoneIndices.add(i)
-					
-				else
-					pBoneIndices.add(i)
-					
+					pRecordAnimation.addBone(pRig.boneGetName(i))
 				end
-				
-				pRecordAnimation.addBone(pRig.boneGetName(i))
+			end
+			
+			for i = 0 to count
+				if pRig.boneGetParent(i) != -1
+					pBoneIndices.add(i)
+					pRecordAnimation.addBone(pRig.boneGetName(i))
+				end
 			end
 			
 			pRecordAnimation.setOriginBone(pCharacterConfiguration.getProfile().getOriginBone())
