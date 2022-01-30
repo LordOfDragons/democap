@@ -34,7 +34,6 @@ class AATeleport extends AABase
 	protected var ECBehaviorVRHandPointAt.Instance pointAt
 	protected var ECBATeleportDestination.Instance teleportDestination
 	protected var DVector pPosition
-	protected var Quaternion pOrientation
 	
 	
 	/** Create action. */
@@ -46,8 +45,6 @@ class AATeleport extends AABase
 	/** Action has been activated. */
 	public func void activate(BehaviorElement actor)
 		super.activate(actor)
-		
-		pOrientation = actor.getOrientation()
 		
 		stopPointingAtAnything()
 		
@@ -83,6 +80,8 @@ class AATeleport extends AABase
 	
 	/** Player update thinking. */
 	public func void playerThink(float elapsed)
+		super.playerThink(elapsed)
+		
 		var SessionSettings settings = SessionSettings.get()
 		projectToGround.setEnabled(settings.getProjectToGround())
 		playerInputMove.setCanMove(not settings.getTeleportMovement())
@@ -98,7 +97,7 @@ class AATeleport extends AABase
 		pPosition = pointAt.getPointAtHitPoint()
 		
 		if pPosition != null
-			teleportDestination.setGeometry(pPosition, pOrientation)
+			teleportDestination.setGeometry(pPosition, actor.getOrientation())
 			teleportDestination.setVisible(true)
 			
 		else
@@ -129,7 +128,7 @@ class AATeleport extends AABase
 			// teleport actor element. place center at target point not playspace center
 			var DMatrix matrix = ECBCharacterConfiguration.getInstanceIn(mcactor)\
 				.getCharacter().getMatrixCalibrate().toDMatrix()\
-					* DMatrix.newWorld(pPosition, pOrientation)
+					* DMatrix.newWorld(pPosition, actor.getOrientation())
 			
 			mcactor.setGeometry(matrix.getPosition(), matrix.toQuaternion())
 			
