@@ -541,6 +541,29 @@ class WMPanelProject extends Panel
 		end
 	end
 	
+	/** Object class help button. */
+	class ObjectHelpButton extends Button
+		private var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel) super("?")
+			pPanel = panel
+			setDesignerSelector("Button.Help")
+			setToolTip("Show help webpage")
+		end
+		
+		public func void fireAction(int modifiers)
+			super.fireAction(modifiers)
+			
+			var ECBSceneObject.Instance object = pPanel.getObject()
+			if object != null
+				var ECBHelpTopic.Instance helpTopic = ECBHelpTopic.getInstanceIn(object.getElement())
+				if helpTopic != null and not helpTopic.getHelpTopic().empty()
+					FileSystem.openUrl("https://developer.dragondreams.ch/wiki/doku.php/democap:" + helpTopic.getHelpTopic())
+				end
+			end
+		end
+	end
+	
 	
 	
 	public var bool preventUpdate
@@ -1470,9 +1493,12 @@ class WMPanelProject extends Panel
 		CollapsibleGroup.persistModel(pPrefixUIOptions + "/ObjectGeometry"),\
 		FormLayout.new(true, 5, 2), block Panel p
 			p.addWidget(Label.new("Class:", "Label.FormCaption"))
-			label = Label.new(pModelObjectClass, "Label.FormText")
-			label.setToolTip("Object class. Defines behaviors shown below")
-			p.addWidget(label)
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.first), block Panel p2
+				label = Label.new(pModelObjectClass, "Label.FormText")
+				label.setToolTip("Object class. Defines behaviors shown below")
+				p2.addWidget(label)
+				p2.addWidget(ObjectHelpButton.new(this))
+			end))
 			
 			p.addWidget(Label.new("Position:", "Label.FormCaption"))
 			pEditObjectPosition = EditVector.new(3)
