@@ -36,7 +36,7 @@ class StaticGroup extends Panel
 	
 	
 	/** Create widget. */
-	public func new(String label)
+	public func new(String label, String helpTopic)
 		if label == null
 			throw ENullPointer.new("label")
 		end
@@ -44,9 +44,13 @@ class StaticGroup extends Panel
 		runWhileBlockingLayout(block
 			setLayout(BorderLayout.new())
 			
-			pPanelHeader = Panel.new(FlowLayout.new(LayoutAxis.x, 5, FlowLayout.Stretch.last), block Panel p
+			pPanelHeader = Panel.new(BorderLayout.new(5), block Panel p
 				pLabel = Label.new(label)
-				p.addWidget(pLabel)
+				p.addWidget(pLabel, BorderLayout.Area.content)
+				
+				if not helpTopic.empty()
+					p.addWidget(HelpButton.new(helpTopic), BorderLayout.Area.right)
+				end
 			end)
 			addWidget(pPanelHeader, BorderLayout.Area.top)
 			
@@ -58,7 +62,7 @@ class StaticGroup extends Panel
 	end
 	
 	/** Create widget. */
-	public func new(String label, Layout layout, Block addContent) this(label)
+	public func new(String label, String helpUrl, Layout layout, Block addContent) this(label, helpUrl)
 		pPanelContent.runWhileBlockingLayout(block
 			pPanelContent.setLayout(layout)
 			addContent.run(pPanelContent)

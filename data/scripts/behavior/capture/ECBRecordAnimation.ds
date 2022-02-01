@@ -90,6 +90,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var ECBehaviorActorAnimated.Instance pActorAnimated
 		private var Array pBoneIndices
 		private var Array pRootBoneIndices
+		private var Array pStaticBoneIndices
+		private var Array pStaticRootBoneIndices
 		private var Matrix pTransformRootBones
 		private var RecordAnimation pRecordAnimation
 		private var RecordAnimation pRecordAnimationDevices
@@ -106,6 +108,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var Array pListeners
 		private var ECBCapturedAnimations.Instance pCapturedAnimations
 		private var bool pFullRecording
+		private var bool pFirstFrame
 		
 		
 		
@@ -114,6 +117,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pECBehavior = ecbehavior
 			pBoneIndices = Array.new()
 			pRootBoneIndices = Array.new()
+			pStaticBoneIndices = Array.new()
+			pStaticRootBoneIndices = Array.new()
 			pRecordDeviceSlots = Array.new()
 			pListeners = Array.new()
 			pTransformRootBones = Matrix.new()
@@ -197,6 +202,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 			app.getPlaybackScene().pause()
 			
 			pCharacterConfiguration = app.getWorldSpawnCharacter().getCharacter()
+			
+			pFirstFrame = true
 			
 			pRecordAnimation = RecordAnimation.new()
 			pRecordAnimation.setFPS(SessionSettings.get().getModelRecordFrameRate().getValue())
@@ -323,6 +330,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			pBoneIndices.removeAll()
 			pRootBoneIndices.removeAll()
+			pStaticBoneIndices.removeAll()
+			pStaticRootBoneIndices.removeAll()
 			
 			pECBehavior.getRootBones().forEach(block String bone
 				var int index = pRig.indexOfBoneNamed(bone)
@@ -355,18 +364,37 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			pBoneIndices.removeAll()
 			pRootBoneIndices.removeAll()
+			pStaticBoneIndices.removeAll()
+			pStaticRootBoneIndices.removeAll()
 			
 			var int i, count = pRig.getBoneCount()
+			
+			pECBehavior.getRootBones().forEach(block String bone
+				var int index = pRig.indexOfBoneNamed(bone)
+				if index != -1
+					pRootBoneIndices.add(index)
+					pRecordAnimation.addBone(bone)
+				end
+			end)
+			
 			for i = 0 to count
-				if pRig.boneGetParent(i) == -1
-					pRootBoneIndices.add(i)
+				if pRig.boneGetParent(i) == -1 and not pRootBoneIndices.has(i)
+					pStaticRootBoneIndices.add(i)
 					pRecordAnimation.addBone(pRig.boneGetName(i))
 				end
 			end
 			
+			pECBehavior.getBones().forEach(block String bone
+				var int index = pRig.indexOfBoneNamed(bone)
+				if index != -1 and not pRootBoneIndices.has(index) and not pStaticRootBoneIndices.has(index)
+					pBoneIndices.add(index)
+					pRecordAnimation.addBone(bone)
+				end
+			end)
+			
 			for i = 0 to count
-				if pRig.boneGetParent(i) != -1
-					pBoneIndices.add(i)
+				if pRig.boneGetParent(i) != -1 and not pBoneIndices.has(i)
+					pStaticBoneIndices.add(i)
 					pRecordAnimation.addBone(pRig.boneGetName(i))
 				end
 			end
@@ -524,6 +552,21 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pRecordAnimation.addKeyframe(pRecordTime, \
 					pComponent.boneGetPosition(index), pComponent.boneGetRotation(index))
 			end)
+			
+			if pFirstFrame
+				pFirstFrame = false
+				
+				pStaticRootBoneIndices.forEach(block int index
+					matrix = pComponent.boneGetMatrix(index) * pTransformRootBones\
+						* pComponent.getBoneOriginInverseMatrix(index)
+					pRecordAnimation.addStaticKeyframe(matrix.getPosition(), matrix.toQuaternion())
+				end)
+				
+				pStaticBoneIndices.forEach(block int index
+					pRecordAnimation.addStaticKeyframe(\
+						pComponent.boneGetPosition(index), pComponent.boneGetRotation(index))
+				end)
+			end
 			
 			// devices
 			pRecordDeviceSlots.forEach(block RecordDeviceSlot each

@@ -69,15 +69,16 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 	
 	
 	/** Create widget. */
-	public func new(String label) this(label, true)
+	public func new(String label, String helpTopic) this(label, helpTopic, true)
 	end
 	
 	/** Create widget. */
-	public func new(String label, bool toggled) this(label, DefaultToggleModel.new(toggled))
+	public func new(String label, String helpTopic, bool toggled)\
+	this(label, helpTopic, DefaultToggleModel.new(toggled))
 	end
 	
 	/** Create widget. */
-	public func new(String label, ToggleModel model)
+	public func new(String label, String helpTopic, ToggleModel model)
 		if label == null
 			throw ENullPointer.new("label")
 		end
@@ -88,12 +89,16 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 		runWhileBlockingLayout(block
 			setLayout(BorderLayout.new())
 			
-			pPanelHeader = Panel.new(FlowLayout.new(LayoutAxis.x, 5, FlowLayout.Stretch.last), block Panel p
+			pPanelHeader = Panel.new(BorderLayout.new(5), block Panel p
 				pArrow = DisplayRotatingImage.new(Image.new("/content/gui/images/group_arrow.png"))
-				p.addWidget(pArrow)
+				p.addWidget(pArrow, BorderLayout.Area.left)
 				
 				pLabel = Label.new(label)
-				p.addWidget(pLabel)
+				p.addWidget(pLabel, BorderLayout.Area.content)
+				
+				if not helpTopic.empty()
+					p.addWidget(HelpButton.new(helpTopic), BorderLayout.Area.right)
+				end
 			end)
 			addWidget(pPanelHeader, BorderLayout.Area.top)
 			
@@ -113,7 +118,7 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 	end
 	
 	/** Create widget. */
-	public func new(String label, Layout layout, Block addContent) this(label)
+	public func new(String label, String helpTopic, Layout layout, Block addContent) this(label, helpTopic)
 		pPanelContent.runWhileBlockingLayout(block
 			pPanelContent.setLayout(layout)
 			addContent.run(pPanelContent)
@@ -121,7 +126,7 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 	end
 	
 	/** Create widget. */
-	public func new(String label, bool toggled, Layout layout, Block addContent) this(label, toggled)
+	public func new(String label, String helpTopic, bool toggled, Layout layout, Block addContent) this(label, helpTopic, toggled)
 		pPanelContent.runWhileBlockingLayout(block
 			pPanelContent.setLayout(layout)
 			addContent.run(pPanelContent)
@@ -129,7 +134,7 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 	end
 	
 	/** Create widget. */
-	public func new(String label, ToggleModel model, Layout layout, Block addContent) this(label, model)
+	public func new(String label, String helpTopic, ToggleModel model, Layout layout, Block addContent) this(label, helpTopic, model)
 		pPanelContent.runWhileBlockingLayout(block
 			pPanelContent.setLayout(layout)
 			addContent.run(pPanelContent)
@@ -206,7 +211,6 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 	public func Panel getPanelContent()
 		return pPanelContent
 	end
-	
 	
 	
 	/** Toggle changed. Shows or hides toggle panel. */

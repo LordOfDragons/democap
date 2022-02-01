@@ -38,11 +38,14 @@ class RecordAnimation
 		private var Array pKeyframes
 		private var float pFPS
 		private var String pMoveName
+		private var Array pStaticKeyframes
 		
-		public func new(String originBone, Array bones, Array keyframes, float fps, String moveName)
+		public func new(String originBone, Array bones, Array keyframes,\
+		Array staticKeyframes, float fps, String moveName)
 			pOriginBone = originBone
 			pBones = bones
 			pKeyframes = keyframes
+			pStaticKeyframes = staticKeyframes
 			pFPS = fps
 			pMoveName = moveName
 		end
@@ -50,7 +53,7 @@ class RecordAnimation
 		protected func void buildAnimation()
 			var int boneCount = pBones.getCount()
 			
-			if boneCount == 0 or pKeyframes.getCount() == 0
+			if boneCount == 0 or (pKeyframes.getCount() == 0 and pStaticKeyframes.getCount() == 0)
 				addMove(pMoveName, 0, pFPS)
 				return
 			end
@@ -72,8 +75,15 @@ class RecordAnimation
 				setKeyframeListCount(0, boneCount)
 			end
 			
+			var int stride = pKeyframes.getCount()
+			
 			pKeyframes.forEach(block int index, RecordAnimationKeyframe keyframe
-				addKeyframe(0, index % boneCount, keyframe.getTime(), keyframe.getPosition(), \
+				addKeyframe(0, index % stride, keyframe.getTime(), keyframe.getPosition(), \
+					keyframe.getOrientation().normalize().getEulerAngles(), Vector.new(1, 1, 1))
+			end)
+			
+			pStaticKeyframes.forEach(block int index, RecordAnimationKeyframe keyframe
+				addKeyframe(0, stride + index, 0, keyframe.getPosition(), \
 					keyframe.getOrientation().normalize().getEulerAngles(), Vector.new(1, 1, 1))
 			end)
 			
@@ -125,7 +135,7 @@ class RecordAnimation
 	private var String pOriginBone
 	private var Array pBones
 	private var Array pKeyframes
-	private var int pStride
+	private var Array pStaticKeyframes
 	private var Animation pAnimation
 	private var Rig pRig
 	private var float pFPS
@@ -146,7 +156,7 @@ class RecordAnimation
 		pOriginBone = ""
 		pBones = Array.new()
 		pKeyframes = Array.new()
-		pStride = 0
+		pStaticKeyframes = Array.new()
 		pFPS = 25
 		pTimestamp = TimeDate.new()
 		pMoveName = "MoCap"
@@ -193,7 +203,6 @@ class RecordAnimation
 			throw ENullPointer.new("bone")
 		end
 		pBones.add(bone)
-		pStride = pBones.getCount()
 	end
 	
 	/** Visit bones with block receiving String as argument. */
@@ -241,11 +250,6 @@ class RecordAnimation
 		return pKeyframes.getAt(index) cast RecordAnimationKeyframe
 	end
 	
-	/** Keyframe for bone. */
-	public func RecordAnimationKeyframe getKeyframeFor(int frame, int bone)
-		return pKeyframes.getAt(pStride * frame + bone) cast RecordAnimationKeyframe
-	end
-	
 	/** Add keyframe. */
 	public func void addKeyframe(float time, Vector position, Quaternion orientation)
 		pKeyframes.add(RecordAnimationKeyframe.new(time, position, orientation))
@@ -254,6 +258,28 @@ class RecordAnimation
 	/** Direct access to keyframes array for fast processing. */
 	public func Array getKeyframes()
 		return pKeyframes
+	end
+	
+	
+	
+	/** Count of static keyframes. */
+	public func int getStaticKeyframeCount()
+		return pStaticKeyframes.getCount()
+	end
+	
+	/** Static keyframe at index. */
+	public func RecordAnimationKeyframe getStaticKeyframeAt(int index)
+		return pStaticKeyframes.getAt(index) cast RecordAnimationKeyframe
+	end
+	
+	/** Add static keyframe. */
+	public func void addStaticKeyframe(Vector position, Quaternion orientation)
+		pStaticKeyframes.add(RecordAnimationKeyframe.new(0, position, orientation))
+	end
+	
+	/** Direct access to static keyframes array for fast processing. */
+	public func Array getStaticKeyframes()
+		return pStaticKeyframes
 	end
 	
 	
@@ -275,15 +301,15 @@ class RecordAnimation
 	
 	/** Create animation. */
 	public func void createAnimation()
-		if pBones.getCount() == 0 or pKeyframes.getCount() == 0
+		if pBones.getCount() == 0 or (pKeyframes.getCount() == 0 and pStaticKeyframes.getCount() == 0)
 			return
 		end
 		
 		if pOriginBone.empty() or pBones.has(pOriginBone)
-			pAnimation = CreateAnimation.new(null, pBones, pKeyframes, pFPS, pMoveName).build("")
+			pAnimation = CreateAnimation.new(null, pBones, pKeyframes, pStaticKeyframes, pFPS, pMoveName).build("")
 			
 		else
-			pAnimation = CreateAnimation.new(pOriginBone, pBones, pKeyframes, pFPS, pMoveName).build("")
+			pAnimation = CreateAnimation.new(pOriginBone, pBones, pKeyframes, pStaticKeyframes, pFPS, pMoveName).build("")
 		end
 	end
 	
