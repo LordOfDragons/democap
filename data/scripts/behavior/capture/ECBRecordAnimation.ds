@@ -359,47 +359,24 @@ class ECBRecordAnimation extends DefaultECBehavior
 		 */
 		protected func void prepareAllBoneIndices()
 			// order is important: add first all root bones then all non-root bones
-			pComponent = pActorAnimated.getComponent().getComponent()
-			pRig = pComponent.getRig()
+			prepareBoneIndices()
 			
-			pBoneIndices.removeAll()
-			pRootBoneIndices.removeAll()
-			pStaticBoneIndices.removeAll()
-			pStaticRootBoneIndices.removeAll()
-			
+			pRig = pActorAnimated.getComponent().getComponent().getRig()
 			var int i, count = pRig.getBoneCount()
 			
-			pECBehavior.getRootBones().forEach(block String bone
-				var int index = pRig.indexOfBoneNamed(bone)
-				if index != -1
-					pRootBoneIndices.add(index)
-					pRecordAnimation.addBone(bone)
-				end
-			end)
-			
 			for i = 0 to count
-				if pRig.boneGetParent(i) == -1 and not pRootBoneIndices.has(i)
+				if pRig.boneGetParent(i) == -1 and not pRootBoneIndices.has(i) and not pBoneIndices.has(i)
 					pStaticRootBoneIndices.add(i)
 					pRecordAnimation.addBone(pRig.boneGetName(i))
 				end
 			end
 			
-			pECBehavior.getBones().forEach(block String bone
-				var int index = pRig.indexOfBoneNamed(bone)
-				if index != -1 and not pRootBoneIndices.has(index) and not pStaticRootBoneIndices.has(index)
-					pBoneIndices.add(index)
-					pRecordAnimation.addBone(bone)
-				end
-			end)
-			
 			for i = 0 to count
-				if pRig.boneGetParent(i) != -1 and not pBoneIndices.has(i)
+				if pRig.boneGetParent(i) != -1 and not pRootBoneIndices.has(i) and not pBoneIndices.has(i)
 					pStaticBoneIndices.add(i)
 					pRecordAnimation.addBone(pRig.boneGetName(i))
 				end
 			end
-			
-			pRecordAnimation.setOriginBone(pCharacterConfiguration.getProfile().getOriginBone())
 		end
 		
 		/** Start recording animation. */
