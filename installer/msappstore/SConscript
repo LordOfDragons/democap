@@ -1,0 +1,47 @@
+import os, fnmatch
+
+env = Environment()
+env.Tool('runExternalCommand')
+
+def globFiles(env, search, pattern, result, recursive=True):
+	oldcwd = os.getcwd()
+	os.chdir(env.Dir('.').srcnode().abspath)
+	
+	for root, dirs, files in os.walk(search):
+		if recursive:
+			if '.svn' in dirs:
+				dirs.remove('.svn')
+			if '.git' in dirs:
+				dirs.remove('.git')
+		else:
+			del dirs[:]
+		
+		for s in fnmatch.filter(files, pattern):
+			result.append(root + os.sep + s)
+	
+	os.chdir(oldcwd)
+
+def copyDataFiles(copied, directory, basePath):
+	dataFiles = []
+	globFiles(env, directory, '*', dataFiles)
+	
+	cutLen = len(directory.split('/'))
+	for f in dataFiles:
+		path = f.split('/')
+		copied.append(env.InstallAs(os.path.join(basePath, *path[cutLen:]), f))
+
+def msixBuild(target, source, env):
+	script = []
+	script.append('makemsix pack -d "{}" -p "{}" || exit 1'.format(
+		source[0].get_dir().abspath, target[0].abspath))
+	if not env.RunExternalCommand(script):
+		raise Exception('Failed building MSIX')
+
+copied = []
+copied.append(env.InstallAs('msix/VFS/ProgramFilesX64/DEMoCap/DEMoCap-0.4.delga', '../../../distribute/DEMoCap-0.4.delga'))
+
+copyDataFiles(copied, 'msix-data', 'msix')
+msix = env.Command('DEMoCap-0.4.msix', 'msix/AppxManifest.xml', env.Action(msixBuild, 'Build MSIX $TARGET'))
+env.Depends(msix, copied)
+
+Default(msix)
