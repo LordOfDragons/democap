@@ -1,0 +1,381 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Dragengine.Commands
+pin Dragengine.Gui.Borders
+pin Dragengine.Gui.Events
+pin Dragengine.Gui.Layouts
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.LoadSave
+
+
+/**
+ * Input device window.
+ */
+class WindowInputDevice extends Window
+	/** Input device renderer. */
+	public class InputDeviceRenderer extends DefaultListElementRenderer
+		public func new()
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, \
+		bool selected, bool focused)
+			if element != null
+				super.updateRenderer(listBox, renderer, \
+					(element cast InputDevice).getName(), selected, focused)
+				
+			else
+				super.updateRenderer(listBox, renderer, " ", selected, focused)
+			end
+		end
+	end
+	
+	/** Input device selection listener. */
+	public class SelectInputDevice extends DefaultListModelListener
+		private var WindowInputDevice pWindow
+		
+		public func new(WindowInputDevice window)
+			pWindow = window
+		end
+		
+		public func void selectionChanged(ListModel listModel)
+			if listModel.getSelected() != -1
+				pWindow.setInputDevice(listModel.getAt(listModel.getSelected()) cast InputDevice)
+				
+			else
+				pWindow.setInputDevice(null)
+			end
+		end
+	end
+	
+	/** Input device axis renderer. */
+	public class InputDeviceAxisRenderer extends DefaultListElementRenderer
+		public func new()
+		end
+		
+		public func Widget createRenderer(ListBox listBox)
+			return AxisPanel.new()
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, \
+		bool selected, bool focused)
+			if element != null
+				(renderer cast AxisPanel).setAxis(element cast InputDeviceAxis)
+			end
+		end
+	end
+	
+	/** Axis panel. */
+	class AxisPanel extends Panel
+		private static fixed var WeightLayout.LayoutSettings column1 = WeightLayout.LayoutSettings.new(0, 100)
+		private static fixed var WeightLayout.LayoutSettings column2 = WeightLayout.LayoutSettings.new(1)
+		
+		private var InputDeviceAxis pAxis
+		private var TextModel pModelName
+		private var RangeModel pModelValue
+		
+		public func new()
+			pModelName = DefaultTextModel.new("?: ")
+			pModelValue = DefaultRangeModel.new(-100, 100, 10, 0, 1)
+			
+			setLayout(WeightLayout.new(LayoutAxis.x, 5))
+			
+			addWidget(Label.new(pModelName, Label.middleLeft), column1)
+			addWidget(ProgressBar.new(Orientation.horizontal, pModelValue), column2)
+			
+			startFrameUpdater()
+		end
+		
+		public func void setAxis(InputDeviceAxis axis)
+			pAxis = axis
+			pModelName.setText(axis.getName())
+		end
+		
+		public func void onFrameUpdate(float elapsed)
+			pModelValue.setValue((pAxis.getValue() * 100.0) cast int)
+		end
+	end
+	
+	/** Input device button renderer. */
+	public class InputDeviceButtonRenderer extends DefaultListElementRenderer
+		public func new()
+		end
+		
+		public func Widget createRenderer(ListBox listBox)
+			return ButtonPanel.new()
+		end
+		
+		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, \
+		bool selected, bool focused)
+			if element != null
+				(renderer cast ButtonPanel).setButton(element cast InputDeviceButton)
+			end
+		end
+	end
+	
+	/** Button panel. */
+	class ButtonPanel extends Panel
+		private static fixed var WeightLayout.LayoutSettings column1 = WeightLayout.LayoutSettings.new(0, 100)
+		private static fixed var WeightLayout.LayoutSettings column2 = WeightLayout.LayoutSettings.new(1)
+		private static fixed var WeightLayout.LayoutSettings column3 = WeightLayout.LayoutSettings.new(1)
+		
+		private var InputDeviceButton pButton
+		private var TextModel pModelName
+		private var Label pLabelPressed
+		private var Label pLabelTouched
+		
+		public func new()
+			pModelName = DefaultTextModel.new("?: ")
+			
+			setLayout(WeightLayout.new(LayoutAxis.x, 5))
+			
+			addWidget(Label.new(pModelName, Label.middleLeft), column1)
+			addWidget(pLabelPressed = Label.new("Pressed", "Label.DevideButtonReleased"), column2)
+			addWidget(pLabelTouched = Label.new("Touched", "Label.DevideButtonUntouched"), column3)
+			
+			startFrameUpdater()
+		end
+		
+		public func void setButton(InputDeviceButton button)
+			pButton = button
+			pModelName.setText(button.getName())
+		end
+		
+		public func void onFrameUpdate(float elapsed)
+			pLabelPressed.setDesignerSelector(pButton.isPressed() if "Label.DevideButtonPressed" else "Label.DevideButtonReleased")
+			pLabelTouched.setDesignerSelector(pButton.isTouched() if "Label.DevideButtonTouched" else "Label.DevideButtonUntouched")
+		end
+	end
+	
+	/** Pose panel. */
+	class PosePanel extends Panel
+		private var InputDevice pDevice
+		private var TextModel pModelPosition
+		private var TextModel pModelOrientation
+		private var TextModel pModelLinearVelocity
+		private var TextModel pModelAngularVelocity
+		
+		public func new()
+			pModelPosition = DefaultTextModel.new("(0,0,0)")
+			pModelOrientation = DefaultTextModel.new("(0,0,0)")
+			pModelLinearVelocity = DefaultTextModel.new("(0,0,0)")
+			pModelAngularVelocity = DefaultTextModel.new("(0,0,0)")
+			
+			setLayout(GridLayout.new(4, 2))
+			
+			addWidget(Label.new("Position"))
+			addWidget(Label.new("Rotation"))
+			addWidget(Label.new("Linear Velocity"))
+			addWidget(Label.new("Angular Velocity"))
+			addWidget(Label.new(pModelPosition))
+			addWidget(Label.new(pModelOrientation))
+			addWidget(Label.new(pModelLinearVelocity))
+			addWidget(Label.new(pModelAngularVelocity))
+			
+			startFrameUpdater()
+		end
+		
+		public func void setDevice(InputDevice device)
+			pDevice = device
+		end
+		
+		public func void onFrameUpdate(float elapsed)
+			if pDevice != null
+				pModelPosition.setText(pDevice.getDevicePosePosition().toString(3))
+				pModelOrientation.setText(pDevice.getDevicePoseOrientation().getEulerAngles().toString(3))
+				pModelLinearVelocity.setText(pDevice.getDevicePoseLinearVelocity().toString(3))
+				
+				var Vector av = pDevice.getDevicePoseAngularVelocity()
+				if av.getLength() > 0.01
+					pModelAngularVelocity.setText("{} {:.1f}".format(Array.newWith(av.normalize().toString(3), av.getLength())))
+					
+				else
+					pModelAngularVelocity.setText("{} {:.1f}".format(Array.newWith(Vector.new().toString(3), 0)))
+				end
+				
+			else
+				pModelPosition.setText("")
+				pModelOrientation.setText("")
+				pModelLinearVelocity.setText("")
+				pModelAngularVelocity.setText("")
+			end
+		end
+	end
+	
+	/** Device changes listener. */
+	class DeviceChangeListener extends DefaultBindingManagerListener
+		private var WindowInputDevice pWindow
+		
+		public func new(WindowInputDevice window)
+			pWindow = window
+		end
+		
+		public func void devicesReloaded(BindingManager manager)
+			pWindow.updateInputDeviceModel()
+		end
+	end
+	
+	
+	
+	private var DeviceChangeListener pDeviceChangeListener
+	private var DefaultListModel pModelInputDevices
+	private var ListBox pListInputDevices
+	private var InputDevice pInputDevice //<! Active input device
+	private var DefaultListModel pModelAxes
+	private var DefaultListModel pModelButtons
+	private var PosePanel pPanelPose
+	
+	
+	
+	/** Create window. */
+	public func new() super(0, 0, 700, 500)
+		pModelInputDevices = DefaultListModel.new()
+		pModelAxes = DefaultListModel.new()
+		pModelButtons = DefaultListModel.new()
+		
+		runWhileBlockingLayout(block
+			setDesignerSelector("WindowInputDevice")
+			setTitle("Input Device")
+			createContent(this)
+		end)
+		
+		updateInputDeviceModel()
+		
+		pDeviceChangeListener = DeviceChangeListener.new(this)
+		BaseGameApp.getApp().getBindingManager().addListener(pDeviceChangeListener)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		if pDeviceChangeListener != null
+			BaseGameApp.getApp().getBindingManager().removeListener(pDeviceChangeListener)
+			pDeviceChangeListener = null
+		end
+		
+		pInputDevice = null
+		pModelButtons = null
+		pModelAxes = null
+		pModelInputDevices = null
+		pListInputDevices = null
+		pPanelPose = null
+		
+		super.dispose()
+	end
+	
+	
+	
+	/** Create content. */
+	private func void createContent(Container content)
+		content.setLayout(BorderLayout.new(5))
+		
+		// input device selection
+		content.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 10, FlowLayout.Stretch.last), block Panel panel
+			pListInputDevices = ListBox.new(pModelInputDevices, InputDeviceRenderer.new())
+			pListInputDevices.setNumberDisplayLines(5)
+			pModelInputDevices.addListener(SelectInputDevice.new(this))
+			panel.addWidget(Label.new("Input Device:", Label.left | Label.top))
+			panel.addWidget(ScrollPanel.new(pListInputDevices))
+		end), BorderLayout.Area.top)
+		
+		// content with list of axes and button states
+		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x, 10), block Panel panel
+			// left side list of axes
+			panel.addWidget(Panel.new(BorderLayout.new(3), block Panel subPanel
+				subPanel.addWidget(Label.new("Axes (absolute)", Label.center), BorderLayout.Area.top)
+				subPanel.addWidget(ScrollPanel.new(ListBox.new(\
+					pModelAxes, InputDeviceAxisRenderer.new())), BorderLayout.Area.content)
+			end))
+			
+			// right side list of buttons
+			panel.addWidget(Panel.new(BorderLayout.new(3), block Panel subPanel
+				subPanel.addWidget(Label.new("Buttons (no keys)", Label.center), BorderLayout.Area.top)
+				subPanel.addWidget(ScrollPanel.new(ListBox.new(\
+					pModelButtons, InputDeviceButtonRenderer.new())), BorderLayout.Area.content)
+			end))
+		end), BorderLayout.Area.content)
+		
+		// poses
+		content.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 10), block Panel panel
+			panel.addWidget(pPanelPose = PosePanel.new())
+		end), BorderLayout.Area.bottom)
+	end
+	
+	/** Update input device list. */
+	public func void updateInputDeviceModel()
+		var BindingManager bindings = BaseGameApp.getApp().getBindingManager()
+		var InputDevice selection = pInputDevice
+		var Array content = Array.new()
+		
+		bindings.forEachDevice(block InputDevice each
+			content.add(each)
+		end)
+		
+		pModelInputDevices.setContent(content)
+		pModelInputDevices.setSelected(Math.max(content.indexOf(selection), 0))
+	end
+	
+	/** Set input device to show. */
+	public func void setInputDevice(InputDevice inputDevice)
+		if inputDevice == pInputDevice
+			return
+		end
+		
+		pInputDevice = inputDevice
+		
+		if inputDevice == null or inputDevice.getType() == InputDeviceType.keyboard
+			// ignore keyboard because it has lots of keys (buttons)
+			pModelAxes.removeAll()
+			pModelButtons.removeAll()
+			pPanelPose.setDevice(null)
+			return
+		end
+		
+		runWhileBlockingLayout(block
+			var Array list = Array.new()
+			var InputDeviceAxis axis
+			var int i, count
+			
+			count = inputDevice.getAxisCount()
+			for i = 0 to count
+				axis = inputDevice.getAxisAt(i)
+				select axis.getType()
+				case InputDeviceAxisType.mouse, InputDeviceAxisType.mouseWheel
+					// not showing absolute axes
+				else
+					list.add(axis)
+				end
+			end
+			pModelAxes.setContent(list)
+			
+			list.removeAll()
+			count = inputDevice.getButtonCount()
+			for i = 0 to count
+				list.add(inputDevice.getButtonAt(i))
+			end
+			pModelButtons.setContent(list)
+			
+			pPanelPose.setDevice(inputDevice)
+		end)
+	end
+end
