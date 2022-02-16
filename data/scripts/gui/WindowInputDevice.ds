@@ -188,10 +188,10 @@ class WindowInputDevice extends Window
 			addWidget(Label.new("Rotation"))
 			addWidget(Label.new("Linear Velocity"))
 			addWidget(Label.new("Angular Velocity"))
-			addWidget(Label.new(pModelPosition))
-			addWidget(Label.new(pModelOrientation))
-			addWidget(Label.new(pModelLinearVelocity))
-			addWidget(Label.new(pModelAngularVelocity))
+			addWidget(Label.new(pModelPosition, "Label.WindowInputDevice.VectorValue"))
+			addWidget(Label.new(pModelOrientation, "Label.WindowInputDevice.VectorValue"))
+			addWidget(Label.new(pModelLinearVelocity, "Label.WindowInputDevice.VectorValue"))
+			addWidget(Label.new(pModelAngularVelocity, "Label.WindowInputDevice.VectorValue"))
 			
 			startFrameUpdater()
 		end
@@ -202,17 +202,24 @@ class WindowInputDevice extends Window
 		
 		public func void onFrameUpdate(float elapsed)
 			if pDevice != null
-				pModelPosition.setText(pDevice.getDevicePosePosition().toString(3))
-				pModelOrientation.setText(pDevice.getDevicePoseOrientation().getEulerAngles().toString(3))
-				pModelLinearVelocity.setText(pDevice.getDevicePoseLinearVelocity().toString(3))
+				var Vector v = pDevice.getDevicePosePosition()
+				pModelPosition.setText("({:+06.3f}, {:+06.3f}, {:+06.3f})".format(\
+					Array.newWith(v.getX(), v.getY(), v.getZ())))
 				
-				var Vector av = pDevice.getDevicePoseAngularVelocity()
-				if av.getLength() > 0.01
-					pModelAngularVelocity.setText("{} {:.1f}".format(Array.newWith(av.normalize().toString(3), av.getLength())))
-					
-				else
-					pModelAngularVelocity.setText("{} {:.1f}".format(Array.newWith(Vector.new().toString(3), 0)))
-				end
+				v = pDevice.getDevicePoseOrientation().getEulerAngles()
+				pModelOrientation.setText("({:+06.1f}, {:+06.1f}, {:+06.1f})°".format(\
+					Array.newWith(v.getX(), v.getY(), v.getZ())))
+				
+				v = pDevice.getDevicePoseLinearVelocity()
+				pModelLinearVelocity.setText("({:+05.2f}, {:+05.2f}, {:+05.2f})".format(\
+					Array.newWith(v.getX(), v.getY(), v.getZ())))
+				
+				v = pDevice.getDevicePoseAngularVelocity()
+				var float speed = v.getLength()
+				v = speed > 0.01 if v.normalize() else Vector.new()
+// 				pModelAngularVelocity.setText("({:+06.1f}: {:+5.2f}, {:+5.2f}, {:+5.2f})".format(\
+// 					Array.newWith(speed, v.getX(), v.getY(), v.getZ())))
+				pModelAngularVelocity.setText("{:+05.0f}°".format(Array.newWith(speed)))
 				
 			else
 				pModelPosition.setText("")
@@ -249,7 +256,7 @@ class WindowInputDevice extends Window
 	
 	
 	/** Create window. */
-	public func new() super(0, 0, 700, 500)
+	public func new() super(0, 0, 800, 500)
 		pModelInputDevices = DefaultListModel.new()
 		pModelAxes = DefaultListModel.new()
 		pModelButtons = DefaultListModel.new()
