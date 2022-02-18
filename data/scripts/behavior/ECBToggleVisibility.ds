@@ -41,6 +41,7 @@ class ECBToggleVisibility extends DefaultECBehavior
 		private var ECBToggleVisibility pECBehavior
 		private var Vector pLockUpAxis
 		private var Vector pPivot
+		private var Vector pRotation
 		private var float pDistance
 		private var bool pLockZRotation
 		
@@ -56,6 +57,7 @@ class ECBToggleVisibility extends DefaultECBehavior
 			var CodecPropertyString codec = getElement().getClass().getCodecPropertyString()
 			pLockUpAxis = pECBehavior.getLockUpAxis().getVector(stub, codec)
 			pPivot = pECBehavior.getPivot().getVector(stub, codec)
+			pRotation = pECBehavior.getRotation().getVector(stub, codec)
 			pDistance = pECBehavior.getDistance().getValue(stub)
 			pLockZRotation = pECBehavior.getLockZRotation().getValue(stub)
 		end
@@ -70,6 +72,11 @@ class ECBToggleVisibility extends DefaultECBehavior
 		/** Pivot offset or null value. */
 		public func Vector getPivot()
 			return pPivot
+		end
+		
+		/** Rotation to add. */
+		public func Vector getRotation()
+			return pRotation
 		end
 		
 		/** Distance in front of camera to position element. */
@@ -172,7 +179,8 @@ class ECBToggleVisibility extends DefaultECBehavior
 				matrix = DMatrix.newWorld(matrix.getPosition(), view, lockUp)
 			end
 			
-			matrix = DMatrix.newTranslation(0, 0, -pDistance) * matrix
+			matrix = DMatrix.newRotation(DVector.new(pRotation))\
+				* DMatrix.newTranslation(0, 0, -pDistance) * matrix
 			
 			getElement().setGeometry(matrix.getPosition(), matrix.toQuaternion())
 		end
@@ -182,6 +190,7 @@ class ECBToggleVisibility extends DefaultECBehavior
 	
 	private var ECPVector pLockUpAxis
 	private var ECPVector pPivot
+	private var ECPVector pRotation
 	private var ECPFloat pDistance
 	private var ECPBoolean pLockZRotation
 	
@@ -196,6 +205,9 @@ class ECBToggleVisibility extends DefaultECBehavior
 		
 		pPivot = ECPVector.new(prefix + "pivot", null)
 		eclass.addProperty(pPivot)
+		
+		pRotation = ECPVector.new(prefix + "rotation", Vector.new())
+		eclass.addProperty(pRotation)
 		
 		pDistance = ECPFloat.new(prefix + "distance", 0.5, 0)
 		eclass.addProperty(pDistance)
@@ -216,6 +228,11 @@ class ECBToggleVisibility extends DefaultECBehavior
 	/** Pivot offset or null value. */
 	public func ECPVector getPivot()
 		return pPivot
+	end
+	
+	/** Rotation to add. */
+	public func ECPVector getRotation()
+		return pRotation
 	end
 	
 	/** Distance in front of camera to position element. */

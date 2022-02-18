@@ -42,8 +42,9 @@ class WindowInputDevice extends Window
 		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, \
 		bool selected, bool focused)
 			if element != null
-				super.updateRenderer(listBox, renderer, \
-					(element cast InputDevice).getName(), selected, focused)
+				var InputDevice device = element cast InputDevice
+				super.updateRenderer(listBox, renderer, "{} ({})".format(Array.newWith(\
+					device.getName(), device.getID())), selected, focused)
 				
 			else
 				super.updateRenderer(listBox, renderer, " ", selected, focused)
@@ -299,7 +300,7 @@ class WindowInputDevice extends Window
 		// input device selection
 		content.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 10, FlowLayout.Stretch.last), block Panel panel
 			pListInputDevices = ListBox.new(pModelInputDevices, InputDeviceRenderer.new())
-			pListInputDevices.setNumberDisplayLines(5)
+			pListInputDevices.setNumberDisplayLines(6)
 			pModelInputDevices.addListener(SelectInputDevice.new(this))
 			panel.addWidget(Label.new("Input Device:", Label.left | Label.top))
 			panel.addWidget(ScrollPanel.new(pListInputDevices))
