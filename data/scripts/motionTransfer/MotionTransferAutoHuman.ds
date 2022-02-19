@@ -130,7 +130,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		pTransferArmRight = MotionTransferIK.new(factoryIK.factoryID())
 		pTransferArmRight.setName("AutoHuman: ArmRight")
-		pTransferArmRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+		pTransferArmRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.none)
 		pTransferArmRight.setActorReach(MotionTransferIK.ActorReach.arm)
 		pTransferArmRight.setTwistPropagation(0.5)
 		pTransferArmRight.setTwistAxisRotation(Vector.new(0, -90, 0))
@@ -138,7 +138,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		pTransferArmLeft = MotionTransferIK.new(factoryIK.factoryID())
 		pTransferArmLeft.setName("AutoHuman: ArmLeft")
-		pTransferArmLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+		pTransferArmLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.none)
 		pTransferArmLeft.setActorReach(MotionTransferIK.ActorReach.arm)
 		pTransferArmLeft.setTwistPropagation(0.5)
 		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))
@@ -487,6 +487,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		var bool isSlotLeftFootAttached = hasSlotLeftFoot \
 			and pTransferLegLeft.getTipTracker().getRealSlot().isDeviceAttached()
 		
+		var bool hasSlotRightHandController = pTransferArmRight.getTipTracker().getRealSlot() != null \
+			and pTransferArmRight.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightHandController
+		
+		var bool hasSlotLeftHandController = pTransferArmLeft.getTipTracker().getRealSlot() != null \
+			and pTransferArmLeft.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.leftHandController
+		
 		// waist
 		pTransferWaist.setBone(pBoneHip)
 		
@@ -673,13 +679,19 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		pTransferArmRight.setTipBone(pBoneHandRight)
 		pTransferArmRight.setMoveBaseIK(pMoveBaseIK)
-		pTransferArmRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
 		pTransferArmRight.setActorReach(MotionTransferIK.ActorReach.arm)
 		pTransferArmRight.setReachLimit(1)
 		pTransferArmRight.setReachScaling(pReachScalingArmRight)
 		pTransferArmRight.setTwistBoneCount(1)
 		pTransferArmRight.setTwistPropagation(0.5)
 		pTransferArmRight.setTwistAxisRotation(Vector.new(0, -90, 0))
+		
+		if hasSlotRightHandController
+			pTransferArmRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.none)
+			
+		else
+			pTransferArmRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+		end
 		
 		if index > 1 // at least 3 bones
 			pTransferArmRight.setBaseBone(chain.getAt(index - 1) cast String)
@@ -702,13 +714,19 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		pTransferArmLeft.setTipBone(pBoneHandLeft)
 		pTransferArmLeft.setMoveBaseIK(pMoveBaseIK)
-		pTransferArmLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
 		pTransferArmLeft.setActorReach(MotionTransferIK.ActorReach.arm)
 		pTransferArmLeft.setReachLimit(1)
 		pTransferArmLeft.setReachScaling(pReachScalingArmLeft)
 		pTransferArmLeft.setTwistBoneCount(1)
 		pTransferArmLeft.setTwistPropagation(0.5)
 		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))
+		
+		if hasSlotLeftHandController
+			pTransferArmLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.none)
+			
+		else
+			pTransferArmLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+		end
 		
 		if index > 1 // at least 3 bones
 			pTransferArmLeft.setBaseBone(chain.getAt(index - 1) cast String)
