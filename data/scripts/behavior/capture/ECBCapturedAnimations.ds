@@ -210,51 +210,13 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			pAnimatorInstances.removeAll()
 			pPlaytime = 0
 			
-			var CurveBezier curve = CurveBezier.newDefaultLinear()
-			var Component component = pComponent.getComponent()
-			var Rig rig = component.getRig()
-			
 			pAnimations.forEach(block CharacterAnimation each
-				var Animation animation = each.getAnimation()
-				if animation == null
-					return null
-				end
-				
-				var AnimatorInstance ainst = AnimatorInstance.new()
-				ainst.setComponent(component)
-				
-				var Animator animator = Animator.new()
-				animator.setAnimation(animation)
-				animator.setRig(rig)
-				
-				var int i, boneCount = animation.getBoneCount()
-				for i = 0 to boneCount
-					animator.addBone(animation.getBoneName(i))
-				end
-				
-				animator.setControllerCount(1)
-				var AnimatorController controller = animator.getControllerAt(0)
-				controller.setName("playback")
-				controller.setClamp(true)
-				
-				animator.addLink(0)
-				animator.setLinkCurve(0, curve)
-				
-				var ARAnimation rule = ARAnimation.new()
-				var String move = animation.getMoveName(0)
-				rule.setMoveName(move)
-				rule.targetAddLink(ARAnimationTarget.moveTime, 0)
-				for i = 0 to boneCount
-					rule.addBone(animation.getBoneName(i))
-				end
-				animator.addRule(rule)
-				
-				ainst.setAnimator(animator)
-				pAnimatorInstances.add(ainst)
-				pPlaybackControllers.add(ainst.getControllerAt(0))
-				
-				pPlaytime = DEMath.max(pPlaytime, animation.getMovePlaytime(move))
+				createCharacterAnimator(each)
 			end)
+			
+			if pAnimatorInstances.getCount() == 0
+				createResetAnimator()
+			end
 			
 			pPlaybackControllers.forEach(block AnimatorController each
 				each.setRange(0, pPlaytime)
@@ -324,6 +286,75 @@ class ECBCapturedAnimations extends DefaultECBehavior
 				pAnimations.dispose()
 			end
 			pAnimations = animations
+		end
+		
+		
+		
+		/** Create reset animator instance. */
+		protected func void createResetAnimator()
+			var Component component = pComponent.getComponent()
+			var Rig rig = component.getRig()
+			
+			var AnimatorInstance ainst = AnimatorInstance.new()
+			ainst.setComponent(component)
+			
+			var Animator animator = Animator.new()
+			animator.setRig(rig)
+			
+			var ARStateManipulator rule = ARStateManipulator.new()
+			rule.setEnableOrientation(true)
+			rule.setEnablePosition(true)
+			rule.setEnableSize(true)
+			animator.addRule(rule)
+			
+			ainst.setAnimator(animator)
+			pAnimatorInstances.add(ainst)
+		end
+		
+		/** Create and add animator instance for animation. */
+		protected func void createCharacterAnimator(CharacterAnimation characterAnimation)
+			var Component component = pComponent.getComponent()
+			var Rig rig = component.getRig()
+			
+			var Animation animation = characterAnimation.getAnimation()
+			if animation == null
+				return
+			end
+			
+			var AnimatorInstance ainst = AnimatorInstance.new()
+			ainst.setComponent(component)
+			
+			var Animator animator = Animator.new()
+			animator.setAnimation(animation)
+			animator.setRig(rig)
+			
+			var int i, boneCount = animation.getBoneCount()
+			for i = 0 to boneCount
+				animator.addBone(animation.getBoneName(i))
+			end
+			
+			animator.setControllerCount(1)
+			var AnimatorController controller = animator.getControllerAt(0)
+			controller.setName("playback")
+			controller.setClamp(true)
+			
+			animator.addLink(0)
+			animator.setLinkCurve(0, CurveBezier.newDefaultLinear())
+			
+			var ARAnimation rule = ARAnimation.new()
+			var String move = animation.getMoveName(0)
+			rule.setMoveName(move)
+			rule.targetAddLink(ARAnimationTarget.moveTime, 0)
+			for i = 0 to boneCount
+				rule.addBone(animation.getBoneName(i))
+			end
+			animator.addRule(rule)
+			
+			ainst.setAnimator(animator)
+			pAnimatorInstances.add(ainst)
+			pPlaybackControllers.add(ainst.getControllerAt(0))
+			
+			pPlaytime = DEMath.max(pPlaytime, animation.getMovePlaytime(move))
 		end
 		
 		
