@@ -359,20 +359,61 @@ class ECBRecordAnimation extends DefaultECBehavior
 		 */
 		protected func void prepareAllBoneIndices()
 			// order is important: add first all root bones then all non-root bones
-			prepareBoneIndices()
+			pComponent = pActorAnimated.getComponent().getComponent()
+			pRig = pComponent.getRig()
 			
-			pRig = pActorAnimated.getComponent().getComponent().getRig()
+			pBoneIndices.removeAll()
+			pRootBoneIndices.removeAll()
+			pStaticBoneIndices.removeAll()
+			pStaticRootBoneIndices.removeAll()
+			
+			// add root bones. since all bone indices are added it is important to add root
+			// bones only as root bones if they are true root bones (of the entire component)
+			// not just root bones of all captured bone chains. if this split is not done the
+			// root bone transform is applied twice causing problems
+			var Array allRootBones = Array.new()
+			
+			pECBehavior.getRootBones().forEach(block String bone
+				var int index = pRig.indexOfBoneNamed(bone)
+				if index != -1 and pRig.boneGetParent(index) == -1
+					allRootBones.add(index)
+					pRootBoneIndices.add(index)
+					pRecordAnimation.addBone(bone)
+				end
+			end)
+			
+			pECBehavior.getRootBones().forEach(block String bone
+				var int index = pRig.indexOfBoneNamed(bone)
+				if index != -1 and pRig.boneGetParent(index) != -1
+					allRootBones.add(index)
+					pBoneIndices.add(index)
+					pRecordAnimation.addBone(bone)
+				end
+			end)
+			
+			// add regular bones as in the not all mode
+			pECBehavior.getBones().forEach(block String bone
+				var int index = pRig.indexOfBoneNamed(bone)
+				if index != -1 and not allRootBones.has(index)
+					pBoneIndices.add(index)
+					pRecordAnimation.addBone(bone)
+				end
+			end)
+			
+			pRecordAnimation.setOriginBone(pCharacterConfiguration.getProfile().getOriginBone())
+			
+			// add static bones
 			var int i, count = pRig.getBoneCount()
 			
 			for i = 0 to count
-				if pRig.boneGetParent(i) == -1 and not pRootBoneIndices.has(i) and not pBoneIndices.has(i)
+				if pRig.boneGetParent(i) == -1 and not allRootBones.has(i) and not pBoneIndices.has(i)
 					pStaticRootBoneIndices.add(i)
 					pRecordAnimation.addBone(pRig.boneGetName(i))
 				end
 			end
 			
 			for i = 0 to count
-				if pRig.boneGetParent(i) != -1 and not pRootBoneIndices.has(i) and not pBoneIndices.has(i)
+				if pRig.boneGetParent(i) != -1 and not allRootBones.has(i) and not pBoneIndices.has(i)
 					pStaticBoneIndices.add(i)
 					pRecordAnimation.addBone(pRig.boneGetName(i))
 				end
