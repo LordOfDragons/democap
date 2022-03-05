@@ -1,0 +1,145 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Democap.Behaviors
+
+pin Dragengine.LoadSave
+pin Dragengine.StageDirectionry
+pin Dragengine.Preloading
+pin Dragengine.Utils
+
+
+/**
+ * State directions.
+ */
+class StageDirection
+	private var String pName
+	private var String pContent
+	private var String pPathImage
+	private var String pPathVideo
+	
+	
+	
+	/** Create actor. */
+	public func new()
+		pName = "Stage Direction"
+		pContent = ""
+		pPathImage = ""
+		pPathVideo = ""
+	end
+	
+	/** Create copy of state direction. */
+	public func new(StageDirection stageDirection)
+		pName = stageDirection.pName
+		pContent = stageDirection.pContent
+		pPathImage = stageDirection.pPathImage
+		pPathVideo = stageDirection.pPathVideo
+	end
+	
+	/** Load stageDirection. */
+	public func new(PersistencyEnvironment env, FileReader reader)
+		select reader.readByte() // version
+		case 0
+			pName = reader.readString8()
+			pContent = reader.readString16()
+			pPathImage = reader.readString8()
+			pPathVideo = reader.readString8()
+			
+		else
+			throw EInvalidParam.new("Unsupported version")
+		end
+	end
+	
+	
+	
+	/** Name. */
+	public func String getName()
+		return pName
+	end
+	
+	/** Set name. */
+	public func void setName(String name)
+		if name == null
+			throw ENullPointer.new("name")
+		end
+		pName = name
+	end
+	
+	/** Content. */
+	public func String getContent()
+		return pContent
+	end
+	
+	/** Set content. */
+	public func void setContent(String content)
+		if content == null
+			throw ENullPointer.new("content")
+		end
+		pContent = content
+	end
+	
+	/** Path to image file or empty string. */
+	public func String getPathImage()
+		return pPathImage
+	end
+	
+	/** Set path to image file or empty string. */
+	public func void setPathImage(String path)
+		if path == null
+			throw ENullPointer.new("path")
+		end
+		pPathImage = path
+	end
+	
+	/** Path to video file or empty string. */
+	public func String getPathVideo()
+		return pPathVideo
+	end
+	
+	/** Set path to video file or empty string. */
+	public func void setPathVideo(String path)
+		if path == null
+			throw ENullPointer.new("path")
+		end
+		pPathVideo = path
+	end
+	
+	
+	
+	/** Write to file. */
+	public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+		writer.writeByte(0) // version
+		
+		writer.writeString8(pName)
+		writer.writeString16(pContent)
+		writer.writeString8(pPathImage)
+		writer.writeString8(pPathVideo)
+	end
+	
+	
+	
+	/** String representation. Returns name. */
+	public func String toString()
+		return pName
+	end
+end

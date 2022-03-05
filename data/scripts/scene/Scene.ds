@@ -36,6 +36,7 @@ pin Dragengine.Utils
 class Scene
 	private var String pName
 	private var String pPathWorld
+	private var StageDirections pStageDirections
 	private var MemoryFile pSaveState
 	private var FileUsageManager pFileUsage
 	private var SafeArray pListeners
@@ -45,6 +46,7 @@ class Scene
 	/** Create actor. */
 	public func new(String name)
 		pPathWorld = "/content/worlds/default.deworld"
+		pStageDirections = StageDirections.new()
 		pFileUsage = FileUsageManager.new()
 		pListeners = SafeArray.new()
 		setName(name)
@@ -53,6 +55,7 @@ class Scene
 	/** Create copy of actor. */
 	public func new(String name, Scene scene)
 		pPathWorld = scene.pPathWorld
+		pStageDirections = StageDirections.new()
 		pFileUsage = FileUsageManager.new(scene.pFileUsage)
 		pListeners = SafeArray.new()
 		setName(name)
@@ -64,10 +67,9 @@ class Scene
 	
 	/** Load scene. */
 	public func new(PersistencyEnvironment env, FileReader reader)
+		pStageDirections = StageDirections.new()
 		pFileUsage = FileUsageManager.new()
 		pListeners = SafeArray.new()
-		var int size, i, count
-		var String key
 		
 		if env.getPersistency().getDebugEnableCanaryValue()
 			if not reader.readString(Persistency.debugCanaryValue_BEGIN.getLength() ).equals(Persistency.debugCanaryValue_BEGIN)
@@ -77,19 +79,14 @@ class Scene
 		
 		select reader.readByte() // version
 		case 0
-			reader.readByte() // flags
+			readVersion0(env, reader)
 			
-			pName = reader.readString8()
-			pPathWorld = reader.readString8()
+		case 1
+			readVersion0(env, reader)
 			
-			pFileUsage.readFromFile(reader)
-			
-			reader.readUShort() // TODO custom object classes
-			
-			size = reader.readUInt() // save state size
-			if size > 0 // 0 size means not saved
-				pSaveState = MemoryFile.new("saveState")
-				pSaveState.getWriter(false).writeData(reader, size)
+			var int i, count = reader.readUShort()
+			for i = 0 to count
+				pStageDirections.add(StageDirection.new(env, reader))
 			end
 			
 		else
@@ -100,6 +97,23 @@ class Scene
 			if not reader.readString(Persistency.debugCanaryValue_END.getLength() ).equals(Persistency.debugCanaryValue_END)
 				throw EInvalidParam.new("End canary value invalid at reader position " + reader.getPosition())
 			end
+		end
+	end
+	
+	private func void readVersion0(PersistencyEnvironment env, FileReader reader)
+		reader.readByte() // flags
+		
+		pName = reader.readString8()
+		pPathWorld = reader.readString8()
+		
+		pFileUsage.readFromFile(reader)
+		
+		reader.readUShort() // TODO custom object classes
+		
+		var int size = reader.readUInt() // save state size
+		if size > 0 // 0 size means not saved
+			pSaveState = MemoryFile.new("saveState")
+			pSaveState.getWriter(false).writeData(reader, size)
 		end
 	end
 	
@@ -157,6 +171,34 @@ class Scene
 	/** File usage. */
 	public func FileUsageManager getFileUsage()
 		return pFileUsage
+	end
+	
+	
+	
+	/** Stage directions. */
+	public func StageDirections getStageDirections()
+		return pStageDirections
+	end
+	
+	/** Notify listeners stage directions added or removed. */
+	public func void notifyStageDirectionsChanged()
+		pListeners.forEach(block SceneListener each
+			each.stageDirectionsChanged(this)
+		end)
+	end
+	
+	/** Notify listeners stage direction name changed. */
+	public func void notifyStageDirectionNameChanged(StageDirection stageDirection)
+		pListeners.forEach(block SceneListener each
+			each.stageDirectionNameChanged(this, stageDirection)
+		end)
+	end
+	
+	/** Notify listeners stage direction content changed. */
+	public func void notifyStageDirectionContentChanged(StageDirection stageDirection)
+		pListeners.forEach(block SceneListener each
+			each.stageDirectionContentChanged(this, stageDirection)
+		end)
 	end
 	
 	
@@ -273,7 +315,7 @@ class Scene
 			writer.writeString(Persistency.debugCanaryValue_BEGIN)
 		end
 		
-		writer.writeByte(0) // version
+		writer.writeByte(1) // version
 		writer.writeByte(0) // flags
 		
 		writer.writeString8(pName)
@@ -290,6 +332,11 @@ class Scene
 		else
 			writer.writeUInt(0)
 		end
+		
+		writer.writeUShort(pStageDirections.getCount())
+		pStageDirections.forEach(block StageDirection each
+			each.writeToFile(env, writer)
+		end)
 		
 		if env.getPersistency().getDebugEnableCanaryValue()
 			writer.writeString(Persistency.debugCanaryValue_END)

@@ -1,0 +1,390 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * Stage directions panel.
+ */
+class WMPPanelStageDirections extends CollapsibleGroup
+	/** Game changes listener. */
+	class GameChangedListener extends DefaultGameListener
+		protected var WMPPanelStageDirections pPanel
+		
+		public func new(WMPPanelStageDirections panel)
+			pPanel = panel
+		end
+		
+		public func void projectChanged(GameApp app)
+			pPanel.setScene(app.getScene())
+		end
+		
+		public func void sceneChanged(GameApp app)
+			pPanel.setScene(app.getScene())
+		end
+	end
+	
+	/** Scene changed listener. */
+	class SceneChangedListener extends DefaultSceneListener
+		protected var WMPPanelStageDirections pPanel
+		
+		public func new(WMPPanelStageDirections panel)
+			pPanel = panel
+		end
+		
+		public func void stageDirectionContentChanged(Scene scene, StageDirection stageDirection)
+			if pPanel.getStageDirection() == stageDirection
+				pPanel.updateStageDirection()
+			end
+		end
+		
+		public func void stageDirectionNameChanged(Scene scene, StageDirection stageDirection)
+			pPanel.updateStageDirections()
+		end
+		
+		public func void stageDirectionsChanged(Scene scene)
+			pPanel.updateStageDirections()
+		end
+	end
+	
+	
+	
+	/** Stage direction popup menu. */
+	class StageDirectionPopupAction extends DefaultActionListener
+		protected var WMPPanelStageDirections pPanel
+		
+		public func new(WMPPanelStageDirections panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			var Scene scene = pPanel.getScene()
+			if scene == null
+				return
+			end
+			
+			var Widget widget = event.getSource() cast Widget
+			var WindowPopup popup = WindowPopup.new()
+			var Button button
+			
+			button = Button.new("Add...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.addStageDirection()
+			end))
+			popup.addWidget(button)
+			
+			button = Button.new("Remove", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.removeStageDirection()
+			end))
+			button.setEnabled(pPanel.getStageDirection() != null)
+			popup.addWidget(button)
+			
+			button = Button.new("Remove All", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.removeAllStageDirections()
+			end))
+			button.setEnabled(scene.getStageDirections().getCount() > 0)
+			popup.addWidget(button)
+			
+			button = Button.new("Rename...", BlockActionListener.new(block ActionEvent event
+				popup.popdown()
+				pPanel.renameStageDirection()
+			end))
+			button.setEnabled(pPanel.getStageDirection() != null)
+			popup.addWidget(button)
+			
+			pPanel.getDesktop().addWindow(popup)
+			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
+		end
+	end
+	
+	/** Stage direction selection listener. */
+	public class SelectStageDirection extends DefaultListModelListener
+		protected var WMPPanelStageDirections pPanel
+		
+		public func new(WMPPanelStageDirections panel)
+			pPanel = panel
+		end
+		
+		public func void selectionChanged(ListModel listModel)
+			pPanel.updateStageDirection()
+		end
+	end
+	
+	/** Content changed listener. */
+	class ContentChanged implements ActionListener
+		protected var WMPPanelStageDirections pPanel
+		protected var DefaultTextModel pModel
+		
+		public func new(WMPPanelStageDirections panel, DefaultTextModel model)
+			pPanel = panel
+			pModel = model
+		end
+		
+		public func void onAction(ActionEvent event)
+			var StageDirection direction = pPanel.getStageDirection()
+			var Scene scene = pPanel.getScene()
+			if direction == null or scene == null
+				return
+			end
+			
+			var String content = pModel.getText()
+			if content.equals(direction.getContent())
+				return
+			end
+			
+			direction.setContent(content)
+			scene.notifyStageDirectionContentChanged(direction)
+		end
+	end
+	
+	
+	
+	protected var WMPanelSession pPanelSession
+	protected var String pPrefixUIOptions
+	protected var DefaultListModel pModelDirections
+	protected var DefaultTextModel pModelContent
+	protected var DisplayImage pDisplayImage
+	protected var DisplayVideo pDisplayVideo
+	protected var Scene pScene
+	protected var GameChangedListener pGameChangedListener
+	protected var SceneChangedListener pSceneChangedListener
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelSession panelSession) super("Stage directions:", "",\
+	CollapsibleGroup.persistModel(prefixUIOptions(panelSession)))
+		pPanelSession = panelSession
+		pPrefixUIOptions = prefixUIOptions(panelSession)
+		
+		pModelDirections = DefaultListModel.new()
+		pModelContent = DefaultTextModel.new("")
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+		
+		pModelDirections.addListener(SelectStageDirection.new(this))
+		
+		pSceneChangedListener = SceneChangedListener.new(this)
+		
+		var GameApp app = GameApp.getGameApp()
+		pGameChangedListener = GameChangedListener.new(this)
+		app.addListener(pGameChangedListener)
+		
+		setScene(app.getScene())
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		var GameApp app = GameApp.getGameApp()
+		if pGameChangedListener != null
+			app.removeListener(pGameChangedListener)
+		end
+		
+		pSceneChangedListener = null
+		pGameChangedListener = null
+		
+		pPanelSession = null
+		pDisplayImage = null
+		pDisplayVideo = null
+		pModelContent = null
+		pModelDirections = null
+		
+		super.dispose()
+	end
+	
+	/** UI options prefix. */
+	static public func String prefixUIOptions(WMPanelSession panelSession)
+		return panelSession.getPrefixUIOptions() + "/WMPPanelStageDirections"
+	end
+	
+	
+	
+	/** Active scene or null. */
+	public func Scene getScene()
+		return pScene
+	end
+	
+	/** Set active scene or null. */
+	public func void setScene(Scene scene)
+		if scene == pScene
+			return
+		end
+		
+		if pScene != null
+			pScene.removeListener(pSceneChangedListener)
+		end
+		
+		pScene = scene
+		
+		if scene != null
+			scene.addListener(pSceneChangedListener)
+		end
+		
+		updateStageDirections()
+	end
+	
+	
+	
+	/** Selected stage direction or null. */
+	public func StageDirection getStageDirection()
+		return pModelDirections.getSelectedElement() cast StageDirection
+	end
+	
+	/** Update selected stage direction. */
+	public func void updateStageDirection()
+		var StageDirection direction = getStageDirection()
+		
+		if direction != null
+			pModelContent.setText(direction.getContent())
+			
+		else
+			pModelContent.setText("")
+		end
+	end
+	
+	/** Update stage directions model. */
+	public func void updateStageDirections()
+		var StageDirection direction = getStageDirection()
+		
+		if pScene != null
+			pModelDirections.setContent(pScene.getStageDirections().toArray())
+			
+		else
+			pModelDirections.removeAll()
+		end
+		
+		if direction == null and pModelDirections.getCount() > 0
+			direction = pModelDirections.getAt(0) cast StageDirection
+		end
+		pModelDirections.setSelectedElement(direction)
+	end
+	
+	/** Add stage direction. */
+	public func void addStageDirection()
+		if pScene == null
+			return
+		end
+		
+		WindowDialog.input(getWindow(), "Add Stage Direction", "Name:", null, "Stage Direction",\
+		null, null, WindowDialog.BlockResultListener.new(block String result
+			if result != null
+				var StageDirection direction = StageDirection.new()
+				direction.setName(result)
+				
+				pScene.getStageDirections().add(direction)
+				pScene.notifyStageDirectionsChanged()
+				
+				pModelDirections.setSelectedElement(direction)
+			end
+		end))
+	end
+	
+	/** Remove stage direction. */
+	public func void removeStageDirection()
+		var StageDirection direction = getStageDirection()
+		if direction == null or pScene == null
+			return
+		end
+		
+		var int index = pModelDirections.indexOf(direction)
+		
+		pScene.getStageDirections().remove(direction)
+		pScene.notifyStageDirectionsChanged()
+		
+		pModelDirections.setSelected(DEMath.min(index, pModelDirections.getCount() - 1))
+	end
+	
+	/** Remove all stage directions. */
+	public func void removeAllStageDirections()
+		if pScene == null or pScene.getStageDirections().getCount() == 0
+			return
+		end
+		
+		pScene.getStageDirections().removeAll()
+		pScene.notifyStageDirectionsChanged()
+	end
+	
+	/** Rename stage direction. */
+	public func void renameStageDirection()
+		var StageDirection direction = getStageDirection()
+		if direction == null or pScene == null
+			return
+		end
+		
+		WindowDialog.input(getWindow(), "Rename Stage Direction", "Name:", null, direction.getName(),\
+		null, null, WindowDialog.BlockResultListener.new(block String result
+			if result != null
+				if not result.equals(direction.getName())
+					direction.setName(result)
+					pScene.notifyStageDirectionNameChanged(direction)
+				end
+			end
+		end))
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var bool readOnly = pPanelSession.getInVR()
+		var TextArea textArea
+		var ListBox listBox
+		
+		content.setLayout(BorderLayout.new(5))
+		
+		content.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 0, FlowLayout.Stretch.first), block Panel p
+			listBox = ListBox.new(pModelDirections, DefaultListElementRenderer.new(String.new('X', 15)))
+			listBox.setDesignerSelector("ListBox.WMPPanelStageDirections")
+			listBox.setToolTip("Stage direction to show.")
+			listBox.setNumberDisplayLines(10)
+			p.addWidget(ScrollPanel.new(listBox))
+			
+			if not readOnly
+				var Button button = Button.new("...", StageDirectionPopupAction.new(this))
+				button.setDesignerSelector("Button.Popup")
+				p.addWidget(button)
+			end
+		end), BorderLayout.Area.left)
+		
+		content.addWidget(Panel.new(StackLayout.new(), block Panel p
+			textArea = TextArea.new(pModelContent, 10, readOnly)
+			textArea.setToolTip("Stage direction text.")
+			p.addWidget(ScrollPanel.new(textArea, ScrollPanel.Policy.hidden, ScrollPanel.Policy.visible))
+			if not readOnly
+				textArea.addActionListener(ContentChanged.new(this, pModelContent))
+			end
+		end), BorderLayout.Area.content)
+	end
+end

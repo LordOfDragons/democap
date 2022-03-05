@@ -578,11 +578,14 @@ class WMPanelProject extends Panel
 	protected var EditVector pEditObjectRotation
 	protected var ECBSceneObject.Instance pObject
 	protected var bool pInVR
+	protected var bool pDisposing
 	protected var String pPrefixUIOptions
 	protected var Project pProject
 	protected var Scene pScene
 	protected var ScenesChangedListener pScenesChangedListener
 	protected var SceneChangedListener pSceneChangedListener
+	protected var ListenLoadableWorlds pListenLoadableWorlds
+	protected var GameChangedListener pGameChangedListener
 	protected var SelectedSelectableObjectChanged pSelectedSelectableObjectChanged
 	protected var Panel pPanelBehaviors
 	
@@ -609,7 +612,8 @@ class WMPanelProject extends Panel
 		end)
 		
 		var GameApp app = GameApp.getGameApp()
-		app.getLoadableWorlds().addListener(ListenLoadableWorlds.new(this))
+		pListenLoadableWorlds = ListenLoadableWorlds.new(this)
+		app.getLoadableWorlds().addListener(pListenLoadableWorlds)
 		updateModelLoadableWorlds()
 		
 		pModelScenes.addListener(SelectScene.new(this))
@@ -617,9 +621,11 @@ class WMPanelProject extends Panel
 		
 		pScenesChangedListener = ScenesChangedListener.new(this)
 		pSceneChangedListener = SceneChangedListener.new(this)
-		pSelectedSelectableObjectChanged = SelectedSelectableObjectChanged.new(this)
 		
-		app.addListener(GameChangedListener.new(this))
+		pGameChangedListener = GameChangedListener.new(this)
+		app.addListener(pGameChangedListener)
+		
+		pSelectedSelectableObjectChanged = SelectedSelectableObjectChanged.new(this)
 		app.getSelectionTracker().addListener(pSelectedSelectableObjectChanged)
 		
 		setProject(app.getProject())
@@ -628,7 +634,18 @@ class WMPanelProject extends Panel
 	
 	/** Dispose of widget. */
 	public func void dispose()
-		GameApp.getGameApp().getSelectionTracker().removeListener(pSelectedSelectableObjectChanged)
+		pDisposing = true
+		
+		var GameApp app = GameApp.getGameApp()
+		if pSelectedSelectableObjectChanged != null
+			app.getSelectionTracker().removeListener(pSelectedSelectableObjectChanged)
+		end
+		if pListenLoadableWorlds != null
+			app.getLoadableWorlds().removeListener(pListenLoadableWorlds)
+		end
+		if pGameChangedListener != null
+			app.removeListener(pGameChangedListener)
+		end
 		
 		setObject(null)
 		setScene(null)
@@ -637,6 +654,9 @@ class WMPanelProject extends Panel
 		pSelectedSelectableObjectChanged = null
 		pSceneChangedListener = null
 		pScenesChangedListener = null
+		pGameChangedListener = null
+		pListenLoadableWorlds = null
+		
 		pModelObjectClass = null
 		pModelObjects = null
 		pModelLoadableWorlds = null
@@ -1150,7 +1170,10 @@ class WMPanelProject extends Panel
 		if object != null
 			selectable = ECBSelectable.getInstanceIn(object.getElement())
 		end
-		GameApp.getGameApp().getSelectionTracker().setElement(selectable)
+		
+		if not pDisposing
+			GameApp.getGameApp().getSelectionTracker().setElement(selectable)
+		end
 		
 		if object != null
 			var bool noBehaviors = object.getECBehavior().editPanelNoBehaviors.getValue()
