@@ -1,0 +1,164 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Gui
+
+pin Dragengine.Gui
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding support to resize VR wrist panel if user is looking at it. Calculates
+ * angle between looking direction and center of VR menu. If angle is less than threshold
+ * changes size to full size. Otherwise shrinks menu.
+ */
+class ECBResizeVRWristPanel extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBResizeVRWristPanel pECBehavior
+		private var ECBVRWristPanel.Instance pVRWristPanel
+		private var DVector pCenter
+		private var float pThresholdAngle
+		private var float pScaleLarge
+		private var float pScaleSmall
+		private var SmoothFloat pScale
+		
+		
+		/** Create instance. */
+		public func new(ECBResizeVRWristPanel ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pThresholdAngle = 30
+			pScaleLarge = 1
+			pScaleSmall = 0.25
+			
+			pScale = SmoothFloat.new()
+			pScale.setAdjustRange(1)
+			pScale.setAdjustTime(0.25)
+			
+			pVRWristPanel = ecbehavior.getVRWristMenu().instance(element)
+			pCenter = DVector.new(ecbehavior.getCenter().getVector())
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pVRWristPanel = null
+			super.dispose()
+		end
+		
+		
+		/** Behavior. */
+		public func ECBResizeVRWristPanel getECBehavior()
+			return pECBehavior
+		end
+		
+		
+		/** Frame update. */
+		public func void think(float elapsed)
+			var DVector center = pVRWristPanel.getElement().getElementMatrix() * pCenter
+			var DMatrix matrixCamera = GameApp.getGameApp().getVRCamera().getMatrix()
+			var float scale = 0
+			
+			center = matrixCamera * center
+			
+			if not center.isZero()
+				center = center.normalize()
+				
+				var float x = center.getZ()
+				if x > 0.1
+					var float y = Vector2.new(center.getX(), center.getY()).getLength()
+					if DEMath.atan(y / x) > pThresholdAngle
+						scale = pScaleSmall
+					end
+				end
+			end
+			
+			pScale.setGoal(scale)
+			pScale.update(elapsed)
+			
+			scale = DEMath.linearStep(pScale.getValue(), 0, 1, pScaleSmall, pScaleLarge)
+			pVRWristPanel.getElement().setScaling(Vector.new(scale, scale, scale))
+		end
+		
+		
+		/** Added to game world. */
+		public func void addToGameWorld()
+			setRequiresThink(true)
+		end
+		
+		/** Removed from game world. */
+		public func void removeFromGameWorld()
+			setRequiresThink(false)
+		end
+	end
+	
+	
+	private var ECBVRWristPanel pVRWristPanel
+	private var ECPVector pCenter
+	
+	
+	/** Create behavior element class. */
+	public func new(BehaviorElementClass eclass, ECBVRWristPanel vrWristPanel) super(eclass)
+		if vrWristPanel == null
+			throw ENullPointer.new("vrWristPanel")
+		end
+		
+		var String prefix = "resizeVRWristPanel."
+		
+		pVRWristPanel = vrWristPanel
+		
+		pCenter = ECPVector.new(prefix + "center", Vector.new(0, 0.11, 0))
+		eclass.addProperty(pCenter)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pVRWristPanel = null
+		super.dispose()
+	end
+	
+	
+	/** VR Wrist Menu behavior. */
+	public func ECBVRWristPanel getVRWristMenu()
+		return pVRWristPanel
+	end
+	
+	/** Center position relative to VR wrist menu. */
+	public func ECPVector getCenter()
+		return pCenter
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
