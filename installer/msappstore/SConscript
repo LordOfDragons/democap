@@ -3,6 +3,10 @@ import os, fnmatch
 env = Environment()
 env.Tool('runExternalCommand')
 
+# parameters
+version = '0.5'
+
+# build
 def globFiles(env, search, pattern, result, recursive=True):
 	oldcwd = os.getcwd()
 	os.chdir(env.Dir('.').srcnode().abspath)
@@ -37,11 +41,30 @@ def msixBuild(target, source, env):
 	if not env.RunExternalCommand(script):
 		raise Exception('Failed building MSIX')
 
+def copyLauncherInit(env, target, source):
+	with open(source[0].abspath, 'r') as f:
+		content = f.read()
+	
+	content = content.replace('%DELGA_FILENAME%', env['DELGA_FILENAME'])
+	
+	with open(target[0].abspath, 'w') as f:
+		f.write(content)
+
+delgaFilename = 'DEMoCap-{}.delga'.format(version)
+
 copied = []
-copied.append(env.InstallAs('msix/VFS/ProgramFilesX64/DEMoCap/DEMoCap-0.5.delga', '../../../distribute/DEMoCap-0.5.delga'))
+
+copied.append(env.InstallAs(
+	'msix/VFS/ProgramFilesX64/DEMoCap/{}'.format(delgaFilename),
+	'../../../distribute/{}'.format(delgaFilename)))
 
 copyDataFiles(copied, 'msix-data', 'msix')
-msix = env.Command('DEMoCap-0.5.msix', 'msix/AppxManifest.xml', env.Action(msixBuild, 'Build MSIX $TARGET'))
+
+copied.append(env.Command('msix/VFS/ProgramFilesX64/DEMoCap/Launcher.ini', 'Launcher.ini',
+	env.Action(copyLauncherInit, 'Copy $TARGET'), DELGA_FILENAME=delgaFilename))
+
+msix = env.Command('DEMoCap-{}.msix'.format(version),
+	'msix/AppxManifest.xml', env.Action(msixBuild, 'Build MSIX $TARGET'))
 env.Depends(msix, copied)
 
 Default(msix)
