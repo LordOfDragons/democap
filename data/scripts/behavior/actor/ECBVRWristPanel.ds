@@ -24,6 +24,7 @@ namespace Democap.Behaviors
 pin Democap.Gui
 
 pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
 pin Dragengine.Preloading
 pin Dragengine.Scenery
 pin Dragengine.Utils
@@ -58,9 +59,31 @@ class ECBVRWristPanel extends DefaultECBehavior
 			end
 		end
 		
+		class ModelPanelButton extends DefaultToggleModel implements ActionListener
+			private var Instance pInstance
+			private var DefaultListModel pModelPanel
+			private var SessionSettings.WristMenuPanel pPanel
+			
+			public func new(Instance instance, DefaultListModel modelPanel, SessionSettings.WristMenuPanel panel)
+				pInstance = instance
+				pModelPanel = modelPanel
+				pPanel = panel
+			end
+			
+			public func void updateState()
+				setToggled(pPanel == pModelPanel.getSelectedElement())
+			end
+			
+			public func void onAction(ActionEvent event)
+				pModelPanel.setSelectedElement(pPanel)
+			end
+		end
+		
 		
 		private var ECBVRWristPanel pECBehavior
 		private var Window pWindow
+		private var Panel pPanelContainer
+		private var Array pModelPanelButtons
 		private var ShowPanelListener pShowPanelListener
 		private var SessionSettings.WristMenuPanel pPanel
 		
@@ -68,6 +91,7 @@ class ECBVRWristPanel extends DefaultECBehavior
 		/** Create instance. */
 		public func new(ECBVRWristPanel ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
+			pModelPanelButtons = Array.new()
 		end
 		
 		/** Init behavior instance. */
@@ -88,6 +112,18 @@ class ECBVRWristPanel extends DefaultECBehavior
 				pWindow.setCanResize(false)
 				pWindow.setCanReorder(false)
 				pWindow.setWindowState(Window.WindowState.maximized)
+				
+				pWindow.setLayout(BorderLayout.new(5))
+				
+				createPanelButtons()
+				
+				pPanelContainer = Panel.new(FlowLayout.new(LayoutAxis.y, 5))
+				
+				pWindow.addWidget(\
+					ScrollPanel.new(\
+						Viewport.new(pPanelContainer, 0, 20, true),\
+						ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed),\
+					BorderLayout.Area.content)
 			end)
 			desktop.addWindow(pWindow)
 		end
@@ -95,6 +131,8 @@ class ECBVRWristPanel extends DefaultECBehavior
 		/** Dispose of behavior instance. */
 		public func void dispose()
 			pWindow = null
+			pPanelContainer = null
+			pModelPanelButtons = null
 			super.dispose()
 		end
 		
@@ -140,33 +178,34 @@ class ECBVRWristPanel extends DefaultECBehavior
 				return
 			end
 			
-			pWindow.removeAllWidgets()
+			pPanelContainer.removeAllWidgets()
 			
 			pPanel = panel
 			
-			var Panel panelWidget
-			
+			// create panel widget
 			select panel
 			case SessionSettings.WristMenuPanel.settings
-				panelWidget = WMPanelSettings.new(true, getPrefixUIOptions())
+				pPanelContainer.addWidget(WMPanelSettings.new(true, getPrefixUIOptions()))
 				
 			case SessionSettings.WristMenuPanel.character
-				panelWidget = WMPanelCharacter.new(true, getPrefixUIOptions())
+				pPanelContainer.addWidget(WMPanelCharacter.new(true, getPrefixUIOptions()))
 				
 			case SessionSettings.WristMenuPanel.project
-				panelWidget = WMPanelProject.new(true, getPrefixUIOptions())
+				pPanelContainer.addWidget(WMPanelProject.new(true, getPrefixUIOptions()))
 				
 			case SessionSettings.WristMenuPanel.actorControl
-				panelWidget = WMPanelActorControl.new(true, getPrefixUIOptions())
+				pPanelContainer.addWidget(WMPanelActorControl.new(true, getPrefixUIOptions()))
 				
 			case SessionSettings.WristMenuPanel.session
-				panelWidget = WMPanelSession.new(true, getPrefixUIOptions())
+				pPanelContainer.addWidget(WMPanelSession.new(true, getPrefixUIOptions()))
 			end
 			
-			if panelWidget != null
-				pWindow.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p
-					p.addWidget(panelWidget)
-				end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
+			// assign panel widget and show or hide window
+			if pPanelContainer.getWidgetCount() > 0
+				pModelPanelButtons.forEach(block ModelPanelButton each
+					each.updateState()
+				end)
+				
 				getElement().setVisible(true)
 				getElement().setTouchable(true)
 				
@@ -191,6 +230,55 @@ class ECBVRWristPanel extends DefaultECBehavior
 				pShowPanelListener = null
 			end
 			setPanel(null)
+		end
+		
+		/** Create panel buttons. */
+		protected func void createPanelButtons()
+			pWindow.addWidget(Panel.new(BoxLayout.new(LayoutAxis.y), block Panel p
+				var DefaultListModel modelPanel = getModelPanel()
+				var ModelPanelButton modelButton
+				var ToggleButton button
+				
+				modelButton = ModelPanelButton.new(this, modelPanel, SessionSettings.WristMenuPanel.settings)
+				button = ToggleButton.new(modelButton, " ")
+				button.setDesignerSelector("Button.Category.Settings")
+				button.setToolTip("Settings and VR Control")
+				button.addActionListener(modelButton)
+				p.addWidget(button)
+				pModelPanelButtons.add(modelButton)
+				
+				modelButton = ModelPanelButton.new(this, modelPanel, SessionSettings.WristMenuPanel.character)
+				button = ToggleButton.new(modelButton, " ")
+				button.setDesignerSelector("Button.Category.Character")
+				button.setToolTip("Character Configuration")
+				button.addActionListener(modelButton)
+				p.addWidget(button)
+				pModelPanelButtons.add(modelButton)
+				
+				modelButton = ModelPanelButton.new(this, modelPanel, SessionSettings.WristMenuPanel.project)
+				button = ToggleButton.new(modelButton, " ")
+				button.setDesignerSelector("Button.Category.Project")
+				button.setToolTip("Project, Scenes and Objects")
+				button.addActionListener(modelButton)
+				p.addWidget(button)
+				pModelPanelButtons.add(modelButton)
+				
+				modelButton = ModelPanelButton.new(this, modelPanel, SessionSettings.WristMenuPanel.actorControl)
+				button = ToggleButton.new(modelButton, " ")
+				button.setDesignerSelector("Button.Category.ActorControl")
+				button.setToolTip("Actor Controls")
+				button.addActionListener(modelButton)
+				p.addWidget(button)
+				pModelPanelButtons.add(modelButton)
+				
+				modelButton = ModelPanelButton.new(this, modelPanel, SessionSettings.WristMenuPanel.session)
+				button = ToggleButton.new(modelButton, " ")
+				button.setDesignerSelector("Button.Category.Capture")
+				button.setToolTip("Session, Recording and Playback")
+				button.addActionListener(modelButton)
+				p.addWidget(button)
+				pModelPanelButtons.add(modelButton)
+			end), pECBehavior.getRightHand() if BorderLayout.Area.right else BorderLayout.Area.left)
 		end
 	end
 	
