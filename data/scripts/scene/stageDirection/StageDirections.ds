@@ -21,32 +21,37 @@
 
 namespace Democap
 
-pin Dragengine.Utils
+pin Dragengine.Gui
 
 
 /**
  * List of stage directions.
  */
 class StageDirections
-	private var Array pStageDirections
+	private var DefaultListModel pModel
 	
 	
 	
 	/** Create list. */
 	public func new()
-		pStageDirections = Array.new()
+		pModel = DefaultListModel.new()
+	end
+	
+	/** Dispose of list. */
+	public func void dispose()
+		pModel = null
 	end
 	
 	
 	
 	/** Count of stage directions. */
 	public func int getCount()
-		return pStageDirections.getCount()
+		return pModel.getCount()
 	end
 	
 	/** Stage direction at index. */
 	public func StageDirection getAt(int index)
-		return pStageDirections.getAt(index) cast StageDirection
+		return pModel.getAt(index) cast StageDirection
 	end
 	
 	/** Add stage direction. */
@@ -54,22 +59,27 @@ class StageDirections
 		if stageDirection == null
 			throw ENullPointer.new("stageDirection")
 		end
-		pStageDirections.add(stageDirection)
+		pModel.add(stageDirection)
+	end
+	
+	/** Move stage direction. */
+	public func void move(StageDirection stageDirection, int index)
+		pModel.move(stageDirection, index)
 	end
 	
 	/** Remove stage direction. */
 	public func void remove(StageDirection stageDirection)
-		pStageDirections.remove(stageDirection)
+		pModel.remove(stageDirection)
 	end
 	
 	/** Remove all stage directions. */
 	public func void removeAll()
-		pStageDirections.removeAll()
+		pModel.removeAll()
 	end
 	
 	/** Visit staged directions with block. Block receives as argument StageDirection. */
 	public func void forEach(Block ablock)
-		pStageDirections.forEach(ablock)
+		pModel.forEach(ablock)
 	end
 	
 	/**
@@ -78,11 +88,28 @@ class StageDirections
 	 * Returns Array of StageDirection.
 	 */
 	public func Array collect(Block ablock)
-		return pStageDirections.collect(ablock)
+		return pModel.collect(ablock)
 	end
 	
 	/** List of stage directions as Array of StageDirection. */
 	public func Array toArray()
-		return Array.new(pStageDirections)
+		return pModel.getContent()
+	end
+	
+	
+	
+	/** List model. */
+	public func ListModel getModel()
+		return pModel
+	end
+	
+	/** Selected stage direction or null. */
+	public func StageDirection getSelected()
+		return pModel.getSelectedElement() cast StageDirection
+	end
+	
+	/** Set selected stage direction or null. */
+	public func void setSelected(StageDirection stageDirection)
+		pModel.setSelectedElement(stageDirection)
 	end
 end

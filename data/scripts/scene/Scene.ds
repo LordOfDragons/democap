@@ -121,8 +121,14 @@ class Scene
 	public func void dispose()
 		pListeners.removeAll()
 		
+		if pStageDirections != null
+			pStageDirections.dispose()
+			pStageDirections = null
+		end
+		
 		if pFileUsage != null
 			pFileUsage.setParent(null)
+			pFileUsage = null
 		end
 	end
 	
@@ -189,6 +195,9 @@ class Scene
 	
 	/** Notify listeners stage direction name changed. */
 	public func void notifyStageDirectionNameChanged(StageDirection stageDirection)
+		var int index = pStageDirections.getModel().indexOf(stageDirection)
+		pStageDirections.getModel().notifyContentChanged(index, index)
+		
 		pListeners.forEach(block SceneListener each
 			each.stageDirectionNameChanged(this, stageDirection)
 		end)
@@ -196,6 +205,9 @@ class Scene
 	
 	/** Notify listeners stage direction content changed. */
 	public func void notifyStageDirectionContentChanged(StageDirection stageDirection)
+		var int index = pStageDirections.getModel().indexOf(stageDirection)
+		pStageDirections.getModel().notifyContentChanged(index, index)
+		
 		pListeners.forEach(block SceneListener each
 			each.stageDirectionContentChanged(this, stageDirection)
 		end)

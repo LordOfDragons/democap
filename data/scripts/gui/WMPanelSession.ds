@@ -318,152 +318,149 @@ class WMPanelSession extends Panel
 		
 		setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
-		addWidget(Panel.new(BorderLayout.new(5), block Panel p
-			p.setDesignerSelector("Panel.CollapsibleGroup.Header")
-			p.addWidget(Label.new("Session", "Label.CollapsibleGroup"), BorderLayout.Area.content)
+		addWidget(CollapsibleGroup.new("Session", "uipanelcapture",\
+		CollapsibleGroup.persistModel(pPrefixUIOptions + "/Session"),\
+		FlowLayout.new(LayoutAxis.y, 2), block Panel gp
+			gp.addWidget(Panel.new(BorderLayout.new(), block Panel p
+				p.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p2
+					button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+						startRecording()
+					end))
+					button.setDesignerSelector("Button.CaptureRecord")
+					button.setToolTip("Start motion capturing")
+					p2.addWidget(button)
+					
+					button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+						stopRecording()
+					end))
+					button.setDesignerSelector("Button.CaptureStop")
+					button.setToolTip("Stop motion capturing writing animation to overlay directory")
+					p2.addWidget(button)
+					
+					button = Button.new("Captured", BlockActionListener.new(block ActionEvent event
+						browseCapturedAnimations()
+					end))
+					button.setToolTip("Browse motion captured animations")
+					p2.addWidget(button)
+				end), BorderLayout.Area.content)
+			end)) 
 			
-			p.addWidget(HelpButton.new("uipanelcapture"), BorderLayout.Area.right)
-		end))
-		
-		addWidget(Panel.new(BorderLayout.new(), block Panel p
-			p.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p2
-				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
-					startRecording()
+			gp.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x, 5), block Panel p
+				// frame rate
+				p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 3, FlowLayout.Stretch.last), block Panel p2
+					tooltip = "Frame rate to use for recording animations"
+					
+					label = Label.new("Rate:", "Label.FormCaption")
+					label.setToolTip(tooltip)
+					p2.addWidget(label)
+					
+					textField = TextField.new(RangeTextModel.new(sessionSettings.getModelRecordFrameRate()), 2)
+					textField.setToolTip(tooltip)
+					textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+					p2.addWidget(textField)
+					textField.addMouseListener(ScrollModelWheelMouseListener.new(sessionSettings.getModelRecordFrameRate()))
+					
+					spinButton = SpinButton.new(sessionSettings.getModelRecordFrameRate())
+					spinButton.setToolTip(tooltip)
+					p2.addWidget(spinButton)
 				end))
-				button.setDesignerSelector("Button.CaptureRecord")
-				button.setToolTip("Start motion capturing")
-				p2.addWidget(button)
 				
-				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
-					stopRecording()
+				// smoothing
+				p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 3, FlowLayout.Stretch.last), block Panel p2
+					tooltip = "Slot smoothing strength (0=none, 10=full)"
+					
+					label = Label.new("Smooth:", "Label.FormCaption")
+					label.setToolTip(tooltip)
+					p2.addWidget(label)
+					
+					textField = TextField.new(RangeTextModel.new(sessionSettings.getModelSmoothSlotStrength()), 2)
+					textField.setToolTip(tooltip)
+					textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+					p2.addWidget(textField)
+					textField.addMouseListener(ScrollModelWheelMouseListener.new(sessionSettings.getModelSmoothSlotStrength()))
+					
+					spinButton = SpinButton.new(sessionSettings.getModelSmoothSlotStrength())
+					spinButton.setToolTip(tooltip)
+					p2.addWidget(spinButton)
 				end))
-				button.setDesignerSelector("Button.CaptureStop")
-				button.setToolTip("Stop motion capturing writing animation to overlay directory")
-				p2.addWidget(button)
 				
-				button = Button.new("Captured", BlockActionListener.new(block ActionEvent event
-					browseCapturedAnimations()
+				p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 3, FlowLayout.Stretch.last), block Panel p2
+					tooltip = "Animation smoothing strength (0=none, 10=full)"
+					
+					label = Label.new("Record:", "Label.FormCaption")
+					label.setToolTip(tooltip)
+					p2.addWidget(label)
+					
+					comboBox  = ComboBox.new(sessionSettings.getModelRecordDevices(), RecordDevicesRenderer.new())
+					comboBox.setToolTip("Record VR device positions too.\n"\
+						+ "none: Not recording.\n"\
+						+ "device: Original device position\n"\
+						+ "reference: Reference slot position\n"\
+						+ "target: Target slot position")
+					p2.addWidget(comboBox)
 				end))
-				button.setToolTip("Browse motion captured animations")
-				p2.addWidget(button)
-			end), BorderLayout.Area.content)
-		end)) 
-		
-		addWidget(Panel.new(BoxLayout.new(LayoutAxis.x, 5), block Panel p
-			// frame rate
-			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 3, FlowLayout.Stretch.last), block Panel p2
-				tooltip = "Frame rate to use for recording animations"
-				
-				label = Label.new("Rate:", "Label.FormCaption")
-				label.setToolTip(tooltip)
-				p2.addWidget(label)
-				
-				textField = TextField.new(RangeTextModel.new(sessionSettings.getModelRecordFrameRate()), 2)
-				textField.setToolTip(tooltip)
-				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
-				p2.addWidget(textField)
-				textField.addMouseListener(ScrollModelWheelMouseListener.new(sessionSettings.getModelRecordFrameRate()))
-				
-				spinButton = SpinButton.new(sessionSettings.getModelRecordFrameRate())
-				spinButton.setToolTip(tooltip)
-				p2.addWidget(spinButton)
 			end))
 			
-			// smoothing
-			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 3, FlowLayout.Stretch.last), block Panel p2
-				tooltip = "Slot smoothing strength (0=none, 10=full)"
-				
-				label = Label.new("Smooth:", "Label.FormCaption")
-				label.setToolTip(tooltip)
-				p2.addWidget(label)
-				
-				textField = TextField.new(RangeTextModel.new(sessionSettings.getModelSmoothSlotStrength()), 2)
-				textField.setToolTip(tooltip)
-				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
-				p2.addWidget(textField)
-				textField.addMouseListener(ScrollModelWheelMouseListener.new(sessionSettings.getModelSmoothSlotStrength()))
-				
-				spinButton = SpinButton.new(sessionSettings.getModelSmoothSlotStrength())
-				spinButton.setToolTip(tooltip)
-				p2.addWidget(spinButton)
+			gp.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
+				var ProgressBar progress = ProgressBar.new(Orientation.horizontal, pModelPlaybackPosition)
+				progress.setDesignerSelector("ProgressBar.PlaybackTime")
+				progress.addMouseListener(ClickAndDragPlaybackBar.new(this, progress))
+				p.addWidget(progress)
 			end))
 			
-			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 3, FlowLayout.Stretch.last), block Panel p2
-				tooltip = "Animation smoothing strength (0=none, 10=full)"
-				
-				label = Label.new("Record:", "Label.FormCaption")
-				label.setToolTip(tooltip)
-				p2.addWidget(label)
-				
-				comboBox  = ComboBox.new(sessionSettings.getModelRecordDevices(), RecordDevicesRenderer.new())
-				comboBox.setToolTip("Record VR device positions too.\n"\
-					+ "none: Not recording.\n"\
-					+ "device: Original device position\n"\
-					+ "reference: Reference slot position\n"\
-					+ "target: Target slot position")
-				p2.addWidget(comboBox)
-			end))
-		end))
-		
-		addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
-			var ProgressBar progress = ProgressBar.new(Orientation.horizontal, pModelPlaybackPosition)
-			progress.setDesignerSelector("ProgressBar.PlaybackTime")
-			progress.addMouseListener(ClickAndDragPlaybackBar.new(this, progress))
-			p.addWidget(progress)
-		end))
-		
-		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.first), block Panel p
-			p.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p2
-				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
-					playbackRewind()
+			gp.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.first), block Panel p
+				p.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p2
+					button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+						playbackRewind()
+					end))
+					button.setDesignerSelector("Button.PlaybackRewind")
+					button.setToolTip("Rewind to start")
+					p2.addWidget(button)
+					
+					pButtonPlaybackPlayBackwards = Button.new(" ", BlockActionListener.new(block ActionEvent event
+						playbackStart(true)
+					end))
+					pButtonPlaybackPlayBackwards.setDesignerSelector("Button.PlaybackPlayBackwards")
+					pButtonPlaybackPlayBackwards.setToolTip("Start playing backwards")
+					p2.addWidget(pButtonPlaybackPlayBackwards)
+					
+					pButtonPlaybackPlay = Button.new(" ", BlockActionListener.new(block ActionEvent event
+						playbackStart(false)
+					end))
+					pButtonPlaybackPlay.setDesignerSelector("Button.PlaybackPlay")
+					pButtonPlaybackPlay.setToolTip("Start playing")
+					p2.addWidget(pButtonPlaybackPlay)
+					
+					pButtonPlaybackPause = Button.new(" ", BlockActionListener.new(block ActionEvent event
+						playbackPause()
+					end))
+					pButtonPlaybackPause.setDesignerSelector("Button.PlaybackPause")
+					pButtonPlaybackPause.setToolTip("Pause/Resume playback")
+					p2.addWidget(pButtonPlaybackPause)
+					
+					pButtonPlaybackStop = Button.new(" ", BlockActionListener.new(block ActionEvent event
+						playbackStop()
+					end))
+					pButtonPlaybackStop.setDesignerSelector("Button.PlaybackStop")
+					pButtonPlaybackStop.setToolTip("Stop playback and rewind to start")
+					p2.addWidget(pButtonPlaybackStop)
+					
+					button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+						playbackForwardEnd()
+					end))
+					button.setDesignerSelector("Button.PlaybackForwardEnd")
+					button.setToolTip("Fast forward to end of playback")
+					p2.addWidget(button)
 				end))
-				button.setDesignerSelector("Button.PlaybackRewind")
-				button.setToolTip("Rewind to start")
-				p2.addWidget(button)
 				
-				pButtonPlaybackPlayBackwards = Button.new(" ", BlockActionListener.new(block ActionEvent event
-					playbackStart(true)
+				var DefaultComboBoxEditor editor = DefaultComboBoxEditor.new(pModelTextPlaybackSpeed, 2)
+				editor.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
+				comboBox = ComboBox.new(pModelListPlaybackSpeed, editor)
+				comboBox.setToolTip("Playback speed in percentage (100 = normal speed)")
+				p.addWidget(comboBox)
+				editor.addTextActionListener(BlockActionListener.new(block ActionEvent event
+					GameApp.getGameApp().getPlaybackScene().setSpeed(0.01 * pModelTextPlaybackSpeed.getText().toInt())
 				end))
-				pButtonPlaybackPlayBackwards.setDesignerSelector("Button.PlaybackPlayBackwards")
-				pButtonPlaybackPlayBackwards.setToolTip("Start playing backwards")
-				p2.addWidget(pButtonPlaybackPlayBackwards)
-				
-				pButtonPlaybackPlay = Button.new(" ", BlockActionListener.new(block ActionEvent event
-					playbackStart(false)
-				end))
-				pButtonPlaybackPlay.setDesignerSelector("Button.PlaybackPlay")
-				pButtonPlaybackPlay.setToolTip("Start playing")
-				p2.addWidget(pButtonPlaybackPlay)
-				
-				pButtonPlaybackPause = Button.new(" ", BlockActionListener.new(block ActionEvent event
-					playbackPause()
-				end))
-				pButtonPlaybackPause.setDesignerSelector("Button.PlaybackPause")
-				pButtonPlaybackPause.setToolTip("Pause/Resume playback")
-				p2.addWidget(pButtonPlaybackPause)
-				
-				pButtonPlaybackStop = Button.new(" ", BlockActionListener.new(block ActionEvent event
-					playbackStop()
-				end))
-				pButtonPlaybackStop.setDesignerSelector("Button.PlaybackStop")
-				pButtonPlaybackStop.setToolTip("Stop playback and rewind to start")
-				p2.addWidget(pButtonPlaybackStop)
-				
-				button = Button.new(" ", BlockActionListener.new(block ActionEvent event
-					playbackForwardEnd()
-				end))
-				button.setDesignerSelector("Button.PlaybackForwardEnd")
-				button.setToolTip("Fast forward to end of playback")
-				p2.addWidget(button)
-			end))
-			
-			var DefaultComboBoxEditor editor = DefaultComboBoxEditor.new(pModelTextPlaybackSpeed, 2)
-			editor.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
-			comboBox = ComboBox.new(pModelListPlaybackSpeed, editor)
-			comboBox.setToolTip("Playback speed in percentage (100 = normal speed)")
-			p.addWidget(comboBox)
-			editor.addTextActionListener(BlockActionListener.new(block ActionEvent event
-				GameApp.getGameApp().getPlaybackScene().setSpeed(0.01 * pModelTextPlaybackSpeed.getText().toInt())
 			end))
 		end))
 		

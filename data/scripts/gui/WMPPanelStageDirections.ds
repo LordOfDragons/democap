@@ -52,29 +52,6 @@ class WMPPanelStageDirections extends CollapsibleGroup
 		end
 	end
 	
-	/** Scene changed listener. */
-	class SceneChangedListener extends DefaultSceneListener
-		protected var WMPPanelStageDirections pPanel
-		
-		public func new(WMPPanelStageDirections panel)
-			pPanel = panel
-		end
-		
-		public func void stageDirectionContentChanged(Scene scene, StageDirection stageDirection)
-			if pPanel.getStageDirection() == stageDirection
-				pPanel.updateStageDirection()
-			end
-		end
-		
-		public func void stageDirectionNameChanged(Scene scene, StageDirection stageDirection)
-			pPanel.updateStageDirections()
-		end
-		
-		public func void stageDirectionsChanged(Scene scene)
-			pPanel.updateStageDirections()
-		end
-	end
-	
 	
 	
 	/** Stage direction popup menu. */
@@ -128,11 +105,17 @@ class WMPPanelStageDirections extends CollapsibleGroup
 	end
 	
 	/** Stage direction selection listener. */
-	public class SelectStageDirection extends DefaultListModelListener
+	public class StageDirectionModelChanged extends DefaultListModelListener
 		protected var WMPPanelStageDirections pPanel
 		
 		public func new(WMPPanelStageDirections panel)
 			pPanel = panel
+		end
+		
+		public func void contentChanged(ListModel listModel, int fromIndex, int toIndex)
+			if listModel.getSelected() >= fromIndex and listModel.getSelected() <= toIndex
+				pPanel.updateStageDirection()
+			end
 		end
 		
 		public func void selectionChanged(ListModel listModel)
@@ -171,13 +154,13 @@ class WMPPanelStageDirections extends CollapsibleGroup
 	
 	protected var WMPanelSession pPanelSession
 	protected var String pPrefixUIOptions
-	protected var DefaultListModel pModelDirections
 	protected var DefaultTextModel pModelContent
+	protected var ListBox pListBoxDirections
 	protected var DisplayImage pDisplayImage
 	protected var DisplayVideo pDisplayVideo
 	protected var Scene pScene
 	protected var GameChangedListener pGameChangedListener
-	protected var SceneChangedListener pSceneChangedListener
+	protected var StageDirectionModelChanged pStageDirectionModelChanged
 	
 	
 	
@@ -187,16 +170,13 @@ class WMPPanelStageDirections extends CollapsibleGroup
 		pPanelSession = panelSession
 		pPrefixUIOptions = prefixUIOptions(panelSession)
 		
-		pModelDirections = DefaultListModel.new()
+		pStageDirectionModelChanged = StageDirectionModelChanged.new(this)
+		
 		pModelContent = DefaultTextModel.new("")
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
 		end)
-		
-		pModelDirections.addListener(SelectStageDirection.new(this))
-		
-		pSceneChangedListener = SceneChangedListener.new(this)
 		
 		var GameApp app = GameApp.getGameApp()
 		pGameChangedListener = GameChangedListener.new(this)
@@ -212,14 +192,14 @@ class WMPPanelStageDirections extends CollapsibleGroup
 			app.removeListener(pGameChangedListener)
 		end
 		
-		pSceneChangedListener = null
+		pStageDirectionModelChanged = null
 		pGameChangedListener = null
 		
 		pPanelSession = null
 		pDisplayImage = null
 		pDisplayVideo = null
+		pListBoxDirections = null
 		pModelContent = null
-		pModelDirections = null
 		
 		super.dispose()
 	end
@@ -242,24 +222,28 @@ class WMPPanelStageDirections extends CollapsibleGroup
 			return
 		end
 		
-		if pScene != null
-			pScene.removeListener(pSceneChangedListener)
-		end
+		pListBoxDirections.getModel().removeListener(pStageDirectionModelChanged)
+		pListBoxDirections.setModel(DefaultListModel.new())
 		
 		pScene = scene
 		
 		if scene != null
-			scene.addListener(pSceneChangedListener)
+			pListBoxDirections.setModel(scene.getStageDirections().getModel())
 		end
 		
-		updateStageDirections()
+		pListBoxDirections.getModel().addListener(pStageDirectionModelChanged)
+		
+		updateStageDirection()
 	end
 	
 	
 	
 	/** Selected stage direction or null. */
 	public func StageDirection getStageDirection()
-		return pModelDirections.getSelectedElement() cast StageDirection
+		if pScene == null
+			return null
+		end
+		return pScene.getStageDirections().getSelected()
 	end
 	
 	/** Update selected stage direction. */
@@ -272,23 +256,6 @@ class WMPPanelStageDirections extends CollapsibleGroup
 		else
 			pModelContent.setText("")
 		end
-	end
-	
-	/** Update stage directions model. */
-	public func void updateStageDirections()
-		var StageDirection direction = getStageDirection()
-		
-		if pScene != null
-			pModelDirections.setContent(pScene.getStageDirections().toArray())
-			
-		else
-			pModelDirections.removeAll()
-		end
-		
-		if direction == null and pModelDirections.getCount() > 0
-			direction = pModelDirections.getAt(0) cast StageDirection
-		end
-		pModelDirections.setSelectedElement(direction)
 	end
 	
 	/** Add stage direction. */
@@ -306,7 +273,7 @@ class WMPPanelStageDirections extends CollapsibleGroup
 				pScene.getStageDirections().add(direction)
 				pScene.notifyStageDirectionsChanged()
 				
-				pModelDirections.setSelectedElement(direction)
+				pScene.getStageDirections().setSelected(direction)
 			end
 		end))
 	end
@@ -318,12 +285,13 @@ class WMPPanelStageDirections extends CollapsibleGroup
 			return
 		end
 		
-		var int index = pModelDirections.indexOf(direction)
+		var ListModel model = pScene.getStageDirections().getModel()
+		var int index = model.indexOf(direction)
 		
 		pScene.getStageDirections().remove(direction)
 		pScene.notifyStageDirectionsChanged()
 		
-		pModelDirections.setSelected(DEMath.min(index, pModelDirections.getCount() - 1))
+		model.setSelected(DEMath.min(index, model.getCount() - 1))
 	end
 	
 	/** Remove all stage directions. */
@@ -360,16 +328,16 @@ class WMPPanelStageDirections extends CollapsibleGroup
 	protected func void createContent(Panel content)
 		var bool readOnly = pPanelSession.getInVR()
 		var TextArea textArea
-		var ListBox listBox
 		
 		content.setLayout(BorderLayout.new(5))
 		
 		content.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 0, FlowLayout.Stretch.first), block Panel p
-			listBox = ListBox.new(pModelDirections, DefaultListElementRenderer.new(String.new('X', 15)))
-			listBox.setDesignerSelector("ListBox.WMPPanelStageDirections")
-			listBox.setToolTip("Stage direction to show.")
-			listBox.setNumberDisplayLines(10)
-			p.addWidget(ScrollPanel.new(listBox))
+			pListBoxDirections = ListBox.new(DefaultListModel.new(), DefaultListElementRenderer.new(String.new('X', 15)))
+			pListBoxDirections.setDesignerSelector("ListBox.WMPPanelStageDirections")
+			pListBoxDirections.setToolTip("Stage direction to show.")
+			pListBoxDirections.setNumberDisplayLines(10)
+			pListBoxDirections.getModel().addListener(pStageDirectionModelChanged)
+			p.addWidget(ScrollPanel.new(pListBoxDirections))
 			
 			if not readOnly
 				var Button button = Button.new("...", StageDirectionPopupAction.new(this))
