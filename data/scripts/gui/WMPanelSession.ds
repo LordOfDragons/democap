@@ -204,24 +204,43 @@ class WMPanelSession extends Panel
 		end
 		
 		var ECBSelectable.Instance selection = app.getSelectionTracker().getElement()
+		var ECBCapturedAnimations.Instance capturedAnimations
+		
 		if selection != null
-			var ECBCapturedAnimations.Instance ca = ECBCapturedAnimations.getInstanceIn(selection.getElement())
+			capturedAnimations = ECBCapturedAnimations.getInstanceIn(selection.getElement())
 			
-			if ca != null
-				if not ca.getCharacterProfile().equals(app.getWorldSpawnCharacter().getCharacter().getProfile().getName())
+			if capturedAnimations != null
+				if not capturedAnimations.getCharacterProfile().equals(\
+				app.getWorldSpawnCharacter().getCharacter().getProfile().getName())
 					WindowDialog.message(getWindow(), "Record Animation",\
 						"Recording into selected Capture Animation Scene Object is only possible " +\
 						"if the matching Character Profile is activate.", null, null, null)
 					return
 				end
 				
-				if ca.getAnimations().getActive() == null
+				if capturedAnimations.getAnimations().getActive() == null
 					WindowDialog.message(getWindow(), "Record Animation",\
 						"Recording into selected Capture Animation Scene Object is only possible " +\
 						"if an animation is selected.", null, null, null)
 					return
 				end
 			end
+		end
+		
+		if capturedAnimations == null and app.getWorldSpawnCharacter().getGameWorld().findElement(block Element each
+			return each castable BehaviorElement and ECBCapturedAnimations.getInstanceIn(each cast BehaviorElement) != null
+		end) != null
+			WindowDialog.question(getWindow(), "Record Animation",\
+				"Captured Animation Scene Objects are present but none is selected to record into. " +\
+				"Do you want to record non-captured animation?", null,\
+				Array.newWith(WindowDialog.ButtonConfiguration.new("Record Free", true), \
+				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+				WindowDialog.BlockResultListener.new(block bool result
+					if result
+						aacc.startRecording()
+					end
+				end))
+			return
 		end
 		
 		aacc.startRecording()
