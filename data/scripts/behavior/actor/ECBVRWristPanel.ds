@@ -126,10 +126,19 @@ class ECBVRWristPanel extends DefaultECBehavior
 					BorderLayout.Area.content)
 			end)
 			desktop.addWindow(pWindow)
+			
+			pShowPanelListener = ShowPanelListener.new(this)
+			pShowPanelListener.selectionChanged(getModelPanel())
+			getModelPanel().addListener(pShowPanelListener)
 		end
 		
 		/** Dispose of behavior instance. */
 		public func void dispose()
+			if pShowPanelListener != null
+				getModelPanel().removeListener(pShowPanelListener)
+				pShowPanelListener = null
+			end
+			
 			pWindow = null
 			pPanelContainer = null
 			pModelPanelButtons = null
@@ -215,22 +224,6 @@ class ECBVRWristPanel extends DefaultECBehavior
 			end
 		end
 		
-		
-		/** Add to game world. */
-		public func void addToGameWorld()
-			pShowPanelListener = ShowPanelListener.new(this)
-			pShowPanelListener.selectionChanged(getModelPanel())
-			getModelPanel().addListener(pShowPanelListener)
-		end
-		
-		/** Remove from game world. */
-		public func void removeFromGameWorld()
-			if pShowPanelListener != null
-				getModelPanel().removeListener(pShowPanelListener)
-				pShowPanelListener = null
-			end
-			setPanel(null)
-		end
 		
 		/** Create panel buttons. */
 		protected func void createPanelButtons()
