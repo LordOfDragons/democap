@@ -49,7 +49,7 @@ class ECBResizeVRWristPanel extends DefaultECBehavior
 		/** Create instance. */
 		public func new(ECBResizeVRWristPanel ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
-			pThresholdAngle = 30
+			pThresholdAngle = 20
 			pScaleLarge = 1
 			pScaleSmall = 0.25
 			
@@ -59,6 +59,11 @@ class ECBResizeVRWristPanel extends DefaultECBehavior
 			
 			pVRWristPanel = ecbehavior.getVRWristMenu().instance(element)
 			pCenter = DVector.new(ecbehavior.getCenter().getVector())
+			
+			// disabled. for some unknown reason this is not working. the VR camera seems to
+			// not line up properly causing the forward vector to slightly aim up.
+			// no workaround found so far
+// 			setRequiresThink(true)
 		end
 		
 		/** Dispose of behavior instance. */
@@ -76,21 +81,20 @@ class ECBResizeVRWristPanel extends DefaultECBehavior
 		
 		/** Frame update. */
 		public func void think(float elapsed)
-			var DVector center = pVRWristPanel.getElement().getElementMatrix() * pCenter
-			var DMatrix matrixCamera = GameApp.getGameApp().getVRCamera().getMatrix()
-			var float scale = 0
+			// we have to use newWorld() here since getElementMatrix() contains the
+			// scaling which would falsify the result
+			var BehaviorElement element = pVRWristPanel.getElement()
+			var DMatrix matrixPanel = DMatrix.newWorld(element.getPosition(), element.getOrientation())
 			
-			center = matrixCamera * center
+			var DMatrix matrixCamera = GameApp.getGameApp().getVRCamera().getMatrix()
+			var DVector center = matrixCamera.getInverse() * (matrixPanel * pCenter)
+			var float scale = 0
 			
 			if not center.isZero()
 				center = center.normalize()
 				
-				var float x = center.getZ()
-				if x > 0.1
-					var float y = Vector2.new(center.getX(), center.getY()).getLength()
-					if DEMath.atan(y / x) > pThresholdAngle
-						scale = pScaleSmall
-					end
+				if DEMath.acos(center.getZ()) < pThresholdAngle
+					scale = 1
 				end
 			end
 			
@@ -98,18 +102,7 @@ class ECBResizeVRWristPanel extends DefaultECBehavior
 			pScale.update(elapsed)
 			
 			scale = DEMath.linearStep(pScale.getValue(), 0, 1, pScaleSmall, pScaleLarge)
-			pVRWristPanel.getElement().setScaling(Vector.new(scale, scale, scale))
-		end
-		
-		
-		/** Added to game world. */
-		public func void addToGameWorld()
-			setRequiresThink(true)
-		end
-		
-		/** Removed from game world. */
-		public func void removeFromGameWorld()
-			setRequiresThink(false)
+			element.setScaling(Vector.new(scale, scale, scale))
 		end
 	end
 	
@@ -128,7 +121,7 @@ class ECBResizeVRWristPanel extends DefaultECBehavior
 		
 		pVRWristPanel = vrWristPanel
 		
-		pCenter = ECPVector.new(prefix + "center", Vector.new(0, 0.11, 0))
+		pCenter = ECPVector.new(prefix + "center", Vector.new(0, 0.1125, 0))
 		eclass.addProperty(pCenter)
 		
 		eclass.addBehavior(this)
