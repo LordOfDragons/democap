@@ -485,6 +485,10 @@ class ECBRecordAnimation extends DefaultECBehavior
 						
 						pCapturedAnimations.getAnimations().notifyAnimationChanged(pCharacterAnimation)
 						
+						if app.getSessionSettings().getModelAutoExport().getToggled()
+							pCharacterAnimation.export(project, getAutoExportPath())
+						end
+						
 					else
 						pRecordAnimation.getAnimation().save(pRecordAnimation.getPath())
 						
@@ -695,6 +699,28 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			// write to file
 			document.writeToFile(FileWriter.new(path), false)
+		end
+		
+		/** Create auto export path. */
+		public func String getAutoExportPath()
+			var Scene scene = GameApp.getGameApp().getScene()
+			var File path = File.new(scene.getName())
+			
+			var StageDirection stageDirection = scene.getStageDirections().getSelected()
+			if stageDirection != null
+				path = path + stageDirection.getName()
+			end
+			
+			var BehaviorElement element = pCapturedAnimations.getElement()
+			var ECBSceneObject.Instance sceneObject = ECBSceneObject.getInstanceIn(element)
+			var String objectName = sceneObject.getName()
+			if objectName.empty()
+				objectName = "{}-{}".format(Array.newWith(element.getClass().getClassname(), element.getID()))
+			end
+			path = path + objectName
+			
+			path = path + pCharacterAnimation.getName()
+			return path.getPath()
 		end
 	end
 	
