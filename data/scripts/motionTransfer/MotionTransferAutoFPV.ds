@@ -274,7 +274,12 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 		
 		assignSlots(config)
 		
-		// determine what devices are attached
+		// determine what devices are attached. it is important to to resolve all trackers
+		// that are used to determine motion transfer parameters or first time calibrate
+		// can yield wrong results
+		pTransferArmRight.getTipTracker().resolveRealSlot(config)
+		pTransferArmLeft.getTipTracker().resolveRealSlot(config)
+		
 		var bool hasSlotRightHandController = pTransferArmRight.getTipTracker().getRealSlot() != null \
 			and pTransferArmRight.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightHandController
 		
