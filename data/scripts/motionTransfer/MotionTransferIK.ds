@@ -453,6 +453,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		var String guideBone = pGuideBone.empty() if pBaseBone else pGuideBone
 		
+		// add base IK rules
 		if not pMoveBaseIK.empty()
 			pADRuleBaseIK = ADRuleAnimation.new()
 			pADRuleBaseIK.setName(getName() + ".baseIK")
@@ -463,6 +464,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(pADRuleBaseIK)
 		end
 		
+		// add retracted rules
 		if not pMoveRetracted.empty()
 			pADControllerRetracted = ADController.new()
 			pADControllerRetracted.setName(behavior.getControllerNameRetracted())
@@ -489,55 +491,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(pADRuleRetracted)
 		end
 		
-		if pTwistBoneCount > 0 and pTwistPropagation > 0.01 and boneCount >= 2
-			var int count = DEMath.min(pTwistBoneCount, boneCount - 1)
-			var ADRuleBoneTransformator rule
-			var String name = getName() + ".twist"
-			var float maxAngle = 180
-			var int i
-			
-			pADControllerTwist = ADController.new()
-			pADControllerTwist.setName(behavior.getControllerNameTwist())
-			pADControllerTwist.setMinimum(-maxAngle)
-			pADControllerTwist.setMaximum(maxAngle)
-			adef.addController(pADControllerTwist)
-			
-			var ADLink link = ADLink.new()
-			link.setController(pADControllerTwist)
-			adef.addLink(link)
-			
-			var float angle = pTwistPropagation * maxAngle / count
-			var int baseIndex = count
-			
-			for i = 0 to count
-				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
-				var Vector axis = pCalibrateTwistAxes.getAt(i) cast Vector
-				
-				rule = ADRuleBoneTransformator.new()
-				rule.setName(name)
-				rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
-				rule.setUseAxis(true)
-				rule.setAxis(axis)
-				rule.setMinimumAngle(-angle)
-				rule.setMaximumAngle(angle)
-				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
-				rule.addBone(bone)
-				adef.addRule(rule)
-			end
-			
-			rule = ADRuleBoneTransformator.new()
-			rule.setName(name)
-			rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
-			rule.setUseAxis(true)
-			rule.setAxis(pCalibrateTwistAxes.getAt(-1) cast Vector)
-			rule.setMinimumAngle(pTwistPropagation * maxAngle)
-			rule.setMaximumAngle(-pTwistPropagation * maxAngle)
-			rule.setTargetBone(pCalibrateBones.getAt(1) cast String)
-			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
-			rule.addBone(pTipBone)
-			adef.addRule(rule)
-		end
-		
+		// add guide rules
 		if slotGuide != null and slotGuide.isDeviceAttached()
 			pADControllerGuidePosition = ADController.new()
 			pADControllerGuidePosition.setName(behavior.getControllerNameGuidePosition())
@@ -567,6 +521,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(pADRuleGuide)
 		end
 		
+		// add IK rules
 		pADControllerBlend = ADController.new()
 		pADControllerBlend.setName(behavior.getControllerNameBlend())
 		pADControllerBlend.setMinimum(0)
@@ -593,6 +548,21 @@ class MotionTransferIK extends DefaultMotionTransfer
 		linkTipOrientation.setController(pADControllerTipOrientation)
 		adef.addLink(linkTipOrientation)
 		
+		if pAdjustPosition and slotGuide != null and slotGuide.isDeviceAttached()
+			var int index = pCalibrateBones.indexOf(guideBone)
+			if index > 1
+				var ADRuleInverseKinematic rule = ADRuleInverseKinematic.new()
+				rule.setName(getName())
+				rule.setAdjustPosition(true)
+				rule.setAdjustOrientation(false)
+				rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.blendFactor, linkBlend))
+				rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, linkTipPosition))
+				rule.addBone(pTipBone)
+				rule.addBone(pCalibrateBones.getAt(index - 1) cast String)
+				adef.addRule(rule)
+			end
+		end
+		
 		pADRuleIK = ADRuleInverseKinematic.new()
 		pADRuleIK.setName(getName())
 		pADRuleIK.setAdjustPosition(pAdjustPosition)
@@ -618,6 +588,58 @@ class MotionTransferIK extends DefaultMotionTransfer
 			pADRuleIKForce.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkTipOrientation))
 			pADRuleIKForce.addBone(pTipBone)
 			adef.addRule(pADRuleIKForce)
+		end
+		
+		// add twist rules
+		if pTwistBoneCount > 0 and pTwistPropagation > 0.01 and boneCount >= 2
+			var int count = DEMath.min(pTwistBoneCount, boneCount - 1)
+			var ADRuleBoneTransformator rule
+			var String name = getName() + ".twist"
+			var float maxAngle = 180
+			var int i
+			
+			pADControllerTwist = ADController.new()
+			pADControllerTwist.setName(behavior.getControllerNameTwist())
+			pADControllerTwist.setMinimum(-maxAngle)
+			pADControllerTwist.setMaximum(maxAngle)
+			adef.addController(pADControllerTwist)
+			
+			var ADLink link = ADLink.new()
+			link.setController(pADControllerTwist)
+			adef.addLink(link)
+			
+			var float angle = pTwistPropagation * maxAngle / count
+			var int baseIndex = count
+			
+			for i = 0 to count
+				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
+				var Vector axis = pCalibrateTwistAxes.getAt(i) cast Vector
+				var float realAngle = angle * (i + 1)
+				
+				rule = ADRuleBoneTransformator.new()
+				rule.setName(name)
+				rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+				rule.setTargetBone(bone)
+				rule.setUseAxis(true)
+				rule.setAxis(axis)
+				rule.setMinimumAngle(realAngle)
+				rule.setMaximumAngle(-realAngle)
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				rule.addBone(pCalibrateBones.getAt(baseIndex - i - 1) cast String)
+				adef.addRule(rule)
+				
+				rule = ADRuleBoneTransformator.new()
+				rule.setName(name)
+				rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+				rule.setTargetBone(bone)
+				rule.setUseAxis(true)
+				rule.setAxis(axis)
+				rule.setMinimumAngle(-realAngle)
+				rule.setMaximumAngle(realAngle)
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				rule.addBone(bone)
+				adef.addRule(rule)
+			end
 		end
 		
 		// register bones to record

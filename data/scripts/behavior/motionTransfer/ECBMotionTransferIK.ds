@@ -320,8 +320,22 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			
 			var Matrix matrix = pTransformGuide * pSlotGuide.getMatrixCharacter()
 			
+			var Vector targetPosition = matrix.getPosition()
+			
+			if pEnableScaleReach
+				var Matrix boneMatrix = pComponent.boneGetMatrix(pBaseBone)
+				
+				if pEnableTipOffset
+					targetPosition = targetPosition + boneMatrix.transformNormal(pTipOffset)
+				end
+				
+				var Vector basePosition = boneMatrix.getPosition()
+				
+				targetPosition = basePosition + (targetPosition - basePosition).compMultiply(pScaleReach)
+			end
+			
 			if pControllerGuidePosition != null
-				pControllerGuidePosition.setVector(matrix.getPosition() + pTipOffset)
+				pControllerGuidePosition.setVector(targetPosition)
 			end
 			if pControllerGuideUp != null
 				pControllerGuideUp.setVector(matrix.normalize().transformNormal(pGuideUp))
