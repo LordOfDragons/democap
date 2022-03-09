@@ -73,14 +73,12 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var AnimatorController pControllerTipPosition
 		private var AnimatorController pControllerTipOrientation
 		private var AnimatorController pControllerGuidePosition
-		private var AnimatorController pControllerGuideUp
 		private var AnimatorController pControllerTwist
 		private var AnimatorController pControllerRetracted
 		private var AnimatorController pControllerBlend
 		private var Matrix pTransformTip
 		private var Quaternion pTransformTipQuat
 		private var Matrix pTransformGuide
-		private var Vector pGuideUp
 		private var Vector pTipOffset
 		private var int pBaseBone
 		private var AnimatorInstance pAnimatorInstance
@@ -118,7 +116,6 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			if ecbehavior.getSlotGuide() != null
 				pSlotGuide = ecbehavior.getSlotGuide().instance(element)
 				pTransformGuide = ecbehavior.getTransfer().getGuideTracker().getTransformMatrix()
-				pGuideUp = MotionTransferIK.trackToVectorFromAxis(ecbehavior.getTransfer().getCalibrateGuideUpAxis())
 			end
 		end
 		
@@ -142,7 +139,6 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pControllerTipPosition = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTipPosition())
 			pControllerTipOrientation = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTipOrientation())
 			pControllerGuidePosition = actorAnimated.getControllerNamed(pECBehavior.getControllerNameGuidePosition())
-			pControllerGuideUp = actorAnimated.getControllerNamed(pECBehavior.getControllerNameGuideUp())
 			pControllerRetracted = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRetracted())
 			pControllerTwist = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTwist())
 			pControllerBlend = actorAnimated.getControllerNamed(pECBehavior.getControllerNameBlend())
@@ -203,11 +199,6 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		/** Animator controller guide position. */
 		public func AnimatorController getControllerGuidePosition()
 			return pControllerGuidePosition
-		end
-		
-		/** Animator controller guide up. */
-		public func AnimatorController getControllerGuideUp()
-			return pControllerGuideUp
 		end
 		
 		/** Animator controller blend. */
@@ -318,9 +309,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				return
 			end
 			
-			var Matrix matrix = pTransformGuide * pSlotGuide.getMatrixCharacter()
-			
-			var Vector targetPosition = matrix.getPosition()
+			var Vector targetPosition = (pTransformGuide * pSlotGuide.getMatrixCharacter()).getPosition()
 			
 			if pEnableScaleReach
 				var Matrix boneMatrix = pComponent.boneGetMatrix(pBaseBone)
@@ -336,9 +325,6 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			
 			if pControllerGuidePosition != null
 				pControllerGuidePosition.setVector(targetPosition)
-			end
-			if pControllerGuideUp != null
-				pControllerGuideUp.setVector(matrix.normalize().transformNormal(pGuideUp))
 			end
 		end
 		

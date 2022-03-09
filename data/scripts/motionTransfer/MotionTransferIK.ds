@@ -95,7 +95,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var ADController pADControllerTipPosition
 	private var ADController pADControllerTipOrientation
 	private var ADController pADControllerGuidePosition
-	private var ADController pADControllerGuideUp
 	private var ADController pADControllerTwist
 	private var ADController pADControllerRetracted
 	private var ADController pADControllerBlend
@@ -111,11 +110,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var float pCalibrateReachScale
 	private var Vector pCalibrateReachScaleDirection
 	private var float pCalibrateReachRange
-	private var ARTrackToAxis pCalibrateGuideTrackAxis
-	private var ARTrackToAxis pCalibrateGuideUpAxis
 	private var Vector pCalibrateTipOffset
 	private var float pCalibrateReachRetracted
-	private var Vector pCalibrateTwistRotation
 	private var Array pCalibrateTwistAxes
 	private var Vector pCalibrateTwistBoneAxisRotation
 	
@@ -144,10 +140,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateReachScaleDirection = Vector.new(1, 1, 1)
 		pCalibrateReachRange = 0
 		pCalibrateReachRetracted = 1
-		pCalibrateGuideTrackAxis = ARTrackToAxis.posZ
-		pCalibrateGuideUpAxis = ARTrackToAxis.posY
 		pCalibrateTipOffset = Vector.new()
-		pCalibrateTwistRotation = Vector.new()
 		pCalibrateTwistAxes = Array.new()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
 	end
@@ -175,10 +168,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateReachScaleDirection = transfer.pCalibrateReachScaleDirection
 		pCalibrateReachRange = transfer.pCalibrateReachRange
 		pCalibrateReachRetracted = transfer.pCalibrateReachRetracted
-		pCalibrateGuideTrackAxis = transfer.pCalibrateGuideTrackAxis
-		pCalibrateGuideUpAxis = transfer.pCalibrateGuideUpAxis
 		pCalibrateTipOffset = transfer.pCalibrateTipOffset
-		pCalibrateTwistRotation = transfer.pCalibrateTwistRotation
 		pCalibrateTwistAxes = Array.new(transfer.pCalibrateTwistAxes)
 		pCalibrateTwistBoneAxisRotation = transfer.pCalibrateTwistBoneAxisRotation
 	end
@@ -387,21 +377,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pCalibrateTipOffset
 	end
 	
-	/** Calibrate guide track axis. */
-	public func ARTrackToAxis getCalibrateGuideTrackAxis()
-		return pCalibrateGuideTrackAxis
-	end
-	
-	/** Calibrate guide up axis. */
-	public func ARTrackToAxis getCalibrateGuideUpAxis()
-		return pCalibrateGuideUpAxis
-	end
-	
-	/** Calibrate twist rotation. */
-	public func Vector getCalibrateTwistRotation()
-		return pCalibrateTwistRotation
-	end
-	
 	/** Calibrate twist bone axis rotation. */
 	public func Vector getCalibrateTwistBoneAxisRotation()
 		return pCalibrateTwistBoneAxisRotation
@@ -415,7 +390,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADControllerTipOrientation = null
 		pADControllerGuidePosition = null
 		pADControllerRetracted = null
-		pADControllerGuideUp = null
 		pADControllerTwist = null
 		pADControllerBlend = null
 		pADRuleIK = null
@@ -445,11 +419,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end
 		
 		var AnimatorDefinition adef = config.getAnimatorDefinition()
-		
-// 		if false
-// 			var ADRuleBoneTransformator rule = ADRuleBoneTransformator.new()
-// 			rule.setName(getName() + ".baseBend1")
-// 		end
 		
 		var String guideBone = pGuideBone.empty() if pBaseBone else pGuideBone
 		
@@ -491,37 +460,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(pADRuleRetracted)
 		end
 		
-		// add guide rules
-		if slotGuide != null and slotGuide.isDeviceAttached()
-			pADControllerGuidePosition = ADController.new()
-			pADControllerGuidePosition.setName(behavior.getControllerNameGuidePosition())
-			adef.addController(pADControllerGuidePosition)
-			
-			pADControllerGuideUp = ADController.new()
-			pADControllerGuideUp.setName(behavior.getControllerNameGuideUp())
-			adef.addController(pADControllerGuideUp)
-			
-			pADRuleGuide = ADRuleTrackTo.new()
-			pADRuleGuide.setName(getName() + ".guide")
-			pADRuleGuide.setTrackAxis(pCalibrateGuideTrackAxis)
-			pADRuleGuide.setUpAxis(pCalibrateGuideUpAxis)
-			pADRuleGuide.setUpTarget(ARTrackToUp.controller)
-			pADRuleGuide.addBone(guideBone)
-			
-			var ADLink link = ADLink.new()
-			link.setController(pADControllerGuidePosition)
-			adef.addLink(link)
-			pADRuleGuide.addTargetLink(ADRuleTargetLink.new(ARTrackToTarget.position, link))
-			
-			link = ADLink.new()
-			link.setController(pADControllerGuideUp)
-			adef.addLink(link)
-			pADRuleGuide.addTargetLink(ADRuleTargetLink.new(ARTrackToTarget.up, link))
-			
-			adef.addRule(pADRuleGuide)
-		end
-		
-		// add IK rules
+		// add IK rule
 		pADControllerBlend = ADController.new()
 		pADControllerBlend.setName(behavior.getControllerNameBlend())
 		pADControllerBlend.setMinimum(0)
@@ -548,35 +487,36 @@ class MotionTransferIK extends DefaultMotionTransfer
 		linkTipOrientation.setController(pADControllerTipOrientation)
 		adef.addLink(linkTipOrientation)
 		
-		if pAdjustPosition and slotGuide != null and slotGuide.isDeviceAttached()
-			var int index = pCalibrateBones.indexOf(guideBone)
-			if index > 1
-				var ADRuleInverseKinematic rule = ADRuleInverseKinematic.new()
-				rule.setName(getName())
-				rule.setAdjustPosition(true)
-				rule.setAdjustOrientation(false)
-				rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.blendFactor, linkBlend))
-				rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, linkTipPosition))
-				rule.addBone(pTipBone)
-				rule.addBone(pCalibrateBones.getAt(index - 1) cast String)
-				adef.addRule(rule)
-			end
-		end
-		
 		pADRuleIK = ADRuleInverseKinematic.new()
 		pADRuleIK.setName(getName())
 		pADRuleIK.setAdjustPosition(pAdjustPosition)
 		pADRuleIK.setAdjustOrientation(true)
-		pADRuleIK.setReachBone(guideBone)
 		
+		pADRuleIK.setReachBone(guideBone)
 		pADRuleIK.setReachRange(pCalibrateReachRange)
+		
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.blendFactor, linkBlend))
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, linkTipPosition))
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkTipOrientation))
+		
 		pADRuleIK.addBone(pTipBone)
 		if not pBaseBone.equals(pTipBone)
 			pADRuleIK.addBone(pBaseBone)
 		end
+		
+		if slotGuide != null and slotGuide.isDeviceAttached()
+			pADControllerGuidePosition = ADController.new()
+			pADControllerGuidePosition.setName(behavior.getControllerNameGuidePosition())
+			adef.addController(pADControllerGuidePosition)
+			
+			var ADLink linkGuidePosition = ADLink.new()
+			linkGuidePosition.setController(pADControllerGuidePosition)
+			adef.addLink(linkGuidePosition)
+			
+			pADRuleIK.setGuideBone(guideBone)
+			pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.guidePosition, linkGuidePosition))
+		end
+		
 		adef.addRule(pADRuleIK)
 		
 		if false
@@ -656,10 +596,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateReachScaleDirection = Vector.new(1, 1, 1)
 		pCalibrateReachRange = 0
 		pCalibrateReachRetracted = 1
-		pCalibrateGuideTrackAxis = ARTrackToAxis.posZ
-		pCalibrateGuideUpAxis = ARTrackToAxis.posY
 		pCalibrateBones.removeAll()
-		pCalibrateTwistRotation = Vector.new()
 		pTipTracker.resetTransform()
 		pGuideTracker.resetTransform()
 		pBaseTracker.resetTransform()
@@ -680,9 +617,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		if guideBone.empty()
 			guideBone = baseBone
 		end
-		
-		pCalibrateGuideTrackAxis = findGuideTrackAxis(component.getRig(), pTipBone, pBaseBone, pGuideBone)
-		pCalibrateGuideUpAxis = guideUpFromGuideTrack(pCalibrateGuideTrackAxis)
 		
 		pTipTracker.resolveRealSlot(config)
 		pTipTracker.setTransform(component, pTipBone)
@@ -819,20 +753,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 				pCalibrateReachRange = 0
 			end
 			
-			// twist rotation. the rotation angle is unimportant since we only examine relative rotation
-			if indexGuide != -1
-				var Matrix guideMatrix = component.boneGetMatrix(indexGuide)
-				var Matrix twistTransform = (guideMatrix * tipMatrix.getInverse()).normalize()
-				var Vector twistAxis = twistTransform.transformNormal(trackToVectorFromAxis(pCalibrateGuideTrackAxis))
-				var Vector twistUp = twistTransform.transformNormal(trackToVectorFromAxis(pCalibrateGuideUpAxis))
-				
-				twistTransform = Matrix.newVU(twistAxis, twistUp).getInverse()
-				pCalibrateTwistRotation = twistTransform.getEulerAngles()
-				
-			else
-				pCalibrateTwistRotation = Vector.new()
-			end
-			
 		else
 			pCalibrateReach = 0.6
 			pCalibrateReachScale = 1
@@ -840,12 +760,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 			pCalibrateReachRange = 0
 			pCalibrateReachRetracted = pCalibrateReach
 			pCalibrateTipOffset = Vector.new()
-			pCalibrateTwistRotation = Vector.new()
 		end
 		
 		// calibrate guide tracker. has to come after reach scaling since it uses this value
 		pGuideTracker.resolveRealSlot(config)
-		pGuideTracker.setTransformTrackTo(component, pGuideBone, trackToVectorFromAxis(pCalibrateGuideTrackAxis))
+		pGuideTracker.setTransform(component, "")
 		
 		// calculate retracted reach if used
 		if not pMoveRetracted.empty() and indexGuide != -1 and indexTip != -1
@@ -896,68 +815,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 				pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation) \
 					* component.boneGetInverseMatrix(indexTip)).getEulerAngles()
 			end
-		end
-	end
-	
-	/** Find guide track axis. */
-	protected func ARTrackToAxis findGuideTrackAxis(Rig rig, String tipBone, String baseBone, String guideBone)
-		if tipBone.empty() or baseBone.empty() // bone count less than 2
-			return ARTrackToAxis.posZ
-		end
-		
-		var int guide = rig.indexOfBoneNamed(guideBone)
-		if guide == -1
-			return ARTrackToAxis.posZ
-		end
-		
-		var Vector position = rig.boneGetPosition(guide)
-		var Vector absPosition = position.absolute()
-		
-		if absPosition.getZ() > absPosition.getX() and absPosition.getZ() > absPosition.getY()
-			return position.getZ() > 0 if ARTrackToAxis.posZ else ARTrackToAxis.negZ
-			
-		elif absPosition.getX() > absPosition.getY()
-			return position.getX() > 0 if ARTrackToAxis.posX else ARTrackToAxis.negX
-			
-		else
-			return position.getY() > 0 if ARTrackToAxis.posY else ARTrackToAxis.negY
-		end
-	end
-	
-	/** Get guide up axis from guide track axis. */
-	protected func ARTrackToAxis guideUpFromGuideTrack(ARTrackToAxis axis)
-		select pCalibrateGuideTrackAxis
-		case ARTrackToAxis.posY, ARTrackToAxis.negY
-			return ARTrackToAxis.posZ
-			
-		else
-			return ARTrackToAxis.posY
-		end
-	end
-	
-	/** Get track to vector from trackto axis. */
-	static public func Vector trackToVectorFromAxis(ARTrackToAxis axis)
-		select axis
-		case ARTrackToAxis.posZ
-			return Vector.new(0, 0, 1)
-			
-		case ARTrackToAxis.negZ
-			return Vector.new(0, 0, -1)
-			
-		case ARTrackToAxis.posX
-			return Vector.new(1, 0, 0)
-			
-		case ARTrackToAxis.negX
-			return Vector.new(-1, 0, 0)
-			
-		case ARTrackToAxis.posY
-			return Vector.new(0, 1, 0)
-			
-		case ARTrackToAxis.negY
-			return Vector.new(0, -1, 0)
-			
-		else
-			throw EInvalidParam.new()
 		end
 	end
 	
@@ -1052,15 +909,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("baseTracker")
 				pBaseTracker.loadCalibrated(loader, element)
 				
-			elif tagName.equals("guideTrackAxis")
-				pCalibrateGuideTrackAxis = ARTrackToAxis.named(element.getFirstCData())
-				pCalibrateGuideUpAxis = guideUpFromGuideTrack(pCalibrateGuideTrackAxis)
-				
 			elif tagName.equals("reachRetracted")
 				pCalibrateReachRetracted = element.getFirstCDataFloat()
-				
-			elif tagName.equals("twistRotation")
-				pCalibrateTwistRotation = loader.readVector(element)
 				
 			elif tagName.equals("twistAxis")
 				pCalibrateTwistAxes.add(loader.readVector(element))
@@ -1111,9 +961,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTipTracker.saveCalibrated(loader, tag.addTag("tipTracker"))
 		pGuideTracker.saveCalibrated(loader, tag.addTag("guideTracker"))
 		pBaseTracker.saveCalibrated(loader, tag.addTag("baseTracker"))
-		tag.addDataTag("guideTrackAxis", pCalibrateGuideTrackAxis.name())
 		tag.addDataTag("reachRetracted", pCalibrateReachRetracted)
-		loader.writeVector(tag, "twistRotation", pCalibrateTwistRotation)
 		pCalibrateTwistAxes.forEach(block Vector each
 			loader.writeVector(tag, "twistAxis", each)
 		end)
