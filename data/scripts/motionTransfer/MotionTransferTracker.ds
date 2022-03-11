@@ -222,8 +222,7 @@ class MotionTransferTracker
 		// getCalibrateMatrix() is the same as getCharacterMatrix() during capturing
 		// getCalibrateReferenceMatrix() is the same as getReferenceMatrix() in tracker slot
 		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
-		var Matrix slotTargetMatrix = getOffsetMatrix() * pRealSlot.getTargetMatrix()
-		var Matrix slotTargetMatrixInv = slotTargetMatrix.getInverse()
+		var Matrix slotTargetMatrix = pRealSlot.getTargetMatrix()
 		var Matrix slotRefMatrix = pRealSlot.getCalibrateReferenceMatrix()
 		var Matrix slotRefMatrixInv = pRealSlot.getCalibrateReferenceMatrixInverse()
 		
@@ -231,10 +230,11 @@ class MotionTransferTracker
 		var Matrix targetBoneTransform
 		
 		if index != -1
-			targetBoneTransform = component.boneGetMatrix(index) * slotTargetMatrixInv
+			slotTargetMatrix = getOffsetMatrix() * slotTargetMatrix
+			targetBoneTransform = component.boneGetMatrix(index) * slotTargetMatrix.getInverse()
 			
 		else
-			targetBoneTransform = Matrix.new()
+			targetBoneTransform = getOffsetMatrix()
 		end
 		
 		var Matrix deviceReferenceTransform = slotRefMatrix * slotInvMatrix

@@ -461,8 +461,14 @@ class ECBTrackerSlot extends DefaultECBehavior
 		
 		/** Create coordinate system debug drawer if required. */
 		protected func void createDDCoordSystem()
-			if pShowCoordSystem and pInputDevice != null and pInputDevice.getType() != InputDeviceType.vrHMD \
-			and getElement().getVisible() and getElement().getGameWorld() != null
+			if not pShowCoordSystem or pInputDevice == null or not getElement().getVisible()\
+			or getElement().getGameWorld() == null
+				destroyDDCoordSystem()
+				return
+			end
+			
+			select pInputDevice.getType()
+			case InputDeviceType.vrRightHand, InputDeviceType.vrLeftHand, InputDeviceType.vrTracker
 				if pDDCoordSystem != null
 					return
 				end
