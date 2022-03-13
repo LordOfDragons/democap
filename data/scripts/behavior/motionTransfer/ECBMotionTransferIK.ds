@@ -72,7 +72,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var ECBTrackerSlot.Instance pSlotGuide
 		private var AnimatorController pControllerTipPosition
 		private var AnimatorController pControllerTipOrientation
-		private var AnimatorController pControllerGuidePosition
+		private var AnimatorController pControllerGuideRotation
 		private var AnimatorController pControllerTwist
 		private var AnimatorController pControllerRetracted
 		private var AnimatorController pControllerBlend
@@ -138,7 +138,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			
 			pControllerTipPosition = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTipPosition())
 			pControllerTipOrientation = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTipOrientation())
-			pControllerGuidePosition = actorAnimated.getControllerNamed(pECBehavior.getControllerNameGuidePosition())
+			pControllerGuideRotation = actorAnimated.getControllerNamed(pECBehavior.getControllerNameGuideRotation())
 			pControllerRetracted = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRetracted())
 			pControllerTwist = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTwist())
 			pControllerBlend = actorAnimated.getControllerNamed(pECBehavior.getControllerNameBlend())
@@ -196,9 +196,9 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			return pControllerTipOrientation
 		end
 		
-		/** Animator controller guide position. */
-		public func AnimatorController getControllerGuidePosition()
-			return pControllerGuidePosition
+		/** Animator controller guide rotation. */
+		public func AnimatorController getControllerGuideRotation()
+			return pControllerGuideRotation
 		end
 		
 		/** Animator controller blend. */
@@ -309,22 +309,9 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				return
 			end
 			
-			var Vector targetPosition = (pTransformGuide * pSlotGuide.getMatrixCharacter()).getPosition()
-			
-			if pEnableScaleReach
-				var Matrix boneMatrix = pComponent.boneGetMatrix(pBaseBone)
-				
-				if pEnableTipOffset
-					targetPosition = targetPosition + boneMatrix.transformNormal(pTipOffset)
-				end
-				
-				var Vector basePosition = boneMatrix.getPosition()
-				
-				targetPosition = basePosition + (targetPosition - basePosition).compMultiply(pScaleReach)
-			end
-			
-			if pControllerGuidePosition != null
-				pControllerGuidePosition.setVector(targetPosition)
+			if pControllerGuideRotation != null
+				pControllerGuideRotation.setRotation((pTransformGuide\
+					* pSlotGuide.getMatrixCharacter()).normalize().getEulerAngles())
 			end
 		end
 		
@@ -374,8 +361,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	private var ECBTrackerSlot pSlotGuide
 	private var String pControllerNameTipPosition
 	private var String pControllerNameTipOrientation
-	private var String pControllerNameGuidePosition
-	private var String pControllerNameGuideUp
+	private var String pControllerNameGuideRotation
 	private var String pControllerNameTwist
 	private var String pControllerNameRetracted
 	private var String pControllerNameBlend
@@ -404,8 +390,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		
 		pControllerNameTipPosition = transfer.getName() + ".targetPosition"
 		pControllerNameTipOrientation = transfer.getName() + ".targetOrientation"
-		pControllerNameGuidePosition = transfer.getName() + ".guideTrack"
-		pControllerNameGuideUp = transfer.getName() + ".guideUp"
+		pControllerNameGuideRotation = transfer.getName() + ".guideRotation"
 		pControllerNameTwist = transfer.getName() + ".twist"
 		pControllerNameRetracted = transfer.getName() + ".retracted"
 		pControllerNameBlend = transfer.getName() + ".blend"
@@ -460,14 +445,9 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		return pControllerNameTipOrientation
 	end
 	
-	/** Animator controller name guide position. */
-	public func String getControllerNameGuidePosition()
-		return pControllerNameGuidePosition
-	end
-	
-	/** Animator controller name guide up. */
-	public func String getControllerNameGuideUp()
-		return pControllerNameGuideUp
+	/** Animator controller name guide rotation. */
+	public func String getControllerNameGuideRotation()
+		return pControllerNameGuideRotation
 	end
 	
 	/** Animator controller name twist. */

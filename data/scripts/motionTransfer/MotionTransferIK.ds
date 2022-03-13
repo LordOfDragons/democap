@@ -94,14 +94,13 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	private var ADController pADControllerTipPosition
 	private var ADController pADControllerTipOrientation
-	private var ADController pADControllerGuidePosition
+	private var ADController pADControllerGuideRotation
 	private var ADController pADControllerTwist
 	private var ADController pADControllerRetracted
 	private var ADController pADControllerBlend
 	
-	private var ADRuleTrackTo pADRuleGuide
+	private var ADRuleInverseKinematic pADRuleGuide
 	private var ADRuleInverseKinematic pADRuleIK
-	private var ADRuleInverseKinematic pADRuleIKForce
 	private var ADRuleAnimation pADRuleBaseIK
 	private var ADRuleAnimation pADRuleRetracted
 	
@@ -344,7 +343,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pADRuleIK
 	end
 	
-	public func ADRuleTrackTo getADRuleGuide()
+	public func ADRuleInverseKinematic getADRuleGuide()
 		return pADRuleGuide
 	end
 	
@@ -385,16 +384,15 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	
 	/** Init element clas. */
-	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
 		pADControllerTipPosition = null
 		pADControllerTipOrientation = null
-		pADControllerGuidePosition = null
+		pADControllerGuideRotation = null
 		pADControllerRetracted = null
 		pADControllerTwist = null
 		pADControllerBlend = null
-		pADRuleIK = null
-		pADRuleIKForce = null
 		pADRuleGuide = null
+		pADRuleIK = null
 		pADRuleBaseIK = null
 		pADRuleRetracted = null
 		
@@ -460,7 +458,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(pADRuleRetracted)
 		end
 		
-		// add IK rule
+		// shared controllers and links
 		pADControllerBlend = ADController.new()
 		pADControllerBlend.setName(behavior.getControllerNameBlend())
 		pADControllerBlend.setMinimum(0)
@@ -487,6 +485,27 @@ class MotionTransferIK extends DefaultMotionTransfer
 		linkTipOrientation.setController(pADControllerTipOrientation)
 		adef.addLink(linkTipOrientation)
 		
+		// add guide rule
+		if slotGuide != null and slotGuide.isDeviceAttached()
+			pADControllerGuideRotation = ADController.new()
+			pADControllerGuideRotation.setName(behavior.getControllerNameGuideRotation())
+			adef.addController(pADControllerGuideRotation)
+			
+			var ADLink linkGuideRotation = ADLink.new()
+			linkGuideRotation.setController(pADControllerGuideRotation)
+			adef.addLink(linkGuideRotation)
+			
+			pADRuleGuide = ADRuleInverseKinematic.new()
+			pADRuleGuide.setName(getName())
+			pADRuleGuide.setAdjustPosition(false)
+			pADRuleGuide.setAdjustOrientation(true)
+			pADRuleGuide.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.blendFactor, linkBlend))
+			pADRuleGuide.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkGuideRotation))
+			pADRuleGuide.addBone(pGuideBone)
+			adef.addRule(pADRuleGuide)
+		end
+		
+		// add IK rule
 		pADRuleIK = ADRuleInverseKinematic.new()
 		pADRuleIK.setName(getName())
 		pADRuleIK.setAdjustPosition(pAdjustPosition)
@@ -504,31 +523,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			pADRuleIK.addBone(pBaseBone)
 		end
 		
-		if slotGuide != null and slotGuide.isDeviceAttached()
-			pADControllerGuidePosition = ADController.new()
-			pADControllerGuidePosition.setName(behavior.getControllerNameGuidePosition())
-			adef.addController(pADControllerGuidePosition)
-			
-			var ADLink linkGuidePosition = ADLink.new()
-			linkGuidePosition.setController(pADControllerGuidePosition)
-			adef.addLink(linkGuidePosition)
-			
-			pADRuleIK.setGuideBone(guideBone)
-			pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.guidePosition, linkGuidePosition))
-		end
-		
 		adef.addRule(pADRuleIK)
-		
-		if false
-			pADRuleIKForce = ADRuleInverseKinematic.new()
-			pADRuleIKForce.setName(getName() + ".force")
-			pADRuleIKForce.setAdjustPosition(false)
-			pADRuleIKForce.setAdjustOrientation(true)
-			pADRuleIKForce.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, linkTipPosition))
-			pADRuleIKForce.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkTipOrientation))
-			pADRuleIKForce.addBone(pTipBone)
-			adef.addRule(pADRuleIKForce)
-		end
 		
 		// add twist rules
 		if pTwistBoneCount > 0 and pTwistPropagation > 0.01 and boneCount >= 2
@@ -764,7 +759,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		// calibrate guide tracker. has to come after reach scaling since it uses this value
 		pGuideTracker.resolveRealSlot(config)
-		pGuideTracker.setTransform(component, "")
+		pGuideTracker.setTransform(component, guideBone)
 		
 		// calculate retracted reach if used
 		if not pMoveRetracted.empty() and indexGuide != -1 and indexTip != -1
