@@ -1,0 +1,371 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Characters
+
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Modified rig.
+ */
+class ModifiedRig
+	/** Rig constraint degree of freedom. */
+	public class ConstraintDof
+		public var float lowerLimit
+		public var float upperLimit
+		public var float staticFriction
+		public var float kinematicFriction
+		public var float springStiffness
+		
+		/** Create constraint degree of freedom. */
+		public func new(ColliderConstraintDof dof)
+			select dof
+			case ColliderConstraintDof.angularX, ColliderConstraintDof.angularY, ColliderConstraintDof.angularZ
+				lowerLimit = 360
+				
+			else
+				lowerLimit = 1
+			end
+		end
+		
+		/** Create constraint degree of freedom from rig bone constraint. */
+		public func new(ColliderConstraint constraint, ColliderConstraintDof dof)
+			lowerLimit = constraint.getLowerLimitFor(dof)
+			upperLimit = constraint.getUpperLimitFor(dof)
+			staticFriction = constraint.getStaticFrictionFor(dof)
+			kinematicFriction = constraint.getKinematicFrictionFor(dof)
+			springStiffness = constraint.getSpringStiffnessFor(dof)
+		end
+	end
+	
+	/** Rig constraint. */
+	public class Constraint
+		public var Vector referencePosition
+		public var Quaternion referenceOrientation
+		public var Vector boneOffset
+		public var float linearDamping
+		public var float angularDamping
+		public var float springDamping
+		public var bool isRope
+		public var float breakingThreshold
+		public var Bone parentBone
+		public var ConstraintDof dofLinearX
+		public var ConstraintDof dofLinearY
+		public var ConstraintDof dofLinearZ
+		public var ConstraintDof dofAngularX
+		public var ConstraintDof dofAngularY
+		public var ConstraintDof dofAngularZ
+		
+		public var int index //!< Internal use
+		
+		/** Create constraint. */
+		public func new()
+			index = -1
+			referencePosition = Vector.new()
+			referenceOrientation = Quaternion.new()
+			boneOffset = Vector.new()
+			dofLinearX = ConstraintDof.new(ColliderConstraintDof.linearX)
+			dofLinearY = ConstraintDof.new(ColliderConstraintDof.linearY)
+			dofLinearZ = ConstraintDof.new(ColliderConstraintDof.linearZ)
+			dofAngularX = ConstraintDof.new(ColliderConstraintDof.angularX)
+			dofAngularY = ConstraintDof.new(ColliderConstraintDof.angularY)
+			dofAngularZ = ConstraintDof.new(ColliderConstraintDof.angularZ)
+		end
+		
+		/** Create constraint from rig bone constraint. */
+		public func new(ModifiedRig modifiedRig, Bone bone, int constraint)
+			var Rig rig = modifiedRig.getOriginalRig()
+			var ColliderConstraint orgConstraint = rig.boneGetConstraintAt(bone.index, constraint)
+			index = constraint
+			referencePosition = rig.boneConstraintGetReferencePosition(bone.index, constraint)
+			referenceOrientation = rig.boneConstraintGetReferenceOrientation(bone.index, constraint)
+			boneOffset = rig.boneConstraintGetBoneOffset(bone.index, constraint)
+			linearDamping = orgConstraint.getLinearDamping()
+			angularDamping = orgConstraint.getAngularDamping()
+			springDamping = orgConstraint.getSpringDamping()
+			isRope = orgConstraint.getIsRope()
+			breakingThreshold = orgConstraint.getBreakingThreshold()
+			if orgConstraint.getBone() != -1
+				parentBone = modifiedRig.getBoneAt(orgConstraint.getBone())
+			end
+			dofLinearX = ConstraintDof.new(orgConstraint, ColliderConstraintDof.linearX)
+			dofLinearY = ConstraintDof.new(orgConstraint, ColliderConstraintDof.linearY)
+			dofLinearZ = ConstraintDof.new(orgConstraint, ColliderConstraintDof.linearZ)
+			dofAngularX = ConstraintDof.new(orgConstraint, ColliderConstraintDof.angularX)
+			dofAngularY = ConstraintDof.new(orgConstraint, ColliderConstraintDof.angularY)
+			dofAngularZ = ConstraintDof.new(orgConstraint, ColliderConstraintDof.angularZ)
+		end
+	end
+	
+	/** Rig bone. */
+	public class Bone
+		public var String name
+		public var Bone parent
+		public var Vector position
+		public var Vector rotation
+		public var Vector centralMassPoint
+		public var bool dynamic
+		public var float mass
+		public var Vector ikLimitsLower
+		public var Vector ikLimitsUpper
+		public var Vector ikResistance
+		public var bool ikLockedX
+		public var bool ikLockedY
+		public var bool ikLockedZ
+		public var ShapeList shapes
+		public var Array constraints
+		
+		public var int index //!< Internal use
+		
+		/** Create bone. */
+		public func new(int index, String name)
+			this.index = index
+			this.name = name
+			position = Vector.new()
+			rotation = Vector.new()
+			centralMassPoint = Vector.new()
+			mass = 1
+			ikLimitsLower = Vector.new(360, 360, 360)
+			ikLimitsUpper = Vector.new()
+			ikResistance = Vector.new()
+			shapes = ShapeList.new()
+			constraints = Array.new()
+		end
+		
+		/** Create bone from rig bone (first round init). */
+		public func new(Rig rig, int bone)
+			index = bone
+			name = rig.boneGetName(bone)
+			position = rig.boneGetPosition(bone)
+			rotation = rig.boneGetRotation(bone)
+			centralMassPoint = rig.boneGetCentralMassPoint(bone)
+			dynamic = rig.boneGetDynamic(bone)
+			mass = rig.boneGetMass(bone)
+			ikLimitsLower = rig.boneGetIKLimitsLower(bone)
+			ikLimitsUpper = rig.boneGetIKLimitsUpper(bone)
+			ikResistance = rig.boneGetIKResistance(bone)
+			ikLockedX = rig.boneGetIKLocked(bone, 0)
+			ikLockedY = rig.boneGetIKLocked(bone, 1)
+			ikLockedZ = rig.boneGetIKLocked(bone, 2)
+			shapes = rig.boneGetShapes(bone)
+			constraints = Array.new()
+		end
+	end
+	
+	/** Build modified rig. */
+	protected class ModifiedRigBuilder extends RigBuilder
+		protected var ModifiedRig pModifiedRig
+		
+		/** Create rig builder. */
+		public func new(ModifiedRig modifiedRig)
+			pModifiedRig = modifiedRig
+		end
+		
+		/** Build rig. */
+		protected func void buildRig()
+			setCentralMassPoint(pModifiedRig.getCentralMassPoint())
+			setModelCollision(false)
+			setShapes(pModifiedRig.getRigShapes())
+			if pModifiedRig.getRootBone() != null
+				setRootBone(pModifiedRig.getRootBone().index)
+			end
+			
+			pModifiedRig.forEachBone(block Bone bone
+				addBone(bone.name, bone.parent != null if bone.parent.index else -1,\
+					bone.position, bone.rotation, bone.centralMassPoint, bone.dynamic, bone.mass,\
+					bone.ikLimitsLower, bone.ikLimitsUpper, bone.ikResistance,\
+					bone.ikLockedX, bone.ikLockedY, bone.ikLockedZ, bone.shapes)
+				
+				bone.constraints.forEach(block Constraint constraint
+					addBoneConstraint(bone.index, constraint.referencePosition,\
+						constraint.referenceOrientation, constraint.boneOffset,\
+						constraint.linearDamping, constraint.angularDamping,\
+						constraint.springDamping, constraint.isRope, constraint.breakingThreshold,\
+						constraint.parentBone != null if constraint.parentBone.index else -1)
+					
+					setBoneConstraintDof(bone, constraint, ColliderConstraintDof.linearX, constraint.dofLinearX)
+					setBoneConstraintDof(bone, constraint, ColliderConstraintDof.linearY, constraint.dofLinearY)
+					setBoneConstraintDof(bone, constraint, ColliderConstraintDof.linearZ, constraint.dofLinearZ)
+					setBoneConstraintDof(bone, constraint, ColliderConstraintDof.angularX, constraint.dofAngularX)
+					setBoneConstraintDof(bone, constraint, ColliderConstraintDof.angularY, constraint.dofAngularY)
+					setBoneConstraintDof(bone, constraint, ColliderConstraintDof.angularZ, constraint.dofAngularZ)
+				end)
+			end)
+		end
+		
+		protected func void setBoneConstraintDof(Bone bone, Constraint constraint, ColliderConstraintDof dof, ConstraintDof value)
+			setBoneConstraintDof(bone.index, constraint.index, dof, value.lowerLimit,\
+				value.upperLimit, value.staticFriction, value.kinematicFriction, value.springStiffness)
+		end
+	end
+	
+	
+	
+	private var Rig pOriginalRig
+	private var Rig pModifiedRig
+	private var Array pBones
+	private var Bone pRootBone
+	private var ShapeList pRigShapes
+	private var Vector pCentralMassPoint
+	private var int pGenBoneNumber
+	
+	
+	
+	/** Create modified rig. */
+	public func new(Rig rig)
+		var int i, count, parent
+		
+		pOriginalRig = rig
+		pBones = Array.new()
+		pGenBoneNumber = 1
+		
+		pRigShapes = rig.getShapes()
+		pCentralMassPoint = rig.getCentralMassPoint()
+		
+		count = rig.getBoneCount()
+		for i = 0 to count
+			pBones.add(Bone.new(rig, i))
+		end
+		
+		pBones.forEach(block Bone bone
+			parent = rig.boneGetParent(bone.index)
+			if parent != -1
+				bone.parent = pBones.getAt(parent) cast Bone
+			end
+		end)
+		
+		pBones.forEach(block Bone bone
+			count = rig.boneGetConstraintCount(bone.index)
+			for i = 0 to count
+				bone.constraints.add(Constraint.new(this, bone, i))
+			end
+		end)
+	end
+	
+	
+	
+	/** Original rig. */
+	public func Rig getOriginalRig()
+		return pOriginalRig
+	end
+	
+	/** Modified rig or null if not created. */
+	public func Rig getModifiedRig()
+		return pModifiedRig
+	end
+	
+	/** Update modified rig indicies. */
+	public func void updateIndices()
+		pBones.forEach(block int indexBone, Bone bone
+			bone.index = indexBone
+			bone.constraints.forEach(block int indexConstraint, Constraint constraint
+				constraint.index = indexConstraint
+			end)
+		end)
+	end
+	
+	/** Build modified rig. */
+	public func void buildModifiedRig()
+		updateIndices()
+		pModifiedRig = ModifiedRigBuilder.new(this).build("")
+	end
+	
+	
+	
+	/** Count of bones. */
+	public func int getBoneCount()
+		return pBones.getCount()
+	end
+	
+	/** Bone at index. */
+	public func Bone getBoneAt(int index)
+		return pBones.getAt(index) cast Bone
+	end
+	
+	/** Named bone or null if absent. */
+	public func Bone getBoneNamed(String name)
+		return pBones.find(block Bone each
+			return each.name.equals(name)
+		end) cast Bone
+	end
+	
+	/** Add bone. */
+	public func Bone addBone(String name)
+		var Bone bone = Bone.new(pBones.getCount(), generateBoneName() + name)
+		pBones.add(bone)
+		return bone
+	end
+	
+	/** Remove bone. */
+	public func void removeBone(Bone bone)
+		pBones.remove(bone)
+		updateIndices()
+	end
+	
+	/** Remove all bones. */
+	public func void removeAllBones()
+		pBones.removeAll()
+	end
+	
+	/** Visit bones with block receiving Bone as argument. */
+	public func void forEachBone(Block ablock)
+		pBones.forEach(ablock)
+	end
+	
+	/** Find bone with block receiving Bone as argument and returning true if found. */
+	public func Bone findBone(Block ablock)
+		return pBones.find(ablock) cast Bone
+	end
+	
+	/** Generate bone name. */
+	public func String generateBoneName()
+		return "democap.genbone" + pGenBoneNumber++ + "."
+	end
+	
+	
+	
+	/** Rig shaped. */
+	public func ShapeList getRigShapes()
+		return pRigShapes
+	end
+	
+	/** Rig central mass point. */
+	public func Vector getCentralMassPoint()
+		return pCentralMassPoint
+	end
+	
+	/** Set rig central mass point. */
+	public func void setCentralMassPoint(Vector centralMassPoint)
+		pCentralMassPoint = centralMassPoint
+	end
+	
+	/** Root bone or null. */
+	public func Bone getRootBone()
+		return pRootBone
+	end
+	
+	/** Set root bone or null. */
+	public func void setRootBone(Bone bone)
+		pRootBone = bone
+	end
+end

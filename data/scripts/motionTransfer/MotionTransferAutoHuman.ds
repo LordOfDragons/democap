@@ -409,16 +409,16 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	
 	
 	/** Init element class. */
-	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
-		pTransferWaist.initElementClass(config, eclass)
-		//pTransferSpineHead.initElementClass(config, eclass)
-		pTransferSpine.initElementClass(config, eclass)
-		pTransferNeck.initElementClass(config, eclass)
-		pTransferHead.initElementClass(config, eclass)
-		pTransferArmRight.initElementClass(config, eclass)
-		pTransferArmLeft.initElementClass(config, eclass)
-		pTransferLegRight.initElementClass(config, eclass)
-		pTransferLegLeft.initElementClass(config, eclass)
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
+		pTransferWaist.initElementClass(config, eclass, modifyRig)
+		//pTransferSpineHead.initElementClass(config, eclass, modifyRig)
+		pTransferSpine.initElementClass(config, eclass, modifyRig)
+		pTransferNeck.initElementClass(config, eclass, modifyRig)
+		pTransferHead.initElementClass(config, eclass, modifyRig)
+		pTransferArmRight.initElementClass(config, eclass, modifyRig)
+		pTransferArmLeft.initElementClass(config, eclass, modifyRig)
+		pTransferLegRight.initElementClass(config, eclass, modifyRig)
+		pTransferLegLeft.initElementClass(config, eclass, modifyRig)
 	end
 	
 	/** Reset calibration. */
@@ -466,7 +466,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferWaist.getTracker().resolveRealSlot(config)
 		pTransferSpine.getTargetTracker().resolveRealSlot(config)
 		pTransferLegRight.getTipTracker().resolveRealSlot(config)
+		pTransferLegRight.getGuideTracker().resolveRealSlot(config)
 		pTransferLegLeft.getTipTracker().resolveRealSlot(config)
+		pTransferLegLeft.getGuideTracker().resolveRealSlot(config)
 		pTransferArmRight.getTipTracker().resolveRealSlot(config)
 		pTransferArmLeft.getTipTracker().resolveRealSlot(config)
 		
@@ -712,8 +714,17 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferArmRight.setGuideBone(pTransferArmRight.getBaseBone())
 		end
 		
-		pTransferArmRight.getGuideTracker().setOffsetPosition(Vector.new(0, 0, -0.2))
+		// NOTE trackers have z axis pointing up (if tracker is resting on the bottom
+		//      on a desk). hence when wrapped around the arm the z axis points away
+		//      from the arm like a normal. the distance to the reference position
+		//      is between 4-5cm depending on the cloth worn and how tight the tracker
+		//      strap is pulled. thus using a z displacement of -0.04 would allow to
+		//      use the tracker in none mode with acceptable results
+		pTransferArmRight.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+		pTransferArmRight.getGuideTracker().setOffsetPosition(Vector.new(0, -0.1, 0))
 		pTransferArmRight.getGuideTracker().setOffsetRotation(Vector.new())
+		pTransferArmRight.setGuideZeroRotation(0)//-90)
+		pTransferArmRight.setGuideScaleRotation(1)
 		
 		// left arm. separate guide bone is used if chain has at least 4 bones:
 		// hand, lower arm, upper arm, shoulder. with 3 bones no shoulder is assumed
@@ -750,8 +761,11 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferArmLeft.setGuideBone(pTransferArmLeft.getBaseBone())
 		end
 		
-		pTransferArmLeft.getGuideTracker().setOffsetPosition(Vector.new(0, 0, -0.2))
+		pTransferArmLeft.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+		pTransferArmLeft.getGuideTracker().setOffsetPosition(Vector.new(0, -0.1, 0))
 		pTransferArmLeft.getGuideTracker().setOffsetRotation(Vector.new())
+		pTransferArmLeft.setGuideZeroRotation(0)//90)
+		pTransferArmLeft.setGuideScaleRotation(1)
 		
 		// legs
 		var Array chainRightLeg = Array.new()
@@ -778,7 +792,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegRight.setMoveRetracted(pMoveCrouch)
 		pTransferLegRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
 		pTransferLegRight.setActorReach(MotionTransferIK.ActorReach.leg)
-		pTransferLegRight.setTwistBoneCount(DEMath.max(chainRightLeg.getCount() - 2, 0))
+		pTransferLegRight.setTwistBoneCount(0)//DEMath.max(chainRightLeg.getCount() - 2, 0))
 		pTransferLegRight.setTwistPropagation(1)
 		pTransferLegRight.setTwistAxisRotation(Vector.new(-90, 0, 0))
 		
@@ -797,14 +811,36 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		end
 		
 		pTransferLegRight.setGuideBone(pTransferLegRight.getBaseBone())
-		pTransferLegRight.getGuideTracker().setOffsetPosition(Vector.new(0, 0, 0.2))
+		
+		var Vector guideOffset = Vector.new(0, 0, 0.2)
+		
+		if pTransferLegRight.getGuideTracker().getRealSlot() == pTransferLegRight.getTipTracker().getRealSlot()\
+		and pTransferLegRight.getGuideTracker().getRealSlot() != null
+			var String slotKneeName = firstSlotWithType(config, CharacterTrackerSlot.Type.rightKnee)
+			if not slotKneeName.empty()
+				var CharacterTrackerSlot slotKnee = config.getTrackerSlots().getNamed(slotKneeName)
+				if slotKnee != null
+					var Vector positionKnee = slotKnee.getTargetPosition()
+					var Vector positionFoot = pTransferLegRight.getTipTracker().getRealSlot().getTargetPosition()
+					var float distance = (positionFoot - positionKnee).getLength()
+					guideOffset = Vector.new(0, distance, distance)
+				end
+			end
+			
+			pTransferLegRight.getGuideTracker().setAutoTransform(pTransferLegRight.getTipTracker().getAutoTransform())
+			
+		else
+			pTransferLegRight.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		end
+		
+		pTransferLegRight.getGuideTracker().setOffsetPosition(guideOffset)
 		
 		// left leg
 		pTransferLegLeft.setTipBone(pBoneFootLeft)
 		pTransferLegLeft.setMoveBaseIK(pMoveBaseIK)
 		pTransferLegLeft.setMoveRetracted(pMoveCrouch)
 		pTransferLegLeft.setActorReach(MotionTransferIK.ActorReach.leg)
-		pTransferLegLeft.setTwistBoneCount(DEMath.max(chainLeftLeg.getCount() - 2, 0))
+		pTransferLegLeft.setTwistBoneCount(0)//DEMath.max(chainLeftLeg.getCount() - 2, 0))
 		pTransferLegLeft.setTwistPropagation(1)
 		pTransferLegLeft.setTwistAxisRotation(Vector.new(-90, 0, 0))
 		
@@ -823,7 +859,29 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		end
 		
 		pTransferLegLeft.setGuideBone(pTransferLegLeft.getBaseBone())
-		pTransferLegLeft.getGuideTracker().setOffsetPosition(Vector.new(0, 0, 0.2))
+		
+		guideOffset = Vector.new(0, 0, 0.2)
+		
+		if pTransferLegLeft.getGuideTracker().getRealSlot() == pTransferLegLeft.getTipTracker().getRealSlot()\
+		and pTransferLegLeft.getGuideTracker().getRealSlot() != null
+			var String slotKneeName = firstSlotWithType(config, CharacterTrackerSlot.Type.leftKnee)
+			if not slotKneeName.empty()
+				var CharacterTrackerSlot slotKnee = config.getTrackerSlots().getNamed(slotKneeName)
+				if slotKnee != null
+					var Vector positionKnee = slotKnee.getTargetPosition()
+					var Vector positionFoot = pTransferLegLeft.getTipTracker().getRealSlot().getTargetPosition()
+					var float distance = (positionFoot - positionKnee).getLength()
+					guideOffset = Vector.new(0, distance, distance)
+				end
+			end
+			
+			pTransferLegLeft.getGuideTracker().setAutoTransform(pTransferLegLeft.getTipTracker().getAutoTransform())
+			
+		else
+			pTransferLegLeft.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		end
+		
+		pTransferLegLeft.getGuideTracker().setOffsetPosition(guideOffset)
 	end
 	
 	/** Create copy of motion transfer. */
@@ -1045,8 +1103,17 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		var String slotChest = firstSlotAttachedWithType(config, CharacterTrackerSlot.Type.chest)
 		
+		var String slotFootRight = firstSlotWithType(config, CharacterTrackerSlot.Type.rightFoot)
+		var String slotFootLeft = firstSlotWithType(config, CharacterTrackerSlot.Type.leftFoot)
+		
+		var String slotKneeRight = firstSlotAttachedWithType(config, CharacterTrackerSlot.Type.rightKnee)
+		var String slotKneeLeft = firstSlotAttachedWithType(config, CharacterTrackerSlot.Type.leftKnee)
+		
 		var String armSlotBase = slotChest.empty() if slotWaist else slotChest
 		var String spineSlotTarget = slotChest.empty() if slotHead else slotChest
+		
+		var String legRightSlotGuide = slotKneeRight.empty() if slotFootRight else slotKneeRight
+		var String legLeftSlotGuide = slotKneeLeft.empty() if slotFootLeft else slotKneeLeft
 		
 		pTransferWaist.getTracker().setSlot(slotWaist)
 		
@@ -1071,12 +1138,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftElbow))
 		pTransferArmLeft.getBaseTracker().setSlot(armSlotBase)
 		
-		pTransferLegRight.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightFoot))
-		pTransferLegRight.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightKnee))
+		pTransferLegRight.getTipTracker().setSlot(slotFootRight)
+		pTransferLegRight.getGuideTracker().setSlot(legRightSlotGuide)
 		pTransferLegRight.getBaseTracker().setSlot(slotWaist)
 		
-		pTransferLegLeft.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftFoot))
-		pTransferLegLeft.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftKnee))
+		pTransferLegLeft.getTipTracker().setSlot(slotFootLeft)
+		pTransferLegLeft.getGuideTracker().setSlot(legLeftSlotGuide)
 		pTransferLegLeft.getBaseTracker().setSlot(slotWaist)
 	end
 	

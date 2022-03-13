@@ -91,15 +91,18 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var float pTwistPropagation
 	private var int pTwistBoneCount
 	private var Vector pTwistAxisRotation
+	private var float pGuideZeroRotation
+	private var float pGuideScaleRotation
 	
 	private var ADController pADControllerTipPosition
 	private var ADController pADControllerTipOrientation
 	private var ADController pADControllerGuidePosition
+	private var ADController pADControllerGuideRotation
 	private var ADController pADControllerTwist
 	private var ADController pADControllerRetracted
 	private var ADController pADControllerBlend
 	
-	private var ADRuleTrackTo pADRuleGuide
+	private var ADRuleBoneTransformator pADRuleGuide
 	private var ADRuleInverseKinematic pADRuleIK
 	private var ADRuleInverseKinematic pADRuleIKForce
 	private var ADRuleAnimation pADRuleBaseIK
@@ -114,6 +117,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var float pCalibrateReachRetracted
 	private var Array pCalibrateTwistAxes
 	private var Vector pCalibrateTwistBoneAxisRotation
+	private var Vector pCalibrateGuideLocalPosition
+	private var float pCalibrateGuideRotation
+	private var ARTrackToUp pCalibrateGuideRotationAxis
 	
 	
 	
@@ -134,6 +140,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTwistPropagation = 0
 		pTwistBoneCount = 0
 		pTwistAxisRotation = Vector.new()
+		pGuideZeroRotation = 0
+		pGuideScaleRotation = 1
 		pCalibrateBones = Array.new()
 		pCalibrateReach = 0.6
 		pCalibrateReachScale = 1
@@ -143,6 +151,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateTipOffset = Vector.new()
 		pCalibrateTwistAxes = Array.new()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
+		pCalibrateGuideLocalPosition = Vector.new()
+		pCalibrateGuideRotation = 0
+		pCalibrateGuideRotationAxis = ARTrackToUp.trackBoneZ
 	end
 	
 	/** Create copy of motion transfer. */
@@ -162,6 +173,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTwistPropagation = transfer.pTwistPropagation
 		pTwistBoneCount = transfer.pTwistBoneCount
 		pTwistAxisRotation = transfer.pTwistAxisRotation
+		pGuideZeroRotation = transfer.pGuideZeroRotation
+		pGuideScaleRotation = transfer.pGuideScaleRotation
 		pCalibrateBones = Array.new(transfer.pCalibrateBones)
 		pCalibrateReach = transfer.pCalibrateReach
 		pCalibrateReachScale = transfer.pCalibrateReachScale
@@ -171,6 +184,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateTipOffset = transfer.pCalibrateTipOffset
 		pCalibrateTwistAxes = Array.new(transfer.pCalibrateTwistAxes)
 		pCalibrateTwistBoneAxisRotation = transfer.pCalibrateTwistBoneAxisRotation
+		pCalibrateGuideLocalPosition = transfer.pCalibrateGuideLocalPosition
+		pCalibrateGuideRotation = transfer.pCalibrateGuideRotation
+		pCalibrateGuideRotationAxis = transfer.pCalibrateGuideRotationAxis
 	end
 	
 	
@@ -337,6 +353,26 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTwistAxisRotation = rotation
 	end
 	
+	/** Guide zero rotation. */
+	public func float getGuideZeroRotation()
+		return pGuideZeroRotation
+	end
+	
+	/** Set guide zero rotation. */
+	public func void setGuideZeroRotation(float rotation)
+		pGuideZeroRotation = rotation
+	end
+	
+	/** Guide scale rotation. */
+	public func float getGuideScaleRotation()
+		return pGuideScaleRotation
+	end
+	
+	/** Set guide scale rotation. */
+	public func void setGuideScaleRotation(float scale)
+		pGuideScaleRotation = scale
+	end
+	
 	
 	
 	/** Animator definition rule or null. */
@@ -344,7 +380,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pADRuleIK
 	end
 	
-	public func ADRuleTrackTo getADRuleGuide()
+	public func ADRuleBoneTransformator getADRuleGuide()
 		return pADRuleGuide
 	end
 	
@@ -382,13 +418,19 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pCalibrateTwistBoneAxisRotation
 	end
 	
+	/** Calibrate guide local position. */
+	public func Vector getCalibrateGuideLocalPosition()
+		return pCalibrateGuideLocalPosition
+	end
+	
 	
 	
 	/** Init element clas. */
-	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass)
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
 		pADControllerTipPosition = null
 		pADControllerTipOrientation = null
 		pADControllerGuidePosition = null
+		pADControllerGuideRotation = null
 		pADControllerRetracted = null
 		pADControllerTwist = null
 		pADControllerBlend = null
@@ -460,28 +502,173 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(pADRuleRetracted)
 		end
 		
-		// add IK rule
+		// shared IK objects
 		pADControllerBlend = ADController.new()
 		pADControllerBlend.setName(behavior.getControllerNameBlend())
 		pADControllerBlend.setMinimum(0)
 		pADControllerBlend.setMaximum(1)
 		adef.addController(pADControllerBlend)
 		
-		pADControllerTipPosition = ADController.new()
-		pADControllerTipPosition.setName(behavior.getControllerNameTipPosition())
-		adef.addController(pADControllerTipPosition)
-		
-		pADControllerTipOrientation = ADController.new()
-		pADControllerTipOrientation.setName(behavior.getControllerNameTipOrientation())
-		adef.addController(pADControllerTipOrientation)
-		
 		var ADLink linkBlend = ADLink.new()
 		linkBlend.setController(pADControllerBlend)
 		adef.addLink(linkBlend)
 		
+		pADControllerTipPosition = ADController.new()
+		pADControllerTipPosition.setName(behavior.getControllerNameTipPosition())
+		adef.addController(pADControllerTipPosition)
+		
 		var ADLink linkTipPosition = ADLink.new()
 		linkTipPosition.setController(pADControllerTipPosition)
 		adef.addLink(linkTipPosition)
+		
+		// add guide rule
+		var ModifiedRig.Bone mrboneGuide1, mrboneGuide2, mrboneGuide3
+		
+		if slotGuide != null and slotGuide.isDeviceAttached() and not pGuideBone.empty() and false
+			// add bones
+			mrboneGuide1 = modifyRig.addBone(getName() + ".guide1")
+			
+			mrboneGuide2 = modifyRig.addBone(getName() + ".guide2")
+			mrboneGuide2.rotation = Vector.new(0, 0, pCalibrateGuideRotation)
+			mrboneGuide2.parent = mrboneGuide1
+			
+			mrboneGuide3 = modifyRig.addBone(getName() + ".guide3")
+			
+			// add controllers and links
+			pADControllerGuidePosition = ADController.new()
+			pADControllerGuidePosition.setName(behavior.getControllerNameGuidePosition())
+			adef.addController(pADControllerGuidePosition)
+			
+			var ADLink linkGuidePosition = ADLink.new()
+			linkGuidePosition.setController(pADControllerGuidePosition)
+			adef.addLink(linkGuidePosition)
+			
+			var ADLink linkGuideRotation = ADLink.new()
+			linkGuideRotation.setBone(mrboneGuide2.name)
+			linkGuideRotation.setBoneParameter(AnimatorLinkBoneParameter.rotationZ)
+			linkGuideRotation.setBoneMinimum(-180)
+			linkGuideRotation.setBoneMaximum(180)
+			adef.addLink(linkGuideRotation)
+			
+			// add rules
+			var ADRuleInverseKinematic ruleIK
+			var ADRuleTrackTo ruleTrackTo
+			var ADRuleForeignState ruleForeign
+			var ADRuleBoneTransformator ruleBTrans
+			var ADController controller
+			var ADLink link
+			
+			// track guide1 to tip position with guide bone as up
+			ruleIK = ADRuleInverseKinematic.new()
+			ruleIK.setName(getName())
+			ruleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, linkTipPosition))
+			ruleIK.addBone(mrboneGuide3.name)
+			adef.addRule(ruleIK)
+			
+			ruleForeign = ADRuleForeignState.new()
+			ruleForeign.setName(getName())
+			ruleForeign.setEnablePosition(false)
+			ruleForeign.setForeignBone(pGuideBone)
+			ruleForeign.setSourceCoordinateFrame(ARForeignStateCFrame.component)
+			ruleForeign.setDestinationCoordinateFrame(ARForeignStateCFrame.component)
+			ruleForeign.addBone(mrboneGuide3.name)
+			adef.addRule(ruleForeign)
+			
+			ruleIK = ADRuleInverseKinematic.new()
+			ruleIK.setName(getName())
+			ruleIK.setSolverBone(pGuideBone)
+			ruleIK.setUseSolverBone(true)
+			ruleIK.addBone(mrboneGuide1.name)
+			adef.addRule(ruleIK)
+			
+			ruleTrackTo = ADRuleTrackTo.new()
+			ruleTrackTo.setName(getName())
+			ruleTrackTo.setTrackBone(mrboneGuide3.name)
+			ruleTrackTo.setUpTarget(pCalibrateGuideRotationAxis)
+			ruleTrackTo.addBone(mrboneGuide1.name)
+			adef.addRule(ruleTrackTo)
+			
+			// track guide2 to guide goal
+			ruleTrackTo = ADRuleTrackTo.new()
+			ruleTrackTo.setName(getName())
+			ruleTrackTo.setTrackAxis(ARTrackToAxis.posY)
+			ruleTrackTo.setLockedAxis(ARTrackToLocked.z)
+			ruleTrackTo.addTargetLink(ADRuleTargetLink.new(ARTrackToTarget.position, linkGuidePosition))
+			ruleTrackTo.addBone(mrboneGuide2.name)
+			adef.addRule(ruleTrackTo)
+			
+			// rotate guide bone. this can not be done around the view direction used
+			// to calculate the rotation angle. instead the view direction has to match
+			// the goal position is it would be if the current pose has to stay unchanged.
+			// for this we can reuse the guide3 and guide1 as long as guide2 is not touched
+			ruleIK = ADRuleInverseKinematic.new()
+			ruleIK.setName(getName())
+			ruleIK.setSolverBone(pTipBone)
+			ruleIK.setUseSolverBone(true)
+			ruleIK.addBone(mrboneGuide3.name)
+			adef.addRule(ruleIK)
+			
+			ruleForeign = ADRuleForeignState.new()
+			ruleForeign.setName(getName())
+			ruleForeign.setEnablePosition(false)
+			ruleForeign.setForeignBone(pGuideBone)
+			ruleForeign.setSourceCoordinateFrame(ARForeignStateCFrame.component)
+			ruleForeign.setDestinationCoordinateFrame(ARForeignStateCFrame.component)
+			ruleForeign.addBone(mrboneGuide3.name)
+			adef.addRule(ruleForeign)
+			
+			ruleTrackTo = ADRuleTrackTo.new()
+			ruleTrackTo.setName(getName())
+			ruleTrackTo.setTrackBone(mrboneGuide3.name)
+			ruleTrackTo.setUpTarget(pCalibrateGuideRotationAxis)
+			ruleTrackTo.addBone(mrboneGuide1.name)
+			adef.addRule(ruleTrackTo)
+			
+			ruleBTrans = ADRuleBoneTransformator.new()
+			ruleBTrans.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+			ruleBTrans.setMinimumRotation(Vector.new(0, 0, -180))
+			ruleBTrans.setMaximumRotation(Vector.new(0, 0, 180))
+			ruleBTrans.setTargetBone(mrboneGuide1.name)
+			ruleBTrans.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkGuideRotation))
+			ruleBTrans.addBone(pGuideBone)
+			adef.addRule(ruleBTrans)
+			
+		/*
+			pADControllerGuideRotation = ADController.new()
+			pADControllerGuideRotation.setName(behavior.getControllerNameGuideRotation())
+			pADControllerGuideRotation.setMinimum(-180)
+			pADControllerGuideRotation.setMaximum(180)
+			pADControllerGuideRotation.setClamp(false)
+			adef.addController(pADControllerGuideRotation)
+			
+			var ADLink linkGuideRotation = ADLink.new()
+			linkGuideRotation.setController(pADControllerGuideRotation)
+			adef.addLink(linkGuideRotation)
+			
+			pADRuleGuide = ADRuleBoneTransformator.new()
+			pADRuleGuide.setName(getName())
+			pADRuleGuide.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+			pADRuleGuide.setEnableOrientation(true)
+			pADRuleGuide.setEnablePosition(false)
+			pADRuleGuide.setEnableSize(false)
+			pADRuleGuide.setMinimumAngle(-180)
+			pADRuleGuide.setMaximumAngle(180)
+			pADRuleGuide.setUseAxis(true)
+			pADRuleGuide.setAxis(pCalibrateGuideAxis)
+			
+			pADRuleGuide.addBone(pGuideBone)
+			
+			pADRuleGuide.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.blendFactor, linkBlend))
+			pADRuleGuide.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkGuideRotation))
+			
+			adef.addRule(pADRuleGuide)
+		*/
+		end
+		
+		// add IK rule
+		pADControllerTipOrientation = ADController.new()
+		pADControllerTipOrientation.setName(behavior.getControllerNameTipOrientation())
+		adef.addController(pADControllerTipOrientation)
 		
 		var ADLink linkTipOrientation = ADLink.new()
 		linkTipOrientation.setController(pADControllerTipOrientation)
@@ -504,6 +691,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			pADRuleIK.addBone(pBaseBone)
 		end
 		
+		/*
 		if slotGuide != null and slotGuide.isDeviceAttached()
 			pADControllerGuidePosition = ADController.new()
 			pADControllerGuidePosition.setName(behavior.getControllerNameGuidePosition())
@@ -514,8 +702,10 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addLink(linkGuidePosition)
 			
 			pADRuleIK.setGuideBone(guideBone)
-			pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.guidePosition, linkGuidePosition))
+			pADRuleIK.setGuideLocalPosition(pCalibrateGuideLocalPosition)
+			pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.guideGoalPosition, linkGuidePosition))
 		end
+		*/
 		
 		adef.addRule(pADRuleIK)
 		
@@ -528,6 +718,102 @@ class MotionTransferIK extends DefaultMotionTransfer
 			pADRuleIKForce.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkTipOrientation))
 			pADRuleIKForce.addBone(pTipBone)
 			adef.addRule(pADRuleIKForce)
+		end
+		
+		// add guide rule
+		if slotGuide != null and slotGuide.isDeviceAttached() and not pGuideBone.empty()
+			// add bones
+			mrboneGuide1 = modifyRig.addBone(getName() + ".guide1")
+			
+			mrboneGuide2 = modifyRig.addBone(getName() + ".guide2")
+			mrboneGuide2.rotation = Vector.new(0, 0, pCalibrateGuideRotation)
+			mrboneGuide2.parent = mrboneGuide1
+			
+			mrboneGuide3 = modifyRig.addBone(getName() + ".guide3")
+			
+			// add controllers and links
+			pADControllerGuidePosition = ADController.new()
+			pADControllerGuidePosition.setName(behavior.getControllerNameGuidePosition())
+			adef.addController(pADControllerGuidePosition)
+			
+			var ADLink linkGuidePosition = ADLink.new()
+			linkGuidePosition.setController(pADControllerGuidePosition)
+			adef.addLink(linkGuidePosition)
+			
+			var ADLink linkGuideRotation = ADLink.new()
+			linkGuideRotation.setBone(mrboneGuide2.name)
+			linkGuideRotation.setBoneParameter(AnimatorLinkBoneParameter.rotationZ)
+			linkGuideRotation.setBoneMinimum(-180)
+			linkGuideRotation.setBoneMaximum(180)
+			adef.addLink(linkGuideRotation)
+			
+			// add rules
+			var ADRuleInverseKinematic ruleIK
+			var ADRuleTrackTo ruleTrackTo
+			var ADRuleForeignState ruleForeign
+			var ADRuleBoneTransformator ruleBTrans
+			var ADRuleStateManipulator ruleStaManip
+			var ADController controller
+			var ADLink link
+			
+			// track guide1 to tip position with guide bone as up
+			ruleIK = ADRuleInverseKinematic.new()
+			ruleIK.setName(getName())
+			ruleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalPosition, linkTipPosition))
+			ruleIK.addBone(mrboneGuide3.name)
+			adef.addRule(ruleIK)
+			
+			ruleForeign = ADRuleForeignState.new()
+			ruleForeign.setName(getName())
+			ruleForeign.setEnablePosition(false)
+			ruleForeign.setForeignBone(pGuideBone)
+			ruleForeign.setSourceCoordinateFrame(ARForeignStateCFrame.component)
+			ruleForeign.setDestinationCoordinateFrame(ARForeignStateCFrame.component)
+			ruleForeign.addBone(mrboneGuide3.name)
+			adef.addRule(ruleForeign)
+			
+			ruleIK = ADRuleInverseKinematic.new()
+			ruleIK.setName(getName())
+			ruleIK.setSolverBone(pGuideBone)
+			ruleIK.setUseSolverBone(true)
+			ruleIK.addBone(mrboneGuide1.name)
+			adef.addRule(ruleIK)
+			
+			ruleTrackTo = ADRuleTrackTo.new()
+			ruleTrackTo.setName(getName())
+			ruleTrackTo.setTrackBone(mrboneGuide3.name)
+			ruleTrackTo.setUpTarget(pCalibrateGuideRotationAxis)
+			ruleTrackTo.addBone(mrboneGuide1.name)
+			adef.addRule(ruleTrackTo)
+			
+			// track guide2 to guide goal
+			ruleTrackTo = ADRuleTrackTo.new()
+			ruleTrackTo.setName(getName())
+			ruleTrackTo.setTrackAxis(ARTrackToAxis.posY)
+			ruleTrackTo.setLockedAxis(ARTrackToLocked.z)
+			ruleTrackTo.addTargetLink(ADRuleTargetLink.new(ARTrackToTarget.position, linkGuidePosition))
+			ruleTrackTo.addBone(mrboneGuide2.name)
+			adef.addRule(ruleTrackTo)
+			
+			// rotate guide bone
+			ruleBTrans = ADRuleBoneTransformator.new()
+			ruleBTrans.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+			ruleBTrans.setMinimumRotation(Vector.new(0, 0, pGuideScaleRotation * -180))
+			ruleBTrans.setMaximumRotation(Vector.new(0, 0, pGuideScaleRotation * 180))
+			ruleBTrans.setTargetBone(mrboneGuide1.name)
+			ruleBTrans.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkGuideRotation))
+			ruleBTrans.addBone(pGuideBone)
+			adef.addRule(ruleBTrans)
+			
+			// cancel rotation on tip bone
+			ruleBTrans = ADRuleBoneTransformator.new()
+			ruleBTrans.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+			ruleBTrans.setMinimumRotation(Vector.new(0, 0, pGuideScaleRotation * 180))
+			ruleBTrans.setMaximumRotation(Vector.new(0, 0, pGuideScaleRotation * -180))
+			ruleBTrans.setTargetBone(mrboneGuide1.name)
+			ruleBTrans.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkGuideRotation))
+			ruleBTrans.addBone(pTipBone)
+			adef.addRule(ruleBTrans)
 		end
 		
 		// add twist rules
@@ -586,6 +872,16 @@ class MotionTransferIK extends DefaultMotionTransfer
 		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
 		if recordAnimation != null
 			recordAnimation.addBones(pCalibrateBones)
+			
+			if mrboneGuide1 != null
+				recordAnimation.addIgnoreBone(mrboneGuide1.name)
+			end
+			if mrboneGuide2 != null
+				recordAnimation.addIgnoreBone(mrboneGuide2.name)
+			end
+			if mrboneGuide3 != null
+				recordAnimation.addIgnoreBone(mrboneGuide3.name)
+			end
 		end
 	end
 	
@@ -602,6 +898,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBaseTracker.resetTransform()
 		pCalibrateTwistAxes.removeAll()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
+		pCalibrateGuideLocalPosition = Vector.new()
+		pCalibrateGuideRotation = 0
+		pCalibrateGuideRotationAxis = ARTrackToUp.trackBoneZ
 	end
 	
 	/** Calibrate character. */
@@ -767,9 +1066,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pGuideTracker.setTransform(component, "")
 		
 		// calculate retracted reach if used
+		var Component tcomponent = component
+		
 		if not pMoveRetracted.empty() and indexGuide != -1 and indexTip != -1
 			// create a temporary component so we can apply the move and do some measuring
-			var Component tcomponent = Component.new(component.getModel(), component.getSkin())
+			tcomponent = Component.new(component.getModel(), component.getSkin())
 			tcomponent.setRig(component.getRig())
 			
 			var CharacterAppearance appearance = config.getProfile().getAppearance()
@@ -814,6 +1115,63 @@ class MotionTransferIK extends DefaultMotionTransfer
 			if indexTip != -1
 				pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation) \
 					* component.boneGetInverseMatrix(indexTip)).getEulerAngles()
+			end
+		end
+		
+		// guiding
+		if indexGuide != -1 and indexBase != -1 and indexTip != -1
+			var CharacterTrackerSlot slotBase = pBaseTracker.getRealSlot()
+			var CharacterTrackerSlot slotTip = pTipTracker.getRealSlot()
+			var CharacterTrackerSlot slotGuide = pGuideTracker.getRealSlot()
+			
+			if slotGuide != null and slotBase != null and slotTip != null
+				var Vector posBase = (pBaseTracker.getTransformMatrix() * slotBase.getCalibrateMatrix()).getPosition()
+				var Vector posTip = (pTipTracker.getTransformMatrix() * slotTip.getCalibrateMatrix()).getPosition()
+				var Vector view = posTip - posBase
+				
+				if not view.isZero()
+					view = view.normalize()
+					
+					// calculate base matrix
+					var Matrix boneMatrix = component.boneGetMatrix(indexGuide).normalize()
+					
+					var float x = view * boneMatrix.getRightVector()
+					var float y = view * boneMatrix.getUpVector()
+					var float z = view * boneMatrix.getViewVector()
+					
+					var Vector up
+					
+					if z > x and z > y
+						up = boneMatrix.getUpVector()
+						pCalibrateGuideRotationAxis = ARTrackToUp.trackBoneY
+						
+					else
+						up = boneMatrix.getViewVector()
+						pCalibrateGuideRotationAxis = ARTrackToUp.trackBoneZ
+					end
+					up = (up - view * (view * up))
+					
+					if not (view % up).isZero()
+						var Matrix baseMatrix = Matrix.newWorld(boneMatrix.getPosition(), view, up)
+						
+						// track rotation. transform guide position into base matrix then
+						// calculate the rotation against the Z axis
+						var Vector posGuide = (pGuideTracker.getTransformMatrix()\
+							* slotGuide.getCalibrateMatrix() * baseMatrix.getInverse()).getPosition()
+						
+						up = posGuide.compSelect(true, true, false)
+						
+						if not up.isZero()
+							pCalibrateGuideRotation = DEMath.atan2(up.getX(), up.getY()) + pGuideZeroRotation
+						end
+					end
+				end
+				
+				
+				
+				pCalibrateGuideLocalPosition = (pGuideTracker.getTransformMatrix()\
+					* slotGuide.getCalibrateMatrix()\
+					* component.boneGetInverseMatrix(indexGuide)).getPosition()
 			end
 		end
 	end
@@ -874,6 +1232,12 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("twistAxisRotation")
 				setTwistAxisRotation(loader.readVector(element))
 				
+			elif tagName.equals("guideZeroRotation")
+				setGuideZeroRotation(element.getFirstCDataFloat())
+				
+			elif tagName.equals("guideScaleRotation")
+				setGuideScaleRotation(element.getFirstCDataFloat())
+				
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
 			end
@@ -917,6 +1281,15 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 			elif tagName.equals("twistBoneAxisRotation")
 				pCalibrateTwistBoneAxisRotation = loader.readVector(element)
+				
+			elif tagName.equals("guideRotationBase")
+				pCalibrateGuideRotation = element.getFirstCDataFloat()
+				
+			elif tagName.equals("guideRotationBaseAxis")
+				pCalibrateGuideRotationAxis = ARTrackToUp.named(element.getFirstCData())
+				
+			elif tagName.equals("guideLocalPosition")
+				pCalibrateGuideLocalPosition = loader.readVector(element)
 			end
 		end)
 	end
@@ -946,6 +1319,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		tag.addDataTag("twistPropagation", pTwistPropagation)
 		tag.addDataTag("twistBoneCount", pTwistBoneCount)
 		loader.writeVector(tag, "twistAxisRotation", pTwistAxisRotation)
+		tag.addDataTag("guideZeroRotation", pGuideZeroRotation)
+		tag.addDataTag("guideScaleRotation", pGuideScaleRotation)
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
@@ -966,5 +1341,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 			loader.writeVector(tag, "twistAxis", each)
 		end)
 		loader.writeVector(tag, "twistBoneAxisRotation", pCalibrateTwistBoneAxisRotation)
+		tag.addDataTag("guideRotation", pCalibrateGuideRotation)
+		tag.addDataTag("guideRotationAxis", pCalibrateGuideRotationAxis.name())
+		loader.writeVector(tag, "guideLocalPosition", pCalibrateGuideLocalPosition)
 	end
 end

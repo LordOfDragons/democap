@@ -627,6 +627,7 @@ class CharacterConfiguration
 				pAnimatorDefinition.addRule(rule)
 			end
 			
+			// apply appearance
 			pProfile.getAppearance().initElementClass(eclass)
 			
 			// add tracker slots. each slot adds two controllers (position, rotation)
@@ -635,20 +636,29 @@ class CharacterConfiguration
 			end)
 			
 			// add motion capture behaviors. should this fail reset calibration and try again
-			try
-				pMotionTransfers.forEach(block MotionTransfer each
-					each.initElementClass(this, eclass)
-				end)
-				
-			catch Exception e
-				GameApp.getGameApp().getConsole().addError("Init ElementClass failed. Reset clalibration and trying again", e)
-				
-				pMotionTransfers.forEach(block MotionTransfer each
-					each.resetCalibration()
-				end)
-				pMotionTransfers.forEach(block MotionTransfer each
-					each.initElementClass(this, eclass)
-				end)
+			var ECComposeComponent ecccomponent = eclass.getComponent().getComponent()
+			
+			if ecccomponent.getRig().getRig() != null
+				try
+					var ModifiedRig modifiedRig = ModifiedRig.new(ecccomponent.getRig().getRig())
+					
+					pMotionTransfers.forEach(block MotionTransfer each
+						each.initElementClass(this, eclass, modifiedRig)
+					end)
+					
+					modifiedRig.buildModifiedRig()
+					ecccomponent.getRig().setPath("")
+					ecccomponent.getRig().setRig(modifiedRig.getModifiedRig())
+					
+					modifiedRig.getModifiedRig().save("_debug_modified.derig")
+					
+				catch Exception e
+					GameApp.getGameApp().getConsole().addError("Init ElementClass failed. Reset clalibration", e)
+					
+					pMotionTransfers.forEach(block MotionTransfer each
+						each.resetCalibration()
+					end)
+				end
 			end
 			
 			// add behaviors to adjust VR Hand position to match tracker slot component.

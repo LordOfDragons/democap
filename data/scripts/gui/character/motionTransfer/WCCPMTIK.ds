@@ -54,6 +54,8 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	private var DefaultTextModel pModelTwistPropagation
 	private var DefaultTextModel pModelTwistBoneCount
 	private var EditVector pEditTwistAxisRotation
+	private var DefaultTextModel pModelGuideZeroRotation
+	private var DefaultTextModel pModelGuideScaleRotation
 	
 	
 	
@@ -84,6 +86,8 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pModelTextMoveRetracted = DefaultTextModel.new()
 		pModelTwistPropagation = DefaultTextModel.new()
 		pModelTwistBoneCount = DefaultTextModel.new()
+		pModelGuideZeroRotation = DefaultTextModel.new()
+		pModelGuideScaleRotation = DefaultTextModel.new()
 		
 		runWhileBlockingLayout(block
 			createContent(optionPrefix)
@@ -115,6 +119,8 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pModelTwistPropagation = null
 		pModelTwistBoneCount = null
 		pEditTwistAxisRotation = null
+		pModelGuideZeroRotation = null
+		pModelGuideScaleRotation = null
 		super.dispose()
 	end
 	
@@ -145,6 +151,8 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pModelTwistPropagation.setText(mt.getTwistPropagation().toString())
 				pModelTwistBoneCount.setText(mt.getTwistBoneCount().toString())
 				pEditTwistAxisRotation.setVector(mt.getTwistAxisRotation())
+				pModelGuideZeroRotation.setText(mt.getGuideZeroRotation().toString())
+				pModelGuideScaleRotation.setText(mt.getGuideScaleRotation().toString())
 				
 			else
 				pModelTextTipBone.setText("")
@@ -162,6 +170,8 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pModelTwistPropagation.setText("")
 				pModelTwistBoneCount.setText("")
 				pEditTwistAxisRotation.setVector(Vector.new())
+				pModelGuideZeroRotation.setText("")
+				pModelGuideScaleRotation.setText("")
 			end
 		end)
 		doLayoutIfBlocked()
@@ -190,6 +200,8 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		mt.setTwistPropagation(pModelTwistPropagation.getText().toFloat())
 		mt.setTwistBoneCount(pModelTwistBoneCount.getText().toInt())
 		mt.setTwistAxisRotation(pEditTwistAxisRotation.getVector())
+		mt.setGuideZeroRotation(pModelGuideZeroRotation.getText().toFloat())
+		mt.setGuideScaleRotation(pModelGuideScaleRotation.getText().toFloat())
 	end
 	
 	/** Supports motion transfer type. */
@@ -336,6 +348,25 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(pEditTwistAxisRotation)
 		
 		CPECoordinateSystem.new(preview, null, null, label, pEditTwistAxisRotation, null, null)
+		
+		// guide zero rotation
+		pPanelForm.addWidget(Label.new("Guide zero rotation:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelGuideZeroRotation, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("Zero rotation angle relative to calibration position. "\
+			+ "Typically required for elbows (90 degrees)")
+		pPanelForm.addWidget(textField)
+		
+		// guide scale rotation
+		pPanelForm.addWidget(Label.new("Guide scale rotation:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelGuideScaleRotation, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
+		textField.setToolTip("Scale guide rotation angle. Typically required for elbows (0.5)")
+		pPanelForm.addWidget(textField)
 	end
 	
 	/** Update bone lists. */
