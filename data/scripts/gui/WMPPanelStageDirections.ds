@@ -52,6 +52,21 @@ class WMPPanelStageDirections extends CollapsibleGroup
 		end
 	end
 	
+	/** Reorder stage directions. */
+	class ReorderStageDirections extends ReorderListMouseListener
+		protected var WMPPanelStageDirections pPanel
+		
+		public func new(WMPPanelStageDirections panel, ListBox listBox) super(DefaultListModel.new(), listBox)
+			pPanel = panel
+		end
+		
+		protected func void onStopDrag()
+			if getDropIndex() != getDragIndex() and pPanel.getScene() != null
+				pPanel.getScene().notifyStageDirectionsChanged()
+			end
+		end
+	end
+	
 	
 	
 	/** Stage direction popup menu. */
@@ -98,11 +113,6 @@ class WMPPanelStageDirections extends CollapsibleGroup
 			end))
 			button.setEnabled(pPanel.getStageDirection() != null)
 			popup.addWidget(button)
-			
-			// TODO: Move Top
-			// TODO: Move Up
-			// TODO: Move Down
-			// TODO: Move Bottom
 			
 			pPanel.getDesktop().addWindow(popup)
 			popup.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
@@ -166,6 +176,7 @@ class WMPPanelStageDirections extends CollapsibleGroup
 	protected var Scene pScene
 	protected var GameChangedListener pGameChangedListener
 	protected var StageDirectionModelChanged pStageDirectionModelChanged
+	protected var ReorderStageDirections pReorderStageDirections
 	
 	
 	
@@ -201,6 +212,7 @@ class WMPPanelStageDirections extends CollapsibleGroup
 		setScene(null)
 		
 		pStageDirectionModelChanged = null
+		pReorderStageDirections = null
 		
 		pPanelSession = null
 		pDisplayImage = null
@@ -231,11 +243,13 @@ class WMPPanelStageDirections extends CollapsibleGroup
 		
 		pListBoxDirections.getModel().removeListener(pStageDirectionModelChanged)
 		pListBoxDirections.setModel(DefaultListModel.new())
+		pReorderStageDirections.setModel(DefaultListModel.new())
 		
 		pScene = scene
 		
 		if scene != null
 			pListBoxDirections.setModel(scene.getStageDirections().getModel())
+			pReorderStageDirections.setModel(scene.getStageDirections().getModel())
 		end
 		
 		pListBoxDirections.getModel().addListener(pStageDirectionModelChanged)
@@ -345,6 +359,9 @@ class WMPPanelStageDirections extends CollapsibleGroup
 			pListBoxDirections.setNumberDisplayLines(10)
 			pListBoxDirections.getModel().addListener(pStageDirectionModelChanged)
 			p.addWidget(ScrollPanel.new(pListBoxDirections))
+			
+			pReorderStageDirections = ReorderStageDirections.new(this, pListBoxDirections)
+			pListBoxDirections.addMouseListener(pReorderStageDirections)
 			
 			if not readOnly
 				var Button button = Button.new("...", StageDirectionPopupAction.new(this))
