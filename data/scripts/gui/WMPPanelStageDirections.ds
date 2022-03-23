@@ -109,6 +109,24 @@ class WMPPanelStageDirections extends CollapsibleGroup
 			item.setEnabled(pPanel.getStageDirection() != null)
 			menu.addWidget(item)
 			
+			item = MenuItemCommand.new("Cut", BlockActionListener.new(block ActionEvent event
+				pPanel.cutStageDirection()
+			end))
+			item.setEnabled(pPanel.getStageDirection() != null)
+			menu.addWidget(item)
+			
+			item = MenuItemCommand.new("Copy", BlockActionListener.new(block ActionEvent event
+				pPanel.copyStageDirection()
+			end))
+			item.setEnabled(pPanel.getStageDirection() != null)
+			menu.addWidget(item)
+			
+			item = MenuItemCommand.new("Paste", BlockActionListener.new(block ActionEvent event
+				pPanel.pasteStageDirection()
+			end))
+			item.setEnabled(pPanel.getClipboard().hasClip())
+			menu.addWidget(item)
+			
 			pPanel.getDesktop().addWindow(menu)
 			menu.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
 		end
@@ -308,6 +326,42 @@ class WMPPanelStageDirections extends CollapsibleGroup
 		pScene.notifyStageDirectionsChanged()
 		
 		model.setSelected(DEMath.min(index, model.getCount() - 1))
+	end
+	
+	/** Copy stage direction. */
+	public func void copyStageDirection()
+		var StageDirection direction = getStageDirection()
+		if direction == null or pScene == null
+			return
+		end
+		
+		getClipboard().setClipWith(StageDirection.new(direction))
+	end
+	
+	/** Cut stage direction. */
+	public func void cutStageDirection()
+		var StageDirection direction = getStageDirection()
+		if direction == null or pScene == null
+			return
+		end
+		
+		getClipboard().setClipWith(StageDirection.new(direction))
+		removeStageDirection()
+	end
+	
+	/** Paste stage direction. */
+	public func void pasteStageDirection()
+		if pScene == null or getClipboard().isEmpty()
+			return
+		end
+		
+		getClipboard().getClip().findCastable(block StageDirection direction
+			direction = StageDirection.new(direction)
+			pScene.getStageDirections().add(direction)
+			pScene.notifyStageDirectionsChanged()
+			pScene.getStageDirections().setSelected(direction)
+			return true
+		end)
 	end
 	
 	/** Remove all stage directions. */

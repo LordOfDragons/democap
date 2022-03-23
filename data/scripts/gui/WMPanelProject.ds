@@ -475,6 +475,27 @@ class WMPanelProject extends Panel
 			item.setToolTip("Rename scene object")
 			menu.addWidget(item)
 			
+			item = MenuItemCommand.new("Cut...", BlockActionListener.new(block ActionEvent event
+				pPanel.cutObject()
+			end))
+			item.setToolTip("Cut scene object")
+			item.setEnabled(pPanel.getObject() != null)
+			menu.addWidget(item)
+			
+			item = MenuItemCommand.new("Copy", BlockActionListener.new(block ActionEvent event
+				pPanel.copyObject()
+			end))
+			item.setToolTip("Copy scene object")
+			item.setEnabled(pPanel.getObject() != null)
+			menu.addWidget(item)
+			
+			item = MenuItemCommand.new("Paste", BlockActionListener.new(block ActionEvent event
+				pPanel.pasteObject()
+			end))
+			item.setToolTip("Paste scene object")
+			item.setEnabled(pPanel.getClipboard().hasClip())
+			menu.addWidget(item)
+			
 			item = MenuItemCommand.new("Browse Objects...", BlockActionListener.new(block ActionEvent event
 				pPanel.browseObjects()
 			end))
@@ -1353,6 +1374,85 @@ class WMPanelProject extends Panel
 		var BehaviorElement element = stub.createElement() cast BehaviorElement
 		gameWorld.addElement(element)
 		ECBSelectable.getInstanceIn(element).selectElement()
+	end
+	
+	/** Copy object. */
+	public func void copyObject()
+		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+		if pObject == null or pScene == null or gameWorld == null
+			return
+		end
+		
+		if not pObject.getECBehavior().canRemove.getValue()
+			WindowDialog.message(getWindow(), "Copy Scene Object",\
+				"Scene objects of type " + pObject.getElement().getClass().getClassname()\
+					+ " can not be copied.", null, null, null)
+			return
+		end
+		
+		var StubElement stub = StubElement.new(pObject.getElement().getStub())
+		stub.setPosition(pObject.getElement().getPosition())
+		stub.setRotation(pObject.getElement().getOrientation().getEulerAngles())
+		
+		getClipboard().setClipWith(stub)
+	end
+	
+	/** Cut object. */
+	public func void cutObject()
+		if pObject == null
+			return
+		end
+		
+		if not pObject.getECBehavior().canRemove.getValue()
+			WindowDialog.message(getWindow(), "Cut Scene Object",\
+				"Scene objects of type " + pObject.getElement().getClass().getClassname()\
+					+ " can not be cut.", null, null, null)
+			return
+		end
+		
+		WindowDialog.question(getWindow(), "Cut Scene Object", "Cut Scene Object '"\
+			+ pObject.getDisplayName() + "'?", null, Array.newWith(\
+				WindowDialog.ButtonConfiguration.new("Cut", true),\
+				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					copyObject()
+					pObject.getElement().safeDispose()
+				end
+		end))
+	end
+	
+	/** Paste object. */
+	public func void pasteObject()
+		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+		if pScene == null or gameWorld == null or getClipboard().isEmpty()
+			return
+		end
+		
+		getClipboard().getClip().findCastable(block StubElement stub
+			stub = StubElement.new(stub)
+			var BehaviorElementClass eclass = stub.getClass() cast BehaviorElementClass
+			var ECBSceneObject sceneObject = ECBSceneObject.getBehaviorIn(eclass)
+			
+			if eclass.getPersistable()
+				stub.setID(GameApp.getGameApp().getIDGenerator().nextID())
+			end
+			
+			var Camera camera = GameApp.getGameApp().getWindowGameWorld().getCamera()
+			var DVector position = DVector.new()
+			if camera != null
+				position = camera.getMatrix() * DVector.new(0, 0, 1)
+			end
+			
+			stub.setPosition(position)
+			
+			if sceneObject.runSceneObjectStubInitializers(stub, getWindow())
+				var BehaviorElement element = stub.createElement() cast BehaviorElement
+				gameWorld.addElement(element)
+				ECBSelectable.getInstanceIn(element).selectElement()
+			end
+			return true
+		end)
 	end
 	
 	/** Remove object. */

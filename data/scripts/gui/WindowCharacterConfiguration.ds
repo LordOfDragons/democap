@@ -187,6 +187,24 @@ class WindowCharacterConfiguration extends WindowDialog
 			end))
 			menu.addWidget(item)
 			
+			item = MenuItemCommand.new("Cut...", BlockActionListener.new(block ActionEvent event
+				pWindow.cutTrackerSlot()
+			end))
+			item.setEnabled(pWindow.getTrackerSlot() != null)
+			menu.addWidget(item)
+			
+			item = MenuItemCommand.new("Copy", BlockActionListener.new(block ActionEvent event
+				pWindow.copyTrackerSlot()
+			end))
+			item.setEnabled(pWindow.getTrackerSlot() != null)
+			menu.addWidget(item)
+			
+			item = MenuItemCommand.new("Paste...", BlockActionListener.new(block ActionEvent event
+				pWindow.pasteTrackerSlot()
+			end))
+			item.setEnabled(pWindow.getClipboard().hasClip())
+			menu.addWidget(item)
+			
 			item = MenuItemCommand.new("Remove Slot", BlockActionListener.new(block ActionEvent event
 				pWindow.removeTrackerSlot()
 			end))
@@ -228,40 +246,53 @@ class WindowCharacterConfiguration extends WindowDialog
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
 			
-			item = MenuItemCommand.new("Add Transfer...", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("Add...", BlockActionListener.new(block ActionEvent event
 				pWindow.addMotionTransfer()
 			end))
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Duplicate Transfer...", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("Duplicate...", BlockActionListener.new(block ActionEvent event
 				pWindow.duplicateMotionTransfer()
 			end))
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Remove Transfer", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("Remove", BlockActionListener.new(block ActionEvent event
 				pWindow.removeMotionTransfer()
 			end))
 			item.setEnabled(pWindow.getMotionTransfer() != null)
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Remove All Transfers", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("Remove All", BlockActionListener.new(block ActionEvent event
 				pWindow.removeAllMotionTransfers()
 			end))
 			item.setEnabled(pWindow.getTrackerSlot() != null)
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Move Transfer Up", BlockActionListener.new(block ActionEvent event
-				pWindow.moveMotionTransferUp()
+			item = MenuItemCommand.new("Cut", BlockActionListener.new(block ActionEvent event
+				pWindow.cutMotionTransfer()
 			end))
 			item.setEnabled(pWindow.getMotionTransfer() != null)
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Move Transfer Down", BlockActionListener.new(block ActionEvent event
-				pWindow.moveMotionTransferDown()
+			item = MenuItemCommand.new("Copy", BlockActionListener.new(block ActionEvent event
+				pWindow.copyMotionTransfer()
 			end))
 			item.setEnabled(pWindow.getMotionTransfer() != null)
 			menu.addWidget(item)
 			
+			item = MenuItemCommand.new("Paste", BlockActionListener.new(block ActionEvent event
+				pWindow.pasteMotionTransfer()
+			end))
+			item.setEnabled(pWindow.getClipboard().hasClip())
+			menu.addWidget(item)
+			
+			item = MenuItemCommand.new("Reorder...", BlockActionListener.new(block ActionEvent event
+				pWindow.reorderMotionTransferUp()
+			end))
+			item.setEnabled(pWindow.getMotionTransfer() != null)
+			menu.addWidget(item)
+			
+			// TODO replace move up/down with reorder using a dialog with ListBox and ReorderListMouseListener
 			item = MenuItemCommand.new("Decompose Transfer", BlockActionListener.new(block ActionEvent event
 				pWindow.decomposeMotionTransfer()
 			end))
@@ -815,6 +846,66 @@ class WindowCharacterConfiguration extends WindowDialog
 			end))
 	end
 	
+	/** Copy tracker slot. */
+	public func void copyTrackerSlot()
+		var CharacterTrackerSlot slot = getTrackerSlot()
+		if slot == null
+			return
+		end
+		
+		getClipboard().setClipWith(CharacterTrackerSlot.new(pCharacterConfiguration, slot))
+	end
+	
+	/** Cut tracker slot. */
+	public func void cutTrackerSlot()
+		var CharacterTrackerSlot slot = getTrackerSlot()
+		if slot == null
+			return
+		end
+		
+		WindowDialog.question(this, "Cut Tracker Slot",\
+			"Do you really want to cut slot '" + slot.getName() + "'?",\
+			null, Array.newWith(WindowDialog.ButtonConfiguration.new("Cut", true), \
+				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					getClipboard().setClipWith(CharacterTrackerSlot.new(pCharacterConfiguration, slot))
+					pModelTrackerSlots.remove(slot)
+					updateTrackerSlotLists()
+				end
+			end))
+	end
+	
+	/** Paste tracker slot. */
+	public func void pasteTrackerSlot()
+		if getClipboard().isEmpty()
+			return
+		end
+		
+		getClipboard().getClip().findCastable(block CharacterTrackerSlot slot
+			WindowDialog.input(this, "Paste Tracker Slot", "Slot Name:", null, slot.getName(),\
+				null, null, WindowDialog.BlockResultListener.new(block String result
+					if result != null
+						if pModelTrackerSlots.find(block CharacterTrackerSlot each
+							return each.getName().compareNoCase(result) == 0
+						end) != null
+							WindowDialog.message(this, "Duplicate Tracker Slot", "Slot '"\
+								+ result + "' exists already", null, null, null)
+							
+						else
+							slot = CharacterTrackerSlot.new(pCharacterConfiguration, slot)
+							slot.setName(result)
+							pModelTrackerSlots.add(slot)
+							pModelTrackerSlots.sort()
+							pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(slot))
+							updateTrackerSlotLists()
+						end
+					end
+				end))
+			return true
+		end)
+	end
+	
 	/** Remove tracker slot. */
 	public func void removeTrackerSlot()
 		var CharacterTrackerSlot slot = getTrackerSlot()
@@ -956,6 +1047,46 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 	end
 	
+	/** Copy motion transfer. */
+	public func void copyMotionTransfer()
+		var MotionTransfer motionTransfer = getMotionTransfer()
+		if motionTransfer != null
+			getClipboard().setClipWith(motionTransfer.createCopy())
+		end
+	end
+	
+	/** Cut motion transfer. */
+	public func void cutMotionTransfer()
+		var MotionTransfer motionTransfer = getMotionTransfer()
+		if motionTransfer == null
+			return
+		end
+		
+		WindowDialog.question(this, "Cut Motion Transfer",\
+			"Do you really want to cut motion transfer '" + motionTransfer.getName() + "'?",\
+			null, Array.newWith(WindowDialog.ButtonConfiguration.new("Cut", true), \
+				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					getClipboard().setClipWith(motionTransfer.createCopy())
+					pModelMotionTransfers.remove(motionTransfer)
+				end
+			end))
+	end
+	
+	/** Paste motion transfer. */
+	public func void pasteMotionTransfer()
+		if getClipboard().isEmpty()
+			return
+		end
+		
+		getClipboard().getClip().findCastable(block MotionTransfer motionTransfer
+			pModelMotionTransfers.add(motionTransfer.createCopy())
+			pModelMotionTransfers.setSelected(pModelMotionTransfers.getCount() - 1)
+			return true
+		end)
+	end
+	
 	/** Remove motion transfer. */
 	public func void removeMotionTransfer()
 		var MotionTransfer motionTransfer = getMotionTransfer()
@@ -991,40 +1122,20 @@ class WindowCharacterConfiguration extends WindowDialog
 			end))
 	end
 	
-	/** Move motion transfer up. */
-	public func void moveMotionTransferUp()
+	/** Reorder motion transfer up. */
+	public func void reorderMotionTransferUp()
 		var MotionTransfer motionTransfer = getMotionTransfer()
 		if motionTransfer == null
 			return
 		end
 		
-		var Array content = pModelMotionTransfers.getContent()
-		var int index = content.indexOf(motionTransfer)
-		if index < 1
-			return
-		end
-		
-		content.move(index, index - 1)
-		pModelMotionTransfers.setAll(content)
-		pModelMotionTransfers.setSelected(index - 1)
-	end
-	
-	/** Move motion transfer down. */
-	public func void moveMotionTransferDown()
-		var MotionTransfer motionTransfer = getMotionTransfer()
-		if motionTransfer == null
-			return
-		end
-		
-		var Array content = pModelMotionTransfers.getContent()
-		var int index = content.indexOf(motionTransfer)
-		if index < 0 or index > content.getCount() - 2
-			return
-		end
-		
-		content.move(index, index + 1)
-		pModelMotionTransfers.setAll(content)
-		pModelMotionTransfers.setSelected(index + 1)
+		var DefaultListModel list = DefaultListModel.new(pModelMotionTransfers.getContent())
+		WindowDialog.reorderList(this, "Reorder Motion Transfers", "Drag motion transfer to reorder",\
+			null, list, MotionTransferRenderer.new(), null, null,\
+			WindowDialog.BlockResultListener.new(block bool result
+				pModelMotionTransfers.setContent(list.getContent())
+				pModelMotionTransfers.setSelectedElement(motionTransfer)
+			end))
 	end
 	
 	/** Decompose motion transfer. */
