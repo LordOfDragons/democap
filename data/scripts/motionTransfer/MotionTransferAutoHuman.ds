@@ -491,10 +491,20 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		var bool isSlotRightFootAttached = hasSlotRightFoot \
 			and pTransferLegRight.getTipTracker().getRealSlot().isDeviceAttached()
 		
+		var bool hasSlotRightKnee = pTransferLegRight.getGuideTracker().getRealSlot() != null \
+			and pTransferLegRight.getGuideTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightKnee
+		var bool isSlotRightKneeAttached = hasSlotRightKnee \
+			and pTransferLegRight.getGuideTracker().getRealSlot().isDeviceAttached()
+		
 		var bool hasSlotLeftFoot = pTransferLegLeft.getTipTracker().getRealSlot() != null \
 			and pTransferLegLeft.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.leftFoot
 		var bool isSlotLeftFootAttached = hasSlotLeftFoot \
 			and pTransferLegLeft.getTipTracker().getRealSlot().isDeviceAttached()
+		
+		var bool hasSlotLeftKnee = pTransferLegLeft.getGuideTracker().getRealSlot() != null \
+			and pTransferLegLeft.getGuideTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightKnee
+		var bool isSlotLeftKneeAttached = hasSlotLeftKnee \
+			and pTransferLegLeft.getGuideTracker().getRealSlot().isDeviceAttached()
 		
 		var bool hasSlotRightHandController = pTransferArmRight.getTipTracker().getRealSlot() != null \
 			and pTransferArmRight.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightHandController
@@ -719,7 +729,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		end
 		
 		pTransferArmRight.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
-		pTransferArmRight.getGuideTracker().setOffsetPosition(Vector.new(0, -0.1, 0))
+		pTransferArmRight.getGuideTracker().setOffsetPosition(Vector.new())
 		pTransferArmRight.getGuideTracker().setOffsetRotation(Vector.new())
 		
 		// left arm. separate guide bone is used if chain has at least 4 bones:
@@ -764,7 +774,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		end
 		
 		pTransferArmLeft.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
-		pTransferArmLeft.getGuideTracker().setOffsetPosition(Vector.new(0, -0.1, 0))
+		pTransferArmLeft.getGuideTracker().setOffsetPosition(Vector.new())
 		pTransferArmLeft.getGuideTracker().setOffsetRotation(Vector.new())
 		
 		// legs
@@ -810,30 +820,43 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferLegRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 		end
 		
-		pTransferLegRight.setGuideBone(pTransferLegRight.getBaseBone())
-		
-		var Vector guideOffset = Vector.new(0, 0, 0.2)
-		
-		if pTransferLegRight.getGuideTracker().getRealSlot() == pTransferLegRight.getTipTracker().getRealSlot()\
-		and pTransferLegRight.getGuideTracker().getRealSlot() != null
-			var String slotKneeName = firstSlotWithType(config, CharacterTrackerSlot.Type.rightKnee)
-			if not slotKneeName.empty()
-				var CharacterTrackerSlot slotKnee = config.getTrackerSlots().getNamed(slotKneeName)
-				if slotKnee != null
-					var Vector positionKnee = slotKnee.getTargetPosition()
-					var Vector positionFoot = pTransferLegRight.getTipTracker().getRealSlot().getTargetPosition()
-					var float distance = (positionFoot - positionKnee).getLength()
-					guideOffset = Vector.new(0, distance, distance)
-				end
-			end
+		if hasSlotRightKnee
+			pTransferLegRight.setGuideBone(pTransferLegRight.getBaseBone())
 			
-			pTransferLegRight.getGuideTracker().setAutoTransform(pTransferLegRight.getTipTracker().getAutoTransform())
+			pTransferLegRight.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+			pTransferLegRight.getGuideTracker().setOffsetPosition(Vector.new())
+			pTransferLegRight.getGuideTracker().setOffsetRotation(Vector.new())
 			
 		else
+			pTransferLegRight.setGuideBone("")
+			
+			/*
 			pTransferLegRight.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+			
+			var Vector guideOffset = Vector.new(0, 0, 0.2)
+			
+			if pTransferLegRight.getGuideTracker().getRealSlot() != null\
+			and pTransferLegRight.getGuideTracker().getRealSlot() == pTransferLegRight.getTipTracker().getRealSlot()
+				var String slotKneeName = firstSlotWithType(config, CharacterTrackerSlot.Type.rightKnee)
+				if not slotKneeName.empty()
+					var CharacterTrackerSlot slotKnee = config.getTrackerSlots().getNamed(slotKneeName)
+					if slotKnee != null
+						var Vector positionKnee = slotKnee.getTargetPosition()
+						var Vector positionFoot = pTransferLegRight.getTipTracker().getRealSlot().getTargetPosition()
+						var float distance = (positionFoot - positionKnee).getLength()
+						guideOffset = Vector.new(0, distance, distance)
+					end
+				end
+				
+				pTransferLegRight.getGuideTracker().setAutoTransform(pTransferLegRight.getTipTracker().getAutoTransform())
+				
+			else
+				pTransferLegRight.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+			end
+			
+			pTransferLegRight.getGuideTracker().setOffsetPosition(guideOffset)
+			*/
 		end
-		
-		pTransferLegRight.getGuideTracker().setOffsetPosition(guideOffset)
 		
 		// left leg
 		pTransferLegLeft.setTipBone(pBoneFootLeft)
@@ -858,30 +881,43 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferLegLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 		end
 		
-		pTransferLegLeft.setGuideBone(pTransferLegLeft.getBaseBone())
-		
-		guideOffset = Vector.new(0, 0, 0.2)
-		
-		if pTransferLegLeft.getGuideTracker().getRealSlot() == pTransferLegLeft.getTipTracker().getRealSlot()\
-		and pTransferLegLeft.getGuideTracker().getRealSlot() != null
-			var String slotKneeName = firstSlotWithType(config, CharacterTrackerSlot.Type.leftKnee)
-			if not slotKneeName.empty()
-				var CharacterTrackerSlot slotKnee = config.getTrackerSlots().getNamed(slotKneeName)
-				if slotKnee != null
-					var Vector positionKnee = slotKnee.getTargetPosition()
-					var Vector positionFoot = pTransferLegLeft.getTipTracker().getRealSlot().getTargetPosition()
-					var float distance = (positionFoot - positionKnee).getLength()
-					guideOffset = Vector.new(0, distance, distance)
-				end
-			end
+		if hasSlotLeftKnee
+			pTransferLegLeft.setGuideBone(pTransferLegLeft.getBaseBone())
 			
-			pTransferLegLeft.getGuideTracker().setAutoTransform(pTransferLegLeft.getTipTracker().getAutoTransform())
+			pTransferLegLeft.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+			pTransferLegLeft.getGuideTracker().setOffsetPosition(Vector.new())
+			pTransferLegLeft.getGuideTracker().setOffsetRotation(Vector.new())
 			
 		else
-			pTransferLegLeft.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+			pTransferLegLeft.setGuideBone("")
+			
+			/*
+			pTransferLegLeft.setGuideBone(pTransferLegLeft.getBaseBone())
+			
+			var Vector guideOffset = Vector.new(0, 0, 0.2)
+			
+			if pTransferLegLeft.getGuideTracker().getRealSlot() == pTransferLegLeft.getTipTracker().getRealSlot()\
+			and pTransferLegLeft.getGuideTracker().getRealSlot() != null
+				var String slotKneeName = firstSlotWithType(config, CharacterTrackerSlot.Type.leftKnee)
+				if not slotKneeName.empty()
+					var CharacterTrackerSlot slotKnee = config.getTrackerSlots().getNamed(slotKneeName)
+					if slotKnee != null
+						var Vector positionKnee = slotKnee.getTargetPosition()
+						var Vector positionFoot = pTransferLegLeft.getTipTracker().getRealSlot().getTargetPosition()
+						var float distance = (positionFoot - positionKnee).getLength()
+						guideOffset = Vector.new(0, distance, distance)
+					end
+				end
+				
+				pTransferLegLeft.getGuideTracker().setAutoTransform(pTransferLegLeft.getTipTracker().getAutoTransform())
+				
+			else
+				pTransferLegLeft.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+			end
+			
+			pTransferLegLeft.getGuideTracker().setOffsetPosition(guideOffset)
+			*/
 		end
-		
-		pTransferLegLeft.getGuideTracker().setOffsetPosition(guideOffset)
 	end
 	
 	/** Create copy of motion transfer. */
@@ -1102,17 +1138,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		var String slotChest = firstSlotAttachedWithType(config, CharacterTrackerSlot.Type.chest)
 		
-		var String slotFootRight = firstSlotWithType(config, CharacterTrackerSlot.Type.rightFoot)
-		var String slotFootLeft = firstSlotWithType(config, CharacterTrackerSlot.Type.leftFoot)
-		
-		var String slotKneeRight = firstSlotAttachedWithType(config, CharacterTrackerSlot.Type.rightKnee)
-		var String slotKneeLeft = firstSlotAttachedWithType(config, CharacterTrackerSlot.Type.leftKnee)
-		
 		var String armSlotBase = slotChest.empty() if slotWaist else slotChest
 		var String spineSlotTarget = slotChest.empty() if slotHead else slotChest
-		
-		var String legRightSlotGuide = slotKneeRight.empty() if slotFootRight else slotKneeRight
-		var String legLeftSlotGuide = slotKneeLeft.empty() if slotFootLeft else slotKneeLeft
 		
 		pTransferWaist.getTracker().setSlot(slotWaist)
 		
@@ -1137,12 +1164,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftElbow))
 		pTransferArmLeft.getBaseTracker().setSlot(armSlotBase)
 		
-		pTransferLegRight.getTipTracker().setSlot(slotFootRight)
-		pTransferLegRight.getGuideTracker().setSlot(legRightSlotGuide)
+		pTransferLegRight.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightFoot))
+		pTransferLegRight.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightKnee))
 		pTransferLegRight.getBaseTracker().setSlot(slotWaist)
 		
-		pTransferLegLeft.getTipTracker().setSlot(slotFootLeft)
-		pTransferLegLeft.getGuideTracker().setSlot(legLeftSlotGuide)
+		pTransferLegLeft.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftFoot))
+		pTransferLegLeft.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftKnee))
 		pTransferLegLeft.getBaseTracker().setSlot(slotWaist)
 	end
 	
