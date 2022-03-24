@@ -522,8 +522,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		var bool isSlotLeftElbowAttached = hasSlotLeftElbow \
 			and pTransferArmLeft.getGuideTracker().getRealSlot().isDeviceAttached()
 		
+		
+		
 		// waist
 		pTransferWaist.setBone(pBoneHip)
+		
+		
 		
 		// spine, head. base is hip which we use to find chains but it should not be
 		// included in anything but the waist. start one bone down the chain
@@ -549,6 +553,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferSpineHead.setTwistBoneCount(0)
 		end
 		*/
+		
+		
 		
 		// spine
 		pTransferSpine.setTipBone(pBoneChest)
@@ -620,6 +626,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferSpine.setTargetBaseBone("")
 		end
 		
+		
+		
 		// neck
 		pTransferNeck.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
 		
@@ -656,6 +664,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferNeck.setTargetBaseBone("")
 		end
 		
+		
+		
 		// head
 // 		pTransferHead.setTipBone(pBoneHead)
 // 		pTransferHead.getTipTracker().setOffsetPosition(Vector.new(0, 0, 0))
@@ -674,6 +684,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferHead.getTipTracker().setOffsetPosition(Vector.new())
 		pTransferHead.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
 		pTransferHead.setAdjustPosition(false)
+		
+		
 		
 		// right arm. separate guide bone is used if chain has at least 4 bones:
 		// hand, lower arm, upper arm, shoulder. with 3 bones no shoulder is assumed
@@ -732,6 +744,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmRight.getGuideTracker().setOffsetPosition(Vector.new())
 		pTransferArmRight.getGuideTracker().setOffsetRotation(Vector.new())
 		
+		
+		
 		// left arm. separate guide bone is used if chain has at least 4 bones:
 		// hand, lower arm, upper arm, shoulder. with 3 bones no shoulder is assumed
 		findBoneChain(rig, pBoneHandLeft, armBaseBone, chain)
@@ -777,6 +791,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.getGuideTracker().setOffsetPosition(Vector.new())
 		pTransferArmLeft.getGuideTracker().setOffsetRotation(Vector.new())
 		
+		
+		
 		// legs
 		var Array chainRightLeg = Array.new()
 		findBoneChain(rig, pBoneFootRight, pBoneHip, chainRightLeg)
@@ -796,6 +812,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			chainLeftLeg = chainLeftLeg.slice(0, -1)
 		end
 		
+		
+		
 		// right leg
 		pTransferLegRight.setTipBone(pBoneFootRight)
 		pTransferLegRight.setMoveBaseIK(pMoveBaseIK)
@@ -808,9 +826,11 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		if chainRightLeg.getCount() > 0
 			pTransferLegRight.setBaseBone(chainRightLeg.getAt(-1) cast String)
+			pTransferLegRight.setGuideBone(pTransferLegRight.getBaseBone())
 			
 		else
 			pTransferLegRight.setBaseBone("")
+			pTransferLegRight.setGuideBone("")
 		end
 		
 		if isSlotRightFootAttached
@@ -820,43 +840,18 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferLegRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 		end
 		
+		pTransferLegRight.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+		pTransferLegRight.getGuideTracker().setOffsetPosition(Vector.new())
+		pTransferLegRight.getGuideTracker().setOffsetRotation(Vector.new())
+		
 		if hasSlotRightKnee
-			pTransferLegRight.setGuideBone(pTransferLegRight.getBaseBone())
-			
-			pTransferLegRight.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
-			pTransferLegRight.getGuideTracker().setOffsetPosition(Vector.new())
-			pTransferLegRight.getGuideTracker().setOffsetRotation(Vector.new())
+			pTransferLegRight.setGuideTwistStrength(0)
 			
 		else
-			pTransferLegRight.setGuideBone("")
-			
-			/*
-			pTransferLegRight.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
-			
-			var Vector guideOffset = Vector.new(0, 0, 0.2)
-			
-			if pTransferLegRight.getGuideTracker().getRealSlot() != null\
-			and pTransferLegRight.getGuideTracker().getRealSlot() == pTransferLegRight.getTipTracker().getRealSlot()
-				var String slotKneeName = firstSlotWithType(config, CharacterTrackerSlot.Type.rightKnee)
-				if not slotKneeName.empty()
-					var CharacterTrackerSlot slotKnee = config.getTrackerSlots().getNamed(slotKneeName)
-					if slotKnee != null
-						var Vector positionKnee = slotKnee.getTargetPosition()
-						var Vector positionFoot = pTransferLegRight.getTipTracker().getRealSlot().getTargetPosition()
-						var float distance = (positionFoot - positionKnee).getLength()
-						guideOffset = Vector.new(0, distance, distance)
-					end
-				end
-				
-				pTransferLegRight.getGuideTracker().setAutoTransform(pTransferLegRight.getTipTracker().getAutoTransform())
-				
-			else
-				pTransferLegRight.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
-			end
-			
-			pTransferLegRight.getGuideTracker().setOffsetPosition(guideOffset)
-			*/
+			pTransferLegRight.setGuideTwistStrength(0.5)
 		end
+		
+		
 		
 		// left leg
 		pTransferLegLeft.setTipBone(pBoneFootLeft)
@@ -869,9 +864,11 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		if chainLeftLeg.getCount() > 0
 			pTransferLegLeft.setBaseBone(chainLeftLeg.getAt(-1) cast String)
+			pTransferLegLeft.setGuideBone(pTransferLegLeft.getBaseBone())
 			
 		else
 			pTransferLegLeft.setBaseBone("")
+			pTransferLegLeft.setGuideBone("")
 		end
 		
 		if isSlotLeftFootAttached
@@ -881,42 +878,15 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferLegLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 		end
 		
+		pTransferLegLeft.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+		pTransferLegLeft.getGuideTracker().setOffsetPosition(Vector.new())
+		pTransferLegLeft.getGuideTracker().setOffsetRotation(Vector.new())
+		
 		if hasSlotLeftKnee
-			pTransferLegLeft.setGuideBone(pTransferLegLeft.getBaseBone())
-			
-			pTransferLegLeft.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
-			pTransferLegLeft.getGuideTracker().setOffsetPosition(Vector.new())
-			pTransferLegLeft.getGuideTracker().setOffsetRotation(Vector.new())
+			pTransferLegLeft.setGuideTwistStrength(0)
 			
 		else
-			pTransferLegLeft.setGuideBone("")
-			
-			/*
-			pTransferLegLeft.setGuideBone(pTransferLegLeft.getBaseBone())
-			
-			var Vector guideOffset = Vector.new(0, 0, 0.2)
-			
-			if pTransferLegLeft.getGuideTracker().getRealSlot() == pTransferLegLeft.getTipTracker().getRealSlot()\
-			and pTransferLegLeft.getGuideTracker().getRealSlot() != null
-				var String slotKneeName = firstSlotWithType(config, CharacterTrackerSlot.Type.leftKnee)
-				if not slotKneeName.empty()
-					var CharacterTrackerSlot slotKnee = config.getTrackerSlots().getNamed(slotKneeName)
-					if slotKnee != null
-						var Vector positionKnee = slotKnee.getTargetPosition()
-						var Vector positionFoot = pTransferLegLeft.getTipTracker().getRealSlot().getTargetPosition()
-						var float distance = (positionFoot - positionKnee).getLength()
-						guideOffset = Vector.new(0, distance, distance)
-					end
-				end
-				
-				pTransferLegLeft.getGuideTracker().setAutoTransform(pTransferLegLeft.getTipTracker().getAutoTransform())
-				
-			else
-				pTransferLegLeft.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
-			end
-			
-			pTransferLegLeft.getGuideTracker().setOffsetPosition(guideOffset)
-			*/
+			pTransferLegLeft.setGuideTwistStrength(0.5)
 		end
 	end
 	

@@ -91,6 +91,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var float pTwistPropagation
 	private var int pTwistBoneCount
 	private var Vector pTwistAxisRotation
+	private var float pGuideTwistStrength
 	
 	private var ADController pADControllerTipPosition
 	private var ADController pADControllerTipOrientation
@@ -133,6 +134,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTwistPropagation = 0
 		pTwistBoneCount = 0
 		pTwistAxisRotation = Vector.new()
+		pGuideTwistStrength = 0
 		pCalibrateBones = Array.new()
 		pCalibrateReach = 0.6
 		pCalibrateReachScale = 1
@@ -160,6 +162,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pMoveRetracted = transfer.pMoveRetracted
 		pTwistPropagation = transfer.pTwistPropagation
 		pTwistBoneCount = transfer.pTwistBoneCount
+		pGuideTwistStrength = transfer.pGuideTwistStrength
 		pTwistAxisRotation = transfer.pTwistAxisRotation
 		pCalibrateBones = Array.new(transfer.pCalibrateBones)
 		pCalibrateReach = transfer.pCalibrateReach
@@ -300,14 +303,14 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pMoveRetracted = move
 	end
 	
-	/** Percentage amount of twist propagated from tip bone to first bone after root bone. */
+	/** Percentage of tip bone rotation to apply as twist down the chain. */
 	public func float getTwistPropagation()
 		return pTwistPropagation
 	end
 	
-	/** Set percentage amount of twist propagated from tip bone to first bone after root bone. */
-	public func void setTwistPropagation(float amount)
-		pTwistPropagation = DEMath.max(amount, 0.0)
+	/** Set percentage of tip bone rotation to apply as twist down the chain. */
+	public func void setTwistPropagation(float percentage)
+		pTwistPropagation = percentage
 	end
 	
 	/** Count of bones along chain to apply twist to starting at first bone after tip bone. */
@@ -334,6 +337,16 @@ class MotionTransferIK extends DefaultMotionTransfer
 			throw ENullPointer.new("rotation")
 		end
 		pTwistAxisRotation = rotation
+	end
+	
+	/** Percentage of tip bone rotation to apply as twist to guide bone. */
+	public func float getGuideTwistStrength()
+		return pGuideTwistStrength
+	end
+	
+	/** Set percentage of tip bone rotation to apply as twist to guide bone. */
+	public func void setGuideTwistStrength(float percentage)
+		pGuideTwistStrength = percentage
 	end
 	
 	
@@ -420,6 +433,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		var String guideBone = pGuideBone.empty() if pBaseBone else pGuideBone
 		
+		
+		
 		// add base IK rules
 		if not pMoveBaseIK.empty()
 			pADRuleBaseIK = ADRuleAnimation.new()
@@ -430,6 +445,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 			end)
 			adef.addRule(pADRuleBaseIK)
 		end
+		
+		
 		
 		// add retracted rules
 		if not pMoveRetracted.empty()
@@ -458,6 +475,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(pADRuleRetracted)
 		end
 		
+		
+		
 		// shared controllers and links
 		pADControllerBlend = ADController.new()
 		pADControllerBlend.setName(behavior.getControllerNameBlend())
@@ -485,6 +504,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		linkTipOrientation.setController(pADControllerTipOrientation)
 		adef.addLink(linkTipOrientation)
 		
+		
+		
 		// add guide rule
 		if slotGuide != null and slotGuide.isDeviceAttached()
 			pADControllerGuideRotation = ADController.new()
@@ -504,6 +525,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 			pADRuleGuide.addBone(pGuideBone)
 			adef.addRule(pADRuleGuide)
 		end
+		
+		
 		
 		// add IK rule
 		pADRuleIK = ADRuleInverseKinematic.new()
@@ -525,25 +548,86 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		adef.addRule(pADRuleIK)
 		
+		
+		
 		// add twist rules
-		if pTwistBoneCount > 0 and pTwistPropagation > 0.01 and boneCount >= 2
-			var int count = DEMath.min(pTwistBoneCount, boneCount - 1)
-			var ADRuleBoneTransformator rule
-			var String name = getName() + ".twist"
-			var float maxAngle = 180
-			var int i
-			
+		var bool useTwist = pTwistBoneCount > 0 and pTwistPropagation > 0.01 and boneCount >= 2
+		var bool useGuideTwist = not pGuideBone.empty() and not pTipBone.empty() and pGuideTwistStrength > 0.01
+		var float maxTwistAngle = 180
+		var ADLink linkTwist
+		
+		if useTwist or useGuideTwist
 			pADControllerTwist = ADController.new()
 			pADControllerTwist.setName(behavior.getControllerNameTwist())
-			pADControllerTwist.setMinimum(-maxAngle)
-			pADControllerTwist.setMaximum(maxAngle)
+			pADControllerTwist.setMinimum(-maxTwistAngle)
+			pADControllerTwist.setMaximum(maxTwistAngle)
 			adef.addController(pADControllerTwist)
 			
-			var ADLink link = ADLink.new()
-			link.setController(pADControllerTwist)
-			adef.addLink(link)
+			linkTwist = ADLink.new()
+			linkTwist.setController(pADControllerTwist)
+			adef.addLink(linkTwist)
+		end
+		
+		if useGuideTwist
+			// add bone to be used as rotator bone
+			var float angle = maxTwistAngle * pGuideTwistStrength
+			var ModifiedRig.Bone boneTwistAxis = modifyRig.addBone("guideTwistAxis")
 			
-			var float angle = pTwistPropagation * maxAngle / count
+			var ADController controllerGuideTwistAxis = ADController.new()
+			controllerGuideTwistAxis.setName(behavior.getControllerNameGuideTwistAxis())
+			adef.addController(controllerGuideTwistAxis)
+			
+			var ADLink linkGuideTwistAxis = ADLink.new()
+			linkGuideTwistAxis.setController(controllerGuideTwistAxis)
+			adef.addLink(linkGuideTwistAxis)
+			
+			var ADRuleInverseKinematic ruleAlign = ADRuleInverseKinematic.new()
+			ruleAlign.setName(getName() + ".guideTwist")
+			ruleAlign.setSolverBone(pGuideBone)
+			ruleAlign.setUseSolverBone(true)
+			ruleAlign.addBone(boneTwistAxis.name)
+			adef.addRule(ruleAlign)
+			
+			ruleAlign = ADRuleInverseKinematic.new()
+			ruleAlign.setName(getName() + ".guideTwist")
+			ruleAlign.setAdjustOrientation(true)
+			ruleAlign.setAdjustPosition(false)
+			ruleAlign.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkGuideTwistAxis))
+			ruleAlign.addBone(boneTwistAxis.name)
+			adef.addRule(ruleAlign)
+			
+			// apply rotation using the rotator bone
+			var ADRuleBoneTransformator rule = ADRuleBoneTransformator.new()
+			rule.setName(getName() + ".guideTwist")
+			rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+			rule.setTargetBone(boneTwistAxis.name)
+			rule.setUseAxis(true)
+			rule.setMinimumAngle(-angle)
+			rule.setMaximumAngle(angle)
+			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkTwist))
+			rule.addBone(pGuideBone)
+			adef.addRule(rule)
+			
+			// cancel rotation on tip bone
+			rule = ADRuleBoneTransformator.new()
+			rule.setName(getName() + ".guideTwist")
+			rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+			rule.setTargetBone(boneTwistAxis.name)
+			rule.setUseAxis(true)
+			rule.setMinimumAngle(angle)
+			rule.setMaximumAngle(-angle)
+			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkTwist))
+			rule.addBone(pTipBone)
+			adef.addRule(rule)
+		end
+		
+		if useTwist
+			var int count = DEMath.min(pTwistBoneCount, boneCount - 1)
+			var String name = getName() + ".twist"
+			var ADRuleBoneTransformator rule
+			var int i
+			
+			var float angle = pTwistPropagation * maxTwistAngle / count
 			var int baseIndex = count
 			
 			for i = 0 to count
@@ -559,7 +643,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 				rule.setAxis(axis)
 				rule.setMinimumAngle(realAngle)
 				rule.setMaximumAngle(-realAngle)
-				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkTwist))
 				rule.addBone(pCalibrateBones.getAt(baseIndex - i - 1) cast String)
 				adef.addRule(rule)
 				
@@ -571,11 +655,13 @@ class MotionTransferIK extends DefaultMotionTransfer
 				rule.setAxis(axis)
 				rule.setMinimumAngle(-realAngle)
 				rule.setMaximumAngle(realAngle)
-				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkTwist))
 				rule.addBone(bone)
 				adef.addRule(rule)
 			end
 		end
+		
+		
 		
 		// register bones to record
 		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
@@ -805,11 +891,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 					pCalibrateTwistAxes.add(Vector.new(0, 0, 1))
 				end
 			end
-			
-			if indexTip != -1
-				pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation) \
-					* component.boneGetInverseMatrix(indexTip)).getEulerAngles()
-			end
+		end
+		
+		if indexTip != -1
+			pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation) \
+				* component.boneGetInverseMatrix(indexTip)).getEulerAngles()
 		end
 	end
 	
@@ -868,6 +954,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 			elif tagName.equals("twistAxisRotation")
 				setTwistAxisRotation(loader.readVector(element))
+				
+			elif tagName.equals("guideTwistStrength")
+				setGuideTwistStrength(element.getFirstCDataFloat())
 				
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
@@ -941,6 +1030,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		tag.addDataTag("twistPropagation", pTwistPropagation)
 		tag.addDataTag("twistBoneCount", pTwistBoneCount)
 		loader.writeVector(tag, "twistAxisRotation", pTwistAxisRotation)
+		tag.addDataTag("guideTwistStrength", pGuideTwistStrength)
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	

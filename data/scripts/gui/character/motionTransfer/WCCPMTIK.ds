@@ -54,6 +54,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	private var DefaultTextModel pModelTwistPropagation
 	private var DefaultTextModel pModelTwistBoneCount
 	private var EditVector pEditTwistAxisRotation
+	private var DefaultTextModel pModelGuideTwistStrength
 	
 	
 	
@@ -84,6 +85,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pModelTextMoveRetracted = DefaultTextModel.new()
 		pModelTwistPropagation = DefaultTextModel.new()
 		pModelTwistBoneCount = DefaultTextModel.new()
+		pModelGuideTwistStrength = DefaultTextModel.new()
 		
 		runWhileBlockingLayout(block
 			createContent(optionPrefix)
@@ -114,6 +116,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pModelTextMoveRetracted = null
 		pModelTwistPropagation = null
 		pModelTwistBoneCount = null
+		pModelGuideTwistStrength = null
 		pEditTwistAxisRotation = null
 		super.dispose()
 	end
@@ -145,6 +148,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pModelTwistPropagation.setText(mt.getTwistPropagation().toString())
 				pModelTwistBoneCount.setText(mt.getTwistBoneCount().toString())
 				pEditTwistAxisRotation.setVector(mt.getTwistAxisRotation())
+				pModelGuideTwistStrength.setText(mt.getGuideTwistStrength().toString())
 				
 			else
 				pModelTextTipBone.setText("")
@@ -162,6 +166,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pModelTwistPropagation.setText("")
 				pModelTwistBoneCount.setText("")
 				pEditTwistAxisRotation.setVector(Vector.new())
+				pModelGuideTwistStrength.setText("")
 			end
 		end)
 		doLayoutIfBlocked()
@@ -190,6 +195,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		mt.setTwistPropagation(pModelTwistPropagation.getText().toFloat())
 		mt.setTwistBoneCount(pModelTwistBoneCount.getText().toInt())
 		mt.setTwistAxisRotation(pEditTwistAxisRotation.getVector())
+		mt.setGuideTwistStrength(pModelGuideTwistStrength.getText().toFloat())
 	end
 	
 	/** Supports motion transfer type. */
@@ -314,7 +320,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		
 		textField = TextField.new(pModelTwistPropagation, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("Percentage of Tip Bone twist relative to Base Bone to propagate along bone chain.")
 		pPanelForm.addWidget(textField)
 		
@@ -336,6 +342,15 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(pEditTwistAxisRotation)
 		
 		CPECoordinateSystem.new(preview, null, null, label, pEditTwistAxisRotation, null, null)
+		
+		// guide twist
+		pPanelForm.addWidget(Label.new("Guide Twist Strength:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelGuideTwistStrength, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("Percentage of Tip Bone twist relative to Base Bone to apply to guide bone.")
+		pPanelForm.addWidget(textField)
 	end
 	
 	/** Update bone lists. */
