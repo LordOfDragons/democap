@@ -246,10 +246,25 @@ class WindowCharacterConfiguration extends WindowDialog
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
 			
-			item = MenuItemCommand.new("Add...", BlockActionListener.new(block ActionEvent event
-				pWindow.addMotionTransfer()
-			end))
-			menu.addWidget(item)
+			var MenuPopup subMenu = MenuPopup.new()
+			GameApp.getGameApp().getMotionTransferFactories().toArraySorted().forEach(block MotionTransferFactory factory
+				if factory.displayName().startsWith("Auto")
+					item = MenuItemCommand.new(factory.displayName(), BlockActionListener.new(block ActionEvent event
+						pWindow.addMotionTransfer(factory)
+					end))
+					subMenu.addWidget(item)
+				end
+			end)
+			subMenu.addWidget(MenuItemSeparator.new())
+			GameApp.getGameApp().getMotionTransferFactories().toArraySorted().forEach(block MotionTransferFactory factory
+				if not factory.displayName().startsWith("Auto")
+					item = MenuItemCommand.new(factory.displayName(), BlockActionListener.new(block ActionEvent event
+						pWindow.addMotionTransfer(factory)
+					end))
+					subMenu.addWidget(item)
+				end
+			end)
+			menu.addWidget(MenuItemSubMenu.new("Add", subMenu))
 			
 			item = MenuItemCommand.new("Duplicate...", BlockActionListener.new(block ActionEvent event
 				pWindow.duplicateMotionTransfer()
@@ -1019,21 +1034,11 @@ class WindowCharacterConfiguration extends WindowDialog
 	end
 	
 	/** Add motion transfer. */
-	public func void addMotionTransfer()
-		var DefaultListModel model = DefaultListModel.new(\
-			GameApp.getGameApp().getMotionTransferFactories().toArraySorted())
-		
-		WindowDialog.chooseList(this, "Add Motion Transfer", "Type:", null, model,\
-			MotionTransferFactoryRenderer.new(), null, null, WindowDialog.BlockResultListener.new(\
-			block int result
-				if result != -1
-					var MotionTransferFactory factory = model.getAt(result) cast MotionTransferFactory
-					var MotionTransfer motionTransfer = factory.createMotionTransfer()
-					motionTransfer.setName(factory.displayName())
-					pModelMotionTransfers.add(motionTransfer)
-					pModelMotionTransfers.setSelected(pModelMotionTransfers.indexOf(motionTransfer))
-				end
-			end))
+	public func void addMotionTransfer(MotionTransferFactory factory)
+		var MotionTransfer motionTransfer = factory.createMotionTransfer()
+		motionTransfer.setName(factory.displayName())
+		pModelMotionTransfers.add(motionTransfer)
+		pModelMotionTransfers.setSelected(pModelMotionTransfers.indexOf(motionTransfer))
 	end
 	
 	/** Duplicate motion transfer. */
