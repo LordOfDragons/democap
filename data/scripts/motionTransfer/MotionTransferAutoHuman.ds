@@ -470,7 +470,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegLeft.getTipTracker().resolveRealSlot(config)
 		pTransferLegLeft.getGuideTracker().resolveRealSlot(config)
 		pTransferArmRight.getTipTracker().resolveRealSlot(config)
+		pTransferArmRight.getGuideTracker().resolveRealSlot(config)
 		pTransferArmLeft.getTipTracker().resolveRealSlot(config)
+		pTransferArmLeft.getGuideTracker().resolveRealSlot(config)
 		
 		pTransferNeck.getBaseTracker().resolveRealSlot(config)
 		
@@ -497,8 +499,18 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		var bool hasSlotRightHandController = pTransferArmRight.getTipTracker().getRealSlot() != null \
 			and pTransferArmRight.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightHandController
 		
+		var bool hasSlotRightElbow = pTransferArmRight.getGuideTracker().getRealSlot() != null \
+			and pTransferArmRight.getGuideTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightElbow
+		var bool isSlotRightElbowAttached = hasSlotRightElbow \
+			and pTransferArmRight.getGuideTracker().getRealSlot().isDeviceAttached()
+		
 		var bool hasSlotLeftHandController = pTransferArmLeft.getTipTracker().getRealSlot() != null \
 			and pTransferArmLeft.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.leftHandController
+		
+		var bool hasSlotLeftElbow = pTransferArmLeft.getGuideTracker().getRealSlot() != null \
+			and pTransferArmLeft.getGuideTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.leftElbow
+		var bool isSlotLeftElbowAttached = hasSlotLeftElbow \
+			and pTransferArmLeft.getGuideTracker().getRealSlot().isDeviceAttached()
 		
 		// waist
 		pTransferWaist.setBone(pBoneHip)
@@ -675,9 +687,15 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmRight.setActorReach(MotionTransferIK.ActorReach.arm)
 		pTransferArmRight.setReachLimit(1)
 		pTransferArmRight.setReachScaling(pReachScalingArmRight)
-		pTransferArmRight.setTwistBoneCount(1)
 		pTransferArmRight.setTwistPropagation(0.5)
 		pTransferArmRight.setTwistAxisRotation(Vector.new(0, -90, 0))
+		
+		if isSlotRightElbowAttached
+			pTransferArmRight.setTwistBoneCount(1)
+			
+		else
+			pTransferArmRight.setTwistBoneCount(2)
+		end
 		
 		if hasSlotRightHandController
 			pTransferArmRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.none)
@@ -714,9 +732,15 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.setActorReach(MotionTransferIK.ActorReach.arm)
 		pTransferArmLeft.setReachLimit(1)
 		pTransferArmLeft.setReachScaling(pReachScalingArmLeft)
-		pTransferArmLeft.setTwistBoneCount(1)
 		pTransferArmLeft.setTwistPropagation(0.5)
 		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))
+		
+		if isSlotLeftElbowAttached
+			pTransferArmLeft.setTwistBoneCount(1)
+			
+		else
+			pTransferArmLeft.setTwistBoneCount(2)
+		end
 		
 		if hasSlotLeftHandController
 			pTransferArmLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.none)
