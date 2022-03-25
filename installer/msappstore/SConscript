@@ -4,7 +4,7 @@ env = Environment()
 env.Tool('runExternalCommand')
 
 # parameters
-version = '0.5'
+version = '0.6'
 
 # build
 def globFiles(env, search, pattern, result, recursive=True):
@@ -50,6 +50,16 @@ def copyLauncherInit(env, target, source):
 	with open(target[0].abspath, 'w') as f:
 		f.write(content)
 
+
+def copyManifest(env, target, source):
+	with open(source[0].abspath, 'r') as f:
+		content = f.read()
+	
+	content = content.replace('%DEMOCAP_VERSION%', env['DEMOCAP_VERSION'])
+	
+	with open(target[0].abspath, 'w') as f:
+		f.write(content)
+
 delgaFilename = 'DEMoCap-{}.delga'.format(version)
 
 copied = []
@@ -62,6 +72,9 @@ copyDataFiles(copied, 'msix-data', 'msix')
 
 copied.append(env.Command('msix/VFS/ProgramFilesX64/DEMoCap/Launcher.ini', 'Launcher.ini',
 	env.Action(copyLauncherInit, 'Copy $TARGET'), DELGA_FILENAME=delgaFilename))
+
+copied.append(env.Command('msix/AppxManifest.xml', 'AppxManifest.xml',
+	env.Action(copyManifest, 'Copy $TARGET'), DEMOCAP_VERSION=version))
 
 msix = env.Command('DEMoCap-{}.msix'.format(version),
 	'msix/AppxManifest.xml', env.Action(msixBuild, 'Build MSIX $TARGET'))
