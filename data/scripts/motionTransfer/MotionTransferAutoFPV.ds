@@ -326,7 +326,7 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 			pTransferArmRight.setGuideBone(pTransferArmRight.getBaseBone())
 		end
 		
-		pTransferArmRight.getGuideTracker().setOffsetPosition(Vector.new(0, 0, -0.2))
+		pTransferArmRight.getGuideTracker().setOffsetPosition(Vector.new())
 		pTransferArmRight.getGuideTracker().setOffsetRotation(Vector.new())
 		
 		// left arm. separate guide bone is used if chain has at least 4 bones:
@@ -363,7 +363,7 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 			pTransferArmLeft.setGuideBone(pTransferArmLeft.getBaseBone())
 		end
 		
-		pTransferArmLeft.getGuideTracker().setOffsetPosition(Vector.new(0, 0, -0.2))
+		pTransferArmLeft.getGuideTracker().setOffsetPosition(Vector.new())
 		pTransferArmLeft.getGuideTracker().setOffsetRotation(Vector.new())
 	end
 	
@@ -509,18 +509,21 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 		end
 		
 		var String slotChest = firstSlotAttachedWithType(config, CharacterTrackerSlot.Type.chest)
+		var String slotWaist = firstSlotAttachedWithType(config, CharacterTrackerSlot.Type.waist)
 		
-		pTransferChest.getTracker().setSlot(slotChest)
+		var String useSlotChest = slotChest.empty() if slotWaist else slotChest
+		
+		pTransferChest.getTracker().setSlot(useSlotChest)
 		
 		pTransferHead.getTracker().setSlot(slotHead)
 		
 		pTransferArmRight.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightHandController))
 		pTransferArmRight.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightElbow))
-		pTransferArmRight.getBaseTracker().setSlot(slotChest)
+		pTransferArmRight.getBaseTracker().setSlot(useSlotChest)
 		
 		pTransferArmLeft.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftHandController))
 		pTransferArmLeft.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftElbow))
-		pTransferArmLeft.getBaseTracker().setSlot(slotChest)
+		pTransferArmLeft.getBaseTracker().setSlot(useSlotChest)
 	end
 	
 	/** First slot name matching type or empty string. */
