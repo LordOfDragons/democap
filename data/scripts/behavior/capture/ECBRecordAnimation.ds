@@ -93,6 +93,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var Array pStaticBoneIndices
 		private var Array pStaticRootBoneIndices
 		private var Matrix pTransformRootBones
+		private var int pOriginBoneIndex
+		private var Array pOriginChildrenIndices
 		private var RecordAnimation pRecordAnimation
 		private var RecordAnimation pRecordAnimationDevices
 		private var CharacterConfiguration pCharacterConfiguration
@@ -119,6 +121,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pRootBoneIndices = Array.new()
 			pStaticBoneIndices = Array.new()
 			pStaticRootBoneIndices = Array.new()
+			pOriginBoneIndex = -1
+			pOriginChildrenIndices = Array.new()
 			pRecordDeviceSlots = Array.new()
 			pListeners = Array.new()
 			pTransformRootBones = Matrix.new()
@@ -253,6 +257,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			else
 				prepareBoneIndices()
 			end
+			prepareOriginBone()
 			
 			pTransformRootBones = Matrix.new()
 			
@@ -348,8 +353,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 					pRecordAnimation.addBone(bone)
 				end
 			end)
-			
-			pRecordAnimation.setOriginBone(pCharacterConfiguration.getProfile().getOriginBone())
 		end
 		
 		/**
@@ -400,8 +403,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 				end
 			end)
 			
-			pRecordAnimation.setOriginBone(pCharacterConfiguration.getProfile().getOriginBone())
-			
 			// add static bones
 			var int i, count = pRig.getBoneCount()
 			
@@ -417,6 +418,39 @@ class ECBRecordAnimation extends DefaultECBehavior
 					pStaticBoneIndices.add(i)
 					pRecordAnimation.addBone(pRig.boneGetName(i))
 				end
+			end
+		end
+		
+		/** Prepare origin bone. */
+		protected func void prepareOriginBone()
+			pOriginBoneIndex = -1
+			pOriginChildrenIndices.removeAll()
+			
+			var String originBone = pCharacterConfiguration.getProfile().getOriginBone()
+			pRecordAnimation.setOriginBone(originBone)
+			
+			pOriginBoneIndex = pRig.indexOfBoneNamed(originBone)
+			if pOriginBoneIndex == -1
+				return
+			end
+			
+			if pRig.boneGetParent(pOriginBoneIndex) != -1
+				// origin bone is not a root bone. this is not supported
+				pOriginBoneIndex = -1
+				return
+			end
+			
+			(pBoneIndices + pStaticBoneIndices).forEach(block int index
+				if pRig.boneGetParent(index) == pOriginBoneIndex
+					pOriginChildrenIndices.add(index)
+				end
+			end)
+			
+			if pOriginChildrenIndices.getCount() == 0\
+			and not pRootBoneIndices.has(pOriginBoneIndex)\
+			and not pStaticRootBoneIndices.has(pOriginBoneIndex)
+				// adjusting origin bone transform has no effect so skip it
+				pOriginBoneIndex = -1
 			end
 		end
 		
@@ -563,30 +597,55 @@ class ECBRecordAnimation extends DefaultECBehavior
 			// bones
 			pComponent.updateBones()
 			
+			var Matrix originTransform = Matrix.new()
+			if pOriginBoneIndex != -1
+				originTransform = pTransformRootBones * pComponent.getBoneOriginInverseMatrix(pOriginBoneIndex)
+			end
+			
 			var Matrix matrix
 			pRootBoneIndices.forEach(block int index
-				matrix = pComponent.boneGetMatrix(index) * pTransformRootBones\
-					* pComponent.getBoneOriginInverseMatrix(index)
+				if index == pOriginBoneIndex
+					matrix = Matrix.new()
+				else
+					matrix = pComponent.boneGetMatrix(index) * pTransformRootBones\
+						* pComponent.getBoneOriginInverseMatrix(index)
+				end
 				pRecordAnimation.addKeyframe(pRecordTime, matrix.getPosition(), matrix.toQuaternion())
 			end)
 			
 			pBoneIndices.forEach(block int index
-				pRecordAnimation.addKeyframe(pRecordTime, \
-					pComponent.boneGetPosition(index), pComponent.boneGetRotation(index))
+				if pOriginChildrenIndices.has(index)
+					matrix = pComponent.boneGetMatrix(index) * originTransform\
+						* pComponent.getBoneOriginInverseMatrix(index)
+					pRecordAnimation.addKeyframe(pRecordTime, matrix.getPosition(), matrix.toQuaternion())
+				else
+					pRecordAnimation.addKeyframe(pRecordTime, \
+						pComponent.boneGetPosition(index), pComponent.boneGetRotation(index))
+				end
 			end)
 			
 			if pFirstFrame
 				pFirstFrame = false
 				
 				pStaticRootBoneIndices.forEach(block int index
-					matrix = pComponent.boneGetMatrix(index) * pTransformRootBones\
-						* pComponent.getBoneOriginInverseMatrix(index)
+					if index == pOriginBoneIndex
+						matrix = Matrix.new()
+					else
+						matrix = pComponent.boneGetMatrix(index) * pTransformRootBones\
+							* pComponent.getBoneOriginInverseMatrix(index)
+					end
 					pRecordAnimation.addStaticKeyframe(matrix.getPosition(), matrix.toQuaternion())
 				end)
 				
 				pStaticBoneIndices.forEach(block int index
-					pRecordAnimation.addStaticKeyframe(\
-						pComponent.boneGetPosition(index), pComponent.boneGetRotation(index))
+					if pOriginChildrenIndices.has(index)
+						matrix = pComponent.boneGetMatrix(index) * originTransform\
+							* pComponent.getBoneOriginInverseMatrix(index)
+						pRecordAnimation.addStaticKeyframe(matrix.getPosition(), matrix.toQuaternion())
+					else
+						pRecordAnimation.addStaticKeyframe(\
+							pComponent.boneGetPosition(index), pComponent.boneGetRotation(index))
+					end
 				end)
 			end
 			
