@@ -87,6 +87,8 @@ class GameApp extends BaseGameApp
 	
 	private var Array pListeners
 	
+	private var bool pGameArgsEnableVR
+	
 	
 	
 	/**
@@ -390,12 +392,20 @@ class GameApp extends BaseGameApp
 		// do not capture input. this allows the window to be used like regular windows
 		InputSystem.setCaptureInputDevices(false)
 		
+		// parse game arguments
+		parseGameArguments()
+		
 		// show Drag[en]gine logo then launch the application
 		//WindowLogo.showDragengineLogo(this.getDesktop(), BlockActionListener.new(\
-		WindowLogo.showImageLogo(this.getDesktop(), Image.new("/content/images/splashscreen.jpg"),\
-		BlockActionListener.new(block ActionEvent event
+		if pGameArgsEnableVR
 			launchApplication()
-		end))
+			
+		else
+			WindowLogo.showImageLogo(this.getDesktop(), Image.new("/content/images/splashscreen.jpg"),\
+			BlockActionListener.new(block ActionEvent event
+				launchApplication()
+			end))
+		end
 	end
 	
 	/**
@@ -491,6 +501,11 @@ class GameApp extends BaseGameApp
 			
 		else
 			setScene(pProject.getScenes().getAt(0))
+		end
+		
+		// switch on VR if requested using game arguments
+		if pGameArgsEnableVR
+			pSessionSettings.getModelEnableVR().setToggled(true)
 		end
 		
 // 		PhysicsSystem.sendCommand("dm_enable")
@@ -698,5 +713,22 @@ class GameApp extends BaseGameApp
 		
 		pWindowMain.setSize(Point.new(400, desktop.getContainerHeight() - 50))
 		pWindowMain.setPosition(Point.new(desktop.getContainerWidth() - 430, 30))
+	end
+	
+	/** Parse game arguments. */
+	protected func void parseGameArguments()
+		var int i, count = getArgumentCount()
+		var String arg
+		
+		for i = 0 to count
+			arg = getArgumentAt(i)
+			
+			if arg.equals("--enable-vr")
+				pGameArgsEnableVR = true
+				
+			else
+				getConsole().addMessage("Unknown game argument '" + arg + "'")
+			end
+		end
 	end
 end
