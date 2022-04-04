@@ -97,28 +97,7 @@ class AADefault extends AABase
 		grabRightHand.getGrabber().setEnabled(true)
 		grabLeftHand.getGrabber().setEnabled(true)
 		
-		// if hand controllers are attached but missing touchable track pad enable laser pointer
-		if vrRightHand.getInputDevice() != null and not hasTouchTrackPadButton(vrRightHand.getInputDevice())
-			vrRightHandPointAt.setEnabled(true)
-		end
-		if vrLeftHand.getInputDevice() != null and not hasTouchTrackPadButton(vrLeftHand.getInputDevice())
-			vrLeftHandPointAt.setEnabled(true)
-		end
-	end
-	
-	protected func bool hasTouchTrackPadButton(InputDevice device)
-		if device != null
-			var int i, count = device.getButtonCount()
-			var InputDeviceButton button
-			
-			for i = 0 to count
-				button = device.getButtonAt(i)
-				if button.getType() == InputDeviceButtonType.touchPad
-					return button.getTouchable()
-				end
-			end
-		end
-		return false
+		controllerCapabilitiesChanged()
 	end
 	
 	/** Action has been deactivated. */
@@ -126,6 +105,14 @@ class AADefault extends AABase
 		resetCalibrationWatcher.reset()
 		super.deactivate()
 	end
+	
+	/** Controller capabilities changed. */
+	public func void controllerCapabilitiesChanged()
+		var TrackControllerCaps caps = GameApp.getGameApp().getTrackControllerCaps()
+		vrRightHandPointAt.setEnabled(caps.getHasControllerRight() and not caps.getHasTouchTrackPadRight())
+		vrLeftHandPointAt.setEnabled(caps.getHasControllerLeft() and not caps.getHasTouchTrackPadLeft())
+	end
+	
 	
 	
 	/** Trigger pulled. */

@@ -1,0 +1,128 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Dragengine.Commands
+pin Dragengine.Scenery
+
+pin Democap.Actions
+pin Democap.Elements
+
+
+/**
+ * Track hand controller capabilities.
+ */
+class TrackControllerCaps extends DefaultBindingManagerListener
+	private var bool pHasControllerLeft
+	private var bool pHasControllerRight
+	private var bool pHasTouchTrackPadLeft
+	private var bool pHasTouchTrackPadRight
+	
+	
+	
+	public func new()
+	end
+	
+	
+	
+	public func bool getHasControllerLeft()
+		return pHasControllerLeft
+	end
+	
+	public func bool getHasControllerRight()
+		return pHasControllerRight
+	end
+	
+	public func bool getHasTouchTrackPadLeft()
+		return pHasTouchTrackPadLeft
+	end
+	
+	public func bool getHasTouchTrackPadRight()
+		return pHasTouchTrackPadRight
+	end
+	
+	
+	
+	public func void deviceAttached(BindingManager manager, InputDevice device)
+		updateCapabilities(manager)
+	end
+	
+	public func void deviceDetached(BindingManager manager, InputDevice device)
+		updateCapabilities(manager)
+	end
+	
+	public func void devicesReloaded(BindingManager manager)
+		updateCapabilities(manager)
+	end
+	
+	
+	
+	public func void updateCapabilities(BindingManager manager)
+		pHasControllerLeft = false
+		pHasControllerRight = false
+		pHasTouchTrackPadLeft = false
+		pHasTouchTrackPadRight = false
+		
+		manager.forEachDevice(block InputDevice device
+			select device.getType()
+			case InputDeviceType.vrLeftHand
+				pHasControllerLeft = true
+				pHasTouchTrackPadLeft = hasTouchTrackPadButton(device)
+				
+			case InputDeviceType.vrRightHand
+				pHasControllerRight = true
+				pHasTouchTrackPadRight = hasTouchTrackPadButton(device)
+			end
+		end)
+		
+		// notify
+		var WorldSpawnCharacter wsc = GameApp.getGameApp().getWorldSpawnCharacter()
+		if wsc == null
+			return
+		end
+		
+		var MoCapActor player = wsc.getActor()
+		if player == null
+			return
+		end
+		
+		var BaseActorAction action = player.getAIAction().getAction()
+		if action != null and action castable AAControlCommands
+			(action cast AAControlCommands).controllerCapabilitiesChanged()
+		end
+	end
+	
+	protected func bool hasTouchTrackPadButton(InputDevice device)
+		if device != null
+			var int i, count = device.getButtonCount()
+			var InputDeviceButton button
+			
+			for i = 0 to count
+				button = device.getButtonAt(i)
+				if button.getType() == InputDeviceButtonType.touchPad
+					return button.getTouchable()
+				end
+			end
+		end
+		return false
+	end
+end
