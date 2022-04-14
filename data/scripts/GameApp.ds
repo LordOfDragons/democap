@@ -81,7 +81,7 @@ class GameApp extends BaseGameApp
 	
 	private var Project pProject
 	private var Scene pScene
-	private var WindowMain pWindowMain
+	private var PanelMain pPanelMain
 	private var PlaybackScene pPlaybackScene
 	
 	private var Array pPatternsProject
@@ -129,9 +129,9 @@ class GameApp extends BaseGameApp
 	
 	
 	
-	/** Main window. */
-	public func WindowMain getWindowMain()
-		return pWindowMain
+	/** Main panel. */
+	public func PanelMain getPanelMain()
+		return pPanelMain
 	end
 	
 	
@@ -383,20 +383,9 @@ class GameApp extends BaseGameApp
 		
 		pWorldSpawnCharacter = WorldSpawnCharacter.new()
 		
-		// modify render window to be a regular window showing the VR view
-		var Desktop desktop = getDesktop()
-		var WindowGameWorld windowGameWorld = getWindowGameWorld()
-		windowGameWorld.setTitle("VR View")
-		windowGameWorld.setPosition(Point.new(10, 30))
-		windowGameWorld.setSize(desktop.getContainerSize() - Point.new(450, 50))
-		windowGameWorld.setCanClose(false)
-		windowGameWorld.setCanMaximize(false)
-		windowGameWorld.setCanMinimize(false)
-		windowGameWorld.setCanReorder(false)
-		
-		// create main window
-		pWindowMain = WindowMain.new(desktop, false)
-		pWindowMain.setQuitOnClose(true)
+		// modify game world window. add main panel to the right side and 
+		pPanelMain = PanelMain.new(getDesktop(), false)
+		getWindowGameWorld().getPanelBorder().addWidget(pPanelMain, BorderLayout.Area.right)
 		
 		// do not capture input. this allows the window to be used like regular windows
 		InputSystem.setCaptureInputDevices(false)
@@ -470,22 +459,25 @@ class GameApp extends BaseGameApp
 		pVRCameraDirector.setAdaptionTime(30)
 		pVRCameraDirector.setVRCamera(pVRCamera)
 		
-		// add support to navigate the view
-		var WindowGameWorld windowGameWorld = getWindowGameWorld()
-		windowGameWorld.addMouseListener(RotateCameraMouseListener.new(\
+		// add support to navigate the view. requires hud panel to be either set invisible
+		// or to not allow hovering. doing the later in case a hud is required later on
+		getPanelHud().setPreventHover(true)
+		
+		var WorldRenderer worldRenderer = getWindowGameWorld().getWorldRenderer()
+		worldRenderer.addMouseListener(RotateCameraMouseListener.new(\
 			pVRCameraDirector, InputEventMouseButton.right, InputEventModifier.none))
 		
-		windowGameWorld.addMouseListener(PanCameraMouseListener.new(\
+		worldRenderer.addMouseListener(PanCameraMouseListener.new(\
 			pVRCameraDirector, InputEventMouseButton.right, InputEventModifier.shift))
 		
-		windowGameWorld.addMouseListener(MoveCameraMouseListener.new(\
+		worldRenderer.addMouseListener(MoveCameraMouseListener.new(\
 			pVRCameraDirector, InputEventMouseButton.right, InputEventModifier.control))
 		
-		windowGameWorld.addMouseListener(ZoomCameraMouseListener.new(\
+		worldRenderer.addMouseListener(ZoomCameraMouseListener.new(\
 			pVRCameraDirector, InputEventMouseButton.right,\
 			InputEventModifier.shift | InputEventModifier.control))
 		
-		windowGameWorld.addMouseListener(InteractMouseListener.new())
+		worldRenderer.addMouseListener(InteractMouseListener.new())
 		
 		// load auto save project if present
 		var String pathAutoSaveProject = File.new(pPathProjects, "autosave.demcp").getPath()
@@ -645,9 +637,9 @@ class GameApp extends BaseGameApp
 		if getWindowGameWorld() != null
 			getWindowGameWorld().setGameWorld(null) // avoid problems while cleaning up
 		end
-		if pWindowMain != null
-			pWindowMain.safeDispose()
-			pWindowMain = null
+		if pPanelMain != null
+			pPanelMain.safeDispose()
+			pPanelMain = null
 		end
 		if pWorldSpawnCharacter != null
 			pWorldSpawnCharacter.dispose()
@@ -713,15 +705,9 @@ class GameApp extends BaseGameApp
 	
 	/** Render window size changed. */
 	public func void onResizeRenderWindow()
-		var Desktop desktop = getDesktop()
-		desktop.setSize(GraphicSystem.getWindowSize())
+		super.onResizeRenderWindow()
 		
-		var WindowGameWorld windowGameWorld = getWindowGameWorld()
-		windowGameWorld.setPosition(Point.new(10, 30))
-		windowGameWorld.setSize(desktop.getContainerSize() - Point.new(450, 50))
-		
-		pWindowMain.setSize(Point.new(400, desktop.getContainerHeight() - 50))
-		pWindowMain.setPosition(Point.new(desktop.getContainerWidth() - 430, 30))
+		// resize console?
 	end
 	
 	/** Parse game arguments. */

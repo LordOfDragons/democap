@@ -30,13 +30,14 @@ pin Dragengine.Utils
 
 
 /**
- * Behavior adding WindowMain to renderable desktop.
+ * Behavior adding PanelMain to renderable desktop using a borderless window.
  */
 class ECBVRWindowMain extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		private var ECBVRWindowMain pECBehavior
-		private var WindowMain pWindow
+		private var PanelMain pPanelMain
+		private var Window pWindow
 		
 		
 		/** Create instance. */
@@ -52,12 +53,17 @@ class ECBVRWindowMain extends DefaultECBehavior
 				desktop.setWindowVirtualKeyboard(WindowVirtualKeyboard.new())
 			end
 			
-			pWindow = WindowMain.new(desktop, true)
-			pWindow.setCanClose(false)
-			pWindow.setSize(Point.new(700, desktop.getContainerHeight()))
-			pWindow.setPosition(Point.new(desktop.getContainerWidth() - 700, 0))
+			pPanelMain = PanelMain.new(desktop, true)
 			
-			var DMCWindowConsole windowConsole = pWindow.getWindowConsole()
+			pWindow = Window.new(0, 0, desktop.getContainerWidth(), desktop.getContainerHeight())
+			pWindow.runWhileBlockingLayout(block
+				pWindow.setDesignerSelector("WindowFullScreen")
+				pWindow.setCanClose(false)
+				pWindow.addWidget(pPanelMain)
+			end)
+			desktop.addWindow(pWindow)
+			
+			var DMCWindowConsole windowConsole = pPanelMain.getWindowConsole()
 			windowConsole.setPosition(Point.new(10, desktop.getContainerHeight() - 550))
 			windowConsole.setSize(Point.new(desktop.getContainerWidth() - pWindow.getWidth() - 50, 500))
 		end
@@ -65,6 +71,7 @@ class ECBVRWindowMain extends DefaultECBehavior
 		/** Dispose of behavior instance. */
 		public func void dispose()
 			pWindow = null
+			pPanelMain = null
 			super.dispose()
 		end
 		
@@ -74,9 +81,9 @@ class ECBVRWindowMain extends DefaultECBehavior
 			return pECBehavior
 		end
 		
-		/** Window. */
-		public func WindowMain getWindow()
-			return pWindow
+		/** Panel. */
+		public func PanelMain getPanelMain()
+			return pPanelMain
 		end
 	end
 	

@@ -27,10 +27,9 @@ pin Dragengine.Scenery
 
 
 /**
- * Main window.
+ * Main panel.
  */
-class WindowMain extends Window
-	private var bool pQuitOnClose
+class PanelMain extends Panel
 	private var DMCWindowConsole pWindowConsole
 	private var bool pInVR
 	
@@ -38,22 +37,12 @@ class WindowMain extends Window
 	
 	/** Create main window */
 	public func new(Desktop desktop, bool inVR)
-		pQuitOnClose = false
 		pInVR = inVR
 		
 		runWhileBlockingLayout(block
-			setTitle("DEMoCap")
-			setCanMinimize(false)
-			setCanMaximize(false)
-			setCanReorder(true)
-			setDesignerSelector("Window.Main")
-			setSize(Point.new(400, desktop.getContainerHeight() - 50))
-			setPosition(Point.new(desktop.getContainerWidth() - 430, 30))
-			
-			createContent(desktop)
+			setDesignerSelector("Panel.Main")
+			createContent()
 		end)
-		
-		desktop.addWindow(this)
 		
 		// create console window and add it to desktop
 		pWindowConsole = DMCWindowConsole.new(desktop)
@@ -67,11 +56,6 @@ class WindowMain extends Window
 	
 	
 	
-	/** Quit engine if window is closed. */
-	public func void setQuitOnClose(bool quitOnClose)
-		pQuitOnClose = quitOnClose
-	end
-	
 	/** Console window. */
 	public func DMCWindowConsole getWindowConsole()
 		return pWindowConsole
@@ -84,19 +68,8 @@ class WindowMain extends Window
 	
 	
 	
-	/** Closing window closes application. */
-	public func void onClosing(WindowEvent event)
-		super.onClosing(event)
-		
-		if pQuitOnClose
-			Engine.quit()
-		end
-	end
-	
-	
-	
 	/** Create window content. */
-	protected func void createContent(Desktop desktop)
+	protected func void createContent()
 		setLayout(BorderLayout.new(2))
 		
 		// switch panel buttons
@@ -138,7 +111,7 @@ class WindowMain extends Window
 		end), BorderLayout.Area.top)
 		
 		// switch panels
-		var String prefixUIOptions = pInVR if "UI/VR/WindowMain" else "UI/WindowMain"
+		var String prefixUIOptions = pInVR if "UI/VR/PanelMain" else "UI/PanelMain"
 		
 		addWidget(SwitchPanel.new(block SwitchPanel p
 			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
