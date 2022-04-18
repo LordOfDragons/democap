@@ -297,10 +297,6 @@ class VIEW3D_PT_DemocapToolsDemcaBrowser(bpy.types.Panel):
 		column = layout.row().column(align=True)
 		
 		row = column.row()
-		row.label(text="Filename")
-		row.label(text=selinfo.filename)
-		
-		row = column.row()
 		row.label(text="Timestamp")
 		row.label(text=selinfo.timestamp)
 		
