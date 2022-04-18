@@ -40,15 +40,23 @@ class Configuration:
 		self.data = {}
 		
 		if platform.system() == "Windows":
-			pathBase = os.path.join(os.getenv("APPDATA"), "DELaunchers", "Config", "games", "e31f1c11-3ca6-c66b-adca-95484bedfc1f")
+			commonPath = ["DELaunchers", "Config", "games", "e31f1c11-3ca6-c66b-adca-95484bedfc1f"]
+			
+			pathBase = os.path.join(os.getenv("LOCALAPPDATA"), "Packages",
+				"DragonDreams.Dragengine.GameEngine_14hw6vre8sh8m", "LocalCache", "Roaming", *commonPath)
+			if not os.path.exists(pathBase):
+				pathBase = os.path.join(os.getenv("APPDATA"), *commonPath)
+			
 			self.pathDemocapConfig = os.path.join(pathBase, "config")
 			self.pathDemocapOverlay = os.path.join(pathBase, "overlay")
 			self.pathDemocapCapture = os.path.join(pathBase, "capture")
+			
 		elif platform.system() == "Darwin":
 			pathBase = os.path.expanduser("~/.config/delauncher/games/e31f1c11-3ca6-c66b-adca-95484bedfc1f")
 			self.pathDemocapConfig = os.path.join(pathBase, "config")
 			self.pathDemocapOverlay = os.path.join(pathBase, "overlay")
 			self.pathDemocapCapture = os.path.join(pathBase, "capture")
+			
 		else:
 			pathBase = os.path.expanduser("~/.config/delauncher/games/e31f1c11-3ca6-c66b-adca-95484bedfc1f")
 			self.pathDemocapConfig = os.path.join(pathBase, "config")
