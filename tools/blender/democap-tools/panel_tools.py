@@ -112,7 +112,7 @@ class DemocapToolsPanelProperties(bpy.types.PropertyGroup):
 class LIST_OT_DemcaBrowserChdir(bpy.types.Operator):
 	"""Descent file listing."""
 	bl_idname = "democaptools_demcabrowser.changedirectory"
-	bl_label = "Descent file listing"
+	bl_label = "Change directory in file listing"
 	
 	path: bpy.props.StringProperty(default="")
 	
