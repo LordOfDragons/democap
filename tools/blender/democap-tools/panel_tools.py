@@ -62,6 +62,8 @@ class DemcaBrowserSelectionInfo(bpy.types.PropertyGroup):
 	playtime: bpy.props.FloatProperty("Playtime", default=0, precision=1, soft_min=0, min=0, soft_max=10)
 	frameRate: bpy.props.IntProperty("Framerate", default=0, soft_min=15, min=0, soft_max=90)
 	pathAnimation: bpy.props.StringProperty(name="Path Animation", default="")
+	pathDevicesRig: bpy.props.StringProperty(name="Path Devices Rig", default="")
+	pathDevicesAnimation: bpy.props.StringProperty(name="Path Devices Animation", default="")
 
 def DemcaBrowser_SelectionChanged(self, context):
 	dtprops = context.window_manager.democaptools_properties
@@ -80,6 +82,8 @@ def DemcaBrowser_SelectionChanged(self, context):
 				dtprops.browserSelectionInfo.playtime = demca.playtime
 				dtprops.browserSelectionInfo.frameRate = demca.frameRate
 				dtprops.browserSelectionInfo.pathAnimation = demca.pathAnimation
+				dtprops.browserSelectionInfo.pathDevicesRig = demca.pathDevicesRig
+				dtprops.browserSelectionInfo.pathDevicesAnimation = demca.pathDevicesAnimation
 				return
 	
 	dtprops.browserSelectionInfo.filename = ""
@@ -89,6 +93,8 @@ def DemcaBrowser_SelectionChanged(self, context):
 	dtprops.browserSelectionInfo.playtime = 0
 	dtprops.browserSelectionInfo.frameRate = 0
 	dtprops.browserSelectionInfo.pathAnimation = ""
+	dtprops.browserSelectionInfo.pathDevicesRig = ""
+	dtprops.browserSelectionInfo.pathDevicesAnimation = ""
 
 def DemocapToolsPanelProperties_CurrentDirectory_Update(self, context):
 	Configuration.get().setDemcaBrowserCurrentDirectory(self.currentDirectory)
@@ -168,37 +174,79 @@ class LIST_OT_DemcaBrowserImportAnimation(bpy.types.Operator):
 	
 	@classmethod
 	def poll(cls, context):
-		return (context.active_object != None
-			and context.active_object.type == 'ARMATURE'
-			and context.window_manager.democaptools_filelistdemca_index >= 0
-			and context.window_manager.democaptools_filelistdemca_index
-				< len(context.window_manager.democaptools_filelistdemca))
+		if context.active_object and context.active_object.type == 'ARMATURE':
+			dtlist = context.window_manager.democaptools_filelistdemca
+			index = context.window_manager.democaptools_filelistdemca_index
+			dtprops = context.window_manager.democaptools_properties
+			if index >= 0 and index < len(dtlist):
+				if not dtlist[index].isDirectory:
+					return dtprops.browserSelectionInfo.pathAnimation
+		return False
+	
+	def execute(self, context):
+		if context.active_object and context.active_object.type == 'ARMATURE':
+			dtlist = context.window_manager.democaptools_filelistdemca
+			index = context.window_manager.democaptools_filelistdemca_index
+			dtprops = context.window_manager.democaptools_properties
+			if index >= 0 and index < len(dtlist):
+				if not dtlist[index].isDirectory:
+					bpy.ops.dragengine.import_animation('EXEC_DEFAULT', filepath=Demca.getAbsPath(
+						dtlist[index].path, dtprops.browserSelectionInfo.pathAnimation))
+		return {'FINISHED'}
+
+class LIST_OT_DemcaBrowserImportDevicesRig(bpy.types.Operator):
+	"""Import Devices Rig."""
+	bl_idname = "democaptools_demcabrowser.importdevicesrig"
+	bl_label = "Import Devices Rig"
+	
+	@classmethod
+	def poll(cls, context):
+		dtlist = context.window_manager.democaptools_filelistdemca
+		index = context.window_manager.democaptools_filelistdemca_index
+		dtprops = context.window_manager.democaptools_properties
+		if index >= 0 and index < len(dtlist):
+			if not dtlist[index].isDirectory:
+				return dtprops.browserSelectionInfo.pathDevicesRig
+		return False
 	
 	def execute(self, context):
 		dtlist = context.window_manager.democaptools_filelistdemca
 		index = context.window_manager.democaptools_filelistdemca_index
 		dtprops = context.window_manager.democaptools_properties
-		
 		if index >= 0 and index < len(dtlist):
 			if not dtlist[index].isDirectory:
-				path = dtprops.browserSelectionInfo.pathAnimation
-				if path.startswith("/"):
-					components = path[1:].split("/")
-					print(components)
-					if components[0] == "capture":
-						path = os.path.join(Configuration.get().pathDemocapCapture, *components[1:])
-					elif components[0] == "config":
-						path = os.path.join(Configuration.get().pathDemocapConfig, *components[1:])
-					else:
-						path = os.path.join(Configuration.get().pathDemocapOverlay, *components)
-				else:
-					# we have to find the project file to find the right path
-					basePath = os.path.split(dtlist[index].path)[0]
-					#while basePath:
-					#	
-				
-				bpy.ops.dragengine.import_animation('EXEC_DEFAULT', filepath=path)
-		
+				if dtprops.browserSelectionInfo.pathDevicesRig:
+					bpy.ops.object.mode_set(mode='OBJECT')
+					bpy.ops.dragengine.import_rig('EXEC_DEFAULT', filepath=Demca.getAbsPath(
+						dtlist[index].path, dtprops.browserSelectionInfo.pathDevicesRig))
+		return {'FINISHED'}
+
+class LIST_OT_DemcaBrowserImportDevicesAnimation(bpy.types.Operator):
+	"""Import Devices Rig."""
+	bl_idname = "democaptools_demcabrowser.importdevicesanimation"
+	bl_label = "Import Devices Animation"
+	
+	@classmethod
+	def poll(cls, context):
+		if context.active_object and context.active_object.type == 'ARMATURE':
+			dtlist = context.window_manager.democaptools_filelistdemca
+			index = context.window_manager.democaptools_filelistdemca_index
+			dtprops = context.window_manager.democaptools_properties
+			if index >= 0 and index < len(dtlist):
+				if not dtlist[index].isDirectory:
+					return dtprops.browserSelectionInfo.pathDevicesAnimation
+		return False
+	
+	def execute(self, context):
+		if context.active_object and context.active_object.type == 'ARMATURE':
+			dtlist = context.window_manager.democaptools_filelistdemca
+			index = context.window_manager.democaptools_filelistdemca_index
+			dtprops = context.window_manager.democaptools_properties
+			if index >= 0 and index < len(dtlist):
+				if not dtlist[index].isDirectory:
+					if dtprops.browserSelectionInfo.pathDevicesAnimation:
+						bpy.ops.dragengine.import_animation('EXEC_DEFAULT', filepath=Demca.getAbsPath(
+							dtlist[index].path, dtprops.browserSelectionInfo.pathDevicesAnimation))
 		return {'FINISHED'}
 
 class VIEW3D_PT_DemocapTools(bpy.types.Panel):
@@ -275,6 +323,8 @@ class VIEW3D_PT_DemocapToolsDemcaBrowser(bpy.types.Panel):
 		# import
 		column = layout.row().column(align=True)
 		column.operator("democaptools_demcabrowser.importanimation", icon='ACTION')
+		column.operator("democaptools_demcabrowser.importdevicesrig", icon='ARMATURE_DATA')
+		column.operator("democaptools_demcabrowser.importdevicesanimation", icon='ACTION')
 
 
 def panelToolsRegister():
@@ -285,6 +335,8 @@ def panelToolsRegister():
 	registerClass(LIST_OT_DemcaBrowserChdir)
 	registerClass(LIST_OT_DemcaBrowserScanFiles)
 	registerClass(LIST_OT_DemcaBrowserImportAnimation)
+	registerClass(LIST_OT_DemcaBrowserImportDevicesRig)
+	registerClass(LIST_OT_DemcaBrowserImportDevicesAnimation)
 	registerClass(VIEW3D_PT_DemocapTools)
 	registerClass(VIEW3D_PT_DemocapToolsDemcaBrowser)
 	

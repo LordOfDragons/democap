@@ -29,6 +29,7 @@ import traceback
 from datetime import datetime
 
 from .utils import registerClass
+from .configuration import Configuration
 
 class Demca:
 	def __init__(self, path):
@@ -57,7 +58,45 @@ class Demca:
 			self.playtime = float(nodeAnimation.find("playtime", ns).text)
 			self.frameRate = int(nodeAnimation.find("frameRate", ns).text)
 			
+			nodeDevices = root.find("capturedAnimationDevices", ns)
+			if nodeDevices:
+				self.pathDevicesRig = nodeDevices.find("pathRig", ns).text
+				self.pathDevicesAnimation = nodeDevices.find("pathAnimation", ns).text
+			else:
+				self.pathDevicesRig = ""
+				self.pathDevicesAnimation = ""
+			
 			self.success = True
 		except Exception:
 			self.success = False
 			traceback.print_exc()
+	
+	@classmethod
+	def getAbsPath(self, pathDemca, relativePath):
+		path = relativePath
+		
+		if path.startswith("/"):
+			components = path[1:].split("/")
+			print(components)
+			if components[0] == "capture":
+				path = os.path.join(Configuration.get().pathDemocapCapture, *components[1:])
+			elif components[0] == "config":
+				path = os.path.join(Configuration.get().pathDemocapConfig, *components[1:])
+			else:
+				path = os.path.join(Configuration.get().pathDemocapOverlay, *components)
+		else:
+			# we have to find the project file to find the right path
+			basePath = os.path.split(pathDemca)[0]
+			while basePath:
+				parentDir = os.path.split(basePath)[0]
+				if basePath.endswith("-data"):
+					if os.path.exists(os.path.join(parentDir, "{}.demcp".format(basePath[0:-5]))):
+						break
+				basePath = parentDir
+			
+			if basePath:
+				path = os.path.join(basePath, path)
+			else:
+				raise Exception("Failed finding project file")
+		
+		return path
