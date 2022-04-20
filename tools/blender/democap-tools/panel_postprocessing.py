@@ -34,6 +34,7 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
 	"""Add correction bones."""
 	bl_idname = "democaptools.addcorrectionbones"
 	bl_label = "Add correction bones"
+	bl_description = "Add correction bones for selected bones"
 	
 	boneGroupName = "DEMoCap Correction"
 	scaleLength = 0.65
@@ -171,16 +172,20 @@ class VIEW3D_PT_DemocapToolsPostProcessing(bpy.types.Panel):
 		
 		layout = self.layout
 		
-		column = layout.row().column(align=True)
+		# correction bones
+		layout.row().label(text="Correction Bones", icon='BONE_DATA')
 		
-		operator = column.operator("democaptools.addcorrectionbones", text="Add Correction Rot", icon='BONE_DATA')
+		row = layout.row().column(align=True).row(align=True)
+		
+		operator = row.operator("democaptools.addcorrectionbones", text="Add Rot")
 		operator.adjustRotation = True
 		operator.adjustLocation = False
 		
-		operator = column.operator("democaptools.addcorrectionbones", text="Add Correction Rot+Loc", icon='BONE_DATA')
+		operator = row.operator("democaptools.addcorrectionbones", text="Add Rot+Loc")
 		operator.adjustRotation = True
 		operator.adjustLocation = True
 		
+		column = layout.row().column(align=True)
 		column.operator("democaptools.copybonetransform", text="Copy Bone Matrices", icon='COPYDOWN')
 		column.operator("democaptools.aligncorrectionbones", text="Align Correction Bones", icon='PASTEDOWN')
 
@@ -209,6 +214,9 @@ class ARMATURE_OT_CopyBoneTransform(bpy.types.Operator):
 			and context.selected_pose_bones
 			and len(context.selected_pose_bones) > 0):
 			
+			boneNamePrefix = ARMATURE_OT_AddCorrectionBones.boneNamePrefix
+			pose = context.active_object.pose
+			
 			copybuffer = context.window_manager.democaptools_copybuffer_bonetransforms
 			copybuffer.clear()
 			
@@ -216,6 +224,15 @@ class ARMATURE_OT_CopyBoneTransform(bpy.types.Operator):
 				bone = copybuffer.add()
 				bone.name = selectedBone.name
 				bone.matrix = flatten(selectedBone.matrix)
+				
+				# if this is a correction bone also copy the original bone for convenience
+				if selectedBone.name.startswith(boneNamePrefix):
+					stateName = selectedBone.name[len(boneNamePrefix):]
+					if stateName in pose.bones:
+						selectedBone = pose.bones[stateName]
+						bone = copybuffer.add()
+						bone.name = selectedBone.name
+						bone.matrix = flatten(selectedBone.matrix)
 		return {'FINISHED'}
 
 class ARMATURE_OT_AlignCorrectionBones(bpy.types.Operator):
