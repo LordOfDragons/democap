@@ -252,8 +252,8 @@ class VIEW3D_PT_DemocapToolsDemcaBrowser(bpy.types.Panel):
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
 	bl_category = 'DEMoCap'
-	bl_parent_id = "VIEW3D_PT_DemocapTools"
 	bl_label = "DEMCA Browser"
+	bl_description = "DEMoCap Tools"
 	
 	def draw(self, context):
 		config = Configuration.get()
@@ -281,7 +281,7 @@ class VIEW3D_PT_DemocapToolsDemcaBrowser(bpy.types.Panel):
 		# information
 		selinfo = dtprops.browserSelectionInfo
 		
-		layout.row().label(text="DEMCA Information:")
+		layout.row().label(text="DEMCA Information:", icon='INFO')
 		column = layout.row().column(align=True)
 		
 		row = column.row()
@@ -311,7 +311,7 @@ class VIEW3D_PT_DemocapToolsDemcaBrowser(bpy.types.Panel):
 		column.operator("democaptools_demcabrowser.importdevicesanimation", icon='ACTION')
 
 
-def demcaBrowserRegister():
+def panelDemcaBrowserRegister():
 	registerClass(DemcaBrowserItem)
 	registerClass(LIST_UL_DemcaBrowser)
 	registerClass(DemcaBrowserSelectionInfo)

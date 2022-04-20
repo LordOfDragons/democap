@@ -41,15 +41,13 @@ import bpy
 import os
 
 from .configuration import Configuration
-from .panel_tools import panelToolsRegister
-from .demca_browser import demcaBrowserRegister
-from .panel_postprocessing import panelPostProcessingRegister
+from .panel_demca_browser import panelDemcaBrowserRegister
+from .panel_correctionbones import panelCorrectionBonesRegister
 
 def register():
 	Configuration.get()
-	panelToolsRegister()
-	demcaBrowserRegister()
-	panelPostProcessingRegister()
+	panelDemcaBrowserRegister()
+	panelCorrectionBonesRegister()
 	
 def unregister():
 	pass

@@ -150,12 +150,12 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
 		
 		return {'FINISHED'}
 
-class VIEW3D_PT_DemocapToolsPostProcessing(bpy.types.Panel):
+class VIEW3D_PT_DemocapToolsCorrectionBones(bpy.types.Panel):
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
 	bl_category = 'DEMoCap'
-	bl_parent_id = "VIEW3D_PT_DemocapTools"
-	bl_label = "Post Processing"
+	bl_label = "Correction Bones"
+	bl_description = "DEMoCap Tools"
 	
 	def draw(self, context):
 		config = Configuration.get()
@@ -165,10 +165,7 @@ class VIEW3D_PT_DemocapToolsPostProcessing(bpy.types.Panel):
 		layout = self.layout
 		
 		# correction bones
-		column = layout.row().column(align=True)
-		column.label(text="Correction Bones", icon='BONE_DATA')
-		
-		row = column.row(align=True)
+		row = layout.row(align=True)
 		row.operator("democaptools.addcorrectionbones", text="Add Rot").adjustLocation = False
 		row.operator("democaptools.addcorrectionbones", text="Add Rot+Loc").adjustLocation = True
 		
@@ -294,9 +291,9 @@ class ARMATURE_OT_AlignCorrectionBones(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-def panelPostProcessingRegister():
+def panelCorrectionBonesRegister():
 	registerClass(ARMATURE_OT_AddCorrectionBones)
-	registerClass(VIEW3D_PT_DemocapToolsPostProcessing)
+	registerClass(VIEW3D_PT_DemocapToolsCorrectionBones)
 	registerClass(CopyBufferBoneTransform)
 	registerClass(ARMATURE_OT_CopyBoneTransform)
 	registerClass(ARMATURE_OT_AlignCorrectionBones)
