@@ -30,7 +30,7 @@ bl_info = {
 	"blender": (2, 90, 0),
 	"location": "View3D > Tools > DEMoCap",
 	"warning": "",
-	"wiki_url": "https://developer.dragondreams.ch/wiki/doku.php/democap:main",
+	"wiki_url": "https://developer.dragondreams.ch/wiki/doku.php/democap:blender_democaptools",
 	"tracker_url": "https://github.com/LordOfDragons/democap/issues",
 	"link": "https://dragondreams.ch/?page_id=938",
 	"support": "COMMUNITY",
@@ -42,10 +42,14 @@ import os
 
 from .configuration import Configuration
 from .panel_tools import panelToolsRegister
+from .demca_browser import demcaBrowserRegister
+from .panel_postprocessing import panelPostProcessingRegister
 
 def register():
 	Configuration.get()
 	panelToolsRegister()
+	demcaBrowserRegister()
+	panelPostProcessingRegister()
 	
 def unregister():
 	pass

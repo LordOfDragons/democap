@@ -35,3 +35,7 @@ def unregisterRegisteredClasses():
 	global registeredClasses
 	for cls in reversed(registeredClasses):
 		bpy.utils.unregister_class(cls)
+
+def flatten(mat):
+	dim = len(mat)
+	return [mat[j][i] for i in range(dim) for j in range(dim)]
