@@ -39,11 +39,10 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
 	boneGroupName = "DEMoCap Correction"
 	scaleLength = 0.65
 	boneNamePrefix = "ik.mocap."
-	constraintNameAdjustLocation = "DEMoCap Correction Location"
 	constraintNameAdjustRotation = "DEMoCap Correction Rotation"
+	constraintNameAdjustTransform = "DEMoCap Correction Transform"
 	
 	adjustLocation: bpy.props.BoolProperty(name="Adjust Location", default=False)
-	adjustRotation: bpy.props.BoolProperty(name="Adjust Rotation", default=True)
 	
 	@classmethod
 	def poll(cls, context):
@@ -63,14 +62,13 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
 			boneGroupName = ARMATURE_OT_AddCorrectionBones.boneGroupName
 			scaleLength = ARMATURE_OT_AddCorrectionBones.scaleLength
 			boneNamePrefix = ARMATURE_OT_AddCorrectionBones.boneNamePrefix
-			constraintNameAdjustLocation = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustLocation
+			constraintNameAdjustTransform = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustTransform
 			constraintNameAdjustRotation = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustRotation
 			
 			object = context.active_object
 			armature = object.data
 			selectedBones = list(context.selected_pose_bones[:])
 			adjustLocation = self.adjustLocation
-			adjustRotation = self.adjustRotation
 			
 			# add edit bone
 			bpy.ops.object.mode_set(mode='EDIT')
@@ -121,7 +119,18 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
 			for addedBone in addedBones:
 				poseBone = pose.bones[addedBone[0]]
 				
-				if adjustRotation:
+				if adjustLocation:
+					constraint = poseBone.constraints.new('COPY_TRANSFORMS')
+					constraint.influence = 1
+					constraint.name = constraintNameAdjustTransform
+					constraint.owner_space = 'LOCAL'
+					constraint.show_expanded = True
+					constraint.target_space = 'LOCAL'
+					constraint.target = object
+					constraint.subtarget = addedBone[1]
+					constraint.mix_mode = 'BEFORE'
+					constraint.head_tail = 0
+				else:
 					constraint = poseBone.constraints.new('COPY_ROTATION')
 					constraint.influence = 1
 					constraint.name = constraintNameAdjustRotation
@@ -138,23 +147,6 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
 					constraint.invert_y = False
 					constraint.invert_z = False
 					constraint.mix_mode = 'BEFORE'
-				
-				if adjustLocation:
-					constraint = poseBone.constraints.new('COPY_LOCATION')
-					constraint.influence = 1
-					constraint.name = constraintNameAdjustLocation
-					constraint.owner_space = 'LOCAL'
-					constraint.show_expanded = True
-					constraint.target_space = 'LOCAL'
-					constraint.target = object
-					constraint.subtarget = addedBone[1]
-					constraint.use_x = True
-					constraint.use_y = True
-					constraint.use_z = True
-					constraint.invert_x = False
-					constraint.invert_y = False
-					constraint.invert_z = False
-					constraint.use_offset = True
 		
 		return {'FINISHED'}
 
@@ -173,17 +165,12 @@ class VIEW3D_PT_DemocapToolsPostProcessing(bpy.types.Panel):
 		layout = self.layout
 		
 		# correction bones
-		layout.row().label(text="Correction Bones", icon='BONE_DATA')
+		column = layout.row().column(align=True)
+		column.label(text="Correction Bones", icon='BONE_DATA')
 		
-		row = layout.row().column(align=True).row(align=True)
-		
-		operator = row.operator("democaptools.addcorrectionbones", text="Add Rot")
-		operator.adjustRotation = True
-		operator.adjustLocation = False
-		
-		operator = row.operator("democaptools.addcorrectionbones", text="Add Rot+Loc")
-		operator.adjustRotation = True
-		operator.adjustLocation = True
+		row = column.row(align=True)
+		row.operator("democaptools.addcorrectionbones", text="Add Rot").adjustLocation = False
+		row.operator("democaptools.addcorrectionbones", text="Add Rot+Loc").adjustLocation = True
 		
 		column = layout.row().column(align=True)
 		column.operator("democaptools.copybonetransform", text="Copy Bone Matrices", icon='COPYDOWN')
@@ -265,7 +252,7 @@ class ARMATURE_OT_AlignCorrectionBones(bpy.types.Operator):
 			and len(context.window_manager.democaptools_copybuffer_bonetransforms) > 0):
 			
 			boneNamePrefix = ARMATURE_OT_AddCorrectionBones.boneNamePrefix
-			constraintNameAdjustLocation = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustLocation
+			constraintNameAdjustTransform = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustTransform
 			constraintNameAdjustRotation = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustRotation
 			
 			copybuffer = {}
@@ -299,7 +286,7 @@ class ARMATURE_OT_AlignCorrectionBones(bpy.types.Operator):
 				boneState.correctedBone.matrix = (boneState.matrix
 					@ boneState.orgBone.matrix.inverted() @ boneState.correctedBone.matrix)
 				
-				if not [x for x in boneState.orgBone.constraints if x.name == constraintNameAdjustLocation]:
+				if not [x for x in boneState.orgBone.constraints if x.name == constraintNameAdjustTransform]:
 					boneState.correctedBone.location = mathutils.Vector()
 				
 				context.view_layer.update()
