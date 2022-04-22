@@ -112,6 +112,7 @@ class LIST_OT_DemcaBrowserChdir(bpy.types.Operator):
 	"""Change directory in file listing."""
 	bl_idname = "democaptools_demcabrowser.changedirectory"
 	bl_label = "Change directory in file listing"
+	bl_options = {'INTERNAL'}
 	
 	path: bpy.props.StringProperty(default="")
 	
@@ -126,6 +127,7 @@ class LIST_OT_DemcaBrowserScanFiles(bpy.types.Operator):
 	"""Update file listing."""
 	bl_idname = "democaptools_demcabrowser.scanfiles"
 	bl_label = "Update file listing"
+	bl_options = {'INTERNAL'}
 	
 	def execute(self, context):
 		dtlist = context.window_manager.democaptools_filelistdemca
@@ -170,6 +172,7 @@ class LIST_OT_DemcaBrowserImportAnimation(bpy.types.Operator):
 	"""Import Animation."""
 	bl_idname = "democaptools_demcabrowser.importanimation"
 	bl_label = "Import Animation"
+	bl_options = {'REGISTER', 'UNDO'}
 	
 	@classmethod
 	def poll(cls, context):
@@ -183,20 +186,27 @@ class LIST_OT_DemcaBrowserImportAnimation(bpy.types.Operator):
 		return False
 	
 	def execute(self, context):
-		if context.active_object and context.active_object.type == 'ARMATURE':
-			dtlist = context.window_manager.democaptools_filelistdemca
-			index = context.window_manager.democaptools_filelistdemca_index
-			dtprops = context.window_manager.democaptools_properties
-			if index >= 0 and index < len(dtlist):
-				if not dtlist[index].isDirectory:
-					bpy.ops.dragengine.import_animation('EXEC_DEFAULT', filepath=Demca.getAbsPath(
-						dtlist[index].path, dtprops.browserSelectionInfo.pathAnimation))
+		if not context.active_object or context.active_object.type != 'ARMATURE':
+			return {'CANCELLED'}
+			
+		dtlist = context.window_manager.democaptools_filelistdemca
+		index = context.window_manager.democaptools_filelistdemca_index
+		dtprops = context.window_manager.democaptools_properties
+		if index < 0 or index >= len(dtlist):
+			return {'CANCELLED'}
+			
+		if dtlist[index].isDirectory:
+			return {'CANCELLED'}
+			
+		bpy.ops.dragengine.import_animation('EXEC_DEFAULT', filepath=Demca.getAbsPath(
+			dtlist[index].path, dtprops.browserSelectionInfo.pathAnimation))
 		return {'FINISHED'}
 
 class LIST_OT_DemcaBrowserImportDevicesRig(bpy.types.Operator):
 	"""Import Devices Rig."""
 	bl_idname = "democaptools_demcabrowser.importdevicesrig"
 	bl_label = "Import Devices Rig"
+	bl_options = {'REGISTER', 'UNDO'}
 	
 	@classmethod
 	def poll(cls, context):
@@ -212,18 +222,25 @@ class LIST_OT_DemcaBrowserImportDevicesRig(bpy.types.Operator):
 		dtlist = context.window_manager.democaptools_filelistdemca
 		index = context.window_manager.democaptools_filelistdemca_index
 		dtprops = context.window_manager.democaptools_properties
-		if index >= 0 and index < len(dtlist):
-			if not dtlist[index].isDirectory:
-				if dtprops.browserSelectionInfo.pathDevicesRig:
-					bpy.ops.object.mode_set(mode='OBJECT')
-					bpy.ops.dragengine.import_rig('EXEC_DEFAULT', filepath=Demca.getAbsPath(
-						dtlist[index].path, dtprops.browserSelectionInfo.pathDevicesRig))
+		if index < 0 or index >= len(dtlist):
+			return {'CANCELLED'}
+			
+		if dtlist[index].isDirectory:
+			return {'CANCELLED'}
+			
+		if not dtprops.browserSelectionInfo.pathDevicesRig:
+			return {'CANCELLED'}
+			
+		bpy.ops.object.mode_set(mode='OBJECT')
+		bpy.ops.dragengine.import_rig('EXEC_DEFAULT', filepath=Demca.getAbsPath(
+			dtlist[index].path, dtprops.browserSelectionInfo.pathDevicesRig))
 		return {'FINISHED'}
 
 class LIST_OT_DemcaBrowserImportDevicesAnimation(bpy.types.Operator):
 	"""Import Devices Rig."""
 	bl_idname = "democaptools_demcabrowser.importdevicesanimation"
 	bl_label = "Import Devices Animation"
+	bl_options = {'REGISTER', 'UNDO'}
 	
 	@classmethod
 	def poll(cls, context):
@@ -237,15 +254,23 @@ class LIST_OT_DemcaBrowserImportDevicesAnimation(bpy.types.Operator):
 		return False
 	
 	def execute(self, context):
-		if context.active_object and context.active_object.type == 'ARMATURE':
-			dtlist = context.window_manager.democaptools_filelistdemca
-			index = context.window_manager.democaptools_filelistdemca_index
-			dtprops = context.window_manager.democaptools_properties
-			if index >= 0 and index < len(dtlist):
-				if not dtlist[index].isDirectory:
-					if dtprops.browserSelectionInfo.pathDevicesAnimation:
-						bpy.ops.dragengine.import_animation('EXEC_DEFAULT', filepath=Demca.getAbsPath(
-							dtlist[index].path, dtprops.browserSelectionInfo.pathDevicesAnimation))
+		if not context.active_object or context.active_object.type != 'ARMATURE':
+			return {'CANCELLED'}
+		
+		dtlist = context.window_manager.democaptools_filelistdemca
+		index = context.window_manager.democaptools_filelistdemca_index
+		dtprops = context.window_manager.democaptools_properties
+		if index < 0 or index >= len(dtlist):
+			return {'CANCELLED'}
+		
+		if dtlist[index].isDirectory:
+			return {'CANCELLED'}
+		
+		if not dtprops.browserSelectionInfo.pathDevicesAnimation:
+			return {'CANCELLED'}
+			
+		bpy.ops.dragengine.import_animation('EXEC_DEFAULT', filepath=Demca.getAbsPath(
+			dtlist[index].path, dtprops.browserSelectionInfo.pathDevicesAnimation))
 		return {'FINISHED'}
 
 class VIEW3D_PT_DemocapToolsDemcaBrowser(bpy.types.Panel):

@@ -35,14 +35,15 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
 	bl_idname = "democaptools.addcorrectionbones"
 	bl_label = "Add correction bones"
 	bl_description = "Add correction bones for selected bones"
+	bl_options = {'REGISTER', 'UNDO'}
 	
 	boneGroupName = "DEMoCap Correction"
-	scaleLength = 0.65
 	boneNamePrefix = "ik.mocap."
 	constraintNameAdjustRotation = "DEMoCap Correction Rotation"
 	constraintNameAdjustTransform = "DEMoCap Correction Transform"
 	
 	adjustLocation: bpy.props.BoolProperty(name="Adjust Location", default=False)
+	scaleLength: bpy.props.FloatProperty(name="Scale Length", default=0.65, min=0.01, soft_min=0.1, soft_max=1)
 	
 	@classmethod
 	def poll(cls, context):
@@ -53,100 +54,101 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
 			and len(context.selected_pose_bones) > 0)
 	
 	def execute(self, context):
-		if (context.active_object
-			and context.active_object.type == 'ARMATURE'
-			and context.mode == 'POSE'
-			and context.selected_pose_bones
-			and len(context.selected_pose_bones) > 0):
+		if (not context.active_object
+			or context.active_object.type != 'ARMATURE'
+			or context.mode != 'POSE'
+			or not context.selected_pose_bones
+			or len(context.selected_pose_bones) == 0):
+			return {'CANCELLED'}
+		
+		boneGroupName = ARMATURE_OT_AddCorrectionBones.boneGroupName
+		boneNamePrefix = ARMATURE_OT_AddCorrectionBones.boneNamePrefix
+		constraintNameAdjustTransform = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustTransform
+		constraintNameAdjustRotation = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustRotation
+		
+		object = context.active_object
+		armature = object.data
+		selectedBones = list(context.selected_pose_bones[:])
+		adjustLocation = self.adjustLocation
+		scaleLength = self.scaleLength
+		
+		# add edit bone
+		bpy.ops.object.mode_set(mode='EDIT')
+		bpy.ops.armature.select_all(action='DESELECT')
 			
-			boneGroupName = ARMATURE_OT_AddCorrectionBones.boneGroupName
-			scaleLength = ARMATURE_OT_AddCorrectionBones.scaleLength
-			boneNamePrefix = ARMATURE_OT_AddCorrectionBones.boneNamePrefix
-			constraintNameAdjustTransform = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustTransform
-			constraintNameAdjustRotation = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustRotation
+		addedBones = []
+		
+		for orgPoseBone in selectedBones:
+			orgEditBone = armature.edit_bones[orgPoseBone.name]
+			newName = boneNamePrefix + orgPoseBone.name
+			if newName in armature.edit_bones:
+				continue
 			
-			object = context.active_object
-			armature = object.data
-			selectedBones = list(context.selected_pose_bones[:])
-			adjustLocation = self.adjustLocation
+			bone = armature.edit_bones.new(newName)
+			bone.head = orgEditBone.head
+			bone.tail = orgEditBone.tail
+			bone.roll = orgEditBone.roll
+			bone.length = orgEditBone.length * scaleLength
+			bone.layers = orgEditBone.layers
+			bone.parent = orgEditBone.parent
+			bone.select = True
+			addedBones.append((orgPoseBone.name, newName))
+		
+		# add pose bone to bone group
+		bpy.ops.object.mode_set(mode='POSE')
+		
+		pose = object.pose
+		
+		if boneGroupName in pose.bone_groups:
+			boneGroup = pose.bone_groups[boneGroupName]
+		else:
+			colorSets = ['THEME{:02d}'.format(x) for x in range(1, 21)]
+			for boneGroup in pose.bone_groups:
+				if boneGroup.color_set in colorSets:
+					colorSets.remove(colorSets.index(boneGroup.color_set))
 			
-			# add edit bone
-			bpy.ops.object.mode_set(mode='EDIT')
-			bpy.ops.armature.select_all(action='DESELECT')
-				
-			addedBones = []
+			if not colorSets:
+				colorSets.add('THEME01')
 			
-			for orgPoseBone in selectedBones:
-				orgEditBone = armature.edit_bones[orgPoseBone.name]
-				newName = boneNamePrefix + orgPoseBone.name
-				if newName in armature.edit_bones:
-					continue
-				
-				bone = armature.edit_bones.new(newName)
-				bone.head = orgEditBone.head
-				bone.tail = orgEditBone.tail
-				bone.roll = orgEditBone.roll
-				bone.length = orgEditBone.length * scaleLength
-				bone.layers = orgEditBone.layers
-				bone.parent = orgEditBone.parent
-				bone.select = True
-				addedBones.append((orgPoseBone.name, newName))
+			boneGroup = pose.bone_groups.new(name=boneGroupName)
+			boneGroup.color_set = next(iter(colorSets))
+		
+		for addedBone in addedBones:
+			poseBone = pose.bones[addedBone[1]]
+			poseBone.bone_group = boneGroup
+		
+		# add constraint to original pose bone
+		for addedBone in addedBones:
+			poseBone = pose.bones[addedBone[0]]
 			
-			# add pose bone to bone group
-			bpy.ops.object.mode_set(mode='POSE')
-			
-			pose = object.pose
-			
-			if boneGroupName in pose.bone_groups:
-				boneGroup = pose.bone_groups[boneGroupName]
+			if adjustLocation:
+				constraint = poseBone.constraints.new('COPY_TRANSFORMS')
+				constraint.influence = 1
+				constraint.name = constraintNameAdjustTransform
+				constraint.owner_space = 'LOCAL'
+				constraint.show_expanded = True
+				constraint.target_space = 'LOCAL'
+				constraint.target = object
+				constraint.subtarget = addedBone[1]
+				constraint.mix_mode = 'BEFORE'
+				constraint.head_tail = 0
 			else:
-				colorSets = ['THEME{:02d}'.format(x) for x in range(1, 21)]
-				for boneGroup in pose.bone_groups:
-					if boneGroup.color_set in colorSets:
-						colorSets.remove(colorSets.index(boneGroup.color_set))
-				
-				if not colorSets:
-					colorSets.add('THEME01')
-				
-				boneGroup = pose.bone_groups.new(name=boneGroupName)
-				boneGroup.color_set = next(iter(colorSets))
-			
-			for addedBone in addedBones:
-				poseBone = pose.bones[addedBone[1]]
-				poseBone.bone_group = boneGroup
-			
-			# add constraint to original pose bone
-			for addedBone in addedBones:
-				poseBone = pose.bones[addedBone[0]]
-				
-				if adjustLocation:
-					constraint = poseBone.constraints.new('COPY_TRANSFORMS')
-					constraint.influence = 1
-					constraint.name = constraintNameAdjustTransform
-					constraint.owner_space = 'LOCAL'
-					constraint.show_expanded = True
-					constraint.target_space = 'LOCAL'
-					constraint.target = object
-					constraint.subtarget = addedBone[1]
-					constraint.mix_mode = 'BEFORE'
-					constraint.head_tail = 0
-				else:
-					constraint = poseBone.constraints.new('COPY_ROTATION')
-					constraint.influence = 1
-					constraint.name = constraintNameAdjustRotation
-					constraint.owner_space = 'LOCAL'
-					constraint.show_expanded = True
-					constraint.target_space = 'LOCAL'
-					constraint.target = object
-					constraint.subtarget = addedBone[1]
-					constraint.euler_order = 'AUTO'
-					constraint.use_x = True
-					constraint.use_y = True
-					constraint.use_z = True
-					constraint.invert_x = False
-					constraint.invert_y = False
-					constraint.invert_z = False
-					constraint.mix_mode = 'BEFORE'
+				constraint = poseBone.constraints.new('COPY_ROTATION')
+				constraint.influence = 1
+				constraint.name = constraintNameAdjustRotation
+				constraint.owner_space = 'LOCAL'
+				constraint.show_expanded = True
+				constraint.target_space = 'LOCAL'
+				constraint.target = object
+				constraint.subtarget = addedBone[1]
+				constraint.euler_order = 'AUTO'
+				constraint.use_x = True
+				constraint.use_y = True
+				constraint.use_z = True
+				constraint.invert_x = False
+				constraint.invert_y = False
+				constraint.invert_z = False
+				constraint.mix_mode = 'BEFORE'
 		
 		return {'FINISHED'}
 
@@ -192,37 +194,39 @@ class ARMATURE_OT_CopyBoneTransform(bpy.types.Operator):
 			and len(context.selected_pose_bones) > 0)
 	
 	def execute(self, context):
-		if (context.active_object
-			and context.active_object.type == 'ARMATURE'
-			and context.mode == 'POSE'
-			and context.selected_pose_bones
-			and len(context.selected_pose_bones) > 0):
+		if (not context.active_object
+			or context.active_object.type != 'ARMATURE'
+			or context.mode != 'POSE'
+			or not context.selected_pose_bones
+			or len(context.selected_pose_bones) == 0):
+			return {'CANCELLED'}
+		
+		boneNamePrefix = ARMATURE_OT_AddCorrectionBones.boneNamePrefix
+		pose = context.active_object.pose
+		
+		copybuffer = context.window_manager.democaptools_copybuffer_bonetransforms
+		copybuffer.clear()
+		
+		for selectedBone in context.selected_pose_bones:
+			bone = copybuffer.add()
+			bone.name = selectedBone.name
+			bone.matrix = flatten(selectedBone.matrix)
 			
-			boneNamePrefix = ARMATURE_OT_AddCorrectionBones.boneNamePrefix
-			pose = context.active_object.pose
-			
-			copybuffer = context.window_manager.democaptools_copybuffer_bonetransforms
-			copybuffer.clear()
-			
-			for selectedBone in context.selected_pose_bones:
-				bone = copybuffer.add()
-				bone.name = selectedBone.name
-				bone.matrix = flatten(selectedBone.matrix)
-				
-				# if this is a correction bone also copy the original bone for convenience
-				if selectedBone.name.startswith(boneNamePrefix):
-					stateName = selectedBone.name[len(boneNamePrefix):]
-					if stateName in pose.bones:
-						selectedBone = pose.bones[stateName]
-						bone = copybuffer.add()
-						bone.name = selectedBone.name
-						bone.matrix = flatten(selectedBone.matrix)
+			# if this is a correction bone also copy the original bone for convenience
+			if selectedBone.name.startswith(boneNamePrefix):
+				stateName = selectedBone.name[len(boneNamePrefix):]
+				if stateName in pose.bones:
+					selectedBone = pose.bones[stateName]
+					bone = copybuffer.add()
+					bone.name = selectedBone.name
+					bone.matrix = flatten(selectedBone.matrix)
 		return {'FINISHED'}
 
 class ARMATURE_OT_AlignCorrectionBones(bpy.types.Operator):
 	"""Align correction bones using copied bone transforms."""
 	bl_idname = "democaptools.aligncorrectionbones"
 	bl_label = "Align correction bones using copied bone transforms"
+	bl_options = {'REGISTER', 'UNDO'}
 	
 	class BoneState:
 		def __init__(self, orgBone, correctedBone, boneChain, matrix):
@@ -241,53 +245,54 @@ class ARMATURE_OT_AlignCorrectionBones(bpy.types.Operator):
 			and len(context.window_manager.democaptools_copybuffer_bonetransforms) > 0)
 	
 	def execute(self, context):
-		if (context.active_object
-			and context.active_object.type == 'ARMATURE'
-			and context.mode == 'POSE'
-			and context.selected_pose_bones
-			and len(context.selected_pose_bones) > 0
-			and len(context.window_manager.democaptools_copybuffer_bonetransforms) > 0):
+		if (not context.active_object
+			or context.active_object.type != 'ARMATURE'
+			or context.mode != 'POSE'
+			or not context.selected_pose_bones
+			or len(context.selected_pose_bones) == 0
+			or len(context.window_manager.democaptools_copybuffer_bonetransforms) == 0):
+			return {'CANCELLED'}
+		
+		boneNamePrefix = ARMATURE_OT_AddCorrectionBones.boneNamePrefix
+		constraintNameAdjustTransform = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustTransform
+		constraintNameAdjustRotation = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustRotation
+		
+		copybuffer = {}
+		for cb in context.window_manager.democaptools_copybuffer_bonetransforms:
+			copybuffer[cb.name] = cb.matrix
+		
+		pose = context.active_object.pose
+		
+		boneStates = []
+		for correctedBone in context.selected_pose_bones:
+			if not correctedBone.name.startswith(boneNamePrefix):
+				continue
 			
-			boneNamePrefix = ARMATURE_OT_AddCorrectionBones.boneNamePrefix
-			constraintNameAdjustTransform = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustTransform
-			constraintNameAdjustRotation = ARMATURE_OT_AddCorrectionBones.constraintNameAdjustRotation
+			stateName = correctedBone.name[len(boneNamePrefix):]
+			if not stateName in pose.bones or not stateName in copybuffer:
+				continue
 			
-			copybuffer = {}
-			for cb in context.window_manager.democaptools_copybuffer_bonetransforms:
-				copybuffer[cb.name] = cb.matrix
+			orgBone = pose.bones[stateName]
+			boneChain = orgBone.parent_recursive
 			
-			pose = context.active_object.pose
+			insertBefore = len(boneStates)
+			for i in range(len(boneStates)):
+				if orgBone in boneStates[i].boneChain:
+					insertBefore = i
+					break
 			
-			boneStates = []
-			for correctedBone in context.selected_pose_bones:
-				if not correctedBone.name.startswith(boneNamePrefix):
-					continue
-				
-				stateName = correctedBone.name[len(boneNamePrefix):]
-				if not stateName in pose.bones or not stateName in copybuffer:
-					continue
-				
-				orgBone = pose.bones[stateName]
-				boneChain = orgBone.parent_recursive
-				
-				insertBefore = len(boneStates)
-				for i in range(len(boneStates)):
-					if orgBone in boneStates[i].boneChain:
-						insertBefore = i
-						break
-				
-				boneStates.insert(insertBefore, ARMATURE_OT_AlignCorrectionBones.BoneState(
-					orgBone, correctedBone, boneChain, copybuffer[stateName]))
+			boneStates.insert(insertBefore, ARMATURE_OT_AlignCorrectionBones.BoneState(
+				orgBone, correctedBone, boneChain, copybuffer[stateName]))
+		
+		for boneState in boneStates:
+			boneState.correctedBone.matrix = (boneState.matrix
+				@ boneState.orgBone.matrix.inverted() @ boneState.correctedBone.matrix)
 			
-			for boneState in boneStates:
-				boneState.correctedBone.matrix = (boneState.matrix
-					@ boneState.orgBone.matrix.inverted() @ boneState.correctedBone.matrix)
-				
-				if not [x for x in boneState.orgBone.constraints if x.name == constraintNameAdjustTransform]:
-					boneState.correctedBone.location = mathutils.Vector()
-				
-				context.view_layer.update()
+			if not [x for x in boneState.orgBone.constraints if x.name == constraintNameAdjustTransform]:
+				boneState.correctedBone.location = mathutils.Vector()
 			
+			context.view_layer.update()
+		
 		return {'FINISHED'}
 
 
