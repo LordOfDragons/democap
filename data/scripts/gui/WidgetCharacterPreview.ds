@@ -551,12 +551,22 @@ class WidgetCharacterPreview extends Panel
 		stub.setPropertyValueFor("component.rig", pPreviewPreloader.pathRig)
 		stub.setPropertyValueFor("previewAnimation.animation", pPreviewPreloader.pathAnimation)
 		
-		pCharacterPreview = stub.createElement() cast BehaviorElement
-		pGameWorld.addElement(pCharacterPreview)
+		try
+			pCharacterPreview = stub.createElement() cast BehaviorElement
+			
+		catch Exception e
+			GameApp.getGameApp().getConsole().addError("Create preview character failed", e)
+			WindowDialog.message(getWindow(), "Create Preview Character Failed",\
+				e.className().split('.').getAt(-1).toString() + "\n" + e.getReason(), null, null, null)
+		end
 		
-		var ECBPreviewDataQuery.Instance previewDataQuery = ECBPreviewDataQuery.getInstanceIn(pCharacterPreview)
-		if previewDataQuery != null
-			previewDataQuery.setDataQuery(pDataQuery)
+		if pCharacterPreview != null
+			pGameWorld.addElement(pCharacterPreview)
+			
+			var ECBPreviewDataQuery.Instance previewDataQuery = ECBPreviewDataQuery.getInstanceIn(pCharacterPreview)
+			if previewDataQuery != null
+				previewDataQuery.setDataQuery(pDataQuery)
+			end
 		end
 		
 		if pEditor != null
