@@ -1,0 +1,45 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron:  '0 3 * * 0'
+  workflow_dispatch:
+
+jobs:
+  distribute:
+    uses: ./.github/workflows/distribute.yml
+    with:
+      version: nightly
+      artifact: distribution
+
+  upload:
+    needs: [distribute]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Get Distribution
+        uses: actions/download-artifact@v3
+        with:
+          name: distribution
+      
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+      
+      - name: Upload Artifacts
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          draft: false
+          prerelease: true
+          commit: 'main'
+          tag: 'nightly'
+          name: 'DEMoCap Pre-Release Nightly Build'
+          body: |
+            Continuous Nightly Build of DEMoCap.
+            Created: ${{ steps.date.outputs.date }}
+            
+            Builds are potentially unstable. Use at own risk.
+          artifacts: DEMoCap-nightly.delga
