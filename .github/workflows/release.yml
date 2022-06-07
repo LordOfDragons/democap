@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version'
+        required: true
+        type: string
+        default: 'X.Y{.Z}'
+
+jobs:
+  distribute:
+    uses: ./.github/workflows/distribute.yml
+    with:
+      version: ${{ github.event.inputs.version }}
+      artifact: distribution
+
+  upload:
+    needs: [distribute]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Get Distribution
+        uses: actions/download-artifact@v3
+        with:
+          name: distribution
+      
+      - name: Upload Artifacts
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: false
+          artifactErrorsFailBuild: true
+          draft: true
+          prerelease: false
+          commit: 'main'
+          tag: 'v${{ github.event.inputs.version }}'
+          name: 'DEMoCap Pre-Release ${{ github.event.inputs.version }}'
+          body: |
+            ${{ github.event.inputs.version }} Pre-Release of the DEMoCap.
+            
+            All information on: https://developer.dragondreams.ch/wiki/doku.php/democap:main
+            
+            This is a pre-release of DEMoCap. More features and bug fixes will be added before the first official release. The pre-release though can be already used for game development purpose.
+            
+            Requires working installation of Drag[en]gine Game Engine version 1.13 or newer: https://dragondreams.ch/?page_id=152#downloads-dragengine
+          artifacts: DEMoCap-${{ github.event.inputs.version }}.delga
