@@ -1,0 +1,233 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Democap.Characters
+pin Democap.Behaviors
+pin Democap.Elements
+
+pin Dragengine.Networking
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * DEMoCap Network server.
+ */
+public class DNServer implements ServerListener
+	/** Actor ready listener. */
+	public class ActorReadyListener extends WorldSpawnCharacter.DefaultListener
+		private var DNServer pServer
+		
+		public func new(DNServer server)
+			pServer = server
+		end
+		
+		public func void characterChanged(WorldSpawnCharacter wsc)
+			pServer.updateCaptureBoneLayout()
+		end
+		
+		public func void actorReady(WorldSpawnCharacter wsc)
+			pServer.updateCaptureBoneLayout()
+		end
+		
+		public func void actorNotReady(WorldSpawnCharacter wsc)
+			pServer.updateCaptureBoneLayout()
+		end
+		
+		public func void gameWorldChanged(WorldSpawnCharacter wsc)
+			pServer.updateCaptureBoneLayout()
+		end
+	end
+	
+	/** Frame updater. */
+	public class UpdateStates extends FrameUpdateListener
+		private var DNServer pServer
+		
+		public func new(DNServer server)
+			pServer = server
+		end
+		
+		public func void frameUpdate(float elapsed)
+			pServer.update()
+		end
+	end
+	
+	
+	private var Server pServer
+	private var Array pConnections
+	private var DNCaptureBoneLayout pCaptureBoneLayout
+	private var DNCaptureFrame pCaptureFrame
+	private var DNStateRecordPlayback pStateRecordPlayback
+	private var ActorReadyListener pActorReadyListener
+	private var UpdateStates pUpdateStates
+	
+	
+	/** Create server. */
+	public func new()
+		pConnections = Array.new()
+		pCaptureBoneLayout = DNCaptureBoneLayout.new()
+		pCaptureFrame = DNCaptureFrame.new(pCaptureBoneLayout)
+		pStateRecordPlayback = DNStateRecordPlayback.new()
+	end
+	
+	/** Dispose. */
+	public func void dispose()
+		stopListening()
+	end
+	
+	
+	/** Server is listening. */
+	public func bool isListening()
+		return pServer != null
+	end
+	
+	/** Start listening. */
+	public func void listenOn(String address)
+		if pServer != null
+			return
+		end
+		
+		pServer = Server.new()
+		
+		if not pServer.listenOn(address)
+			pServer = null
+			return
+		end
+		
+		pActorReadyListener = ActorReadyListener.new(this)
+		GameApp.getGameApp().getWorldSpawnCharacter().addListener(pActorReadyListener)
+		
+		updateCaptureBoneLayout()
+		
+		pUpdateStates = UpdateStates.new(this)
+	end
+	
+	/** Stop listening. */
+	public func void stopListening()
+		if pServer == null
+			return
+		end
+		
+		if pActorReadyListener != null
+			GameApp.getGameApp().getWorldSpawnCharacter().removeListener(pActorReadyListener)
+			pActorReadyListener = null
+		end
+		
+		if pUpdateStates != null
+			pUpdateStates.giveUp()
+			pUpdateStates = null
+		end
+		
+		pServer.stopListening()
+		pServer = null
+		
+		pConnections.removeAll()
+	end
+	
+	
+	/** Visit connections with block. */
+	public func void forEachConnection(Block ablock)
+		pConnections.forEach(ablock)
+	end
+	
+	/** Remove connection. */
+	public func void removeConnection(DNConnection connection)
+		if pConnections.has(connection)
+			pConnections.remove(connection)
+		end
+	end
+	
+	
+	/** Capture bone layout. */
+	public func DNCaptureBoneLayout getCaptureBoneLayout()
+		return pCaptureBoneLayout
+	end
+	
+	/** Capture frame. */
+	public func DNCaptureFrame getCaptureFrame()
+		return pCaptureFrame
+	end
+	
+	/** State record/playback. */
+	public func DNStateRecordPlayback getStateRecordPlayback()
+		return pStateRecordPlayback
+	end
+	
+	/** Update. */
+	public func void update()
+		if pServer == null
+			return
+		end
+		
+		pStateRecordPlayback.update()
+	end
+	
+	
+	/** Update capture bone layout from active actor if ready otherwise set empty. */
+	public func void updateCaptureBoneLayout()
+		if pServer == null
+			return
+		end
+		
+		pCaptureBoneLayout = DNCaptureBoneLayout.new()
+		
+		var MoCapActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+		if actor != null
+			pCaptureBoneLayout.initCaptureBoneLayout(actor)
+		end
+		pCaptureBoneLayout.updateMessageData()
+		
+		pCaptureFrame = DNCaptureFrame.new(pCaptureBoneLayout)
+		pCaptureFrame.update(actor)
+		pCaptureFrame.updateMessageData()
+		
+		pConnections.forEach(block DNConnection each
+			each.sendCaptureBoneLayout(pCaptureBoneLayout)
+		end)
+	end
+	
+	/** Update capture frame. */
+	public func void updateCaptureFrame()
+		if pServer == null
+			return
+		end
+		
+		var MoCapActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+		if actor == null
+			return
+		end
+		
+		pCaptureFrame.update(actor)
+		pCaptureFrame.updateMessageData()
+		
+		pConnections.forEach(block DNConnection each
+			each.sendCaptureFrame(pCaptureFrame)
+		end)
+	end
+	
+	
+	/** Client connected. */
+	public func void clientConnected(Connection connection)
+		pConnections.add(DNConnection.new(this, connection))
+	end
+end

@@ -1,0 +1,119 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * Server panel.
+ */
+class WMPPanelNetworkAccess extends CollapsibleGroup
+	protected var WMPanelSession pPanelSession
+	protected var String pPrefixUIOptions
+	
+	protected var Button pButtonListen
+	protected var Button pButtonConnect
+	protected var Button pButtonDisconnect
+	
+	
+	/** Create panel. */
+	public func new(WMPanelSession panelSession) super("Network Access",\
+	"democap:uipanelcapture#network_access",\
+	CollapsibleGroup.persistModel(prefixUIOptions(panelSession), false))
+		pPanelSession = panelSession
+		pPrefixUIOptions = prefixUIOptions(panelSession)
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		super.dispose()
+	end
+	
+	/** UI options prefix. */
+	static public func String prefixUIOptions(WMPanelSession panelSession)
+		return panelSession.getPrefixUIOptions() + "/WMPPanelNetworkAccess"
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var SessionSettings sessionSettings = SessionSettings.get()
+		var TextField textField
+		var Button button
+		
+		content.setLayout(FormLayout.new(true, 5, 2))
+		
+		content.addWidget(Label.new("Address:", "Label.FormText"))
+		
+		content.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+			textField = TextField.new(sessionSettings.getModelServerAddress())
+			textField.setDisplayCharCount(20)
+			textField.setToolTip("Server address in the form 'hostname{:port}' or 'ip{:port}'")
+			p.addWidget(textField)
+			
+			p.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p2
+				pButtonListen = Button.new("Listen", BlockActionListener.new(block ActionEvent event
+					GameApp.getGameApp().getServer().listenOn(sessionSettings.getModelServerAddress().getText())
+					updateButtonEnabled()
+				end))
+				pButtonListen.setToolTip("Start server listening on 'Address' for incoming connections")
+				p2.addWidget(pButtonListen)
+				
+				/*
+				pButtonConnect = Button.new("Connect", BlockActionListener.new(block ActionEvent event
+					// onServerConnect
+				end))
+				pButtonConnect.setToolTip("Connect to another DEMoCap running at 'Address'")
+				p2.addWidget(pButtonConnect)
+				*/
+				
+				pButtonDisconnect = Button.new("Disconnect", BlockActionListener.new(block ActionEvent event
+					GameApp.getGameApp().getServer().stopListening()
+					updateButtonEnabled()
+				end))
+				pButtonDisconnect.setToolTip("Shut down server if listening or disconnect from DEMoCap if connected")
+				pButtonDisconnect.setEnabled(false)
+				p2.addWidget(pButtonDisconnect)
+			end))
+		end))
+	end
+	
+	/** Update button enabled state. */
+	protected func void updateButtonEnabled()
+		var bool listening = GameApp.getGameApp().getServer().isListening()
+		pButtonListen.setEnabled(not listening)
+		pButtonDisconnect.setEnabled(listening)
+	end
+end

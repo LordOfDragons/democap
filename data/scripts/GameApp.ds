@@ -90,6 +90,8 @@ class GameApp extends BaseGameApp
 	
 	private var bool pGameArgsEnableVR
 	
+	private var DNServer pServer
+	
 	
 	
 	/**
@@ -228,6 +230,10 @@ class GameApp extends BaseGameApp
 		return pSelectionTracker
 	end
 	
+	/** Server. */
+	public func DNServer getServer()
+		return pServer
+	end
 	
 	
 	/** Project. */
@@ -382,6 +388,8 @@ class GameApp extends BaseGameApp
 		pLoadableWorlds = LoadableWorlds.new("/content/worlds")
 		
 		pWorldSpawnCharacter = WorldSpawnCharacter.new()
+		
+		pServer = DNServer.new()
 		
 		// modify game world window. add main panel to the right side and 
 		pPanelMain = PanelMain.new(getDesktop(), false)
@@ -629,6 +637,10 @@ class GameApp extends BaseGameApp
 	public func void cleanUp()
 		saveSettings()
 		
+		if pServer != null
+			pServer.stopListening()
+		end
+		
 		setProject(null) // has to come first since this saves the project... at least for now
 		
 		if getWindowGameWorld() != null
@@ -662,6 +674,7 @@ class GameApp extends BaseGameApp
 			pActorProfiles = null
 		end
 		
+		pServer = null
 		pSelectionTracker = null
 		pLoadCharacterProfile = null
 		pLoadActorProfile = null
