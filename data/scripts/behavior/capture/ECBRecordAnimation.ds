@@ -323,6 +323,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end)
 		end
 		
+		
+		
 		/**
 		 * Prepare bone indices. For each bone find also the root bone. Root bones are also
 		 * added as bones to be recorded. Also find the origin bone if defined. The origin
@@ -599,18 +601,30 @@ class ECBRecordAnimation extends DefaultECBehavior
 		
 		/** Post think. Called after rendering and thus when animation frame is ready to record. */
 		public func void postThink(float elapsed)
-			if not pIsRecording
+			var DNServer dnserver = GameApp.getGameApp().getServer()
+			
+			if not pIsRecording and not dnserver.isListening()
 				return
 			end
 			
-			if pIncrementTime
-				pRecordTime += elapsed
-			end
-			pIncrementTime = true
-			
-			// bones
 			pComponent.updateBones()
 			
+			if pIsRecording
+				if pIncrementTime
+					pRecordTime += elapsed
+				end
+				pIncrementTime = true
+				captureBones()
+			end
+			
+			if dnserver.isListening()
+				dnserver.updateCaptureFrame()
+			end
+		end
+		
+		/** Capture bones. */
+		protected func void captureBones()
+			// bones
 			var Matrix originTransform = Matrix.new()
 			if pOriginBoneIndex != -1
 				originTransform = pTransformRootBones * pComponent.getBoneOriginInverseMatrix(pOriginBoneIndex)

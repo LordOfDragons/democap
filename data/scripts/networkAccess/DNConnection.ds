@@ -1,0 +1,200 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Dragengine.Networking
+
+/**
+ * DEMoCap Networking connected client.
+ */
+public class DNConnection implements ConnectionListener
+	class MessageCode
+		static fixed public var int connectRequest = 1
+		static fixed public var int connectAccepted = 2
+		static fixed public var int actorCaptureBoneLayout = 3
+		static fixed public var int actorCaptureFrame = 4
+	end
+	
+	class LinkStateCode
+		static fixed public var int recordPlayback = 1
+	end
+	
+	
+	private var DNServer pServer
+	private var Connection pConnection
+	private var bool pConnected
+	private var int pNextFrameNumber
+	
+	
+	/** Create server. */
+	public func new(DNServer server, Connection connection)
+		pServer = server
+		pConnection = connection
+		connection.setConnectionListener(this)
+	end
+	
+	
+	/** Disconnect. */
+	public func void disconnect()
+		pConnection.setConnectionListener(null)
+		pConnection.disconnect()
+		pConnection = null
+		
+		pServer.removeConnection(this)
+	end
+	
+	/** Connected. */
+	public func bool getConnected()
+		return pConnected
+	end
+	
+	
+	/** Next frame number. Rolls over at 16-bit. */
+	public func int nextFrameNumber()
+		var int frameNumber = pNextFrameNumber
+		pNextFrameNumber = (pNextFrameNumber + 1) & 0hffff
+		return frameNumber
+	end
+	
+	
+	/** Send capture bone layout message. */
+	public func void sendCaptureBoneLayout(DNCaptureBoneLayout layout)
+		if not pConnected
+			return
+		end
+		
+		try
+			var NetworkMessage message = NetworkMessage.new()
+			var FileWriter writer = message.getWriter(false)
+			writer.writeByte(MessageCode.actorCaptureBoneLayout)
+			writer.writeUShort(nextFrameNumber())
+			writer.writeData(layout.getMessageData().getReader())
+			writer = null
+			pConnection.sendReliableMessage(message)
+			
+		catch Exception e
+			GameApp.getGameApp().getConsole().addError("Send ActorCaptureBoneLayout", e)
+			disconnect()
+		end
+	end
+	
+	/** Send capture frame message. */
+	public func void sendCaptureFrame(DNCaptureFrame frame)
+		if not pConnected
+			return
+		end
+		
+		try
+			var NetworkMessage message = NetworkMessage.new()
+			var FileWriter writer = message.getWriter(false)
+			writer.writeByte(MessageCode.actorCaptureFrame)
+			writer.writeUShort(nextFrameNumber())
+			writer.writeData(frame.getMessageData().getReader())
+			writer = null
+			pConnection.sendMessage(message, 0)
+			
+		catch Exception e
+			GameApp.getGameApp().getConsole().addError("Send ActorCaptureFrame failed", e)
+			disconnect()
+		end
+	end
+	
+	
+	/** Connection closed. */
+	public func void connectionClosed()
+	end
+	
+	/** Message progress. */
+	public func void messageProgress(int bytesReceived)
+	end
+	
+	/** Message received. */
+	public func void messageReceived(NetworkMessage message)
+		if not pConnected
+			var FileReader reader = message.getReader()
+			if reader.readByte() == MessageCode.connectRequest
+				processConnectRequest(reader)
+			end
+			return
+		end
+		
+		var FileReader reader = message.getReader()
+		select reader.readByte()
+		case MessageCode.connectRequest
+			processConnectRequest(reader)
+			
+		else
+			// ignore
+		end
+	end
+	
+	/** Link state. */
+	public func bool linkState(NetworkState state, NetworkMessage message)
+		if not pConnected
+			return false
+		end
+		
+		/*
+		var FileReader reader = message.getReader()
+		select reader.readByte()
+		case LinkStateCode.recordPlayback
+			return true
+			
+		else
+			return false
+		end
+		*/
+		return false
+	end
+	
+	
+	/** Process connect request. */
+	protected func void processConnectRequest(FileReader message)
+		try
+			if not message.readString(16).equals("DEMoCap-Client-0")
+				disconnect()
+				return
+			end
+			
+			var int supportedFeatures = message.readUInt()
+			var int serverSupportedFeatures = 0
+			
+			var int enabledFeatures = supportedFeatures & serverSupportedFeatures
+			
+			var NetworkMessage response = NetworkMessage.new()
+			var FileWriter writer = response.getWriter(false)
+			writer.writeByte(MessageCode.connectAccepted)
+			writer.writeString("DEMoCap-Server-0")
+			writer.writeUInt(enabledFeatures)
+			writer = null
+			pConnection.sendReliableMessage(response)
+			
+			pConnected = true
+			
+		catch Exception e
+			GameApp.getGameApp().getConsole().addError("ConnectRequest failed", e)
+			disconnect()
+		end
+		
+		sendCaptureBoneLayout(pServer.getCaptureBoneLayout())
+	end
+end

@@ -1,0 +1,122 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Democap.Characters
+pin Democap.Behaviors
+pin Democap.Elements
+
+pin Dragengine.Networking
+pin Dragengine.Scenery
+
+
+/**
+ * DEMoCap Networking capture bone layout.
+ */
+public class DNCaptureBoneLayout
+	class Bone
+		private var int pIndex
+		private var String pName
+		
+		public func new(int index, String name)
+			pIndex = index
+			pName = name
+		end
+		
+		public func int getIndex()
+			return pIndex
+		end
+		
+		public func String getName()
+			return pName
+		end
+	end
+	
+	
+	private var Array pBones
+	private var MemoryFile pMessageData
+	
+	
+	/** Create capture bone layout. */
+	public func new()
+		pBones = Array.new()
+		pMessageData = MemoryFile.new("")
+	end
+	
+	
+	/** Bones. */
+	public func int getBoneCount()
+		return pBones.getCount()
+	end
+	
+	public func Bone getBoneAt(int index)
+		return pBones.getAt(index) cast Bone
+	end
+	
+	public func void addBone(int index, String name)
+		pBones.add(Bone.new(index, name))
+	end
+	
+	public func void removeAllBones()
+		pBones.removeAll()
+	end
+	
+	public func void forEachBone(Block ablock)
+		pBones.forEach(ablock)
+	end
+	
+	
+	/** Init from motion capture actor. */
+	public func void initCaptureBoneLayout(MoCapActor actor)
+		pBones.removeAll()
+		
+		if actor.recordAnimation == null
+			return
+		end
+		
+		var Set ignoreBones = actor.recordAnimation.getECBehavior().getIgnoreBones()
+		var Rig rig = actor.getComponent().getComponent().getRig()
+		
+		actor.recordAnimation.getECBehavior().getBones().forEach(block String bone
+			if not ignoreBones.has(bone)
+				var int index = rig.indexOfBoneNamed(bone)
+				if index != -1
+					pBones.add(Bone.new(index, bone))
+				end
+			end
+		end)
+	end
+	
+	/** Message data. */
+	public func MemoryFile getMessageData()
+		return pMessageData
+	end
+	
+	/** Update message data. */
+	public func void updateMessageData()
+		var FileWriter writer = pMessageData.getWriter(false)
+		writer.writeUShort(pBones.getCount())
+		pBones.forEach(block Bone each
+			writer.writeString8(each.getName())
+		end)
+	end
+end

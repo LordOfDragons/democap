@@ -1,0 +1,132 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Democap.Characters
+pin Democap.Behaviors
+pin Democap.Elements
+
+pin Dragengine.Networking
+pin Dragengine.Scenery
+pin Dragengine.Gui
+
+
+/**
+ * DEMoCap Networking state record/playback.
+ */
+public class DNStateRecordPlayback
+	private var NetworkState pState
+	
+	
+	/** Create state record/playback. */
+	public func new()
+		pState = NetworkState.new()
+		
+		// Status
+		pState.addValue(NetworkStateValueType.integer, NetworkStateValueFormat.unsignedInteger8)
+		
+		// FrameRate
+		pState.addValue(NetworkStateValueType.integer, NetworkStateValueFormat.unsignedInteger8)
+		
+		// PrepareTime
+		pState.addValue(NetworkStateValueType.floating, NetworkStateValueFormat.floating32)
+		pState.setValuePrecisionAt(2, 0.1)
+		
+		// PlaySpeed
+		pState.addValue(NetworkStateValueType.floating, NetworkStateValueFormat.floating32)
+		pState.setValuePrecisionAt(3, 0.01)
+		
+		// PlayTime
+		pState.addValue(NetworkStateValueType.floating, NetworkStateValueFormat.floating32)
+		pState.setValuePrecisionAt(4, 0.01)
+		
+		// PlayPosition
+		pState.addValue(NetworkStateValueType.floating, NetworkStateValueFormat.floating32)
+		pState.setValuePrecisionAt(5, 0.001)
+		
+		update()
+	end
+	
+	
+	/** State. */
+	public func NetworkState getState()
+		return pState
+	end
+	
+	
+	/** Update pState. */
+	public func void update()
+		var SessionSettings sessionSettings = SessionSettings.get()
+		var PlaybackScene playbackScene = GameApp.getGameApp().getPlaybackScene()
+		
+		// Status of the recording. Can be one of these values:
+		// 0: Neither recording nor playing back.
+		// 1: Preparing to record. The user is shown in the HMD a progress bar indicating the time until recording begins.
+		// 2: Recording.
+		// 3: Playing back.
+		// 4: Playback paused.
+		select playbackScene.getState()
+		case PlaybackScene.State.stopped
+			var MoCapActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+			var ECBRecordAnimation.Instance recordAnimation
+			if actor != null
+				recordAnimation = actor.recordAnimation
+			end
+			
+			if recordAnimation != null
+				if recordAnimation.isPreparing()
+					pState.setValueIntAt(0, 1)
+					
+				elif recordAnimation.isRecording()
+					pState.setValueIntAt(0, 2)
+					
+				else
+					pState.setValueIntAt(0, 0)
+				end
+				
+			else
+				pState.setValueIntAt(0, 0)
+			end
+			
+		case PlaybackScene.State.playing
+			pState.setValueIntAt(0, 3)
+			
+		case PlaybackScene.State.paused
+			pState.setValueIntAt(0, 4)
+		end
+		
+		// Frame rate used for recording
+		pState.setValueIntAt(1, sessionSettings.getModelRecordFrameRate().getValue())
+		
+		// Prepare waiting time in seconds
+		pState.setValueFloatAt(2, 3)
+		
+		// Playback speed multiplier
+		pState.setValueFloatAt(3, playbackScene.getSpeed())
+		
+		// Playback time in seconds
+		pState.setValueFloatAt(4, playbackScene.getPlaytime())
+		
+		// Playback position in seconds
+		pState.setValueFloatAt(5, playbackScene.getTime())
+	end
+end
