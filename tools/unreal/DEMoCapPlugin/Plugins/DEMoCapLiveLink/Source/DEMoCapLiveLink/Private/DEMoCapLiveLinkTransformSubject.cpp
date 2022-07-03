@@ -56,17 +56,6 @@ void FDEMoCapLiveLinkTransformSubject::Update(int frameNumber){
 
 	transformData->Transform = pTransform;
 
-	// These don't change frame to frame, so they really should be in
-	// static data. However, there is no MetaData in LiveLink static data :(
-	/*
-	transformData->MetaData.StringMetaData.Add
-		(FName(TEXT("DeviceId")), FString::Printf(TEXT("%d"), Device.DeviceId));
-	transformData->MetaData.StringMetaData.Add(
-		FName(TEXT("DeviceType")), GetDeviceTypeName(Device.DeviceType));
-	transformData->MetaData.StringMetaData.Add(
-		FName(TEXT("DeviceControlId")), Device.SubjectName.ToString());
-	*/
-
 	pSource.GetClient()->PushSubjectFrameData_AnyThread({pSource.GetSourceGuid(), pName}, MoveTemp(frameData));
 
 	/*
