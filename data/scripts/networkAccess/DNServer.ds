@@ -101,6 +101,7 @@ public class DNServer implements ServerListener
 	
 	private var Server pServer
 	private var Array pConnections
+	private var int pNextCaptureBoneLayoutRevision
 	private var DNCaptureBoneLayout pCaptureBoneLayout
 	private var DNCaptureFrame pCaptureFrame
 	private var DNStateRecordPlayback pStateRecordPlayback
@@ -112,7 +113,7 @@ public class DNServer implements ServerListener
 	/** Create server. */
 	public func new()
 		pConnections = Array.new()
-		pCaptureBoneLayout = DNCaptureBoneLayout.new()
+		pCaptureBoneLayout = DNCaptureBoneLayout.new(nextCaptureBoneLayoutRevision())
 		pCaptureFrame = DNCaptureFrame.new(pCaptureBoneLayout)
 		pStateRecordPlayback = DNStateRecordPlayback.new()
 		pListeners = Array.new()
@@ -137,8 +138,10 @@ public class DNServer implements ServerListener
 		end
 		
 		pServer = Server.new()
+		pServer.setServerListener(this)
 		
 		if not pServer.listenOn(address)
+			pServer.setServerListener(null)
 			pServer = null
 			return
 		end
@@ -167,6 +170,7 @@ public class DNServer implements ServerListener
 			pUpdateStates = null
 		end
 		
+		pServer.setServerListener(null)
 		pServer.stopListening()
 		pServer = null
 		
@@ -246,7 +250,7 @@ public class DNServer implements ServerListener
 			return
 		end
 		
-		pCaptureBoneLayout = DNCaptureBoneLayout.new()
+		pCaptureBoneLayout = DNCaptureBoneLayout.new(nextCaptureBoneLayoutRevision())
 		
 		var MoCapActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
 		if actor != null
@@ -255,11 +259,14 @@ public class DNServer implements ServerListener
 		pCaptureBoneLayout.updateMessageData()
 		
 		pCaptureFrame = DNCaptureFrame.new(pCaptureBoneLayout)
-		pCaptureFrame.update(actor)
+		if actor != null
+			pCaptureFrame.update(actor)
+		end
 		pCaptureFrame.updateMessageData()
 		
 		pConnections.forEach(block DNConnection each
 			each.sendCaptureBoneLayout(pCaptureBoneLayout)
+			each.sendCaptureFrame(pCaptureFrame)
 		end)
 	end
 	
@@ -291,5 +298,12 @@ public class DNServer implements ServerListener
 		pListeners.forEach(block Listener each
 			each.connectionAdded(this, dncon)
 		end)
+	end
+	
+	
+	protected func int nextCaptureBoneLayoutRevision()
+		var int revision = pNextCaptureBoneLayoutRevision
+		pNextCaptureBoneLayoutRevision = (pNextCaptureBoneLayoutRevision + 1) % 0hff
+		return revision
 	end
 end

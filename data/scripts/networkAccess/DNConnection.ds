@@ -55,14 +55,15 @@ public class DNConnection implements ConnectionListener
 		pName = ""
 	end
 	
-	
 	/** Disconnect. */
 	public func void disconnect()
-		pConnection.setConnectionListener(null)
 		pConnection.disconnect()
-		pConnection = null
 		
-		pServer.removeConnection(this)
+		if pConnection != null
+			pConnection.setConnectionListener(null)
+			pConnection = null
+			pServer.removeConnection(this)
+		end
 	end
 	
 	/** Connected. */
@@ -102,7 +103,6 @@ public class DNConnection implements ConnectionListener
 			var NetworkMessage message = NetworkMessage.new()
 			var FileWriter writer = message.getWriter(false)
 			writer.writeByte(MessageCode.actorCaptureBoneLayout)
-			writer.writeUShort(nextFrameNumber())
 			writer.writeData(layout.getMessageData().getReader())
 			writer = null
 			pConnection.sendReliableMessage(message)
@@ -137,6 +137,9 @@ public class DNConnection implements ConnectionListener
 	
 	/** Connection closed. */
 	public func void connectionClosed()
+		pConnection.setConnectionListener(null)
+		pConnection = null
+		pServer.removeConnection(this)
 	end
 	
 	/** Message progress. */
@@ -213,5 +216,6 @@ public class DNConnection implements ConnectionListener
 		end
 		
 		sendCaptureBoneLayout(pServer.getCaptureBoneLayout())
+		sendCaptureFrame(pServer.getCaptureFrame())
 	end
 end

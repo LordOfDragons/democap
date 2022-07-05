@@ -34,30 +34,10 @@ pin Dragengine.Scenery
  */
 public class DNCaptureFrame
 	public class Bone
-		private var Vector pPosition
-		private var Quaternion pOrientation
-		
+		public var Vector position
+		public var Quaternion orientation
 		
 		public func new()
-		end
-		
-		
-		/** Position of the bone relative to local space. */
-		public func Vector getPosition()
-			return pPosition
-		end
-		
-		public func void setPosition(Vector position)
-			pPosition = position
-		end
-		
-		/** Orientation of the bone relative to local space. */
-		public func Quaternion getOrientation()
-			return pOrientation
-		end
-		
-		public func void setOrientation(Quaternion orientation)
-			pOrientation = orientation
 		end
 	end
 	
@@ -73,12 +53,19 @@ public class DNCaptureFrame
 	/** Create capture frame. */
 	public func new(DNCaptureBoneLayout layout)
 		pLayout = layout
+		pPosition = Vector.new()
+		pOrientation = Quaternion.new()
 		pScale = 1
 		
 		var int i, count = layout.getBoneCount()
+		var Bone bone
+		
 		pBones = Array.new(count)
 		for i = 0 to count
-			pBones.add(Bone.new())
+			bone = Bone.new()
+			bone.position = pPosition
+			bone.orientation = pOrientation
+			pBones.add(bone)
 		end
 		
 		pMessageData = MemoryFile.new("")
@@ -134,19 +121,25 @@ public class DNCaptureFrame
 	/** Update from motion capture actor. */
 	public func void update(MoCapActor actor)
 		var Component component = actor.getComponent().getComponent()
-		var int boneIndex
-		var Bone bone
+		if component == null
+			return
+		end
 		
 		pPosition = actor.getPosition().toVector()
 		pOrientation = actor.getOrientation()
 		pScale = actor.getScaling().getY() // uniform scaling only
 		
-		pLayout.forEachBone(block int index, DNCaptureBoneLayout.Bone each
-			bone = pBones.getAt(index) cast Bone
-			boneIndex = each.getIndex()
+		//var Matrix matrix
+		
+		pBones.forEach(block int index, Bone bone
+			bone.position = component.boneGetPosition(index)
+			bone.orientation = component.boneGetRotation(index)
 			
-			bone.setPosition(component.boneGetPosition(boneIndex))
-			bone.setOrientation(component.boneGetRotation(boneIndex))
+			/*
+			matrix = component.boneGetMatrix(index)
+			bone.position = matrix.getPosition()
+			bone.orientation = matrix.toQuaternion()
+			*/
 		end)
 	end
 	
@@ -159,12 +152,16 @@ public class DNCaptureFrame
 	/** Update message data. */
 	public func void updateMessageData()
 		var FileWriter writer = pMessageData.getWriter(false)
+		
+		writer.writeByte(pLayout.getRevision())
+		
 		pPosition.writeToFile(writer)
 		pOrientation.writeToFile(writer)
 		writer.writeFloat(pScale)
+		
 		pBones.forEach(block Bone each
-			each.getPosition().writeToFile(writer)
-			each.getOrientation().writeToFile(writer)
+			each.position.writeToFile(writer)
+			each.orientation.writeToFile(writer)
 		end)
 	end
 end

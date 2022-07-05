@@ -34,32 +34,33 @@ pin Dragengine.Scenery
  */
 public class DNCaptureBoneLayout
 	class Bone
-		private var int pIndex
-		private var String pName
+		public var int index
+		public var String name
+		public var int parent
+		public var Vector position
+		public var Quaternion orientation
 		
-		public func new(int index, String name)
-			pIndex = index
-			pName = name
-		end
-		
-		public func int getIndex()
-			return pIndex
-		end
-		
-		public func String getName()
-			return pName
+		public func new()
 		end
 	end
 	
 	
+	private var int pRevision
 	private var Array pBones
 	private var MemoryFile pMessageData
 	
 	
 	/** Create capture bone layout. */
-	public func new()
+	public func new(int revision)
+		pRevision = revision
 		pBones = Array.new()
 		pMessageData = MemoryFile.new("")
+	end
+	
+	
+	/** Revision. */
+	public func int getRevision()
+		return pRevision
 	end
 	
 	
@@ -72,8 +73,8 @@ public class DNCaptureBoneLayout
 		return pBones.getAt(index) cast Bone
 	end
 	
-	public func void addBone(int index, String name)
-		pBones.add(Bone.new(index, name))
+	public func void addBone(Bone bone)
+		pBones.add(bone)
 	end
 	
 	public func void removeAllBones()
@@ -93,17 +94,27 @@ public class DNCaptureBoneLayout
 			return
 		end
 		
-		var Set ignoreBones = actor.recordAnimation.getECBehavior().getIgnoreBones()
-		var Rig rig = actor.getComponent().getComponent().getRig()
+		var Component component = actor.getComponent().getComponent()
+		if component == null
+			return
+		end
 		
-		actor.recordAnimation.getECBehavior().getBones().forEach(block String bone
-			if not ignoreBones.has(bone)
-				var int index = rig.indexOfBoneNamed(bone)
-				if index != -1
-					pBones.add(Bone.new(index, bone))
-				end
-			end
-		end)
+		var Rig rig = component.getRig()
+		if rig == null
+			return
+		end
+		
+		var int i, boneCount = rig.getBoneCount()
+		var Bone bone
+		
+		for i = 0 to boneCount
+			bone = Bone.new()
+			bone.name = rig.boneGetName(i)
+			bone.parent = rig.boneGetParent(i)
+			bone.position = rig.boneGetPosition(i)
+			bone.orientation = rig.boneGetOrientation(i)
+			pBones.add(bone)
+		end
 	end
 	
 	/** Message data. */
@@ -114,9 +125,15 @@ public class DNCaptureBoneLayout
 	/** Update message data. */
 	public func void updateMessageData()
 		var FileWriter writer = pMessageData.getWriter(false)
+		
+		writer.writeByte(pRevision)
 		writer.writeUShort(pBones.getCount())
+		
 		pBones.forEach(block Bone each
-			writer.writeString8(each.getName())
+			writer.writeString8(each.name)
+			writer.writeShort(each.parent)
+			each.position.writeToFile(writer)
+			each.orientation.writeToFile(writer)
 		end)
 	end
 end
