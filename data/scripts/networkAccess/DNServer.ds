@@ -72,6 +72,32 @@ public class DNServer implements ServerListener
 		end
 	end
 	
+	/** Listener. */
+	public interface Listener
+		func void connectionAdded(DNServer server, DNConnection connection)
+		func void connectionRemoved(DNServer server, DNConnection connection)
+		func void allConnectionsRemoved(DNServer server)
+		func void connectionChanged(DNServer server, DNConnection connection)
+	end
+	
+	/** Default listener. */
+	public class DefaultListener implements Listener
+		public func new()
+		end
+		
+		public func void connectionAdded(DNServer server, DNConnection connection)
+		end
+		
+		public func void connectionRemoved(DNServer server, DNConnection connection)
+		end
+		
+		public func void allConnectionsRemoved(DNServer server)
+		end
+		
+		public func void connectionChanged(DNServer server, DNConnection connection)
+		end
+	end
+	
 	
 	private var Server pServer
 	private var Array pConnections
@@ -80,6 +106,7 @@ public class DNServer implements ServerListener
 	private var DNStateRecordPlayback pStateRecordPlayback
 	private var ActorReadyListener pActorReadyListener
 	private var UpdateStates pUpdateStates
+	private var Array pListeners
 	
 	
 	/** Create server. */
@@ -88,11 +115,13 @@ public class DNServer implements ServerListener
 		pCaptureBoneLayout = DNCaptureBoneLayout.new()
 		pCaptureFrame = DNCaptureFrame.new(pCaptureBoneLayout)
 		pStateRecordPlayback = DNStateRecordPlayback.new()
+		pListeners = Array.new()
 	end
 	
 	/** Dispose. */
 	public func void dispose()
 		stopListening()
+		pListeners.removeAll(9
 	end
 	
 	
@@ -142,6 +171,10 @@ public class DNServer implements ServerListener
 		pServer = null
 		
 		pConnections.removeAll()
+		
+		pListeners.forEach(block Listener each
+			each.allConnectionsRemoved(this)
+		end)
 	end
 	
 	
@@ -152,9 +185,33 @@ public class DNServer implements ServerListener
 	
 	/** Remove connection. */
 	public func void removeConnection(DNConnection connection)
-		if pConnections.has(connection)
-			pConnections.remove(connection)
+		if not pConnections.has(connection)
+			return
 		end
+		
+		pConnections.remove(connection)
+		
+		pListeners.forEach(block Listener each
+			each.connectionRemoved(this, connection)
+		end)
+	end
+	
+	
+	/** Add listener. */
+	public func void addListener(Listener listener)
+		pListeners.add(listener)
+	end
+	
+	/** Remove listener. */
+	public func void removeListener(Listener listener)
+		pListeners.remove(listener)
+	end
+	
+	/** Notify listeners connection changed. */
+	public func void notifyConnectionChanged(DNConnection connection)
+		pListeners.forEach(block Listener each
+			each.connectionChanged(this, connection)
+		end)
 	end
 	
 	
@@ -228,6 +285,11 @@ public class DNServer implements ServerListener
 	
 	/** Client connected. */
 	public func void clientConnected(Connection connection)
-		pConnections.add(DNConnection.new(this, connection))
+		var DNConnectoin dncon = DNConnection.new(this, connection)
+		pConnections.add(dncon)
+		
+		pListeners.forEach(block Listener each
+			each.connectionAdded(this, dncon)
+		end)
 	end
 end

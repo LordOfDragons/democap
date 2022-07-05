@@ -35,12 +35,40 @@ pin Dragengine.Utils
  * Server panel.
  */
 class WMPPanelNetworkAccess extends CollapsibleGroup
+	class ConnectionsChanged extends DNServer.DefaultListener
+		protected var WMPPanelNetworkAccess pPanel
+		
+		public func new(WMPPanelNetworkAccess panel)
+			pPanel = panel
+		end
+		
+		public func void connectionAdded(DNServer server, DNConnection connection)
+			pPanel.updateConnectionsModel()
+		end
+		
+		public func void connectionRemoved(DNServer server, DNConnection connection)
+			pPanel.updateConnectionsModel()
+		end
+		
+		public func void allConnectionsRemoved(DNServer server)
+			pPanel.updateConnectionsModel()
+		end
+		
+		public func void connectionChanged(DNServer server, DNConnection connection)
+			pPanel.updateConnectionsModel()
+		end
+	end
+	
+	
 	protected var WMPanelSession pPanelSession
 	protected var String pPrefixUIOptions
 	
 	protected var Button pButtonListen
 	protected var Button pButtonConnect
 	protected var Button pButtonDisconnect
+	
+	protected var DefaultListModel pModelConnections
+	protected var ConnectionsChanged pConnectionsChanged
 	
 	
 	/** Create panel. */
@@ -49,14 +77,30 @@ class WMPPanelNetworkAccess extends CollapsibleGroup
 	CollapsibleGroup.persistModel(prefixUIOptions(panelSession), false))
 		pPanelSession = panelSession
 		pPrefixUIOptions = prefixUIOptions(panelSession)
+		pModelConnections = DefaultListModel.new()
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
 		end)
+		
+		pConnectionsChanged = ConnectionsChanged.new(this)
+		GameApp.getGameApp().getServer().addListener(pConnectionsChanged)
+		
+		updateConnectionsModel()
 	end
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		if pConnectionsChanged != null
+			GameApp.getGameApp().getServer().removeListener(pConnectionsChanged)
+			pConnectionsChanged = null
+		end
+		
+		pModelConnections = null
+		pButtonListen = null
+		pButtonConnect = null
+		pButtonDisconnect = null
+		
 		super.dispose()
 	end
 	
@@ -66,6 +110,17 @@ class WMPPanelNetworkAccess extends CollapsibleGroup
 	end
 	
 	
+	
+	/** Update connections model. */
+	public func void updateConnectionsModel()
+		var DNConnection selection = pModelConnections.getSelectedElement() cast DNConnection
+		var Array connections = Array.new()
+		GameApp.getGameApp().getServer().forEachConnection(block DNConnection each
+			connections.add(each)
+		end)
+		pModelConnections.setContent(connections)
+		pModelConnections.setSelectedElement(selection)
+	end
 	
 	/** Create panel content. */
 	protected func void createContent(Panel content)
@@ -106,6 +161,13 @@ class WMPPanelNetworkAccess extends CollapsibleGroup
 				pButtonDisconnect.setToolTip("Shut down server if listening or disconnect from DEMoCap if connected")
 				pButtonDisconnect.setEnabled(false)
 				p2.addWidget(pButtonDisconnect)
+			end))
+			
+			addWidget(CollapsibleGroup.new("Connections", "democap:uipanelcapture#network_access",\
+			CollapsibleGroup.persistModel(pPrefixUIOptions + "/Connections"), Boxlayout.new(), block Panel p2
+				var ListBox listBox = ListBox.new(pModelConnections, DNConnectionRenderer.new())
+				listBox.setNumberDisplayLines(3)
+				p2.addWidget(ScrollPanel.new(listFiles))
 			end))
 		end))
 	end

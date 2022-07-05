@@ -1,0 +1,163 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Dragengine.Gui.Events
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Designers
+
+
+/**
+ * Network connection list element renderer
+ */
+class DNConnectionRenderer implements ListElementRenderer
+	/** Renderer widget. */
+	class RendererWidget extends Panel
+		/** Disconnect client action. */
+		class ActionDisconnect implements addActionListener
+			protected var RendererWidget pOwner
+			
+			public func new(RendererWidget owner)
+				pOwner = owner
+			end
+			
+			public func void onAction(ActionEvent event)
+				if pOwner.getConnection() != null
+					pOwner.getConnection().disconnect()
+				end
+			end
+		end
+		
+		protected var Label pLabName
+		protected var Label pLabHost
+		protected var Button pBtnDisconnect
+		protected var DNConnection pConnection
+		
+		public func new(DNConnection connection)
+			pConnection = connection
+			
+			runWhileBlockingLayout(block
+				setLayout(BorderLayout.new(2))
+				
+				addWidget(Panel.new(BoxLayout.new(LayoutAxis.y), block Panel p
+					pLabName = Label.new("")
+					p.addWidget(pLabName)
+					
+					pLabHost = Label.new("")
+					p.addWidget(pLabHost)
+				end), BorderLayout.Area.content)
+				
+				addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1), block Panel p
+					pBtnDisconnect = Button.new(ActionDisconnect.new(this))
+					p.addWidget(pBtnDisconnect)
+				end), BorderLayout.Area.right)
+				
+				setDesignerSelector("Panel.ListRenderer.Connection")
+			end)
+		end
+		
+		public func void dispose()
+			pBtnDisconnect = null
+			pLabHost = null
+			pLabName = null
+			super.dispose()
+		end
+		
+		public func Label getLabelName()
+			return pLabName
+		end
+		
+		public func Label getLabelHost()
+			return pLabHost
+		end
+		
+		public func Button getButtonDisconnect()
+			return pBtnDisconnect
+		end
+		
+		public func DNConnection getConnection()
+			return pConnection
+		end
+		
+		public func void update(DNConnection connection)
+			pConnection = connection
+			
+			if connection != null
+				pLabName.setText(connection.getName())
+				pLabHost.setText(connection.getRemoteAddress())
+				pBtnDisconnect.setEnabled(true)
+				
+			else
+				pLabName.setText("---")
+				pLabHost.setText("---")
+				pBtnDisconnect.setEnabled(false)
+			end
+		end
+		
+		public func void onDesignerSelectorChanged()
+			var String selector = getDesignerSelector()
+			pLabName.setDesignerSelector("Label." + selector + ".Name")
+			pLabHost.setDesignerSelector("Label." + selector + ".Host")
+			pBtnDisconnect.setDesignerSelector("Button." + selector + ".Disconnect")
+		end
+	end
+	
+	
+	/** Create list element renderer. */
+	public func new()
+	end
+	
+	
+	/** \brief Create renderer. */
+	public func Widget createRenderer(ListBox listBox)
+		return RendererWidget.new()
+	end
+	
+	/** \brief Update renderer with object state. */
+	public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+		(renderer cast RendererWidget).update(element cast DNConnection)
+	end
+	
+	/** \brief Default size of list element. */
+	public func Point getDefaultSize(ListBox listBox)
+		// to properly measure the size a Container instance is created with the gui theme
+		// from the listBox. if the gui theme would be assigned directly to the renderer
+		// potentially use of gui theme selectors are skipped causing strange to find
+		// errors. the empty widget designer ensures the container has no padding nor any
+		// other unwanted designer parameters applied
+		var Container container = Container.new()
+		container.runWhileBlockingLayout(block
+			container.setLayout(BoxLayout.new(LayoutAxis.y))
+			container.setDesigner(DefaultWidgetDesigner.new())
+			container.setGuiTheme(listBox.getGuiTheme())
+			
+			var Widget renderer = createRenderer(listBox)
+			container.addWidget(renderer)
+			updateRenderer(listBox, renderer, pDefaultObject, false, false)
+		end)
+		container.doLayout()
+		
+		var Point size = container.getMinimumSize()
+		container.dispose()
+		return size.largest(pDefaultMinimumSize)
+	end
+end

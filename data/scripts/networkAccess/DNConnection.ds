@@ -42,6 +42,8 @@ public class DNConnection implements ConnectionListener
 	private var DNServer pServer
 	private var Connection pConnection
 	private var bool pConnected
+	private var int pEnabledFeatures
+	private var String pName
 	private var int pNextFrameNumber
 	
 	
@@ -50,6 +52,7 @@ public class DNConnection implements ConnectionListener
 		pServer = server
 		pConnection = connection
 		connection.setConnectionListener(this)
+		pName = ""
 	end
 	
 	
@@ -65,6 +68,19 @@ public class DNConnection implements ConnectionListener
 	/** Connected. */
 	public func bool getConnected()
 		return pConnected
+	end
+	
+	/** Name. */
+	public func String getName()
+		return pName
+	end
+	
+	/** Remote address. */
+	public func String getRemoteAddress()
+		if pConnection != null
+			return pConnection.getRemoteAddress()
+		end
+		return ""
 	end
 	
 	
@@ -178,13 +194,14 @@ public class DNConnection implements ConnectionListener
 			var int supportedFeatures = message.readUInt()
 			var int serverSupportedFeatures = 0
 			
-			var int enabledFeatures = supportedFeatures & serverSupportedFeatures
+			pEnabledFeatures = supportedFeatures & serverSupportedFeatures
+			pName = message.readString8()
 			
 			var NetworkMessage response = NetworkMessage.new()
 			var FileWriter writer = response.getWriter(false)
 			writer.writeByte(MessageCode.connectAccepted)
 			writer.writeString("DEMoCap-Server-0")
-			writer.writeUInt(enabledFeatures)
+			writer.writeUInt(pEnabledFeatures)
 			writer = null
 			pConnection.sendReliableMessage(response)
 			
