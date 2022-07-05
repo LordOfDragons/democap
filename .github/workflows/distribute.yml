@@ -16,14 +16,25 @@ jobs:
     
     steps:
       - uses: actions/checkout@v3
-        with:
-          lfs: true
-          submodules: 'recursive'
-      
-      - name: Force pull LFS files
-        run: |
-          git lfs fetch --include="*" --exclude= origin refs/remotes/origin/main
-      
+        
+      - name: Find LFS Cache Files
+      - run: |
+          git lfs ls-files -l | cut -d' ' -f1 | sort > .assets-id
+
+      - name: Restore LFS Cache
+      - restore_cache:
+          key: lfs-cache-{{ checksum ".assets-id" }}
+
+      - name: Pull LFS Objects
+      - run: |
+          git lfs pull
+
+      - name: Save LFS Cache
+      - save_cache:
+          key: lfs-cache-{{ checksum ".assets-id" }}
+          paths:
+            - .git/lfs
+        
       - name: Update project file
         run: |
           sed -i -e 's/DEMoCap-[0-9.]\+.delga/DEMoCap-${{ inputs.version }}.delga/g' project.xml
