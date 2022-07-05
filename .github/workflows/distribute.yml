@@ -17,23 +17,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         
-      - name: Find LFS Cache Files
-      - run: |
-          git lfs ls-files -l | cut -d' ' -f1 | sort > .assets-id
+      - name: Create LFS file hash list
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-objects-id
 
       - name: Restore LFS Cache
-      - restore_cache:
-          key: lfs-cache-{{ checksum ".assets-id" }}
+        uses: actions/cache@v2
+        id: lfs-cache
+        with:
+          key: lfs-cache-${{ hashFiles('.lfs-objects-id') }}
 
-      - name: Pull LFS Objects
-      - run: |
-          git lfs pull
-
-      - name: Save LFS Cache
-      - save_cache:
-          key: lfs-cache-{{ checksum ".assets-id" }}
-          paths:
-            - .git/lfs
+      - name: Git LFS Pull
+        run: git lfs pull
         
       - name: Update project file
         run: |
