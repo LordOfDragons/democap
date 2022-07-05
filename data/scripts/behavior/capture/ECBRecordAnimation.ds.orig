@@ -139,6 +139,10 @@ class ECBRecordAnimation extends DefaultECBehavior
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
+			pComponent = pActorAnimated.getComponent().getComponent()
+			if pComponent != null
+				pRig = pComponent.getRig()
+			end
 		end
 		
 		
@@ -329,7 +333,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			if pRecordAnimationObject != null
 				pRecordAnimationDevices.addBone("object")
-				pRecordAnimationDevices.addBone("attached")
 			end
 			
 			pIsPreparing = true
@@ -350,9 +353,12 @@ class ECBRecordAnimation extends DefaultECBehavior
 			// order is important: add first all root bones then all non-root bones
 			var Set ignoreBones = pECBehavior.getIgnoreBones()
 			
+<<<<<<< Updated upstream
 			var Component component = pComponent.getComponent()
 			var Rig rig = component.getRig()
 			
+=======
+>>>>>>> Stashed changes
 			pBoneIndices.removeAll()
 			pRootBoneIndices.removeAll()
 			pStaticBoneIndices.removeAll()
@@ -387,7 +393,10 @@ class ECBRecordAnimation extends DefaultECBehavior
 		protected func void prepareAllBoneIndices()
 			// order is important: add first all root bones then all non-root bones
 			var Set ignoreBones = pECBehavior.getIgnoreBones()
+<<<<<<< Updated upstream
 			var Rig rig = pComponent.getComponent().getRig()
+=======
+>>>>>>> Stashed changes
 			
 			pBoneIndices.removeAll()
 			pRootBoneIndices.removeAll()
@@ -639,7 +648,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		public func void postThink(float elapsed)
 			var DNServer dnserver = GameApp.getGameApp().getServer()
 			
-			if not pIsRecording and not dnserver.isListening()
+			if not (pIsRecording or dnserver.isListening()) or pComponent == null or pRig == null
 				return
 			end
 			
@@ -841,11 +850,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				tagAnimation.addDataTag("moveName", moveName)
 				tagAnimation.addDataTag("playtime", animation.getMovePlaytime(moveName))
 				tagAnimation.addDataTag("frameRate", pRecordAnimationObject.getFPS())
-				
-				tagBones = tagAnimation.addTag("bones")
-				pRecordAnimationObject.forEachBone(block String each
-					tagBones.addDataTag("boneName", each)
-				end)
+				tagAnimation.addDataTag("boneName", "object")
 			end
 			
 			// write to file

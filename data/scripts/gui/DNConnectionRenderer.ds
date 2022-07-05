@@ -24,6 +24,7 @@ namespace Democap.Gui
 pin Dragengine.Gui.Events
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Designers
+pin Dragengine.Utils
 
 
 /**
@@ -42,7 +43,9 @@ class DNConnectionRenderer implements ListElementRenderer
 			
 			public func void onAction(ActionEvent event)
 				if pOwner.getConnection() != null
-					pOwner.getConnection().disconnect()
+					TimerBlock.new(0, false, block
+						pOwner.getConnection().disconnect()
+					end)
 				end
 			end
 		end
@@ -55,6 +58,7 @@ class DNConnectionRenderer implements ListElementRenderer
 		public func new()
 			runWhileBlockingLayout(block
 				setLayout(BorderLayout.new(2))
+				setStateChangeNotifyChildren(true)
 				
 				addWidget(Panel.new(BoxLayout.new(LayoutAxis.y), block Panel p
 					pLabName = Label.new("")
@@ -68,8 +72,6 @@ class DNConnectionRenderer implements ListElementRenderer
 					pBtnDisconnect = Button.new("Disconnect", ActionDisconnect.new(this))
 					p.addWidget(pBtnDisconnect)
 				end), BorderLayout.Area.right)
-				
-				setDesignerSelector("Panel.ListRenderer.Connection")
 			end)
 		end
 		
@@ -96,26 +98,35 @@ class DNConnectionRenderer implements ListElementRenderer
 			return pConnection
 		end
 		
-		public func void update(DNConnection connection)
+		public func void update(DNConnection connection, bool selected, bool focused)
 			pConnection = connection
 			
-			if connection != null
-				pLabName.setText(connection.getName())
-				pLabHost.setText(connection.getRemoteAddress())
-				pBtnDisconnect.setEnabled(true)
+			runWhileBlockingLayout(block
+				if connection != null
+					pLabName.setText(connection.getName())
+					pLabHost.setText(connection.getRemoteAddress())
+					pBtnDisconnect.setEnabled(true)
+					
+				else
+					pLabName.setText("---")
+					pLabHost.setText("---")
+					pBtnDisconnect.setEnabled(false)
+				end
 				
-			else
-				pLabName.setText("---")
-				pLabHost.setText("---")
-				pBtnDisconnect.setEnabled(false)
-			end
-		end
-		
-		public func void onDesignerSelectorChanged()
-			var String selector = getDesignerSelector()
-			pLabName.setDesignerSelector("Label." + selector + ".Name")
-			pLabHost.setDesignerSelector("Label." + selector + ".Host")
-			pBtnDisconnect.setDesignerSelector("Button." + selector + ".Disconnect")
+				if selected
+					setDesignerSelector("Panel.ListRenderer.Selected.Connection")
+					pLabName.setDesignerSelector("Label.ListRenderer.Selected.Connection.Name")
+					pLabHost.setDesignerSelector("Label.ListRenderer.Selected.Connection.Host")
+					pBtnDisconnect.setDesignerSelector("Button.ListRenderer.Selected.Connection.Disconnect")
+					
+				else
+					setDesignerSelector("Panel.ListRenderer.Connection")
+					pLabName.setDesignerSelector("Label.ListRenderer.Connection.Name")
+					pLabHost.setDesignerSelector("Label.ListRenderer.Connection.Host")
+					pBtnDisconnect.setDesignerSelector("Button.ListRenderer.Connection.Disconnect")
+				end
+			end)
+			doLayoutIfBlocked()
 		end
 	end
 	
@@ -132,7 +143,7 @@ class DNConnectionRenderer implements ListElementRenderer
 	
 	/** \brief Update renderer with object state. */
 	public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
-		(renderer cast RendererWidget).update(element cast DNConnection)
+		(renderer cast RendererWidget).update(element cast DNConnection, selected, focused)
 	end
 	
 	/** \brief Default size of list element. */

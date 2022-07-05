@@ -128,47 +128,49 @@ class WMPPanelNetworkAccess extends CollapsibleGroup
 		var TextField textField
 		var Button button
 		
-		content.setLayout(FormLayout.new(true, 5, 2))
+		content.setLayout(FlowLayout.new(LayoutAxis.y))
 		
-		content.addWidget(Label.new("Address:", "Label.FormText"))
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel gp
+			gp.addWidget(Label.new("Address:", "Label.FormText"))
+			
+			gp.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+				textField = TextField.new(sessionSettings.getModelServerAddress())
+				textField.setDisplayCharCount(20)
+				textField.setToolTip("Server address in the form 'hostname{:port}' or 'ip{:port}'")
+				p.addWidget(textField)
+				
+				p.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p2
+					pButtonListen = Button.new("Listen", BlockActionListener.new(block ActionEvent event
+						GameApp.getGameApp().getServer().listenOn(sessionSettings.getModelServerAddress().getText())
+						updateButtonEnabled()
+					end))
+					pButtonListen.setToolTip("Start server listening on 'Address' for incoming connections")
+					p2.addWidget(pButtonListen)
+					
+					/*
+					pButtonConnect = Button.new("Connect", BlockActionListener.new(block ActionEvent event
+						// onServerConnect
+					end))
+					pButtonConnect.setToolTip("Connect to another DEMoCap running at 'Address'")
+					p2.addWidget(pButtonConnect)
+					*/
+					
+					pButtonDisconnect = Button.new("Disconnect", BlockActionListener.new(block ActionEvent event
+						GameApp.getGameApp().getServer().stopListening()
+						updateButtonEnabled()
+					end))
+					pButtonDisconnect.setToolTip("Shut down server if listening or disconnect from DEMoCap if connected")
+					pButtonDisconnect.setEnabled(false)
+					p2.addWidget(pButtonDisconnect)
+				end))
+			end))
+		end))
 		
-		content.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
-			textField = TextField.new(sessionSettings.getModelServerAddress())
-			textField.setDisplayCharCount(20)
-			textField.setToolTip("Server address in the form 'hostname{:port}' or 'ip{:port}'")
-			p.addWidget(textField)
-			
-			p.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p2
-				pButtonListen = Button.new("Listen", BlockActionListener.new(block ActionEvent event
-					GameApp.getGameApp().getServer().listenOn(sessionSettings.getModelServerAddress().getText())
-					updateButtonEnabled()
-				end))
-				pButtonListen.setToolTip("Start server listening on 'Address' for incoming connections")
-				p2.addWidget(pButtonListen)
-				
-				/*
-				pButtonConnect = Button.new("Connect", BlockActionListener.new(block ActionEvent event
-					// onServerConnect
-				end))
-				pButtonConnect.setToolTip("Connect to another DEMoCap running at 'Address'")
-				p2.addWidget(pButtonConnect)
-				*/
-				
-				pButtonDisconnect = Button.new("Disconnect", BlockActionListener.new(block ActionEvent event
-					GameApp.getGameApp().getServer().stopListening()
-					updateButtonEnabled()
-				end))
-				pButtonDisconnect.setToolTip("Shut down server if listening or disconnect from DEMoCap if connected")
-				pButtonDisconnect.setEnabled(false)
-				p2.addWidget(pButtonDisconnect)
-			end))
-			
-			p.addWidget(CollapsibleGroup.new("Connections", "democap:uipanelcapture#network_access",\
-			CollapsibleGroup.persistModel(pPrefixUIOptions + "/Connections"), StackLayout.new(), block Panel p2
-				var ListBox listBox = ListBox.new(pModelConnections, DNConnectionRenderer.new())
-				listBox.setNumberDisplayLines(3)
-				p2.addWidget(ScrollPanel.new(listBox))
-			end))
+		content.addWidget(CollapsibleGroup.new("Connections", "", CollapsibleGroup.persistModel(\
+		pPrefixUIOptions + "/Connections", false), StackLayout.new(), block Panel p
+			var ListBox listBox = ListBox.new(pModelConnections, DNConnectionRenderer.new())
+			listBox.setNumberDisplayLines(3)
+			p.addWidget(ScrollPanel.new(listBox))
 		end))
 	end
 	
