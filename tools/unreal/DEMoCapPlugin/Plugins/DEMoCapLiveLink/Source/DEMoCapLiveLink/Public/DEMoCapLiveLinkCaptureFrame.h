@@ -24,33 +24,17 @@
 
 #pragma once
 
-#include <string>
+#include <memory>
 
-class FDEMoCapLiveLinkSource;
-class FDEMoCapLiveLinkCaptureBoneLayout;
-
-class DEMOCAPLIVELINK_API FDEMoCapLiveLinkAnimationSubject{
+class DEMOCAPLIVELINK_API FDEMoCapLiveLinkCaptureFrame{
 public:
-	typedef std::shared_ptr<FDEMoCapLiveLinkAnimationSubject> Ref;
-	
-	FDEMoCapLiveLinkAnimationSubject(FDEMoCapLiveLinkSource &source, const FName &name);
-	virtual ~FDEMoCapLiveLinkAnimationSubject();
-	
-	inline const FName &GetName() const{ return pName; }
+	typedef std::shared_ptr<FDEMoCapLiveLinkCaptureFrame> Ref;
 
-	inline const FRotator &GetRootBoneRotation() const{ return pRootBoneRotation; }
-	void SetRootBoneRotation(const FRotator &rotation);
+	FDEMoCapLiveLinkCaptureFrame();
+	virtual ~FDEMoCapLiveLinkCaptureFrame();
 
-	void Update(int frameNumber);
-	
-private:
-	void pUpdateStaticData(const FDEMoCapLiveLinkCaptureBoneLayout &layout);
-
-	FDEMoCapLiveLinkSource &pSource;
-	const FName pName;
-
-	FRotator pRootBoneRotation;
-	FTransform pRootBoneTransform;
-
-	int32 pFrameCaptureBoneLayout;
+	FVector position;
+	FQuat orientation;
+	float scale;
+	TArray<FTransform> bones;
 };

@@ -26,31 +26,20 @@
 
 #include <string>
 
-class FDEMoCapLiveLinkSource;
-class FDEMoCapLiveLinkCaptureBoneLayout;
+#include "CoreMinimal.h"
 
-class DEMOCAPLIVELINK_API FDEMoCapLiveLinkAnimationSubject{
+class denVector3;
+class denQuaternion;
+
+class FDEMoCapLiveLinkUtils{
 public:
-	typedef std::shared_ptr<FDEMoCapLiveLinkAnimationSubject> Ref;
+	static std::string convertBoneName(const std::string &name);
+
+	static FVector convertPosition(const denVector3 &position);
+	static FQuat convertOrientation(const denQuaternion &orientation);
+	static FTransform convertTransform(const denVector3 &position, const denQuaternion &orientation);
 	
-	FDEMoCapLiveLinkAnimationSubject(FDEMoCapLiveLinkSource &source, const FName &name);
-	virtual ~FDEMoCapLiveLinkAnimationSubject();
-	
-	inline const FName &GetName() const{ return pName; }
-
-	inline const FRotator &GetRootBoneRotation() const{ return pRootBoneRotation; }
-	void SetRootBoneRotation(const FRotator &rotation);
-
-	void Update(int frameNumber);
-	
-private:
-	void pUpdateStaticData(const FDEMoCapLiveLinkCaptureBoneLayout &layout);
-
-	FDEMoCapLiveLinkSource &pSource;
-	const FName pName;
-
-	FRotator pRootBoneRotation;
-	FTransform pRootBoneTransform;
-
-	int32 pFrameCaptureBoneLayout;
+	static FVector convertBonePosition(const denVector3 &position);
+	static FQuat convertBoneOrientation(const denQuaternion &orientation);
+	static FTransform convertBoneTransform(const denVector3 &position, const denQuaternion &orientation);
 };

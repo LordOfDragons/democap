@@ -91,6 +91,8 @@ public:
 	inline const FString &GetHostName() const{ return pHostname; }
 	inline uint16 GetPort() const{ return pPort; }
 
+	inline int32 GetFrameCounter() const{ return pFrameCounter; }
+
 	// connection to DEMoCap
 	inline const FDEMoCapLiveLinkConnection::Ref &GetConnection() const{ return pConnection; }
 

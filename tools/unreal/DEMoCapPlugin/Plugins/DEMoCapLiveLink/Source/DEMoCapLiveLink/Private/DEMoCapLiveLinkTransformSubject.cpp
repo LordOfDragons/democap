@@ -37,35 +37,39 @@ pSource(source),
 pName(name),
 pRequiresStaticDataUpdate(true)
 {
+	SetTransformRotation(FRotator(0.0, 90.0, 0.0));
 }
 
 FDEMoCapLiveLinkTransformSubject::~FDEMoCapLiveLinkTransformSubject(){
 }
 
+void FDEMoCapLiveLinkTransformSubject::SetTransformRotation(const FRotator &rotation){
+	pTransformRotation = rotation;
+	pTransformTransform = FTransform(rotation);
+}
+
 void FDEMoCapLiveLinkTransformSubject::Update(int frameNumber){
+	const FDEMoCapLiveLinkConnection::Ref &connection = pSource.GetConnection();
+	if(!connection || !connection->GetReady() || !connection->GetCaptureFrame()){
+		return;
+	}
+
+	// update static data if required
+	const FDEMoCapLiveLinkCaptureFrame &capture = *connection->GetCaptureFrame();
+
 	if(pRequiresStaticDataUpdate){
 		pRequiresStaticDataUpdate = false;
 		pUpdateStaticData();
 	}
 
+	// update dynamic data
 	FLiveLinkFrameDataStruct frameData(FLiveLinkTransformFrameData::StaticStruct());
 	FLiveLinkTransformFrameData* const transformData = frameData.Cast<FLiveLinkTransformFrameData>();
 
-	FQuat rotation(pTransform.GetRotation() * FQuat(FVector(0.0, 0.0, 1.0), 0.5));
-	pTransform.SetRotation(rotation);
-
-	transformData->Transform = pTransform;
+	transformData->Transform = FTransform(capture.orientation,
+		capture.position, FVector(1.0, 1.0, 1.0)) * pTransformTransform;
 
 	pSource.GetClient()->PushSubjectFrameData_AnyThread({pSource.GetSourceGuid(), pName}, MoveTemp(frameData));
-
-	/*
-				FQuat Orientation;
-				FVector Position;
-
-					TransformFrameData->Transform = FTransform(Orientation, Position);
-
-					Send(&FrameData, Device.SubjectName);
-	*/
 }
 
 void FDEMoCapLiveLinkTransformSubject::pUpdateStaticData(){

@@ -23,6 +23,9 @@
  */
 
 #include "DEMoCapLiveLinkAnimationSubject.h"
+#include "DEMoCapLiveLinkCaptureBoneLayout.h"
+#include "DEMoCapLiveLinkCaptureFrame.h"
+#include "DEMoCapLiveLinkConnection.h"
 
 #include "ILiveLinkClient.h"
 #include "DEMoCapLiveLinkSource.h"
@@ -35,71 +38,49 @@ FDEMoCapLiveLinkAnimationSubject::FDEMoCapLiveLinkAnimationSubject(
 	FDEMoCapLiveLinkSource &source, const FName &name) :
 pSource(source),
 pName(name),
-pBones(nullptr),
-pBoneCount(0),
-pRigChanged(true)
+pFrameCaptureBoneLayout(-1)
 {
+	SetRootBoneRotation(FRotator(0.0, 90.0, 0.0));
 }
 
 FDEMoCapLiveLinkAnimationSubject::~FDEMoCapLiveLinkAnimationSubject(){
-	if(pBones){
-		delete [] pBones;
-		pBones = nullptr;
-		pBoneCount = 0;
-	}
+}
+
+void FDEMoCapLiveLinkAnimationSubject::SetRootBoneRotation(const FRotator &rotation){
+	pRootBoneRotation = rotation;
 }
 
 void FDEMoCapLiveLinkAnimationSubject::Update(int frameNumber){
-	if(pRigChanged){
-		pRigChanged = false;
-		pUpdateStaticData();
+	const FDEMoCapLiveLinkConnection::Ref &connection = pSource.GetConnection();
+	if(!connection || !connection->GetReady() || !connection->GetCaptureBoneLayout() || !connection->GetCaptureFrame()){
+		return;
 	}
 
+	// check if capture bone layout changed
+	const FDEMoCapLiveLinkCaptureBoneLayout &layout = *connection->GetCaptureBoneLayout();
+	const FDEMoCapLiveLinkCaptureFrame &capture = *connection->GetCaptureFrame();
+
+	if(connection->GetSourceFrameCaptureBoneLayout() != pFrameCaptureBoneLayout){
+		pUpdateStaticData(layout);
+		pFrameCaptureBoneLayout = connection->GetSourceFrameCaptureBoneLayout();
+	}
+
+	// update dynamic data
 	FLiveLinkFrameDataStruct frameData(FLiveLinkAnimationFrameData::StaticStruct());
 	FLiveLinkAnimationFrameData* const animationFrameData = frameData.Cast<FLiveLinkAnimationFrameData>();
 	
-	animationFrameData->Transforms.Reserve(pBoneCount);
+	animationFrameData->Transforms = capture.bones;
 
-	if(pSource.GetConnection() && pSource.GetConnection()->pTestValue){
-		double value = ((double)pSource.GetConnection()->pTestValue->GetValue()) / 60.0;
-		value = value * 180.0 - 90.0;
-		FQuat rotation(FVector(0.0, 0.0, 1.0), FMath::DegreesToRadians(value));
-		pBones[0].transform.SetRotation(rotation);
-		/*
-		FVector location(pBones[0].transform.GetLocation());
-		location.Z = ((double)pSource.GetConnection()->pTestValue->GetValue()) / 60.0;
-		pBones[0].transform.SetLocation(location);
-		*/
-	}else{
-		FQuat rotation(pBones[0].transform.GetRotation() * FQuat(FVector(0.0, 0.0, 1.0), FMath::DegreesToRadians(1)));
-		pBones[0].transform.SetRotation(rotation);
-	}
-
-	int32 i;
-	for(i=0; i<pBoneCount; i++){
-		animationFrameData->Transforms.Push(pBones[i].transform);
+	const int rootBoneCount = layout.rootBones.Num();
+	int i;
+	for(i=0; i<rootBoneCount; i++){
+		animationFrameData->Transforms[i] = animationFrameData->Transforms[i] * pRootBoneTransform;
 	}
 
 	pSource.GetClient()->PushSubjectFrameData_AnyThread({pSource.GetSourceGuid(), pName}, MoveTemp(frameData));
 }
 
-void FDEMoCapLiveLinkAnimationSubject::pUpdateStaticData(){
-	// update internal data
-	if(pBones){
-		delete [] pBones;
-		pBones = nullptr;
-		pBoneCount = 0;
-	}
-
-	int32 i;
-
-	pBones = new FBone[1];
-	pBoneCount = 1;
-
-	pBones[0].name = FName(TEXT("Hips"));
-	pBones[0].parent = -1;
-	pBones[0].transform = FTransform();
-
+void FDEMoCapLiveLinkAnimationSubject::pUpdateStaticData(const FDEMoCapLiveLinkCaptureBoneLayout &layout){
 	// build static frame data
 	FLiveLinkStaticDataStruct staticData(FLiveLinkSkeletonStaticData::StaticStruct());
 	FLiveLinkSkeletonStaticData* animationStaticData = staticData.Cast<FLiveLinkSkeletonStaticData>();
@@ -107,12 +88,17 @@ void FDEMoCapLiveLinkAnimationSubject::pUpdateStaticData(){
 	TArray<FName> boneNames;
 	TArray<int32> boneParents;
 
-	boneNames.Reserve(pBoneCount);
-	boneParents.Reserve(pBoneCount);
+	const int boneCount = layout.bones.Num();
+	int i;
 
-	for(i=0; i<pBoneCount; i++){
-		boneNames.Push(pBones[i].name);
-		boneParents.Push(pBones[i].parent);
+	boneNames.Reserve(boneCount);
+	for(i=0; i<boneCount; i++){
+		boneNames.Push(layout.bones[i].name);
+	}
+
+	boneParents.Reserve(boneCount);
+	for(i=0; i<boneCount; i++){
+		boneParents.Push(layout.bones[i].parent);
 	}
 
 	animationStaticData->SetBoneNames(boneNames);

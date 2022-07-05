@@ -24,6 +24,9 @@
 
 #pragma once
 
+#include "DEMoCapLiveLinkCaptureBoneLayout.h"
+#include "DEMoCapLiveLinkCaptureFrame.h"
+
 #include "../ThirdParty/DENetwork/Include/denetwork/denConnection.h"
 #include "../ThirdParty/DENetwork/Include/denetwork/state/denState.h"
 #include "../ThirdParty/DENetwork/Include/denetwork/value/denValueInteger.h"
@@ -37,6 +40,13 @@ public:
 	FDEMoCapLiveLinkConnection(FDEMoCapLiveLinkSource &source);
 	virtual ~FDEMoCapLiveLinkConnection();
 
+	inline bool GetReady() const{ return pReady; }
+
+	inline int32 GetSourceFrameCaptureBoneLayout() const{ return pSourceFrameCaptureBoneLayout; }
+	inline int32 GetSourceFrameCaptureFrame() const{ return pSourceFrameCaptureFrame; }
+	inline FDEMoCapLiveLinkCaptureBoneLayout::Ref &GetCaptureBoneLayout(){ return pCaptureBoneLayout; }
+	inline FDEMoCapLiveLinkCaptureFrame::Ref &GetCaptureFrame(){ return pCaptureFrame; }
+
 	virtual void ConnectionEstablished() override;
 	virtual void ConnectionFailed(ConnectionFailedReason reason);
 	virtual void ConnectionClosed() override;
@@ -44,9 +54,24 @@ public:
 	virtual denState::Ref CreateState(const denMessage::Ref &message, bool readOnly) override;
 
 private:
+	void pResetState();
+	bool pIgnoreFrameNumber(int32 frameNumber) const;
+	void pProcessConnectAccepted(denMessageReader &reader);
+	void pProcessCaptureBoneLayout(denMessageReader &reader);
+	void pProcessCaptureFrame(denMessageReader &reader);
+
 	FDEMoCapLiveLinkSource &pSource;
 
-public:
-	denState::Ref pTestState;
-	denValueInt::Ref pTestValue;
+	bool pReady;
+	uint32 pSupportedFeatures;
+	uint32 pEnabledFeatures;
+
+	int32 pFrameNumberWindowSize;
+	int32 pLastFrameNumber;
+
+	int32 pSourceFrameCaptureBoneLayout;
+	int32 pSourceFrameCaptureFrame;
+
+	FDEMoCapLiveLinkCaptureBoneLayout::Ref pCaptureBoneLayout;
+	FDEMoCapLiveLinkCaptureFrame::Ref pCaptureFrame;
 };

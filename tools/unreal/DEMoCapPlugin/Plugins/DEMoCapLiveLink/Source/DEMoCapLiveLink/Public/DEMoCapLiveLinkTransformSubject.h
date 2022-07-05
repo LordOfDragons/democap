@@ -40,6 +40,9 @@ public:
 	
 	inline const FName &GetName() const{ return pName; }
 
+	inline const FRotator &GetTransformRotation() const{ return pTransformRotation; }
+	void SetTransformRotation(const FRotator &rotation);
+
 	void Update(int frameNumber);
 	
 private:
@@ -48,7 +51,8 @@ private:
 	FDEMoCapLiveLinkSource &pSource;
 	const FName pName;
 
-	FTransform pTransform;
+	FRotator pTransformRotation;
+	FTransform pTransformTransform;
 
 	bool pRequiresStaticDataUpdate;
 };

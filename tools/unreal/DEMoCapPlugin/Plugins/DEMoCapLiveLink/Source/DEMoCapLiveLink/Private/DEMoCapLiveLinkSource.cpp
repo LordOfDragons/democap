@@ -37,7 +37,7 @@
 #include "Roles/LiveLinkAnimationRole.h"
 #include "Roles/LiveLinkTransformRole.h"
 
-#define LOCTEXT_NAMESPACE "DEMoCapLiveLinkSource"
+#define LOCTEXT_NAMESPACE "FDEMoCapLiveLinkSource"
 
 FDEMoCapLiveLinkSource::FDEMoCapLiveLinkSource(const FDEMoCapLiveLinkConnectionSettings &settings) :
 pClient(nullptr),
@@ -154,8 +154,10 @@ uint32 FDEMoCapLiveLinkSource::Run(){
 	pEncounterSubject(pSubjectActorTransform->GetName());
 
 	const double updateInterval = 1.0 / (double)pUpdateRate;
+	const double reconnectDelay = 3.0;
 
 	double startTime = FApp::GetCurrentTime() - updateInterval;
+	double reconnectDelayStartTime = startTime - reconnectDelay - 1.0;
 	
 	while(!pStopping && pConnection){
 		const double endTime = FApp::GetCurrentTime();
@@ -166,7 +168,8 @@ uint32 FDEMoCapLiveLinkSource::Run(){
 			continue;
 		}
 
-		const int32 frameNumber = pFrameCounter++;
+		const int32 frameNumber = pFrameCounter;
+		pFrameCounter = (pFrameCounter + 1) % 0x7fffffff;
 		startTime = endTime;
 
 		try{
@@ -177,10 +180,16 @@ uint32 FDEMoCapLiveLinkSource::Run(){
 		
 		switch(pConnection->GetConnectionState()){
 		case denConnection::ConnectionState::disconnected:{
-			if(pConnected){
-				const FScopeLock Lock(pCriticalSection.get());
+			{
+			const FScopeLock Lock(pCriticalSection.get());
+			pConnected = false;
+			if((endTime - reconnectDelayStartTime) < reconnectDelay){
+				pSourceStatus = LOCTEXT("SourceStatus_DelayReconnect", "Delay Reconnect");
+				break;
+			}else{
+				reconnectDelayStartTime = endTime;
 				pSourceStatus = LOCTEXT("SourceStatus_Connecting", "Connecting");
-				pConnected = false;
+			}
 			}
 
 			std::stringstream s;
@@ -193,9 +202,12 @@ uint32 FDEMoCapLiveLinkSource::Run(){
 			}break;
 
 		case denConnection::ConnectionState::connecting:
+			reconnectDelayStartTime = endTime;
 			break;
 
 		case denConnection::ConnectionState::connected:
+			reconnectDelayStartTime = endTime;
+
 			if(!pConnected){
 				const FScopeLock Lock(pCriticalSection.get());
 				pSourceStatus = LOCTEXT("SourceStatus_Connected", "Connected");
