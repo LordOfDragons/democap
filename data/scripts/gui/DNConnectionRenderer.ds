@@ -33,7 +33,7 @@ class DNConnectionRenderer implements ListElementRenderer
 	/** Renderer widget. */
 	class RendererWidget extends Panel
 		/** Disconnect client action. */
-		class ActionDisconnect implements addActionListener
+		class ActionDisconnect implements ActionListener
 			protected var RendererWidget pOwner
 			
 			public func new(RendererWidget owner)
@@ -52,9 +52,7 @@ class DNConnectionRenderer implements ListElementRenderer
 		protected var Button pBtnDisconnect
 		protected var DNConnection pConnection
 		
-		public func new(DNConnection connection)
-			pConnection = connection
-			
+		public func new()
 			runWhileBlockingLayout(block
 				setLayout(BorderLayout.new(2))
 				
@@ -67,7 +65,7 @@ class DNConnectionRenderer implements ListElementRenderer
 				end), BorderLayout.Area.content)
 				
 				addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1), block Panel p
-					pBtnDisconnect = Button.new(ActionDisconnect.new(this))
+					pBtnDisconnect = Button.new("Disconnect", ActionDisconnect.new(this))
 					p.addWidget(pBtnDisconnect)
 				end), BorderLayout.Area.right)
 				
@@ -152,12 +150,12 @@ class DNConnectionRenderer implements ListElementRenderer
 			
 			var Widget renderer = createRenderer(listBox)
 			container.addWidget(renderer)
-			updateRenderer(listBox, renderer, pDefaultObject, false, false)
+			updateRenderer(listBox, renderer, null, false, false)
 		end)
 		container.doLayout()
 		
 		var Point size = container.getMinimumSize()
 		container.dispose()
-		return size.largest(pDefaultMinimumSize)
+		return size
 	end
 end
