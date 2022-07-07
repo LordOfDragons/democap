@@ -30,11 +30,8 @@ jobs:
 
       - name: Git LFS Pull
         run: |
-          git lfs pull > >(tee -a stdout.log) 2> >(tee -a stderr.log >&2)
-          if grep -q "error:" "stderr.log"; then
-            exit 1
-          fi
-          if grep -q "error:" "stdout.log"; then
+          git lfs pull 2>&1 | tee lfs.log
+          if grep -q "error:" "lfs.log" ; then
             exit 1
           fi
         
