@@ -77,6 +77,7 @@ public class DNStateRecordPlayback
 	public func void update()
 		var SessionSettings sessionSettings = SessionSettings.get()
 		var PlaybackScene playbackScene = GameApp.getGameApp().getPlaybackScene()
+		var RecordScene recordScene = GameApp.getGameApp().getRecordScene()
 		
 		// Status of the recording. Can be one of these values:
 		// 0: Neither recording nor playing back.
@@ -84,34 +85,24 @@ public class DNStateRecordPlayback
 		// 2: Recording.
 		// 3: Playing back.
 		// 4: Playback paused.
-		select playbackScene.getState()
-		case PlaybackScene.State.stopped
-			var MoCapActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
-			var ECBRecordAnimation.Instance recordAnimation
-			if actor != null
-				recordAnimation = actor.recordAnimation
-			end
+		select recordScene.getState()
+		case RecordScene.State.preparing
+			pState.setValueIntAt(0, 1)
 			
-			if recordAnimation != null
-				if recordAnimation.isPreparing()
-					pState.setValueIntAt(0, 1)
-					
-				elif recordAnimation.isRecording()
-					pState.setValueIntAt(0, 2)
-					
-				else
-					pState.setValueIntAt(0, 0)
-				end
-				
-			else
+		case RecordScene.State.recording
+			pState.setValueIntAt(0, 2)
+			
+		else
+			select playbackScene.getState()
+			case PlaybackScene.State.stopped
 				pState.setValueIntAt(0, 0)
+				
+			case PlaybackScene.State.playing
+				pState.setValueIntAt(0, 3)
+				
+			case PlaybackScene.State.paused
+				pState.setValueIntAt(0, 4)
 			end
-			
-		case PlaybackScene.State.playing
-			pState.setValueIntAt(0, 3)
-			
-		case PlaybackScene.State.paused
-			pState.setValueIntAt(0, 4)
 		end
 		
 		// Frame rate used for recording

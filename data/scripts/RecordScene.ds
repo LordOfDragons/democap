@@ -1,0 +1,198 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Democap.Actors
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Scene recording.
+ */
+class RecordScene
+	/** Listener. */
+	interface Listener
+		/** Prepare recording. */
+		func void prepareRecording(RecordScene recordScene)
+		
+		/** Start recording. */
+		func void startRecording(RecordScene recordScene)
+		
+		/** Stop recording. */
+		func void stopRecording(RecordScene recordScene)
+	end
+	
+	/** Default listener implementation. */
+	class DefaultListener implements Listener
+		/** Create listener. */
+		public func new()
+		end
+		
+		/** Prepare recording. */
+		public func void prepareRecording(RecordScene recordScene)
+		end
+		
+		/** Start recording. */
+		public func void startRecording(RecordScene recordScene)
+		end
+		
+		/** Stop recording. */
+		public func void stopRecording(RecordScene recordScene)
+		end
+	end
+	
+	/** Record state. */
+	enum State
+		stopped
+		preparing
+		recording
+	end
+	
+	
+	
+	private var State pState
+	private var Array pListeners
+	
+	
+	
+	/** Create instance. */
+	public func new()
+		pListeners = Array.new()
+		pState = State.stopped
+	end
+	
+	
+	
+	/** Playback state. */
+	public func State getState()
+		return pState
+	end
+	
+	
+	
+	/** Stopped. */
+	public func bool isStopped()
+		return pState == State.stopped
+	end
+	
+	/** Preparing. */
+	public func bool isPreparing()
+		return pState == State.preparing
+	end
+	
+	/** Recording. */
+	public func bool isRecording()
+		return pState == State.recording
+	end
+	
+	/** Prepare recording if stopped. */
+	public func void prepare()
+		if pState != State.stopped
+			return
+		end
+		
+		GameApp.getGameApp().getPlaybackScene().pause()
+		
+		pState = State.preparing
+		
+		try
+			pListeners.forEach(block Listener each
+				each.prepareRecording(this)
+			end)
+			
+		catch Exception e
+			stop(false)
+			throw
+		end
+	end
+	
+	/** Start playback if preparing or stopped. If stopped calls prepare() first. */
+	public func void record()
+		if pState == State.stopped
+			prepare()
+		end
+		if pState != State.preparing
+			return
+		end
+		
+		pState = State.recording
+		
+		try
+			pListeners.forEach(block Listener each
+				each.startRecording(this)
+			end)
+			
+		catch Exception e
+			stop(false)
+			throw
+		end
+		
+		GameApp.getGameApp().getPlaybackScene().play(false)
+	end
+	
+	/** Stop recording if playing or preparing. */
+	public func void stop(bool stopPlayback)
+		if pState == State.stopped
+			return
+		end
+		
+		pState = State.stopped
+		
+		pListeners.forEach(block Listener each
+			each.stopRecording(this)
+		end)
+		
+		if stopPlayback
+			GameApp.getGameApp().getPlaybackScene().stop()
+			
+		else
+			GameApp.getGameApp().getPlaybackScene().pause()
+		end
+		
+		GameApp.getGameApp().getPlaybackScene().updatePlaytime()
+	end
+	
+	
+	
+	/** Add listener. */
+	public func void addListener(Listener listener)
+		pListeners.add(listener)
+	end
+	
+	/** Remove listener. */
+	public func void removeListener(Listener listener)
+		pListeners.remove(listener)
+	end
+	
+	
+	
+	/** Frame update. */
+	public func void update(float elapsed)
+		if pState != State.recording
+			return
+		end
+	end
+end

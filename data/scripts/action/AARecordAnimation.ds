@@ -40,7 +40,6 @@ class AARecordAnimation extends AABase
 	
 	
 	
-	protected var ECBRecordAnimation.Instance recordAnimation
 	protected var ECBVRHudInfo.Instance vrHudInfo
 	protected var Panel panelInfo
 	protected var RangeModel modelProgress
@@ -86,12 +85,12 @@ class AARecordAnimation extends AABase
 			vrHudInfo.addPanel(panelInfo)
 		end
 		
-		recordAnimation.prepareRecording()
+		GameApp.getGameApp().getRecordScene().prepare()
 	end
 	
 	/** Deactivate action. */
 	public func void deactivate()
-		recordAnimation.stopRecording() // just to make sure
+		GameApp.getGameApp().getRecordScene().stop(true)
 		removeHudInfoPanel()
 		modelProgress = null
 	end
@@ -102,7 +101,6 @@ class AARecordAnimation extends AABase
 	protected func void initBehaviors()
 		super.initBehaviors()
 		
-		recordAnimation = ECBRecordAnimation.getInstanceIn(actor)
 		vrHudInfo = ECBVRHudInfo.getInstanceIn(actor)
 	end
 	
@@ -125,7 +123,7 @@ class AARecordAnimation extends AABase
 	
 	/** Stop recording. */
 	public func void stopRecording()
-		recordAnimation.stopRecording()
+		GameApp.getGameApp().getRecordScene().stop(true)
 		
 		select state
 		case State.prepare
@@ -158,6 +156,11 @@ class AARecordAnimation extends AABase
 		
 		select state
 		case State.prepare
+			if GameApp.getGameApp().getRecordScene().getState() != RecordScene.State.preparing
+				stopRecording()
+				return
+			end
+			
 			elapsedTime += elapsed
 			
 			if modelProgress != null
@@ -179,7 +182,13 @@ class AARecordAnimation extends AABase
 				end
 				
 				state = State.recording
-				recordAnimation.startRecording()
+				
+				GameApp.getGameApp().getRecordScene().record()
+			end
+			
+		case State.recording
+			if GameApp.getGameApp().getRecordScene().getState() != RecordScene.State.recording
+				stopRecording()
 			end
 			
 		case State.finished

@@ -85,9 +85,30 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end
 		end
 		
+		class RecordStateChanged extends RecordScene.DefaultListener
+			protected var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void prepareRecording(RecordScene recordScene)
+				pInstance.prepareRecording()
+			end
+			
+			public func void startRecording(RecordScene recordScene)
+				pInstance.startRecording()
+			end
+			
+			public func void stopRecording(RecordScene recordScene)
+				pInstance.stopRecording()
+			end
+		end
+		
 		
 		private var ECBRecordAnimation pECBehavior
 		private var ECBehaviorComponent.Instance pComponent
+		private var ECBCharacterConfiguration.Instance pCharacter
 		private var Array pBoneIndices
 		private var Array pRootBoneIndices
 		private var Array pStaticBoneIndices
@@ -98,9 +119,9 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var RecordAnimation pRecordAnimation
 		private var RecordAnimation pRecordAnimationDevices
 		private var RecordAnimation pRecordAnimationObject
-		private var CharacterConfiguration pCharacterConfiguration
 		private var CharacterAnimation pCharacterAnimation
 		private var SessionSettings.RecordDevices pRecordDevices
+		private var bool pRecordObject
 		private var Array pRecordDeviceSlots
 		private var bool pIsPreparing
 		private var bool pIsRecording
@@ -110,6 +131,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var ECBCapturedAnimations.Instance pCapturedAnimations
 		private var bool pFullRecording
 		private var bool pFirstFrame
+		private var RecordStateChanged pRecordStateChanged
 		
 		
 		
@@ -125,14 +147,28 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pRecordDeviceSlots = Array.new()
 			pListeners = Array.new()
 			pTransformRootBones = Matrix.new()
+			
 			pComponent = ecbehavior.getComponent().instance(element)
+			if ecbehavior.getCharacter() != null
+				pCharacter = ecbehavior.getCharacter().instance(element)
+			end
+			
+			pRecordStateChanged = RecordStateChanged.new(this)
+			GameApp.getGameApp().getRecordScene().addListener(pRecordStateChanged)
+			
 			setRequiresThink(true)
 		end
 		
 		/** Dispose of instance. */
 		public func void dispose()
+			if pRecordStateChanged != null
+				GameApp.getGameApp().getRecordScene().removeListener(pRecordStateChanged)
+				pRecordStateChanged = null
+			end
+			
 			pCapturedAnimations = null
 			pListeners = null
+			pCharacter = null
 			pComponent = null
 			super.dispose()
 		end
@@ -204,12 +240,12 @@ class ECBRecordAnimation extends DefaultECBehavior
 		
 		/** Prepare to record. */
 		public func void prepareRecording()
-			stopRecording()
-			
-			var GameApp app = GameApp.getGameApp()
-			app.getPlaybackScene().pause()
-			
-			pCharacterConfiguration = ECBCharacterConfiguration.getInstanceIn(getElement()).getCharacter()
+			if pIsPreparing or pIsRecording
+				return
+			end
+			if pCharacter != null and GameApp.getGameApp().getWorldSpawnCharacter().getActor() != getElement()
+				return
+			end
 			
 			pFirstFrame = true
 			
@@ -218,45 +254,49 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pRecordAnimation.setMoveName("MoCap")
 			
 			pRecordDevices = SessionSettings.get().getRecordDevices()
+			pRecordObject = SessionSettings.get().getModelRecordObject().getToggled()
 			
 			pRecordDeviceSlots.removeAll()
 			
-			if pRecordDevices != SessionSettings.RecordDevices.none
+			if pRecordDevices != SessionSettings.RecordDevices.none and pCharacter != null
 				pRecordAnimationDevices = RecordAnimation.new("-devices")
 				pRecordAnimationDevices.setFPS(pRecordAnimation.getFPS())
 				pRecordAnimationDevices.setMoveName("MoCapDevices")
-				pRecordAnimationDevices.createRig(pCharacterConfiguration)
+				pRecordAnimationDevices.createRig(pCharacter.getCharacter())
 			end
 			
-			if false
+			if pRecordObject
 				pRecordAnimationObject = RecordAnimation.new("-object")
 				pRecordAnimationObject.setFPS(pRecordAnimation.getFPS())
 				pRecordAnimationObject.setMoveName("MoCapObject")
 				pRecordAnimationObject.createObjectRig()
 			end
 			
-			var ECBSelectable.Instance selection = app.getSelectionTracker().getElement()
 			var BehaviorElement selectionElement
 			var bool firstAnimation
 			
-			if selection != null
-				selectionElement = selection.getElement()
-				pCapturedAnimations = ECBCapturedAnimations.getInstanceIn(selectionElement)
+			if pCharacter != null
+				var ECBSelectable.Instance selection = GameApp.getGameApp().getSelectionTracker().getElement()
 				
-				if pCapturedAnimations != null
-					if not pCapturedAnimations.getCharacterProfile().equals(pCharacterConfiguration.getProfile().getName())
-						pCapturedAnimations = null
-						throw EInvalidParam.new("character profile mismatch")
+				if selection != null
+					selectionElement = selection.getElement()
+					pCapturedAnimations = ECBCapturedAnimations.getInstanceIn(selectionElement)
+					
+					if pCapturedAnimations != null and pCharacter != null
+						if not pCapturedAnimations.getCharacterProfile().equals(pCharacter.getCharacter().getProfile().getName())
+							pCapturedAnimations = null
+							throw EInvalidParam.new("character profile mismatch")
+						end
+						
+						if pCapturedAnimations.getAnimations().getActive() == null
+							pCapturedAnimations = null
+							throw EInvalidParam.new("no active animation")
+						end
+						
+						pCharacterAnimation = pCapturedAnimations.getAnimations().getActive()
+						
+						firstAnimation = pCapturedAnimations.getAnimations().getAt(0) == pCharacterAnimation
 					end
-					
-					if pCapturedAnimations.getAnimations().getActive() == null
-						pCapturedAnimations = null
-						throw EInvalidParam.new("no active animation")
-					end
-					
-					pCharacterAnimation = pCapturedAnimations.getAnimations().getActive()
-					
-					firstAnimation = pCapturedAnimations.getAnimations().getAt(0) == pCharacterAnimation
 				end
 			end
 			
@@ -286,8 +326,10 @@ class ECBRecordAnimation extends DefaultECBehavior
 				var BehaviorElement element = getElement()
 // 				element.setGeometry(selectionElement.getPosition(), selectionElement.getOrientation())
 				
-				pTransformRootBones = (element.getElementMatrix()\
-					* selectionElement.getInverseElementMatrix()).toMatrix()
+				if selectionElement != null
+					pTransformRootBones = (element.getElementMatrix()\
+						* selectionElement.getInverseElementMatrix()).toMatrix()
+				end
 				
 				// if physics attachments are used init collider bone states from component.
 				// this is required since collider bone states are in world space and do not
@@ -299,14 +341,14 @@ class ECBRecordAnimation extends DefaultECBehavior
 				end
 			end
 			
-			if pRecordDevices != SessionSettings.RecordDevices.none
+			if pRecordDevices != SessionSettings.RecordDevices.none and pCharacter != null
 				// has to be done after pTransformRootBones has been calculated
-				var Matrix matCalibInv = pCharacterConfiguration.getMatrixCalibrateInverse()
+				var Matrix matCalibInv = pCharacter.getCharacter().getMatrixCalibrateInverse()
 				var Rig rig = pRecordAnimationDevices.getRig()
 				
-				pCharacterConfiguration.getTrackerSlots().forEach(block int index, CharacterTrackerSlot each
+				pCharacter.getCharacter().getTrackerSlots().forEach(block int index, CharacterTrackerSlot each
 					var ECBTrackerSlot.Instance slot = ECBTrackerSlot.getInstanceIn(getElement(), each.getName())
-					var Matrix matrix1, matrix2
+					var Matrix matrix1
 					
 					select pRecordDevices
 					case SessionSettings.RecordDevices.device
@@ -320,7 +362,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 							* each.getTargetMatrix() * each.getCalibrateReferenceMatrixInverse()
 					end
 					
-					matrix2 = matCalibInv * pTransformRootBones * rig.getBoneInverseMatrix(index)
+					var Matrix matrix2 = matCalibInv * pTransformRootBones * rig.getBoneInverseMatrix(index)
 					
 					pRecordDeviceSlots.add(RecordDeviceSlot.new(slot, index, matrix1, matrix2))
 					pRecordAnimationDevices.addBone(each.getName())
@@ -453,14 +495,17 @@ class ECBRecordAnimation extends DefaultECBehavior
 		
 		/** Prepare origin bone. */
 		protected func void prepareOriginBone()
-			var Rig rig = pComponent.getComponent().getRig()
-			
 			pOriginBoneIndex = -1
 			pOriginChildrenIndices.removeAll()
 			
-			var String originBone = pCharacterConfiguration.getProfile().getOriginBone()
+			if pCharacter == null
+				return
+			end
+			
+			var String originBone = pCharacter.getCharacter().getProfile().getOriginBone()
 			pRecordAnimation.setOriginBone(originBone)
 			
+			var Rig rig = pComponent.getComponent().getRig()
 			pOriginBoneIndex = rig.indexOfBoneNamed(originBone)
 			if pOriginBoneIndex == -1
 				return
@@ -488,8 +533,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 		
 		/** Start recording animation. */
 		public func void startRecording()
-			if not pIsPreparing
-				prepareRecording()
+			if not (pIsPreparing and not pIsRecording)
+				return
 			end
 			
 			pIsPreparing = false
@@ -500,8 +545,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pListeners.forEach(block Listener each
 				each.startRecording(this)
 			end)
-			
-			GameApp.getGameApp().getPlaybackScene().play(false)
 		end
 		
 		/** Stop recording animation. */
@@ -596,7 +639,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pCharacterAnimation = null
 				pCapturedAnimations = null
 				pTransformRootBones = Matrix.new()
-				pCharacterConfiguration = null
 				
 			elif pIsPreparing
 				pIsPreparing = false
@@ -606,7 +648,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pCharacterAnimation = null
 				pCapturedAnimations = null
 				pTransformRootBones = Matrix.new()
-				pCharacterConfiguration = null
 				
 			else
 				return
@@ -615,10 +656,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pListeners.forEach(block Listener each
 				each.stopRecording(this)
 			end)
-			
-			var PlaybackScene ps = app.getPlaybackScene()
-			ps.stop()
-			ps.updatePlaytime()
 		end
 		
 		
@@ -637,9 +674,11 @@ class ECBRecordAnimation extends DefaultECBehavior
 		
 		/** Post think. Called after rendering and thus when animation frame is ready to record. */
 		public func void postThink(float elapsed)
-			var DNServer dnserver = GameApp.getGameApp().getServer()
+			if pCharacter == null
+				return
+			end
 			
-			if not pIsRecording and not dnserver.isListening()
+			if not pIsRecording and not GameApp.getGameApp().getServer().isListening()
 				return
 			end
 			
@@ -651,10 +690,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 				end
 				pIncrementTime = true
 				captureBones()
-			end
-			
-			if dnserver.isListening()
-				dnserver.updateCaptureFrame()
 			end
 		end
 		
@@ -731,7 +766,6 @@ class ECBRecordAnimation extends DefaultECBehavior
 		/** Write capture information file. */
 		public func void writeCaptureInfoFile(String path, String animPath, String animDevicesPath,\
 		String animDevicesRigPath, String animObjectPath, String animObjectRigPath)
-			var GameApp app = GameApp.getGameApp()
 			var EasyXML document = EasyXML.new()
 			var EasyXMLElement root = document.getRootElement()
 			var TimeDate timestamp = pRecordAnimation.getTimestamp()
@@ -742,31 +776,33 @@ class ECBRecordAnimation extends DefaultECBehavior
 			root.addDataTag("timestamp", timestamp.format("%Y-%m-%dT%H:%M:%S"))
 			
 			// actor
-			var ActorProfile actorProfile = app.getActiveActorProfile()
-			if actorProfile != null
-				var EasyXMLElement tag = root.addTag("actor")
-				tag.addDataTag("profileName", actorProfile.getName())
-				tag.addDataTag("shoulderLevel", actorProfile.getShoulderLevel())
-				tag.addDataTag("shoulderWide", actorProfile.getShoulderWidth())
-				tag.addDataTag("armLength", actorProfile.getArmLength())
-				tag.addDataTag("legLength", actorProfile.getLegLength())
+			if pCharacter != null
+				var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
+				if actorProfile != null
+					var EasyXMLElement tag = root.addTag("actor")
+					tag.addDataTag("profileName", actorProfile.getName())
+					tag.addDataTag("shoulderLevel", actorProfile.getShoulderLevel())
+					tag.addDataTag("shoulderWide", actorProfile.getShoulderWidth())
+					tag.addDataTag("armLength", actorProfile.getArmLength())
+					tag.addDataTag("legLength", actorProfile.getLegLength())
+				end
 			end
 			
 			// character
 			var String originBone = ""
 			
-			if pCharacterConfiguration != null
-				var CharacterProfile profile = pCharacterConfiguration.getProfile()
+			if pCharacter != null
+				var CharacterProfile profile = pCharacter.getCharacter().getProfile()
 				originBone = profile.getOriginBone()
 				
 				var EasyXMLElement tag = root.addTag("character")
 				tag.addDataTag("profileName", profile.getName())
-				tag.addDataTag("configurationName", pCharacterConfiguration.getName())
+				tag.addDataTag("configurationName", pCharacter.getCharacter().getName())
 				
 				tag.addDataTag("originBone", originBone)
 				tag.addDataTag("shoulderLevel", profile.getShoulderLevel())
-				tag.addDataTag("scaleMode", pCharacterConfiguration.getScaleMode().name())
-				tag.addDataTag("calibratedScale", pCharacterConfiguration.getCalibrateScale())
+				tag.addDataTag("scaleMode", pCharacter.getCharacter().getScaleMode().name())
+				tag.addDataTag("calibratedScale", pCharacter.getCharacter().getCalibrateScale())
 				
 				var CharacterAppearance appearance = profile.getAppearance()
 				var EasyXMLElement tagAppearance = tag.addTag("appearance")
@@ -878,6 +914,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 	
 	
 	private var ECBehaviorComponent pComponent
+	private var ECBCharacterConfiguration pCharacter
 	private var Set pBones
 	private var Set pRootBones
 	private var Set pIgnoreBones
@@ -885,8 +922,11 @@ class ECBRecordAnimation extends DefaultECBehavior
 	
 	
 	/** Create behavior element class. */
-	public func new(BaseVRActorClass eclass) super(eclass)
-		pComponent = eclass.getComponent()
+	public func new(BehaviorElementClass eclass, ECBehaviorComponent component,\
+	ECBCharacterConfiguration characterConfiguration) super(eclass)
+		pComponent = component
+		pCharacter = characterConfiguration
+		
 		pBones = Set.new()
 		pRootBones = Set.new()
 		pIgnoreBones = Set.new()
@@ -894,11 +934,23 @@ class ECBRecordAnimation extends DefaultECBehavior
 		eclass.addBehavior(this)
 	end
 	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pCharacter = null
+		pComponent = null
+		super.dispose()
+	end
+	
 	
 	
 	/** Component behavior. */
 	public func ECBehaviorComponent getComponent()
 		return pComponent
+	end
+	
+	/** Character configuration behavior or null. */
+	public func ECBCharacterConfiguration getCharacter()
+		return pCharacter
 	end
 	
 	

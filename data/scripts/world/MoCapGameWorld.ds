@@ -60,8 +60,16 @@ class MoCapGameWorld extends GameWorld
 	
 	/** Frame update. */
 	public func void update(float elapsed)
-		GameApp.getGameApp().getPlaybackScene().update(elapsed)
+		var GameApp app = GameApp.getGameApp()
+		
+		app.getPlaybackScene().update(elapsed)
+		app.getRecordScene().update(elapsed)
 		
 		super.update(elapsed)
+		
+		var DNServer server = app.getServer()
+		if server.isListening()
+			server.updateCaptureFrame()
+		end
 	end
 end

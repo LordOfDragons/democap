@@ -70,6 +70,27 @@ class WMPanelSession extends Panel
 		end
 	end
 	
+	/** Record state changed. */
+	class RecordStateChanged extends RecordScene.DefaultListener
+		protected var WMPanelSession pPanel
+		
+		public func new(WMPanelSession panel)
+			pPanel = panel
+		end
+		
+		public func void prepareRecording(RecordScene recordScene)
+			pPanel.updateRecordState()
+		end
+		
+		public func void startRecording(RecordScene recordScene)
+			pPanel.updateRecordState()
+		end
+		
+		public func void stopRecording(RecordScene recordScene)
+			pPanel.updateRecordState()
+		end
+	end
+	
 	/** Click and drag in playback bar. */
 	class ClickAndDragPlaybackBar extends DefaultMouseListener
 		protected var bool pDragging
@@ -90,6 +111,7 @@ class WMPanelSession extends Panel
 		
 		public func void onButtonPress( MouseEvent event )
 			if not pDragging and event.getButton() == InputEventMouseButton.left
+				GameApp.getGameApp().getRecordScene().stop(false)
 				pDragging = true
 				pWidget.captureMouse()
 				pPanel.playbackPause()
@@ -134,7 +156,10 @@ class WMPanelSession extends Panel
 	protected var Button pButtonPlaybackPlayBackwards
 	protected var Button pButtonPlaybackPause
 	protected var Button pButtonPlaybackStop
+	protected var Button pButtonRecordStart
+	protected var Button pButtonRecordStop
 	protected var PlaybackChanged pPlaybackChanged
+	protected var RecordStateChanged pRecordStateChanged
 	
 	
 	
@@ -154,14 +179,23 @@ class WMPanelSession extends Panel
 		runWhileBlockingLayout(block
 			createContent()
 			updatePlaybackState()
+			updateRecordState()
 		end)
 		
 		pPlaybackChanged = PlaybackChanged.new(this)
 		GameApp.getGameApp().getPlaybackScene().addListener(pPlaybackChanged)
+		
+		pRecordStateChanged = RecordStateChanged.new(this)
+		GameApp.getGameApp().getRecordScene().addListener(pRecordStateChanged)
 	end
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		if pRecordStateChanged != null
+			GameApp.getGameApp().getRecordScene().removeListener(pRecordStateChanged)
+			pRecordStateChanged = null
+		end
+		
 		if pPlaybackChanged != null
 			GameApp.getGameApp().getPlaybackScene().removeListener(pPlaybackChanged)
 			pPlaybackChanged = null
@@ -189,6 +223,15 @@ class WMPanelSession extends Panel
 	end
 	
 	
+	
+	/** Update record state. */
+	public func void updateRecordState()
+		var RecordScene record = GameApp.getGameApp().getRecordScene()
+		var RecordScene.State state = record.getState()
+		
+		pButtonRecordStart.setEnabled(state == RecordScene.State.stopped)
+		pButtonRecordStop.setEnabled(state != RecordScene.State.stopped)
+	end
 	
 	/** Start recording. */
 	public func void startRecording()
@@ -270,6 +313,7 @@ class WMPanelSession extends Panel
 	public func void updatePlaybackState()
 		var PlaybackScene playback = GameApp.getGameApp().getPlaybackScene()
 		var PlaybackScene.State state = playback.getState()
+		var bool recordStopped = GameApp.getGameApp().getRecordScene().isStopped()
 		
 		pButtonPlaybackPlay.setEnabled(state != PlaybackScene.State.playing\
 			or playback.getBackwards())
@@ -299,26 +343,31 @@ class WMPanelSession extends Panel
 	
 	/** Start playback. */
 	public func void playbackStart(bool backwards)
+		GameApp.getGameApp().getRecordScene().stop(false)
 		GameApp.getGameApp().getPlaybackScene().play(backwards)
 	end
 	
 	/** Pause playback. */
 	public func void playbackPause()
+		GameApp.getGameApp().getRecordScene().stop(false)
 		GameApp.getGameApp().getPlaybackScene().pause()
 	end
 	
 	/** Stop playback. */
 	public func void playbackStop()
+		GameApp.getGameApp().getRecordScene().stop(false)
 		GameApp.getGameApp().getPlaybackScene().stop()
 	end
 	
 	/** Rewind playback. */
 	public func void playbackRewind()
+		GameApp.getGameApp().getRecordScene().stop(false)
 		GameApp.getGameApp().getPlaybackScene().rewind()
 	end
 	
 	/** Fast forward to end of playback. */
 	public func void playbackForwardEnd()
+		GameApp.getGameApp().getRecordScene().stop(false)
 		GameApp.getGameApp().getPlaybackScene().forwardEnd()
 	end
 	
@@ -342,19 +391,19 @@ class WMPanelSession extends Panel
 		FlowLayout.new(LayoutAxis.y, 2), block Panel gp
 			gp.addWidget(Panel.new(BorderLayout.new(), block Panel p
 				p.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p2
-					button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					pButtonRecordStart = Button.new(" ", BlockActionListener.new(block ActionEvent event
 						startRecording()
 					end))
-					button.setDesignerSelector("Button.CaptureRecord")
-					button.setToolTip("Start motion capturing")
-					p2.addWidget(button)
+					pButtonRecordStart.setDesignerSelector("Button.CaptureRecord")
+					pButtonRecordStart.setToolTip("Start motion capturing")
+					p2.addWidget(pButtonRecordStart)
 					
-					button = Button.new(" ", BlockActionListener.new(block ActionEvent event
+					pButtonRecordStop = Button.new(" ", BlockActionListener.new(block ActionEvent event
 						stopRecording()
 					end))
-					button.setDesignerSelector("Button.CaptureStop")
-					button.setToolTip("Stop motion capturing writing animation to overlay directory")
-					p2.addWidget(button)
+					pButtonRecordStop.setDesignerSelector("Button.CaptureStop")
+					pButtonRecordStop.setToolTip("Stop motion capturing writing animation to overlay directory")
+					p2.addWidget(pButtonRecordStop)
 					
 					button = Button.new("Captured", BlockActionListener.new(block ActionEvent event
 						browseCapturedAnimations()
