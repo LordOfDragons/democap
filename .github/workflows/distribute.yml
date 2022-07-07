@@ -29,7 +29,14 @@ jobs:
           restore-keys: lfs-cache-
 
       - name: Git LFS Pull
-        run: git lfs pull
+        run: |
+          git lfs pull > >(tee -a stdout.log) 2> >(tee -a stderr.log >&2)
+          if grep -q "error:" "stderr.log"; then
+            exit 1
+          fi
+          if grep -q "error:" "stdout.log"; then
+            exit 1
+          fi
         
       - name: Update project file
         run: |
