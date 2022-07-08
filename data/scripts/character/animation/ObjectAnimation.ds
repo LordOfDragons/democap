@@ -1,0 +1,299 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Characters
+
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.LoadSave
+pin Dragengine.XML
+
+
+/**
+ * Object animation
+ */
+class ObjectAnimation
+	private var String pPath
+	private var String pPathRig
+	private var String pPathMeta
+	private var TimeDate pTimestamp
+	private var FileUsageManager pFileUsage
+	private var Animation pAnimation
+	private var Rig pRig
+	
+	
+	
+	/** Create character animation. */
+	public func new()
+		pPath = ""
+		pPathRig = ""
+		pPathMeta = ""
+		pTimestamp = TimeDate.new()
+		pFileUsage = FileUsageManager.new()
+	end
+	
+	/** Create copy of character animation. */
+	public func new(ObjectAnimation copy)
+		pPath = ""
+		pPathRig = ""
+		pPathMeta = ""
+		pTimestamp = copy.pTimestamp
+		pAnimation = copy.pAnimation
+		pRig = copy.pRig
+		
+		pFileUsage = FileUsageManager.new()
+		pFileUsage.setParent(copy.pFileUsage.getParent())
+		
+		setPath(copy.pPath)
+		setPathRig(copy.pPathRig)
+		setPathMeta(copy.pPathMeta)
+	end
+	
+	/** Create character animation from file. */
+	public func new(FileReader reader)
+		var int i, count
+		
+		pPath = ""
+		pPathRig = ""
+		pPathMeta = ""
+		pFileUsage = FileUsageManager.new()
+		
+		select reader.readByte() // version
+		case 0
+			setPath(reader.readString8())
+			setPathRig(reader.readString8())
+			setPathMeta(reader.readString8())
+			pTimestamp = reader.readTimeDate()
+			pFileUsage.readFromFile(reader)
+			
+		else
+			throw EInvalidParam.new("unsupported version")
+		end
+	end
+	
+	/** Dispose of list. */
+	public func void dispose()
+		setPath("")
+		setPathRig("")
+		setPathMeta("")
+		
+		if pFileUsage != null
+			pFileUsage.setParent(null)
+		end
+	end
+	
+	
+	
+	/** Path relative to project or empty string. */
+	public func String getPath()
+		return pPath
+	end
+	
+	/** Set path relative to project or empty string. */
+	public func void setPath(String path)
+		if path.equals(pPath)
+			return
+		end
+		
+		if not pPath.empty()
+			pFileUsage.removeFileUsage(pPath)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"ObjectAnimation.setPath() old(" + pPath + ")")
+			end
+		end
+		
+		pPath = path
+		
+		if not path.empty()
+			pFileUsage.addFileUsage(path)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"ObjectAnimation.setPath() new(" + path + ")")
+			end
+		end
+	end
+	
+	/** Rig path relative to project or empty string. */
+	public func String getPathRig()
+		return pPathRig
+	end
+	
+	/** Set rig path relative to project or empty string. */
+	public func void setPathRig(String path)
+		if path.equals(pPathRig)
+			return
+		end
+		
+		if not pPathRig.empty()
+			pFileUsage.removeFileUsage(pPathRig)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"ObjectAnimation.setPathRig() old(" + pPathRig + ")")
+			end
+		end
+		
+		pPathRig = path
+		
+		if not path.empty()
+			pFileUsage.addFileUsage(path)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"ObjectAnimation.setPathRig() new(" + path + ")")
+			end
+		end
+	end
+	
+	/** Meta path relative to project or empty string. */
+	public func String getPathMeta()
+		return pPathMeta
+	end
+	
+	/** Set path relative to project or empty string. */
+	public func void setPathMeta(String path)
+		if path.equals(pPathMeta)
+			return
+		end
+		
+		if not pPathMeta.empty()
+			pFileUsage.removeFileUsage(pPathMeta)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"ObjectAnimation.setPathMeta() old(" + pPathMeta + ")")
+			end
+		end
+		
+		pPathMeta = path
+		
+		if not path.empty()
+			pFileUsage.addFileUsage(path)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"ObjectAnimation.setPathMeta() new(" + path + ")")
+			end
+		end
+	end
+	
+	/** File usage. */
+	public func FileUsageManager getFileUsage()
+		return pFileUsage
+	end
+	
+	/** Animation or null if not created. */
+	public func Animation getAnimation()
+		return pAnimation
+	end
+	
+	/** Set animation or null if not created. */
+	public func void setAnimation(Animation animation)
+		pAnimation = animation
+	end
+	
+	/** Rig or null if not created. */
+	public func Rig getRig()
+		return pRig
+	end
+	
+	/** Set rig or null if not created. */
+	public func void setRig(Rig rig)
+		pRig = rig
+	end
+	
+	/** Load animations and rigs if present and possible. */
+	public func void loadAnimation(Project project)
+		if not pPath.empty()
+			pAnimation = Animation.new((project.getDataDirectory() + pPath).getPath())
+		end
+		if not pPathRig.empty()
+			pRig = Rig.new((project.getDataDirectory() + pPathRig).getPath())
+		end
+	end
+	
+	/** Clear animation. */
+	public func void clear()
+		pAnimation = null
+		pRig = null
+		setPath("")
+		setPathRig("")
+		setPathMeta("")
+	end
+	
+	/** Assign from another object animation. */
+	public func void assign(ObjectAnimation objectAnimation)
+		pTimestamp = objectAnimation.pTimestamp
+		pAnimation = objectAnimation.pAnimation
+		pRig = objectAnimation.pRig
+		
+		setPath(objectAnimation.pPath)
+		setPathRig(objectAnimation.pPathRig)
+		setPathMeta(objectAnimation.pPathMeta)
+	end
+	
+	/** Export character animation. */
+	public func void export(Project project, String name)
+		var Project.AnimationPath path = project.exportAnimationPath(name, "deanim", "derig")
+		var File directory = project.getDataDirectory()
+		
+		if not pPath.empty()
+			FileWriter.new((directory + path.getPathObject()).getPath()).writeData(\
+				FileReader.new((directory + pPath).getPath()))
+		end
+		
+		if not pPathRig.empty()
+			FileWriter.new((directory + path.getPathObjectRig()).getPath()).writeData(\
+				FileReader.new((directory + pPathRig).getPath()))
+		end
+		
+		var EasyXML document = EasyXML.new((directory + pPathMeta).getPath())
+		if document.hasParseFailed()
+			GameApp.getGameApp().getConsole().addMessage(document.getParseLog())
+			throw EInvalidParam.new("parsing document failed")
+		end
+		
+		document.getRootElement().forEachTag(block EasyXMLElement tag, String tagName
+			if tagName.equals("capturedAnimationObject")
+				tag.forEachTag(block EasyXMLElement tag2, String tagName2
+					if tagName2.equals("pathAnimation")
+						tag2.getElementAt(0).setCDataContent(path.getPathObject())
+						
+					elif tagName2.equals("pathRig")
+						tag2.getElementAt(0).setCDataContent(path.getPathObjectRig())
+					end
+				end)
+			end
+		end)
+		
+		document.writeToFile(FileWriter.new((directory + path.getPathMeta()).getPath()), false)
+	end
+	
+	
+	
+	/** Write to file. */
+	public func void writeToFile(FileWriter writer)
+		writer.writeByte(0) // version
+		
+		writer.writeString8(pPath)
+		writer.writeString8(pPathRig)
+		writer.writeString8(pPathMeta)
+		writer.writeTimeDate(pTimestamp)
+		pFileUsage.writeToFile(writer)
+	end
+end

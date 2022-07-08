@@ -63,6 +63,8 @@ class DemcaBrowserSelectionInfo(bpy.types.PropertyGroup):
 	pathAnimation: bpy.props.StringProperty(name="Path Animation", default="")
 	pathDevicesRig: bpy.props.StringProperty(name="Path Devices Rig", default="")
 	pathDevicesAnimation: bpy.props.StringProperty(name="Path Devices Animation", default="")
+	pathObjectRig: bpy.props.StringProperty(name="Path Object Rig", default="")
+	pathObjectAnimation: bpy.props.StringProperty(name="Path Object Animation", default="")
 
 def DemcaBrowser_SelectionChanged(self, context):
 	dtprops = context.window_manager.democaptools_properties
@@ -83,6 +85,8 @@ def DemcaBrowser_SelectionChanged(self, context):
 				dtprops.browserSelectionInfo.pathAnimation = demca.pathAnimation
 				dtprops.browserSelectionInfo.pathDevicesRig = demca.pathDevicesRig
 				dtprops.browserSelectionInfo.pathDevicesAnimation = demca.pathDevicesAnimation
+				dtprops.browserSelectionInfo.pathObjectRig = demca.pathObjectRig
+				dtprops.browserSelectionInfo.pathObjectAnimation = demca.pathObjectAnimation
 				return
 	
 	dtprops.browserSelectionInfo.filename = ""
@@ -94,6 +98,8 @@ def DemcaBrowser_SelectionChanged(self, context):
 	dtprops.browserSelectionInfo.pathAnimation = ""
 	dtprops.browserSelectionInfo.pathDevicesRig = ""
 	dtprops.browserSelectionInfo.pathDevicesAnimation = ""
+	dtprops.browserSelectionInfo.pathObjectRig = ""
+	dtprops.browserSelectionInfo.pathObjectAnimation = ""
 
 def DemocapToolsPanelProperties_CurrentDirectory_Update(self, context):
 	Configuration.get().setDemcaBrowserCurrentDirectory(self.currentDirectory)
@@ -273,6 +279,77 @@ class LIST_OT_DemcaBrowserImportDevicesAnimation(bpy.types.Operator):
 			dtlist[index].path, dtprops.browserSelectionInfo.pathDevicesAnimation))
 		return {'FINISHED'}
 
+class LIST_OT_DemcaBrowserImportObjectRig(bpy.types.Operator):
+	"""Import Object Rig."""
+	bl_idname = "democaptools_demcabrowser.importobjectrig"
+	bl_label = "Import Object Rig"
+	bl_options = {'REGISTER', 'UNDO'}
+	
+	@classmethod
+	def poll(cls, context):
+		dtlist = context.window_manager.democaptools_filelistdemca
+		index = context.window_manager.democaptools_filelistdemca_index
+		dtprops = context.window_manager.democaptools_properties
+		if index >= 0 and index < len(dtlist):
+			if not dtlist[index].isDirectory:
+				return dtprops.browserSelectionInfo.pathObjectRig
+		return False
+	
+	def execute(self, context):
+		dtlist = context.window_manager.democaptools_filelistdemca
+		index = context.window_manager.democaptools_filelistdemca_index
+		dtprops = context.window_manager.democaptools_properties
+		if index < 0 or index >= len(dtlist):
+			return {'CANCELLED'}
+			
+		if dtlist[index].isDirectory:
+			return {'CANCELLED'}
+			
+		if not dtprops.browserSelectionInfo.pathObjectRig:
+			return {'CANCELLED'}
+			
+		bpy.ops.object.mode_set(mode='OBJECT')
+		bpy.ops.dragengine.import_rig('EXEC_DEFAULT', filepath=Demca.getAbsPath(
+			dtlist[index].path, dtprops.browserSelectionInfo.pathObjectRig))
+		return {'FINISHED'}
+
+class LIST_OT_DemcaBrowserImportObjectAnimation(bpy.types.Operator):
+	"""Import Object Rig."""
+	bl_idname = "democaptools_demcabrowser.importobjectanimation"
+	bl_label = "Import Object Animation"
+	bl_options = {'REGISTER', 'UNDO'}
+	
+	@classmethod
+	def poll(cls, context):
+		if context.active_object and context.active_object.type == 'ARMATURE':
+			dtlist = context.window_manager.democaptools_filelistdemca
+			index = context.window_manager.democaptools_filelistdemca_index
+			dtprops = context.window_manager.democaptools_properties
+			if index >= 0 and index < len(dtlist):
+				if not dtlist[index].isDirectory:
+					return dtprops.browserSelectionInfo.pathObjectAnimation
+		return False
+	
+	def execute(self, context):
+		if not context.active_object or context.active_object.type != 'ARMATURE':
+			return {'CANCELLED'}
+		
+		dtlist = context.window_manager.democaptools_filelistdemca
+		index = context.window_manager.democaptools_filelistdemca_index
+		dtprops = context.window_manager.democaptools_properties
+		if index < 0 or index >= len(dtlist):
+			return {'CANCELLED'}
+		
+		if dtlist[index].isDirectory:
+			return {'CANCELLED'}
+		
+		if not dtprops.browserSelectionInfo.pathObjectAnimation:
+			return {'CANCELLED'}
+			
+		bpy.ops.dragengine.import_animation('EXEC_DEFAULT', filepath=Demca.getAbsPath(
+			dtlist[index].path, dtprops.browserSelectionInfo.pathObjectAnimation))
+		return {'FINISHED'}
+
 class VIEW3D_PT_DemocapToolsDemcaBrowser(bpy.types.Panel):
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
@@ -334,6 +411,8 @@ class VIEW3D_PT_DemocapToolsDemcaBrowser(bpy.types.Panel):
 		column.operator("democaptools_demcabrowser.importanimation", icon='ACTION')
 		column.operator("democaptools_demcabrowser.importdevicesrig", icon='ARMATURE_DATA')
 		column.operator("democaptools_demcabrowser.importdevicesanimation", icon='ACTION')
+		column.operator("democaptools_demcabrowser.importobjectrig", icon='ARMATURE_DATA')
+		column.operator("democaptools_demcabrowser.importobjectanimation", icon='ACTION')
 
 
 def panelDemcaBrowserRegister():
@@ -346,6 +425,8 @@ def panelDemcaBrowserRegister():
 	registerClass(LIST_OT_DemcaBrowserImportAnimation)
 	registerClass(LIST_OT_DemcaBrowserImportDevicesRig)
 	registerClass(LIST_OT_DemcaBrowserImportDevicesAnimation)
+	registerClass(LIST_OT_DemcaBrowserImportObjectRig)
+	registerClass(LIST_OT_DemcaBrowserImportObjectAnimation)
 	registerClass(VIEW3D_PT_DemocapToolsDemcaBrowser)
 	
 	bpy.types.WindowManager.democaptools_properties = bpy.props.PointerProperty(type=DemocapToolsPanelProperties)

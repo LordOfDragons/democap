@@ -163,6 +163,12 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			item.setToolTip("Export animation")
 			menu.addWidget(item)
 			
+			item = MenuItemCommand.new("Export object animation...", BlockActionListener.new(block ActionEvent event
+				pPanel.exportObjectAnimation()
+			end))
+			item.setToolTip("Export object animation")
+			menu.addWidget(item)
+			
 			item = MenuItemCommand.new("Browse exported...", BlockActionListener.new(block ActionEvent event
 				pPanel.browseExportedAnimations()
 			end))
@@ -343,6 +349,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		end
 		
 		pAnimation.clear()
+		pBehaviorCapturedAnimations.getObjectAnimation().clear()
 		pBehaviorCapturedAnimations.getAnimations().notifyAnimationChanged(pAnimation)
 	end
 	
@@ -383,6 +390,21 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		null, null, WindowDialog.BlockResultListener.new(block String result
 			if result != null and not result.empty()
 				pAnimation.export(project, result)
+			end
+		end))
+	end
+	
+	/** Export object animation. */
+	public func void exportObjectAnimation()
+		var Project project = GameApp.getGameApp().getProject()
+		if project == null
+			return
+		end
+		
+		WindowDialog.input(getWindow(), "Export Object Animation", "Name:", null, "Animation",\
+		null, null, WindowDialog.BlockResultListener.new(block String result
+			if result != null and not result.empty()
+				pBehaviorCapturedAnimations.getObjectAnimation().export(project, result)
 			end
 		end))
 	end

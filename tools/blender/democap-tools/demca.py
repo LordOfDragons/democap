@@ -34,6 +34,16 @@ from .configuration import Configuration
 class Demca:
 	def __init__(self, path):
 		self.path = path
+		self.characterProfile = ""
+		self.characterConfiguration = ""
+		self.pathAnimation = ""
+		self.playtime = 0.0
+		self.frameRate = 25
+		self.pathDevicesRig = ""
+		self.pathDevicesAnimation = ""
+		self.pathObjectRig = ""
+		self.pathObjectAnimation = ""
+		self.success = False
 		self.loadDemca()
 	
 	def loadDemca(self):
@@ -50,21 +60,25 @@ class Demca:
 			self.formattedTimestamp = self.timestamp.strftime("%H:%M:%S %m-%d %Y")
 			
 			nodeCharacter = root.find("character", ns)
-			self.characterProfile = nodeCharacter.find("profileName", ns).text
-			self.characterConfiguration = nodeCharacter.find("configurationName", ns).text
+			if nodeCharacter:
+				self.characterProfile = nodeCharacter.find("profileName", ns).text
+				self.characterConfiguration = nodeCharacter.find("configurationName", ns).text
 			
 			nodeAnimation = root.find("capturedAnimation", ns)
-			self.pathAnimation = nodeAnimation.find("pathAnimation", ns).text
-			self.playtime = float(nodeAnimation.find("playtime", ns).text)
-			self.frameRate = int(nodeAnimation.find("frameRate", ns).text)
+			if nodeAnimation:
+				self.pathAnimation = nodeAnimation.find("pathAnimation", ns).text
+				self.playtime = float(nodeAnimation.find("playtime", ns).text)
+				self.frameRate = int(nodeAnimation.find("frameRate", ns).text)
 			
 			nodeDevices = root.find("capturedAnimationDevices", ns)
 			if nodeDevices:
 				self.pathDevicesRig = nodeDevices.find("pathRig", ns).text
 				self.pathDevicesAnimation = nodeDevices.find("pathAnimation", ns).text
-			else:
-				self.pathDevicesRig = ""
-				self.pathDevicesAnimation = ""
+			
+			nodeObject = root.find("capturedAnimationObject", ns)
+			if nodeObject:
+				self.pathObjectRig = nodeObject.find("pathRig", ns).text
+				self.pathObjectAnimation = nodeObject.find("pathAnimation", ns).text
 			
 			self.success = True
 		except Exception:
