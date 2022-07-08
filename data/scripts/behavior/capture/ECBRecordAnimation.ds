@@ -258,12 +258,13 @@ class ECBRecordAnimation extends DefaultECBehavior
 				if selection != null
 					selectionElement = selection.getElement()
 					pCapturedAnimations = ECBCapturedAnimations.getInstanceIn(selectionElement)
-					if pCapturedAnimations.getCaptureTarget() != ECBCapturedAnimations.CaptureTarget.character
-						throw EInvalidParam.new("capture target mismatch")
-					end
-					
-					if not pCapturedAnimations.getCharacterProfile().equals(pCharacter.getCharacter().getProfile().getName())
-						throw EInvalidParam.new("character profile mismatch")
+					if pCapturedAnimations.getCaptureTarget() == ECBCapturedAnimations.CaptureTarget.character
+						if not pCapturedAnimations.getCharacterProfile().equals(pCharacter.getCharacter().getProfile().getName())
+							throw EInvalidParam.new("character profile mismatch")
+						end
+						
+					else
+						pCapturedAnimations = null
 					end
 				end
 			end
@@ -304,13 +305,18 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pRecordAnimationObject.setMoveName("MoCapObject")
 			pRecordAnimationObject.createObjectRig()
 			
-			if pFullRecording
-				prepareAllBoneIndices()
+			if pCharacter != null
+				if pFullRecording
+					prepareAllBoneIndices()
+					
+				else
+					prepareBoneIndices()
+				end
+				prepareOriginBone()
 				
 			else
-				prepareBoneIndices()
+				prepareObjectBones()
 			end
-			prepareOriginBone()
 			
 			pTransformRootBones = Matrix.new()
 			
@@ -534,6 +540,41 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end
 		end
 		
+		/**
+		 * Prepare object bone indices. For each bone find also the root bone.
+		 * All bones are dynamic.
+		 */
+		protected func void prepareObjectBones()
+			// order is important: add first all root bones then all non-root bones
+			var Set ignoreBones = pECBehavior.getIgnoreBones()
+			var Rig rig = pComponent.getComponent().getRig()
+			var int i, boneCount = rig.getBoneCount()
+			var String bone
+			
+			pBoneIndices.removeAll()
+			pRootBoneIndices.removeAll()
+			pStaticBoneIndices.removeAll()
+			pStaticRootBoneIndices.removeAll()
+			
+			// add root bones
+			for i = 0 to boneCount
+				bone = rig.boneGetName(i)
+				if not ignoreBones.has(bone) and rig.boneGetParent(i) == -1
+					pRootBoneIndices.add(i)
+					pRecordAnimation.addBone(bone)
+				end
+			end
+			
+			// add regular bones
+			for i = 0 to boneCount
+				bone = rig.boneGetName(i)
+				if not ignoreBones.has(bone) and rig.boneGetParent(i) != -1
+					pBoneIndices.add(i)
+					pRecordAnimation.addBone(bone)
+				end
+			end
+		end
+		
 		/** Start recording animation. */
 		public func void startRecording()
 			if not (pIsPreparing and not pIsRecording)
@@ -558,9 +599,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pIsRecording = false
 				
 				if pRecordAnimation != null
-					if pRecordAnimation != null
-						pRecordAnimation.createAnimation()
-					end
+					pRecordAnimation.createAnimation()
 					if pRecordAnimationDevices != null
 						pRecordAnimationDevices.createAnimation()
 					end
@@ -695,9 +734,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				return
 			end
 			
-			if pCharacter != null
-				pComponent.getComponent().updateBones()
-			end
+			pComponent.getComponent().updateBones()
 			
 			if pIsRecording
 				if pIncrementTime
@@ -705,13 +742,14 @@ class ECBRecordAnimation extends DefaultECBehavior
 				end
 				pIncrementTime = true
 				
-				if pCharacter != null
+				if pRecordAnimation != null
 					captureBones()
 				end
 				
 				if pRecordAnimationObject != null
 					var BehaviorElement element = getElement()
-					pRecordAnimationObject.addKeyframe(pRecordTime, element.getPosition().toVector(), element.getOrientation())
+					pRecordAnimationObject.addKeyframe(pRecordTime,\
+						element.getPosition().toVector(), element.getOrientation())
 				end
 			end
 		end
@@ -803,6 +841,11 @@ class ECBRecordAnimation extends DefaultECBehavior
 					tag.addDataTag("armLength", actorProfile.getArmLength())
 					tag.addDataTag("legLength", actorProfile.getLegLength())
 				end
+				
+			else
+				var EasyXMLElement tag = root.addTag("object")
+				tag.addDataTag("elementClass", getElement().getClass().getClassname())
+				tag.addDataTag("identifier", getElement().getID().toHexString())
 			end
 			
 			// character
