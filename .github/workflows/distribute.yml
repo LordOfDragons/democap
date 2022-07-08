@@ -34,10 +34,6 @@ jobs:
           if grep -q "error:" "lfs.log" ; then
             exit 1
           fi
-        
-      - name: Update project file
-        run: |
-          sed -i -e 's/DEMoCap-[0-9.]\+.delga/DEMoCap-${{ inputs.version }}.delga/g' project.xml
       
       - name: Distribute
         id: distribute
@@ -45,6 +41,10 @@ jobs:
         with:
           projectFile: 'DEMoCap.degp'
           profile: 'Release'
+        
+      - name: Rename distribution file
+        run: |
+          mv distribute/DEMoCap.delga distribute/DEMoCap-${{ inputs.version }}.delga
         
       - name: Store DELGA
         uses: actions/upload-artifact@v3
