@@ -36,11 +36,15 @@ class CharacterAnimation
 	private var String pPathMeta
 	private var String pPathDevices
 	private var String pPathDevicesRig
+	private var String pPathObject
+	private var String pPathObjectRig
 	private var TimeDate pTimestamp
 	private var FileUsageManager pFileUsage
 	private var Animation pAnimation
 	private var Animation pAnimationDevices
 	private var Rig pRigDevices
+	private var Animation pAnimationObject
+	private var Rig pRigObject
 	private var String pCharacterProfile
 	
 	
@@ -52,6 +56,8 @@ class CharacterAnimation
 		pPathMeta = ""
 		pPathDevices = ""
 		pPathDevicesRig = ""
+		pPathObject = ""
+		pPathObjectRig = ""
 		pTimestamp = TimeDate.new()
 		pFileUsage = FileUsageManager.new()
 	end
@@ -63,10 +69,14 @@ class CharacterAnimation
 		pPathMeta = ""
 		pPathDevices = ""
 		pPathDevicesRig = ""
+		pPathObject = ""
+		pPathObjectRig = ""
 		pTimestamp = copy.pTimestamp
 		pAnimation = copy.pAnimation
 		pAnimationDevices = copy.pAnimationDevices
 		pRigDevices = copy.pRigDevices
+		pAnimationObject = copy.pAnimationObject
+		pRigObject = copy.pRigObject
 		pCharacterProfile = copy.pCharacterProfile
 		
 		pFileUsage = FileUsageManager.new()
@@ -76,6 +86,8 @@ class CharacterAnimation
 		setPathMeta(copy.pPathMeta)
 		setPathDevices(copy.pPathDevices)
 		setPathDevicesRig(copy.pPathDevicesRig)
+		setPathObject(copy.pPathObject)
+		setPathObjectRig(copy.pPathObjectRig)
 	end
 	
 	/** Create character animation from file. */
@@ -86,6 +98,8 @@ class CharacterAnimation
 		pPathMeta = ""
 		pPathDevices = ""
 		pPathDevicesRig = ""
+		pPathObject = ""
+		pPathObjectRig = ""
 		pFileUsage = FileUsageManager.new()
 		
 		select reader.readByte() // version
@@ -105,6 +119,17 @@ class CharacterAnimation
 			pTimestamp = reader.readTimeDate()
 			pFileUsage.readFromFile(reader)
 			
+		case 2
+			pName = reader.readString8()
+			setPath(reader.readString8())
+			setPathMeta(reader.readString8())
+			setPathDevices(reader.readString8())
+			setPathDevicesRig(reader.readString8())
+			setPathObject(reader.readString8())
+			setPathObjectRig(reader.readString8())
+			pTimestamp = reader.readTimeDate()
+			pFileUsage.readFromFile(reader)
+			
 		else
 			throw EInvalidParam.new("unsupported version")
 		end
@@ -116,6 +141,8 @@ class CharacterAnimation
 		setPathMeta("")
 		setPathDevices("")
 		setPathDevicesRig("")
+		setPathObject("")
+		setPathObjectRig("")
 		
 		if pFileUsage != null
 			pFileUsage.setParent(null)
@@ -258,6 +285,66 @@ class CharacterAnimation
 		end
 	end
 	
+	/** Object path relative to project or empty string. */
+	public func String getPathObject()
+		return pPathObject
+	end
+	
+	/** Set object path relative to project or empty string. */
+	public func void setPathObject(String path)
+		if path.equals(pPathObject)
+			return
+		end
+		
+		if not pPathObject.empty()
+			pFileUsage.removeFileUsage(pPathObject)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"CharacterAnimation.setPathObject() old(" + pPathObject + ")")
+			end
+		end
+		
+		pPathObject = path
+		
+		if not path.empty()
+			pFileUsage.addFileUsage(path)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"CharacterAnimation.setPathObject() new(" + path + ")")
+			end
+		end
+	end
+	
+	/** Object rig path relative to project or empty string. */
+	public func String getPathObjectRig()
+		return pPathObjectRig
+	end
+	
+	/** Set object rig path relative to project or empty string. */
+	public func void setPathObjectRig(String path)
+		if path.equals(pPathObjectRig)
+			return
+		end
+		
+		if not pPathObjectRig.empty()
+			pFileUsage.removeFileUsage(pPathObjectRig)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"CharacterAnimation.setPathObjectRig() old(" + pPathObjectRig + ")")
+			end
+		end
+		
+		pPathObjectRig = path
+		
+		if not path.empty()
+			pFileUsage.addFileUsage(path)
+			if FileUsageManager.debugUsage
+				pFileUsage.log(GameApp.getGameApp().getConsole(),\
+					"CharacterAnimation.setPathObjectRig() new(" + path + ")")
+			end
+		end
+	end
+	
 	/** File usage. */
 	public func FileUsageManager getFileUsage()
 		return pFileUsage
@@ -293,6 +380,26 @@ class CharacterAnimation
 		pRigDevices = rig
 	end
 	
+	/** Object animation or null if not created. */
+	public func Animation getAnimationObject()
+		return pAnimationObject
+	end
+	
+	/** Set object animation or null if not created. */
+	public func void setAnimationObject(Animation animation)
+		pAnimationObject = animation
+	end
+	
+	/** Object rig or null if not created. */
+	public func Rig getRigObject()
+		return pRigObject
+	end
+	
+	/** Set object rig or null if not created. */
+	public func void setRigObject(Rig rig)
+		pRigObject = rig
+	end
+	
 	/** Load animations and rigs if present and possible. */
 	public func void loadAnimation(Project project)
 		if not pPath.empty()
@@ -304,10 +411,18 @@ class CharacterAnimation
 		if not pPathDevicesRig.empty()
 			pRigDevices = Rig.new((project.getDataDirectory() + pPathDevicesRig).getPath())
 		end
+		if not pPathObject.empty()
+			pAnimationObject = Animation.new((project.getDataDirectory() + pPathObject).getPath())
+		end
+		if not pPathObjectRig.empty()
+			pRigObject = Rig.new((project.getDataDirectory() + pPathObjectRig).getPath())
+		end
 	end
 	
 	/** Clear animation. */
 	public func void clear()
+		pRigObject = null
+		pAnimationObject = null
 		pRigDevices = null
 		pAnimationDevices = null
 		pAnimation = null
@@ -315,6 +430,8 @@ class CharacterAnimation
 		setPathMeta("")
 		setPathDevices("")
 		setPathDevicesRig("")
+		setPathObject("")
+		setPathObjectRig("")
 	end
 	
 	/** Character profile or empty string if unknown. */
@@ -350,11 +467,15 @@ class CharacterAnimation
 		pAnimation = characterAnimation.pAnimation
 		pAnimationDevices = characterAnimation.pAnimationDevices
 		pRigDevices = characterAnimation.pRigDevices
+		pAnimationObject = characterAnimation.pAnimationObject
+		pRigObject = characterAnimation.pRigObject
 		pCharacterProfile = characterAnimation.pCharacterProfile
 		
 		setPath(characterAnimation.pPath)
 		setPathDevices(characterAnimation.pPathDevices)
 		setPathDevicesRig(characterAnimation.pPathDevicesRig)
+		setPathObject(characterAnimation.pPathObject)
+		setPathObjectRig(characterAnimation.pPathObjectRig)
 		setPathMeta(characterAnimation.pPathMeta)
 	end
 	
@@ -376,6 +497,16 @@ class CharacterAnimation
 		if not pPathDevicesRig.empty()
 			FileWriter.new((directory + path.getPathDevicesRig()).getPath()).writeData(\
 				FileReader.new((directory + pPathDevicesRig).getPath()))
+		end
+		
+		if not pPathObject.empty()
+			FileWriter.new((directory + path.getPathObject()).getPath()).writeData(\
+				FileReader.new((directory + pPathObject).getPath()))
+		end
+		
+		if not pPathObjectRig.empty()
+			FileWriter.new((directory + path.getPathObjectRig()).getPath()).writeData(\
+				FileReader.new((directory + pPathObjectRig).getPath()))
 		end
 		
 		var EasyXML document = EasyXML.new((directory + pPathMeta).getPath())
@@ -401,6 +532,16 @@ class CharacterAnimation
 						tag2.getElementAt(0).setCDataContent(path.getPathDevicesRig())
 					end
 				end)
+				
+			elif tagName.equals("capturedAnimationObject")
+				tag.forEachTag(block EasyXMLElement tag2, String tagName2
+					if tagName2.equals("pathAnimation")
+						tag2.getElementAt(0).setCDataContent(path.getPathObject())
+						
+					elif tagName2.equals("pathRig")
+						tag2.getElementAt(0).setCDataContent(path.getPathObjectRig())
+					end
+				end)
 			end
 		end)
 		
@@ -411,13 +552,15 @@ class CharacterAnimation
 	
 	/** Write to file. */
 	public func void writeToFile(FileWriter writer)
-		writer.writeByte(1) // version
+		writer.writeByte(2) // version
 		
 		writer.writeString8(pName)
 		writer.writeString8(pPath)
 		writer.writeString8(pPathMeta)
 		writer.writeString8(pPathDevices)
 		writer.writeString8(pPathDevicesRig)
+		writer.writeString8(pPathObject)
+		writer.writeString8(pPathObjectRig)
 		writer.writeTimeDate(pTimestamp)
 		pFileUsage.writeToFile(writer)
 	end

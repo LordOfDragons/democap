@@ -76,6 +76,13 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		end
 	end
 	
+	/** Capture target. */
+	enum CaptureTarget
+		character
+		object
+	end
+	
+	
 	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance implements TakeOverBehaviorState
@@ -121,15 +128,6 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			end
 		end
 		
-		/** Take over state. */
-		class TakeOverState
-			public var CharacterAnimations animations
-			public var ObjectAnimation objectAnimation
-			
-			public func new()
-			end
-		end
-		
 		
 		
 		protected var ECBCapturedAnimations pECBehavior
@@ -138,12 +136,14 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		protected var String pCharacterProfile
 		protected var CharacterAnimations pAnimations
 		protected var Array pAnimatorInstances
-		protected var ObjectAnimation pObjectAnimation
 		protected var Component pObjectAnimationComponent
-		protected var AnimatorInstance pAnimatorObject
 		protected var Array pPlaybackControllers
 		protected var float pPlaytime
+		protected var bool pHasObjectAnimation
 		protected var PlaybackSceneChanged pPlaybackSceneChanged
+		protected var CaptureTarget pCaptureTarget
+		protected var bool pRecord
+		protected var String pAnimationName
 		
 		
 		
@@ -159,28 +159,24 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			setRequiresThink(true)
 			
 			pAnimations = CharacterAnimations.new(GameApp.getGameApp().getScene().getFileUsage())
-			pAnimations.add(CharacterAnimation.new("Body"))
 			
-			pObjectAnimation = ObjectAnimation.new()
-			
-			pAnimatorObject = AnimatorInstance.new()
 			pObjectAnimationComponent = Component.new()
-			pAnimatorObject.setComponent(pObjectAnimationComponent)
+			pObjectAnimationComponent.setRig(RecordAnimation.staticCreateObjectRig())
 		end
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
 			pActorProfile = pECBehavior.actorProfile.getValue(stub)
 			pCharacterProfile = pECBehavior.characterProfile.getValue(stub)
+			pCaptureTarget = pECBehavior.captureTarget.getEnumeration() cast CaptureTarget
+			pRecord = pECBehavior.record.getValue(stub)
+			pAnimationName = pECBehavior.animationName.getValue(stub)
+			
+			pAnimations.add(CharacterAnimation.new(pAnimationName))
 		end
 		
 		/** Dispose of behavior instance. */
 		public func void dispose()
-			if pObjectAnimation != null
-				pObjectAnimation.dispose()
-				pObjectAnimation = null
-			end
-			
 			if pAnimations != null
 				pAnimations.dispose()
 				pAnimations = null
@@ -213,16 +209,30 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			return pCharacterProfile
 		end
 		
+		/** Capture target. */
+		public func CaptureTarget getCaptureTarget()
+			return pCaptureTarget
+		end
+		
+		/** Record. */
+		public func bool getRecord()
+			return pRecord
+		end
+		
+		public func void setRecord(bool record)
+			pRecord = record
+		end
+		
+		/** Name for new animations. */
+		public func String getAnimationName()
+			return pAnimationName
+		end
+		
 		
 		
 		/** Animations. */
 		public func CharacterAnimations getAnimations()
 			return pAnimations
-		end
-		
-		/** Object animation. */
-		public func ObjectAnimation getObjectAnimation()
-			return pObjectAnimation
 		end
 		
 		/** Maximum playtime in seconds of all animations. */
@@ -236,9 +246,8 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		public func void rebuildAnimator()
 			pPlaybackControllers.removeAll()
 			pAnimatorInstances.removeAll()
-			pAnimatorObject.setAnimation(null)
-			pAnimatorObject.setAnimator(null)
 			pPlaytime = 0
+			pHasObjectAnimation = false
 			
 			pAnimations.forEach(block CharacterAnimation each
 				createCharacterAnimator(each)
@@ -247,8 +256,6 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			if pAnimatorInstances.getCount() == 0
 				createResetAnimator()
 			end
-			
-			createObjectAnimator()
 			
 			pPlaybackControllers.forEach(block AnimatorController each
 				each.setRange(0, pPlaytime)
@@ -270,8 +277,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 				each.apply()
 			end)
 			
-			if pObjectAnimation.getAnimation() != null
-				pAnimatorObject.applyDirect()
+			if pHasObjectAnimation
 				pObjectAnimationComponent.updateBones()
 				
 				var Component component = pComponent.getComponent()
@@ -293,10 +299,6 @@ class ECBCapturedAnimations extends DefaultECBehavior
 				end
 			end)
 			
-			if pObjectAnimation.getAnimation() == null
-				pObjectAnimation.loadAnimation(project)
-			end
-			
 			rebuildAnimator()
 			
 			app.getPlaybackScene().addListener(pPlaybackSceneChanged)
@@ -317,25 +319,19 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		
 		/** Interface TakeOverBehaviorState. */
 		public func void takeOverStoreState(Dictionary storage)
-			var TakeOverState state = TakeOverState.new()
-			state.animations = pAnimations.deepCopy()
-			state.objectAnimation = ObjectAnimation.new(pObjectAnimation)
-			storage.setAt("ECBCapturedAnimations", state)
+			storage.setAt("ECBCapturedAnimations", pAnimations)
 		end
 		
 		public func void takeOverRestoreState(Dictionary storage)
-			var TakeOverState state = storage.getAt("ECBCapturedAnimations", null) cast TakeOverState
-			if state == null
+			var CharacterAnimations animations = storage.getAt("ECBCapturedAnimations", null) cast CharacterAnimations
+			if animations == null
 				return
 			end
 			
 			if pAnimations != null
 				pAnimations.dispose()
 			end
-			pAnimations = state.animations
-			
-			pObjectAnimation.dispose()
-			pObjectAnimation = state.objectAnimation
+			pAnimations = animations
 		end
 		
 		
@@ -363,103 +359,106 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		
 		/** Create and add animator instance for animation. */
 		protected func void createCharacterAnimator(CharacterAnimation characterAnimation)
-			var Component component = pComponent.getComponent()
-			var Rig rig = component.getRig()
-			
 			var Animation animation = characterAnimation.getAnimation()
-			if animation == null
-				return
+			if animation != null
+				var Component component = pComponent.getComponent()
+				var AnimatorInstance ainst = AnimatorInstance.new()
+				ainst.setComponent(component)
+				
+				var Animator animator = Animator.new()
+				animator.setAnimation(animation)
+				animator.setRig(component.getRig())
+				
+				var int i, boneCount = animation.getBoneCount()
+				for i = 0 to boneCount
+					animator.addBone(animation.getBoneName(i))
+				end
+				
+				animator.setControllerCount(1)
+				var AnimatorController controller = animator.getControllerAt(0)
+				controller.setName("playback")
+				controller.setClamp(true)
+				
+				animator.addLink(0)
+				animator.setLinkCurve(0, CurveBezier.newDefaultLinear())
+				
+				var ARAnimation rule = ARAnimation.new()
+				var String move = animation.getMoveName(0)
+				rule.setMoveName(move)
+				rule.targetAddLink(ARAnimationTarget.moveTime, 0)
+				for i = 0 to boneCount
+					rule.addBone(animation.getBoneName(i))
+				end
+				animator.addRule(rule)
+				
+				ainst.setAnimator(animator)
+				pAnimatorInstances.add(ainst)
+				pPlaybackControllers.add(ainst.getControllerAt(0))
+				
+				pPlaytime = DEMath.max(pPlaytime, animation.getMovePlaytime(move))
 			end
 			
-			var AnimatorInstance ainst = AnimatorInstance.new()
-			ainst.setComponent(component)
-			
-			var Animator animator = Animator.new()
-			animator.setAnimation(animation)
-			animator.setRig(rig)
-			
-			var int i, boneCount = animation.getBoneCount()
-			for i = 0 to boneCount
-				animator.addBone(animation.getBoneName(i))
+			animation = characterAnimation.getAnimationObject()
+			if animation != null
+				var AnimatorInstance ainst = AnimatorInstance.new()
+				ainst.setComponent(pObjectAnimationComponent)
+				
+				var Animator animator = Animator.new()
+				animator.setAnimation(animation)
+				animator.setRig(pObjectAnimationComponent.getRig())
+				
+				var int i, boneCount = animation.getBoneCount()
+				for i = 0 to boneCount
+					animator.addBone(animation.getBoneName(i))
+				end
+				
+				animator.setControllerCount(1)
+				var AnimatorController controller = animator.getControllerAt(0)
+				controller.setName("playback")
+				controller.setClamp(true)
+				
+				animator.addLink(0)
+				animator.setLinkCurve(0, CurveBezier.newDefaultLinear())
+				
+				var ARAnimation rule = ARAnimation.new()
+				var String move = animation.getMoveName(0)
+				rule.setMoveName(move)
+				rule.targetAddLink(ARAnimationTarget.moveTime, 0)
+				for i = 0 to boneCount
+					rule.addBone(animation.getBoneName(i))
+				end
+				animator.addRule(rule)
+				
+				ainst.setAnimator(animator)
+				pAnimatorInstances.add(ainst)
+				pPlaybackControllers.add(ainst.getControllerAt(0))
+				
+				pPlaytime = DEMath.max(pPlaytime, animation.getMovePlaytime(move))
+				pHasObjectAnimation = true
 			end
-			
-			animator.setControllerCount(1)
-			var AnimatorController controller = animator.getControllerAt(0)
-			controller.setName("playback")
-			controller.setClamp(true)
-			
-			animator.addLink(0)
-			animator.setLinkCurve(0, CurveBezier.newDefaultLinear())
-			
-			var ARAnimation rule = ARAnimation.new()
-			var String move = animation.getMoveName(0)
-			rule.setMoveName(move)
-			rule.targetAddLink(ARAnimationTarget.moveTime, 0)
-			for i = 0 to boneCount
-				rule.addBone(animation.getBoneName(i))
-			end
-			animator.addRule(rule)
-			
-			ainst.setAnimator(animator)
-			pAnimatorInstances.add(ainst)
-			pPlaybackControllers.add(ainst.getControllerAt(0))
-			
-			pPlaytime = DEMath.max(pPlaytime, animation.getMovePlaytime(move))
-		end
-		
-		/** Create object animator instance. */
-		protected func void createObjectAnimator()
-			var Rig rig = pObjectAnimation.getRig()
-			var Animation animation = pObjectAnimation.getAnimation()
-			if animation == null or rig == null
-				return
-			end
-			
-			pAnimatorObject.setComponent(null)
-			pObjectAnimationComponent.setRig(rig)
-			pAnimatorObject.setComponent(pObjectAnimationComponent)
-			
-			var Animator animator = Animator.new()
-			animator.setAnimation(animation)
-			animator.setRig(rig)
-			
-			var int i, boneCount = animation.getBoneCount()
-			for i = 0 to boneCount
-				animator.addBone(animation.getBoneName(i))
-			end
-			
-			animator.setControllerCount(1)
-			var AnimatorController controller = animator.getControllerAt(0)
-			controller.setName("playback")
-			controller.setClamp(true)
-			
-			animator.addLink(0)
-			animator.setLinkCurve(0, CurveBezier.newDefaultLinear())
-			
-			var ARAnimation rule = ARAnimation.new()
-			var String move = animation.getMoveName(0)
-			rule.setMoveName(move)
-			rule.targetAddLink(ARAnimationTarget.moveTime, 0)
-			for i = 0 to boneCount
-				rule.addBone(animation.getBoneName(i))
-			end
-			animator.addRule(rule)
-			
-			pAnimatorObject.setAnimator(animator)
-			pPlaybackControllers.add(pAnimatorObject.getControllerAt(0))
-			
-			pPlaytime = DEMath.max(pPlaytime, animation.getMovePlaytime(move))
 		end
 		
 		
 		
 		/** Read from file. */
 		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
-			var int i, count, version = reader.readByte()
-			
-			if version > 1
+			select reader.readByte()
+			case 0
+				readFromFileBase(env, reader)
+				
+			case 1
+				var PersistencyFlags flags = PersistencyFlags.new(1, reader)
+				pRecord = flags.getAt(0)
+				
+				readFromFileBase(env, reader)
+				
+			else
 				throw EInvalidParam.new("unsupported version")
 			end
+		end
+		
+		private func void readFromFileBase(PersistencyEnvironment env, FileReader reader)
+			var int i, count
 			
 			pActorProfile = reader.readString8()
 			pCharacterProfile = reader.readString8()
@@ -469,20 +468,15 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			for i = 0 to count
 				pAnimations.add(CharacterAnimation.new(reader))
 			end
-			
-			pObjectAnimation.dispose()
-			
-			if version >= 1
-				pObjectAnimation = ObjectAnimation.new(reader)
-				
-			else
-				pObjectAnimation = ObjectAnimation.new()
-			end
 		end
 		
 		/** Write to file. */
 		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
 			writer.writeByte(1) // version
+			
+			var PersistencyFlags flags = PersistencyFlags.new(1)
+			flags.setAt(0, pRecord)
+			flags.writeToFile(writer)
 			
 			writer.writeString8(pActorProfile)
 			writer.writeString8(pCharacterProfile)
@@ -491,8 +485,6 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			pAnimations.forEach(block CharacterAnimation each
 				each.writeToFile(writer)
 			end)
-			
-			pObjectAnimation.writeToFile(writer)
 		end
 	end
 	
@@ -502,6 +494,9 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	
 	public var ECPString actorProfile
 	public var ECPString characterProfile
+	public var ECPEnumeration captureTarget
+	public var ECPBoolean record
+	public var ECPString animationName
 	
 	
 	
@@ -517,6 +512,15 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		
 		characterProfile = ECPString.new(prefix + "characterProfile", "")
 		eclass.addProperty(characterProfile)
+		
+		captureTarget = ECPEnumeration.new(prefix + "captureTarget", CaptureTarget.all(), CaptureTarget.object)
+		eclass.addProperty(captureTarget)
+		
+		record = ECPBoolean.new(prefix + "record", false)
+		eclass.addProperty(record)
+		
+		animationName = ECPString.new(prefix + "animationName", "Object")
+		eclass.addProperty(animationName)
 		
 		eclass.addBehavior(this)
 		

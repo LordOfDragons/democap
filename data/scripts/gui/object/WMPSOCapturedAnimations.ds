@@ -163,12 +163,6 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			item.setToolTip("Export animation")
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Export object animation...", BlockActionListener.new(block ActionEvent event
-				pPanel.exportObjectAnimation()
-			end))
-			item.setToolTip("Export object animation")
-			menu.addWidget(item)
-			
 			item = MenuItemCommand.new("Browse exported...", BlockActionListener.new(block ActionEvent event
 				pPanel.browseExportedAnimations()
 			end))
@@ -180,11 +174,25 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		end
 	end
 	
+	/** Toggle record listener. */
+	class ToggleRecord extends DefaultToggleModelListener
+		protected var WMPSOCapturedAnimations pPanel
+		
+		public func new(WMPSOCapturedAnimations panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorCapturedAnimations().setRecord(model.getToggled())
+		end
+	end
+	
 	
 	
 	protected var ECBCapturedAnimations.Instance pBehaviorCapturedAnimations
 	protected var DefaultListModel pModelAnimations
 	protected var DefaultTextModel pModelAnimationInfo
+	protected var DefaultToggleModel pModelRecord
 	protected var AnimationsChangedListener pAnimationsChangedListener
 	protected var CharacterAnimation pAnimation
 	
@@ -198,6 +206,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		
 		pModelAnimations = DefaultListModel.new()
 		pModelAnimationInfo = DefaultTextModel.new("")
+		pModelRecord = DefaultToggleModel.new()
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
@@ -207,6 +216,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		setAnimation(behavior.getAnimations().getActive())
 		
 		pModelAnimations.addListener(SelectedAnimationChanged.new(this))
+		pModelRecord.addListener(ToggleRecord.new(this))
 		
 		pAnimationsChangedListener = AnimationsChangedListener.new(this)
 		behavior.getAnimations().addListener(pAnimationsChangedListener)
@@ -220,8 +230,11 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			pBehaviorCapturedAnimations.getAnimations().removeListener(pAnimationsChangedListener)
 			pAnimationsChangedListener = null
 		end
+		
 		pModelAnimations = null
 		pModelAnimationInfo = null
+		pModelRecord = null
+		
 		super.dispose()
 	end
 	
@@ -234,10 +247,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	
 	/** Update behavior. */
 	public func void updateBehavior()
-		var ECBCapturedAnimations behavior = pBehaviorCapturedAnimations.getECBehavior()
-		var StubElement stub = pBehaviorCapturedAnimations.getElement().getStub()
-		
-		
+		pModelRecord.setToggled(pBehaviorCapturedAnimations.getRecord())
 	end
 	
 	
@@ -273,8 +283,10 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	/** Update animation. */
 	public func void updateAnimation()
 		var Animation animation
+		var Animation animationObject
 		if pAnimation != null
 			animation = pAnimation.getAnimation()
+			animationObject = pAnimation.getAnimationObject()
 		end
 		
 		if animation != null and animation.getMoveCount() > 0
@@ -283,6 +295,12 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 				animation.getMovePlaytime(animation.getMoveName(0)),\
 				animation.getBoneCount())))
 			
+		elif animationObject != null and animationObject.getMoveCount() > 0
+			pModelAnimationInfo.setText("{}: {:.1f}s, {} bones".format(Array.newWith(\
+				File.new(pAnimation.getPathObject()).getName(),\
+				animationObject.getMovePlaytime(animationObject.getMoveName(0)),\
+				animationObject.getBoneCount())))
+			
 		else
 			pModelAnimationInfo.setText("")
 		end
@@ -290,7 +308,8 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	
 	/** Add animation. */
 	public func void addAnimation()
-		WindowDialog.input(getWindow(), "Add Animation", "Name:", null, "Body",\
+		WindowDialog.input(getWindow(), "Add Animation", "Name:", null,\
+			pBehaviorCapturedAnimations.getAnimationName(),\
 			WindowDialog.ButtonConfiguration.new("Add Animation"),\
 			WindowDialog.ButtonConfiguration.new("Cancel"),\
 			WindowDialog.BlockResultListener.new(block String result
@@ -349,7 +368,6 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		end
 		
 		pAnimation.clear()
-		pBehaviorCapturedAnimations.getObjectAnimation().clear()
 		pBehaviorCapturedAnimations.getAnimations().notifyAnimationChanged(pAnimation)
 	end
 	
@@ -394,21 +412,6 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		end))
 	end
 	
-	/** Export object animation. */
-	public func void exportObjectAnimation()
-		var Project project = GameApp.getGameApp().getProject()
-		if project == null
-			return
-		end
-		
-		WindowDialog.input(getWindow(), "Export Object Animation", "Name:", null, "Animation",\
-		null, null, WindowDialog.BlockResultListener.new(block String result
-			if result != null and not result.empty()
-				pBehaviorCapturedAnimations.getObjectAnimation().export(project, result)
-			end
-		end))
-	end
-	
 	/** Browse exported animations directory. */
 	public func void browseExportedAnimations()
 		var Project project = GameApp.getGameApp().getProject()
@@ -421,11 +424,13 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	
 	/** Create panel content. */
 	protected func void createContent(Panel content)
+		var CheckBox checkBox
 		var Button button
 		
 		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
 		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			// animations
 			p.addWidget(Label.new("Animation:", "Label.FormCaption"))
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
 				p2.addWidget(ComboBox.new(pModelAnimations, AnimationElementRenderer.new()))
@@ -435,8 +440,15 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 				p2.addWidget(button)
 			end))
 			
+			// animation information
 			p.addWidget(Label.new("", "Label.FormCaption"))
 			p.addWidget(Label.new(pModelAnimationInfo, "Label.FormText"))
+			
+			// recording
+			p.addWidget(Label.new("", "Label.FormCaption"))
+			checkBox = CheckBox.new(pModelRecord, "Record")
+			checkBox.setToolTip("Enable recording.")
+			p.addWidget(checkBox)
 		end))
 	end
 end
