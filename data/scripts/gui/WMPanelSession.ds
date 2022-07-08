@@ -253,29 +253,38 @@ class WMPanelSession extends Panel
 			capturedAnimations = ECBCapturedAnimations.getInstanceIn(selection.getElement())
 			
 			if capturedAnimations != null
-				if not capturedAnimations.getCharacterProfile().equals(\
-				app.getWorldSpawnCharacter().getCharacter().getProfile().getName())
-					WindowDialog.message(getWindow(), "Record Animation",\
-						"Recording into selected Capture Animation Scene Object is only possible " +\
-						"if the matching Character Profile is activate.", null, null, null)
-					return
-				end
-				
-				if capturedAnimations.getAnimations().getActive() == null
-					WindowDialog.message(getWindow(), "Record Animation",\
-						"Recording into selected Capture Animation Scene Object is only possible " +\
-						"if an animation is selected.", null, null, null)
-					return
+				if capturedAnimations.getCaptureTarget() == ECBCapturedAnimations.CaptureTarget.character
+					if not capturedAnimations.getCharacterProfile().equals(\
+					app.getWorldSpawnCharacter().getCharacter().getProfile().getName())
+						WindowDialog.message(getWindow(), "Record Animation",\
+							"Recording into selected Capture Animation Scene Object is only possible " +\
+							"if the matching Character Profile is activate.", null, null, null)
+						return
+					end
+					
+					if capturedAnimations.getAnimations().getActive() == null
+						WindowDialog.message(getWindow(), "Record Animation",\
+							"Recording into selected Capture Animation Scene Object is only possible " +\
+							"if an animation is selected.", null, null, null)
+						return
+					end
+					
+				else
+					capturedAnimations = null
 				end
 			end
 		end
 		
 		if capturedAnimations == null and app.getWorldSpawnCharacter().getGameWorld().findElement(block Element each
-			return each castable BehaviorElement and ECBCapturedAnimations.getInstanceIn(each cast BehaviorElement) != null
+			if each castable BehaviorElement
+				var ECBCapturedAnimations.Instance i = ECBCapturedAnimations.getInstanceIn(each cast BehaviorElement)
+				return i != null and i.getCaptureTarget() == ECBCapturedAnimations.CaptureTarget.character
+			end
+			return false
 		end) != null
 			WindowDialog.question(getWindow(), "Record Animation",\
-				"Captured Animation Scene Objects are present but none is selected to record into. " +\
-				"Do you want to record non-captured animation?", null,\
+				"Captured Character Objects are present but none is selected to record into. " +\
+				"Do you want to record free animation?", null,\
 				Array.newWith(WindowDialog.ButtonConfiguration.new("Record Free", true), \
 				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
 				WindowDialog.BlockResultListener.new(block bool result

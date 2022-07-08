@@ -1083,13 +1083,18 @@ class WMPanelProject extends Panel
 			return
 		end
 		
-		var String targetProfile = capturedAnimations.getCharacterProfile()
-		
-		var String sourceProfile = savedAnimation.getCharacterProfile(pProject)
-		if targetProfile.empty() or sourceProfile.empty() or not sourceProfile.equals(targetProfile)
-			WindowDialog.message(getWindow(), "Load Saved Animation",\
-				"Scene objects is not compatible (character profile differs).", null, null, null)
-			return
+		select capturedAnimations.getCaptureTarget()
+		case ECBCapturedAnimations.CaptureTarget.character
+			var String targetProfile = capturedAnimations.getCharacterProfile()
+			var String sourceProfile = savedAnimation.getCharacterProfile(pProject)
+			if targetProfile.empty() or sourceProfile.empty() or not sourceProfile.equals(targetProfile)
+				WindowDialog.message(getWindow(), "Load Saved Animation",\
+					"Scene objects is not compatible (character profile differs).", null, null, null)
+				return
+			end
+			
+		case ECBCapturedAnimations.CaptureTarget.object
+			// find some rules here
 		end
 		
 		animation.assign(savedAnimation)
