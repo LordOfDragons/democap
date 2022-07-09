@@ -1,0 +1,420 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior controlling physics parameter of controllers. Element class sets if colliders
+ * should be set to dynamic physics response or kinematic physics response. User can
+ * change this behavior for example when constructing own objects.
+ * 
+ * This behavior takes care of enabling/disabling the physics behavior on an array of
+ * ECBehaviorCollider depending on the current playback/recording state. During recording
+ * physics behavior is enabled. Otherwise physics is disabled. If the user enabled live
+ * physics then physics will be also enabled outside recording unless playing back.
+ * 
+ * Furthermore this behavior copies component bones to physics bones upon switching
+ * states to ensure the result is correct.
+ * 
+ * The weight of the entire element can be set. This is used as the total mass of all
+ * colliders. The mass of each collider is scaled uniformly to match the desired value.
+ */
+class ECBColliderPhysics extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class RecordStateChanged extends RecordScene.DefaultListener
+			protected var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void prepareRecording(RecordScene recordScene)
+				pInstance.onRecordStateChanged()
+			end
+			
+			public func void startRecording(RecordScene recordScene)
+				pInstance.onRecordStateChanged()
+			end
+			
+			public func void stopRecording(RecordScene recordScene)
+				pInstance.onRecordStateChanged()
+			end
+		end
+		
+		class PlaybackStateChanged extends PlaybackScene.DefaultListener
+			protected var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void pausePlayback(PlaybackScene playbackScene)
+				pInstance.onPlaybackStateChanged()
+			end
+			
+			public func void startPlayback(PlaybackScene playbackScene)
+				pInstance.onPlaybackStateChanged()
+			end
+			
+			public func void stopPlayback(PlaybackScene playbackScene)
+				pInstance.onPlaybackStateChanged()
+			end
+		end
+		
+		
+		private var ECBColliderPhysics pECBehavior
+		private var Array pColliders // ECBehaviorCollider.Instance
+		private var bool pUsePhysics
+		private var bool pLivePhysics
+		private var bool pPhysicsEnabled
+		private var float pWeight
+		private var RecordStateChanged pRecordStateChanged
+		private var PlaybackStateChanged pPlaybackStateChanged
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBColliderPhysics ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			
+			pColliders = ecbehavior.getColliders().map(block ECBehaviorCollider each
+				return each.instance(element)
+			end)
+			
+			pRecordStateChanged = RecordStateChanged.new(this)
+			GameApp.getGameApp().getRecordScene().addListener(pRecordStateChanged)
+			
+			pPlaybackStateChanged = PlaybackStateChanged.new(this)
+			GameApp.getGameApp().getPlaybackScene().addListener(pPlaybackStateChanged)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			if pRecordStateChanged != null
+				GameApp.getGameApp().getRecordScene().removeListener(pRecordStateChanged)
+				pRecordStateChanged = null
+			end
+			if pPlaybackStateChanged != null
+				GameApp.getGameApp().getPlaybackScene().removeListener(pPlaybackStateChanged)
+				pPlaybackStateChanged = null
+			end
+			
+			pColliders = null
+			super.dispose()
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			pUsePhysics = pECBehavior.getUsePhysics().getValue(stub)
+			pLivePhysics = pECBehavior.getLivePhysics().getValue(stub)
+			pWeight = pECBehavior.getWeight().getValue(stub)
+			
+			updateMass()
+			updatePhysicsState(true)
+		end
+		
+		
+		
+		/** Behavior. */
+		public func ECBColliderPhysics getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Use physics. */
+		public func bool getUsePhysics()
+			return pUsePhysics
+		end
+		
+		/** Set use physics. */
+		public func void setUsePhysics(bool usePhysics)
+			if usePhysics == pUsePhysics
+				return
+			end
+			
+			pUsePhysics = usePhysics
+			updatePhysicsState(false)
+		end
+		
+		/** Live physics. */
+		public func bool getLivePhysics()
+			return pLivePhysics
+		end
+		
+		/** Set live physics. */
+		public func void setLivePhysics(bool livePhysics)
+			if livePhysics == pLivePhysics
+				return
+			end
+			
+			pLivePhysics = livePhysics
+			updatePhysicsState(false)
+		end
+		
+		/** Weight. */
+		public func float getWeight()
+			return pWeight
+		end
+		
+		/** Set weight. */
+		public func void setWeight(float weight)
+			weight = DEMath.max(weight, 0.001)
+			if DEMath.fabs(weight - pWeight) < 0.001
+				return
+			end
+			
+			pWeight = weight
+			updateMass()
+		end
+		
+		/** Recording state changed. */
+		public func void onRecordStateChanged()
+			updatePhysicsState(false)
+		end
+		
+		/** Playback state changed. */
+		public func void onPlaybackStateChanged()
+			updatePhysicsState(false)
+		end
+		
+		
+		
+		/** Update mass. */
+		protected func void updateMass()
+			var Array colliders = pColliders.map(block ECBehaviorCollider.Instance each
+				return each.getCollider()
+			end).collect(block Collider each
+				return each != null
+			end)
+			
+			var float totalMass = colliders.inject(0.0, block float mass, Collider collider
+				return mass + collider.getMass()
+			end) cast float
+			
+			if totalMass < 0.001
+				return
+			end
+			
+			var float factor = pWeight / totalMass
+			colliders.forEach(block Collider each
+				each.setMass(each.getMass() * factor)
+			end)
+		end
+		
+		/** Update physics state. */
+		protected func void updatePhysicsState(bool force)
+			// there are 4 possible states to cover:
+			// - recording
+			// - prepare to record
+			// - playing back (includes playback paused)
+			// - neither recording nor playing back
+			// 
+			// live physics is only used if use physics is true
+			var bool physicsEnabled
+			
+			if GameApp.getGameApp().getRecordScene().isRecording()
+				physicsEnabled = pUsePhysics
+				
+			elif GameApp.getGameApp().getRecordScene().isPreparing()
+				physicsEnabled = pUsePhysics and pLivePhysics
+				
+			elif not GameApp.getGameApp().getPlaybackScene().isStopped()
+				physicsEnabled = false
+				
+			else
+				physicsEnabled = pUsePhysics and pLivePhysics
+			end
+			
+			if physicsEnabled != pPhysicsEnabled or force
+				pPhysicsEnabled = physicsEnabled
+				
+				if physicsEnabled
+					enablePhysics()
+					
+				else
+					disablePhysics()
+				end
+			end
+		end
+		
+		/** Enable physics. */
+		protected func void enablePhysics()
+			pColliders.forEach(block ECBehaviorCollider.Instance each
+				enablePhysics(each)
+			end)
+		end
+		
+		protected func void enablePhysics(ECBehaviorCollider.Instance behavior)
+			var Collider collider = behavior.getCollider()
+			
+			collider.setResponseType(CollisionResponse.dynamic)
+			collider.setUseLocalGravity(false)
+			
+			if collider castable ColliderComponent
+				(collider cast ColliderComponent).copyStatesFromComponent()
+			end
+		end
+		
+		/** Disable physics. */
+		protected func void disablePhysics()
+			pColliders.forEach(block ECBehaviorCollider.Instance each
+				disablePhysics(each)
+			end)
+		end
+		
+		/** Disable physics. */
+		protected func void disablePhysics(ECBehaviorCollider.Instance behavior)
+			var Collider collider = behavior.getCollider()
+			
+			collider.setResponseType(CollisionResponse.kinematic)
+			collider.setGravity(Vector.new())
+			collider.setUseLocalGravity(true)
+		end
+		
+		
+		
+		/** Read from file. */
+		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+			select reader.readByte()
+			case 0
+				var PersistencyFlags flags = PersistencyFlags.new(3, reader)
+				pUsePhysics = flags.getAt(0)
+				pLivePhysics = flags.getAt(1)
+				pPhysicsEnabled = flags.getAt(2)
+				
+				pWeight = reader.readFloat()
+				
+				updateMass()
+				
+				if pPhysicsEnabled
+					enablePhysics()
+					
+				else
+					disablePhysics()
+				end
+				
+			else
+				throw EInvalidParam.new("unsupported version")
+			end
+		end
+		
+		/** Write to file. */
+		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+			writer.writeByte(0) // version
+			
+			var PersistencyFlags flags = PersistencyFlags.new(3)
+			flags.setAt(0, pUsePhysics)
+			flags.setAt(1, pLivePhysics)
+			flags.setAt(2, pPhysicsEnabled)
+			flags.writeToFile(writer)
+			
+			writer.writeFloat(pWeight)
+		end
+	end
+	
+	
+	
+	private var Array pColliders
+	private var ECPBoolean pUsePhysics
+	private var ECPBoolean pLivePhysics
+	private var ECPFloat pWeight
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorCollider collider) super(eclass)
+		var String prefix = "colliderPhysics."
+		
+		pColliders = Array.new()
+		if collider != null
+			pColliders.add(collider)
+		end
+		
+		pUsePhysics = ECPBoolean.new(prefix + "usePhysics", false)
+		eclass.addProperty(pUsePhysics)
+		
+		pLivePhysics = ECPBoolean.new(prefix + "livePhysics", false)
+		eclass.addProperty(pLivePhysics)
+		
+		pWeight = ECPFloat.new(prefix + "weight", 1)
+		eclass.addProperty(pWeight)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pColliders = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Array of ECBehaviorCollider. */
+	public func Array getColliders()
+		return pColliders
+	end
+	
+	/** Use physics. */
+	public func ECPBoolean getUsePhysics()
+		return pUsePhysics
+	end
+	
+	/** Live physics. */
+	public func ECPBoolean getLivePhysics()
+		return pLivePhysics
+	end
+	
+	/** Weight. */
+	public func ECPFloat getWeight()
+		return pWeight
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(this.getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

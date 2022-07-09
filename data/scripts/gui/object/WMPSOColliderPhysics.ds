@@ -1,0 +1,159 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * ECBColliderPhysics panel.
+ */
+class WMPSOColliderPhysics extends WMPPanelSceneObject
+	class UsePhysicsChanged extends DefaultToggleModelListener
+		protected var WMPSOColliderPhysics pPanel
+		
+		public func new(WMPSOColliderPhysics panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorColliderPhysics().setUsePhysics(model.getToggled())
+		end
+	end
+	
+	class LivePhysicsChanged extends DefaultToggleModelListener
+		protected var WMPSOColliderPhysics pPanel
+		
+		public func new(WMPSOColliderPhysics panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorColliderPhysics().setLivePhysics(model.getToggled())
+		end
+	end
+	
+	class WeightChanged implements ActionListener
+		protected var WMPSOColliderPhysics pPanel
+		protected var DefaultTextModel pModel
+		
+		public func new(WMPSOColliderPhysics panel, DefaultTextModel model)
+			pPanel = panel
+			pModel = model
+		end
+		
+		public func void onAction(ActionEvent event)
+			pPanel.getBehaviorColliderPhysics().setWeight(pModel.getText().toFloat())
+		end
+	end
+	
+	
+	
+	protected var ECBColliderPhysics.Instance pBehaviorColliderPhysics
+	protected var DefaultToggleModel pModelUsePhysics
+	protected var DefaultToggleModel pModelLivePhysics
+	protected var DefaultTextModel pModelWeight
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelProject panelProject, ECBColliderPhysics.Instance behavior)\
+		super(panelProject, behavior, behavior.getECBehavior().getID(),\
+			"ColliderPhysics", "WMPSOColliderPhysics", "ppob_colliderphysics")
+		
+		pBehaviorColliderPhysics = behavior
+		
+		pModelUsePhysics = DefaultToggleModel.new(false)
+		pModelLivePhysics = DefaultToggleModel.new(false)
+		pModelWeight = DefaultTextModel.new("1")
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+		
+		pModelUsePhysics.addListener(UsePhysicsChanged.new(this))
+		pModelLivePhysics.addListener(LivePhysicsChanged.new(this))
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		pModelLivePhysics = null
+		pModelUsePhysics = null
+		pModelWeight = null
+		super.dispose()
+	end
+	
+	
+	
+	/** ColliderPhysics behavior. */
+	public func ECBColliderPhysics.Instance getBehaviorColliderPhysics()
+		return pBehaviorColliderPhysics
+	end
+	
+	/** Update behavior. */
+	public func void updateBehavior()
+		pModelUsePhysics.setToggled(pBehaviorColliderPhysics.getUsePhysics())
+		pModelLivePhysics.setToggled(pBehaviorColliderPhysics.getLivePhysics())
+		pModelWeight.setText(pBehaviorColliderPhysics.getWeight().toString())
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var TextField textField
+		var CheckBox checkBox
+		
+		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			// use physics
+			p.addWidget(Label.new("Physics:", "Label.FormCaption"))
+			p.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p2
+				checkBox = CheckBox.new(pModelUsePhysics, "Record")
+				checkBox.setToolTip("Use physics simulation during recording.")
+				p2.addWidget(checkBox)
+				
+				checkBox = CheckBox.new(pModelLivePhysics, "Live")
+				checkBox.setToolTip("Use physics simulation always except while playing back.")
+				p2.addWidget(checkBox)
+			end))
+			
+			// weight
+			p.addWidget(Label.new("Weight:", "Label.FormCaption"))
+			
+			textField = TextField.new(pModelWeight)
+			textField.setValidator(SimpleTextValidator.new(8, SimpleTextValidator.CharacterClass.positiveNumber))
+			textField.setToolTip("Weight in kg distributed equally over all colliders.")
+			p.addWidget(textField)
+			textField.addActionListener(WeightChanged.new(this, pModelWeight))
+		end))
+	end
+end
