@@ -32,6 +32,8 @@ pin Dragengine.Scenery
 class MoCapActorClass extends BaseVRActorClass
 	public var ECBehaviorVRHandPointAt teleportPointAt
 	public var ECBehaviorVRHandLaserPointer teleportLasterPointer
+	public var ECBAPhysicsToucher physicsToucherRight
+	public var ECBAPhysicsToucher physicsToucherLeft
 	public var ECBATeleportDestination teleportDestination
 	public var ECBAControlDesktop controlDesktop
 	public var ECBAInteractHandle interactHandle
@@ -103,6 +105,16 @@ class MoCapActorClass extends BaseVRActorClass
 		
 		teleportPointAt.getCollisionFilter().setCollisionFilter(CollisionFilter.new(cfcategory, cffilter))
 		
+		physicsToucherRight = ECBAPhysicsToucher.new(this, getVRRightHand(), idVRRightHand)
+		physicsToucherRight.shape.setShapeList(getVRRightHandGrabber().getShape().getShapeList())
+		physicsToucherRight.attach.getPosition().setVector(getVRRightHandGrabber().getAttach().getPosition().getVector())
+		physicsToucherRight.attach.getOrientation().setVector(getVRRightHandGrabber().getAttach().getOrientation().getVector())
+		
+		physicsToucherLeft = ECBAPhysicsToucher.new(this, getVRLeftHand(), idVRLeftHand)
+		physicsToucherLeft.shape.setShapeList(getVRLeftHandGrabber().getShape().getShapeList())
+		physicsToucherLeft.attach.getPosition().setVector(getVRLeftHandGrabber().getAttach().getPosition().getVector())
+		physicsToucherLeft.attach.getOrientation().setVector(getVRLeftHandGrabber().getAttach().getOrientation().getVector())
+		
 		teleportLasterPointer = ECBehaviorVRHandLaserPointer.new(this, teleportPointAt, "teleport")
 		teleportDestination = ECBATeleportDestination.new(this, getComponent())
 		
@@ -111,8 +123,8 @@ class MoCapActorClass extends BaseVRActorClass
 		
 		controlDesktop = ECBAControlDesktop.new(this)
 		interactHandle = ECBAInteractHandle.new(this)
-		grabRightHand = ECBAGrab.new(this, getVRRightHandGrabber(), getVRRightHandAttachSlot(), idVRRightHand)
-		grabLeftHand = ECBAGrab.new(this, getVRLeftHandGrabber(), getVRLeftHandAttachSlot(), idVRLeftHand)
+		grabRightHand = ECBAGrab.new(this, getVRRightHandGrabber(), getVRRightHandAttachSlot(), physicsToucherRight, idVRRightHand)
+		grabLeftHand = ECBAGrab.new(this, getVRLeftHandGrabber(), getVRLeftHandAttachSlot(), physicsToucherLeft, idVRLeftHand)
 		
 		actorSelectable = ECBASelectable.new(this)
 		

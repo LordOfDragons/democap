@@ -1,0 +1,331 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior keeping track of touching physics objects.
+ */
+class ECBAPhysicsToucher extends DefaultECBehavior
+	class TouchObject
+		public var Collider collider
+		public var int bone
+		
+		public func new(Collider collider, int bone)
+			this.collider = collider
+			this.bone = bone
+		end
+		
+		public func DVector getCenter()
+			if bone != -1
+				var ColliderRig colliderRig = collider cast ColliderRig
+				return colliderRig.boneGetMatrix(bone)\
+					* DVector.new(colliderRig.getRig().boneGetCentralMassPoint(bone))
+				
+			elif collider castable ColliderRig
+				var Rig rig = (collider cast ColliderRig).getRig()
+				if rig != null
+					return collider.getMatrix() * DVector.new(rig.getCentralMassPoint())
+					
+				else
+					return collider.getPosition()
+				end
+				
+			else
+				return collider.getPosition()
+			end
+		end
+	end
+	
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class CollectTouchObjects implements ColliderListener
+			private var Array pObjects
+			
+			public func new(Array objects)
+				pObjects = objects
+			end
+			
+			public func void collisionResponse(Collider owner, CollisionInfo info)
+				var Collider collider = info.getCollider()
+				if collider == null or collider.getResponseType() != CollisionResponse.dynamic
+					return
+				end
+				
+				var Object hitOwner = collider.getOwner()
+				if not hitOwner castable BehaviorElement
+					return
+				end
+				
+				var int index = info.getBone()
+				if index != -1
+					var Rig rig = (collider cast ColliderRig).getRig()
+					if not rig.boneGetDynamic(index)
+						return
+					end
+					
+					pObjects.add(TouchObject.new(collider, index))
+					
+				else
+					pObjects.add(TouchObject.new(collider, -1))
+				end
+			end
+			
+			public func void colliderChanged(Collider owner)
+			end
+			
+			public func bool canHitCollider(Collider owner, Collider collider)
+				return true
+			end
+		end
+		
+		
+		private var ECBAPhysicsToucher pECBehavior
+		private var ECBehaviorVRHand.Instance pVRHand
+		private var ColliderVolume pTouchCollider
+		private var Array pTouchObjects
+		private var bool pDirtyTouchObjects
+		private var CollectTouchObjects pCollectTouchObjects
+		
+		
+		
+		public func new(ECBAPhysicsToucher ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pTouchObjects = Array.new()
+			pDirtyTouchObjects = true
+			pCollectTouchObjects = CollectTouchObjects.new(pTouchObjects)
+			setRequiresThink(true)
+		end
+		
+		public func void dispose()
+			pTouchObjects = null
+			pVRHand = null
+			
+			super.dispose()
+		end
+		
+		public func void init(StubElement stub)
+			pVRHand = pECBehavior.vrHand.instance(getElement())
+			pTouchCollider = createTouchCollider(stub)
+			
+			if pVRHand.getCollider() != null
+				attachCollider(stub)
+			end
+		end
+		
+		protected func ColliderVolume createTouchCollider(StubElement stub)
+			var ColliderVolume collider = ColliderVolume.new()
+			collider.setPosition(getElement().getPosition())
+			collider.setOrientation(getElement().getOrientation())
+			collider.setCollisionFilter(pECBehavior.collisionFilter.getCollisionFilter())
+			collider.setShape(pECBehavior.shape.getShapeList(stub))
+			collider.setEnabled(false)
+			return collider
+		end
+		
+		protected func void attachCollider(StubElement stub)
+			pECBehavior.attach.attach(pVRHand.getCollider(), pTouchCollider, stub)
+		end
+		
+		
+		
+		public func ECBAPhysicsToucher getECBehavior()
+			return pECBehavior
+		end
+		
+		public func ECBehaviorVRHand.Instance getVRHand()
+			return pVRHand
+		end
+		
+		
+		
+		/**
+		 * Get touching objects as array of TouchObject. Array is cached with the
+		 * cached array cleared during postThink().
+		 */
+		public func Array getTouchingObjects()
+			if pDirtyTouchObjects
+				pTouchObjects.removeAll()
+				getElement().getGameWorld().getWorld().colliderHits(pTouchCollider, pCollectTouchObjects)
+				pDirtyTouchObjects = false
+			end
+			
+			return pTouchObjects
+		end
+		
+		/**
+		 * Visit touching objects with block.
+		 * 
+		 * Block is called with signature (TouchObject object) or (int index, TouchObject object).
+		 */
+		public func void forEachTouchingObject(Block ablock)
+			getTouchingObjects().forEach(ablock)
+		end
+		
+		/**
+		 * Find touching object with block.
+		 * 
+		 * Block is called with signature (TouchObject object) or (int index, TouchObject object)
+		 * both returning true if found or false to continue searching.
+		 * 
+		 * Returns null if no matching touching object is found.
+		 */
+		public func TouchObject findTouchingObject(Block ablock)
+			return getTouchingObjects().find(ablock) cast TouchObject
+		end
+		
+		/** Closest touched object closest or null if not found. */
+		public func TouchObject closestTouchingObject()
+			if pTouchCollider == null
+				return null
+			end
+			return touchingObjectClosestTo(pTouchCollider.getPosition())
+		end
+		
+		/**
+		 * Closest touched object closest or null if not found.
+		 * 
+		 * Same as closestTouchingObject() but allows to filter objects using a block.
+		 * Block is called with signature (TouchObject object) and has to return
+		 * true to consider the object or false to ignore it.
+		 */
+		public func TouchObject closestTouchingObject(Block ablock)
+			if pTouchCollider == null
+				return null
+			end
+			return touchingObjectClosestTo(pTouchCollider.getPosition(), ablock)
+		end
+		
+		/** Touched object closest to position or null if not found. */
+		public func TouchObject touchingObjectClosestTo(DVector position)
+			var Array objects = getTouchingObjects()
+			var int i, count = objects.getCount()
+			var TouchObject closestObject, object
+			var float closestDistance = 0, distance
+			
+			for i = 0 to count
+				object = objects.getAt(i) cast TouchObject
+				distance = (object.getCenter() - position).getLength()
+				
+				if closestObject == null or distance < closestDistance
+					closestObject = object
+					closestDistance = distance
+				end
+			end
+			
+			return closestObject
+		end
+		
+		/** Touched object closest to position or null if not found. */
+		public func TouchObject touchingObjectClosestTo(DVector position, Block ablock)
+			var Array objects = getTouchingObjects()
+			var int i, count = objects.getCount()
+			var TouchObject closestObject, object
+			var float closestDistance = 0, distance
+			
+			for i = 0 to count
+				object = objects.getAt(i) cast TouchObject
+				if not ablock.run(object) cast bool
+					continue
+				end
+				
+				distance = (object.getCenter() - position).getLength()
+				
+				if closestObject == null or distance < closestDistance
+					closestObject = object
+					closestDistance = distance
+				end
+			end
+			
+			return closestObject
+		end
+		
+		
+		
+		public func void postThink(float elapsed)
+			pDirtyTouchObjects = true
+		end
+	end
+	
+	
+	
+	public var ECBehaviorVRHand vrHand
+	public var ECComposeCollisionFilter collisionFilter
+	public var ECPShapeList shape
+	public var ECComposeAttachResource attach
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorVRHand vrHand, String id) super(eclass, id)
+		var String prefix = "physicsGrabber(" + id + ")."
+		
+		this.vrHand = vrHand
+		
+		shape = ECPShapeList.new(prefix + "shape", eclass.getCodecPropertyString())
+		eclass.addProperty(shape)
+		
+		collisionFilter = ECComposeCollisionFilter.new()
+		collisionFilter.setCollisionFilter(CollisionFilter.new(\
+			LayerMask.newWith(BaseGameApp.CollisionFilterBit.dynamic)))
+		
+		attach = ECComposeAttachResource.new(eclass, prefix)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		vrHand = null
+		super.dispose()
+	end
+	
+	
+	
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	static public func ECBAPhysicsToucher getBehaviorIn(BehaviorElementClass eclass, String id)
+		return eclass.findBehavior(block ECBAPhysicsToucher each
+			return each.getID().equals(id)
+		end) cast ECBAPhysicsToucher
+	end
+	
+	static public func Instance getInstanceIn(BehaviorElement element, String id)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getID().equals(id)
+		end) cast Instance
+	end
+	
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

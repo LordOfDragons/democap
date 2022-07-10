@@ -22,6 +22,7 @@
 namespace Democap.Behaviors
 
 pin Democap.Characters
+pin Democap.Elements
 
 pin Dragengine.Gui
 pin Dragengine.LoadSave
@@ -39,7 +40,10 @@ class ECBAGrab extends DefaultECBehavior
 		private var ECBAGrab pECBehavior
 		private var ECBehaviorGrabber.Instance pGrabber
 		private var ECBehaviorAttachSlot.Instance pAttachSlot
+		private var ECBAPhysicsToucher.Instance pPhysicsToucher
 		private var ECBGrabAttach.Instance pGrabAttach
+		private var Collider pPhysicsGrabCollider
+		private var ColliderConstraint pPhysicsGrabConstraint
 		private var bool pTriggerPulled
 		
 		
@@ -47,13 +51,17 @@ class ECBAGrab extends DefaultECBehavior
 		/** Create behavior instance. */
 		public func new(ECBAGrab ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
-			pGrabber = ecbehavior.getGrabber().instance(element)
-			pAttachSlot = ecbehavior.getAttachSlot().instance(element)
+			pGrabber = ecbehavior.grabber.instance(element)
+			pAttachSlot = ecbehavior.attachSlot.instance(element)
+			pPhysicsToucher = ecbehavior.physicsToucher.instance(element)
 		end
 		
 		/** Dispose of behavior instance. */
 		public func void dispose()
+			pPhysicsGrabConstraint = null
+			pPhysicsGrabCollider = null
 			pGrabber = null
+			pPhysicsToucher = null
 			pAttachSlot = null
 			pGrabAttach = null
 			super.dispose()
@@ -77,22 +85,31 @@ class ECBAGrab extends DefaultECBehavior
 			return pGrabAttach
 		end
 		
+		public func ColliderConstraint getPhysicsGrabConstraint()
+			return pPhysicsGrabConstraint
+		end
+		
 		
 		
 		/** Start grabbing. Returns true if grab succeeded. */
 		public func bool grab()
 			var ECBehaviorGrabSpot.Instance grabSpot = pGrabber.closestTouchingGrabSpot()
-			if grabSpot == null
-				return false
+			if grabSpot != null
+				var BehaviorElement element = grabSpot.getElement()
+				
+				pGrabAttach = element.findInstance(block ECBGrabAttach.Instance each
+					return tryGrabAttach(each)
+				end) cast ECBGrabAttach.Instance
+				if pGrabAttach != null
+					return true
+				end
 			end
 			
-			var BehaviorElement element = grabSpot.getElement()
-			
-			pGrabAttach = element.findInstance(block ECBGrabAttach.Instance each
-				return tryGrabAttach(each)
-			end) cast ECBGrabAttach.Instance
-			if pGrabAttach != null
-				return true
+			var ECBAPhysicsToucher.TouchObject touchObject = pPhysicsToucher.closestTouchingObject()
+			if touchObject != null
+				if tryGrabAttach(touchObject)
+					return true
+				end
 			end
 			
 			return false
@@ -104,15 +121,14 @@ class ECBAGrab extends DefaultECBehavior
 		
 		/** Stop grabbing. */
 		public func void ungrab()
-			if pGrabAttach != null
+			if pPhysicsGrabConstraint != null or pGrabAttach != null
 				ungrabGrabAttach()
-				pGrabAttach = null
 			end
 		end
 		
 		/** Pull trigger. Returns true if processed or false otherwise. */
 		public func bool triggerPull()
-			if pGrabAttach != null
+			if pGrabAttach != null or pPhysicsGrabConstraint != null
 				return true
 			end
 			
@@ -121,14 +137,13 @@ class ECBAGrab extends DefaultECBehavior
 		
 		/** Release trigger. */
 		public func void triggerRelease()
-			if pGrabAttach != null
-				
+			if pGrabAttach != null or pPhysicsGrabConstraint != null
 			end
 		end
 		
 		/** Menu button pressed. Returns true if processed or false otherwise. */
 		public func bool menuPress()
-			if pGrabAttach != null
+			if pGrabAttach != null or pPhysicsGrabConstraint != null
 				return true
 			end
 			
@@ -137,14 +152,13 @@ class ECBAGrab extends DefaultECBehavior
 		
 		/** Menu button released. */
 		public func void menuRelease()
-			if pGrabAttach != null
-				
+			if pGrabAttach != null or pPhysicsGrabConstraint != null
 			end
 		end
 		
 		/** Track pad touched. Returns true if processed or false otherwise. */
 		public func bool trackPadTouch()
-			if pGrabAttach != null
+			if pGrabAttach != null or pPhysicsGrabConstraint != null
 				return true
 			end
 			
@@ -153,8 +167,7 @@ class ECBAGrab extends DefaultECBehavior
 		
 		/** Track pad untouched. */
 		public func void trackPadUntouch()
-			if pGrabAttach != null
-				
+			if pGrabAttach != null or pPhysicsGrabConstraint != null
 			end
 		end
 		
@@ -175,47 +188,141 @@ class ECBAGrab extends DefaultECBehavior
 			*/
 			
 			// grab using world position
+			
+			// TODO: use pPhysicsToucher attach bone and position
+			
 			attachable.reattachWorld(pAttachSlot)
 			
 			return true
 		end
 		
+		protected func bool tryGrabAttach(ECBAPhysicsToucher.TouchObject touchObject)
+			var MoCapActor actor = getElement() cast MoCapActor
+			var Component component = actor.getComponent().getComponent()
+			var Collider collider = actor.getCollider().getCollider()
+			var String attachBone
+			var String constraintBone
+			var ColliderRig colliderRig
+			var int constraintBoneIndex
+			
+			// get matching attach bone from character configuration if present
+			var ECBCharacterConfiguration.Instance characterConfig = ECBCharacterConfiguration.getInstanceIn(actor)
+			if characterConfig != null
+				if pGrabber.getECBehavior().getID().equals(BaseVRActorClass.idNonVRRightHand)
+					attachBone = characterConfig.getCharacter().getGrabBoneRight()
+					
+				else
+					attachBone = characterConfig.getCharacter().getGrabBoneLeft()
+				end
+			end
+			
+			// determine if the actor has a bone with shape as attach bone. only a bone
+			// with shapes can be physically active in the game world and thus can only
+			// be used as attachment point for physics objects. for this the attach bone
+			// is tested. if it has no shapes go up to the parent and test. continue
+			// until a valid bone is found. in general the attach bone has no shape but
+			// the hand bone it is attached to does
+			if not attachBone.empty() and collider != null and collider castable ColliderRig and component != null
+				colliderRig = collider cast ColliderRig
+				if colliderRig.getRig() != null
+					var Rig rig = colliderRig.getRig()
+					if rig != null
+						var int index = rig.indexOfBoneNamed(attachBone)
+						while index != -1
+							if rig.boneGetShapes(index).getCount() > 0
+								constraintBone = rig.boneGetName(index)
+								constraintBoneIndex = index
+								break
+							end
+							index = rig.boneGetParent(index)
+						end
+					end
+				end
+			end
+			
+			// if we have no bone with shapes we can not attach
+			// 
+			// note: later on add a fallback mode which uses a world constraint. this requires
+			//       updating the constraint position properly every think()
+			if constraintBone == null
+				return false
+			end
+			
+			//var Collider handCollider = pPhysicsToucher.getVRHand().getCollider()
+			//var DMatrix handMatrix = handCollider.getMatrix()
+			var DMatrix attachMatrix = component.boneGetMatrix(constraintBoneIndex).toDMatrix() * component.getMatrix()
+			
+			var Matrix coordSysObj
+			
+			pPhysicsGrabCollider = touchObject.collider
+			
+			pPhysicsGrabConstraint = ColliderConstraint.new()
+			pPhysicsGrabConstraint.setTargetCollider(collider)
+			pPhysicsGrabConstraint.setTargetBone(constraintBone)
+			
+			if touchObject.bone != -1
+				pPhysicsGrabConstraint.setBone(touchObject.bone)
+				
+				var ColliderRig pcrig = pPhysicsGrabCollider cast ColliderRig
+				coordSysObj = (attachMatrix * pcrig.boneGetInverseMatrix(touchObject.bone)).toMatrix()
+				
+			else
+				coordSysObj = (attachMatrix * pPhysicsGrabCollider.getInverseMatrix()).toMatrix()
+			end
+			
+			pPhysicsGrabConstraint.setPosition1(coordSysObj.getPosition())
+			pPhysicsGrabConstraint.setOrientation1(coordSysObj.toQuaternion())
+			
+			pPhysicsGrabConstraint.lockAll()
+			
+			pPhysicsGrabCollider.addConstraint(pPhysicsGrabConstraint)
+			GameApp.getGameApp().getConsole().addMessage("grab '" + constraintBone + "'")
+			
+			return true
+		end
+		
 		protected func void ungrabGrabAttach()
-			pGrabAttach.getAttachable().detach()
-			pGrabAttach.getGrabSpot().release()
+			if pPhysicsGrabConstraint != null
+				if pPhysicsGrabCollider.hasConstraint(pPhysicsGrabConstraint)
+					pPhysicsGrabCollider.removeConstraint(pPhysicsGrabConstraint)
+				end
+				
+				pPhysicsGrabConstraint = null
+				pPhysicsGrabCollider = null
+				
+			elif pGrabAttach != null
+				pGrabAttach.getAttachable().detach()
+				pGrabAttach.getGrabSpot().release()
+				pGrabAttach = null
+			end
 			// TODO if object is dynamic give it linear/angular velocity while recording?
 		end
 	end
 	
 	
 	
-	private var ECBehaviorGrabber pGrabber
-	private var ECBehaviorAttachSlot pAttachSlot
+	public var ECBehaviorGrabber grabber
+	public var ECBehaviorAttachSlot attachSlot
+	public var ECBAPhysicsToucher physicsToucher
 	
 	
 	
 	/** Create behavior and add it to element class. */
 	public func new(BehaviorElementClass eclass, ECBehaviorGrabber grabber,\
-	ECBehaviorAttachSlot attachSlot, String id) super(eclass, id)
-		pGrabber = grabber
-		pAttachSlot = attachSlot
+	ECBehaviorAttachSlot attachSlot, ECBAPhysicsToucher physicsToucher, String id) super(eclass, id)
+		this.grabber = grabber
+		this.attachSlot = attachSlot
+		this.physicsToucher = physicsToucher
 		eclass.addBehavior(this)
 	end
 	
 	public func void dispose()
-		pGrabber = null
-		pAttachSlot = null
+		grabber = null
+		attachSlot = null
+		physicsToucher = null
 		super.dispose()
 	end
 	
-	
-	public func ECBehaviorGrabber getGrabber()
-		return pGrabber
-	end
-	
-	public func ECBehaviorAttachSlot getAttachSlot()
-		return pAttachSlot
-	end
 	
 	
 	/** Get instance in element from owner element class. */

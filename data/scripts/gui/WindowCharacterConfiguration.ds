@@ -344,6 +344,10 @@ class WindowCharacterConfiguration extends WindowDialog
 	private var DefaultTextModel pModelTextMoveCalibrate
 	private var DefaultListModel pModelListCameraBone
 	private var DefaultTextModel pModelTextCameraBone
+	private var DefaultListModel pModelListGrabBoneRight
+	private var DefaultTextModel pModelTextGrabBoneRight
+	private var DefaultListModel pModelListGrabBoneLeft
+	private var DefaultTextModel pModelTextGrabBoneLeft
 	private var EditVector pEditCameraPosition
 	private var EditVector pEditCameraRotation
 	private var DefaultListModel pModelTrackerSlots
@@ -367,14 +371,25 @@ class WindowCharacterConfiguration extends WindowDialog
 		end)
 		
 		pModelConfigName = DefaultTextModel.new(config.getName())
+		
 		pModelScaleMode = DefaultListModel.new(CharacterConfiguration.ScaleMode.all().toArray())
 		pModelScaleMode.setSelected(pModelScaleMode.indexOf(config.getScaleMode()))
+		
 		pModelListMoveCalibrate = DefaultListModel.new()
 		pModelListMoveCalibrate.setAutoSelect(false)
 		pModelTextMoveCalibrate = DefaultTextModel.new(config.getMoveCalibrate())
+		
 		pModelListCameraBone = DefaultListModel.new()
 		pModelListCameraBone.setAutoSelect(false)
 		pModelTextCameraBone = DefaultTextModel.new(config.getCameraBone())
+		
+		pModelListGrabBoneRight = DefaultListModel.new()
+		pModelListGrabBoneRight.setAutoSelect(false)
+		pModelTextGrabBoneRight = DefaultTextModel.new(config.getGrabBoneRight())
+		
+		pModelListGrabBoneLeft = DefaultListModel.new()
+		pModelListGrabBoneLeft.setAutoSelect(false)
+		pModelTextGrabBoneLeft = DefaultTextModel.new(config.getGrabBoneLeft())
 		
 		pModelTrackerSlots = DefaultListModel.new(config.getTrackerSlots().toArray().map(\
 			block CharacterTrackerSlot each
@@ -444,6 +459,10 @@ class WindowCharacterConfiguration extends WindowDialog
 		pModelTextMoveCalibrate = null
 		pModelListCameraBone = null
 		pModelTextCameraBone = null
+		pModelListGrabBoneRight = null
+		pModelTextGrabBoneRight = null
+		pModelListGrabBoneLeft = null
+		pModelTextGrabBoneLeft = null
 		pEditCameraPosition = null
 		pEditCameraRotation = null
 		pModelTrackerSlots = null
@@ -501,6 +520,8 @@ class WindowCharacterConfiguration extends WindowDialog
 		pCharacterConfiguration.setCameraBone(pModelTextCameraBone.getText())
 		pCharacterConfiguration.setCameraPosition(pEditCameraPosition.getVector())
 		pCharacterConfiguration.setCameraRotation(pEditCameraRotation.getVector())
+		pCharacterConfiguration.setGrabBoneRight(pModelTextGrabBoneRight.getText())
+		pCharacterConfiguration.setGrabBoneLeft(pModelTextGrabBoneLeft.getText())
 		
 		pCharacterConfiguration.getTrackerSlots().removeAll()
 		pModelTrackerSlots.forEach(block CharacterTrackerSlot each
@@ -607,6 +628,33 @@ class WindowCharacterConfiguration extends WindowDialog
 				// camera coordinate system
 				CPECoordinateSystem.new(pCharacterPreview, labelPosition, pEditCameraPosition,\
 					labelRotation, pEditCameraRotation, cbCameraBone, null)
+			end))
+			
+			// grab
+			p.addWidget(CollapsibleGroup.new("Grab Parameters", "",\
+			CollapsibleGroup.persistModel(uioptPrefix + "/GroupGrab"),\
+			FormLayout.new(true, 10, 2), block Panel p2
+				// right grab bone
+				var Label labelBone = Label.new("Bone Right:", "Label.FormCaption")
+				p2.addWidget(labelBone)
+				
+				comboBox = ComboBox.new(pModelListGrabBoneRight, DefaultComboBoxEditor.new(pModelTextGrabBoneRight))
+				comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+				comboBox.setToolTip("Right hand bone to attach grabbed objects to.")
+				p2.addWidget(comboBox)
+				
+				CPEBone.new(pCharacterPreview, labelBone, comboBox)
+				
+				// left grab bone
+				labelBone = Label.new("Bone Left:", "Label.FormCaption")
+				p2.addWidget(labelBone)
+				
+				comboBox = ComboBox.new(pModelListGrabBoneLeft, DefaultComboBoxEditor.new(pModelTextGrabBoneLeft))
+				comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+				comboBox.setToolTip("Left hand bone to attach grabbed objects to.")
+				p2.addWidget(comboBox)
+				
+				CPEBone.new(pCharacterPreview, labelBone, comboBox)
 			end))
 			
 			// tracker slots
