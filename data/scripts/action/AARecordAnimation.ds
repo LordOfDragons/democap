@@ -22,6 +22,7 @@
 namespace Democap.Actions
 
 pin Democap.Behaviors
+pin Democap.Elements
 
 pin Dragengine.Gui.Layouts
 pin Dragengine.Scenery
@@ -41,6 +42,8 @@ class AARecordAnimation extends AABase
 	
 	
 	protected var ECBVRHudInfo.Instance vrHudInfo
+	protected var ECBAGrab.Instance grabRightHand
+	protected var ECBAGrab.Instance grabLeftHand
 	protected var Panel panelInfo
 	protected var RangeModel modelProgress
 	protected var State state
@@ -65,6 +68,9 @@ class AARecordAnimation extends AABase
 		super.activate(actor)
 		
 		stopPointingAtAnything()
+		
+		grabRightHand.getGrabber().setEnabled(true)
+		grabLeftHand.getGrabber().setEnabled(true)
 		
 		if vrHudInfo != null
 			modelProgress = DefaultRangeModel.new(0, 100, 1, 0, 1)
@@ -101,7 +107,11 @@ class AARecordAnimation extends AABase
 	protected func void initBehaviors()
 		super.initBehaviors()
 		
+		var MoCapActor mcactor = actor cast MoCapActor
+		
 		vrHudInfo = ECBVRHudInfo.getInstanceIn(actor)
+		grabRightHand = mcactor.grabRightHand
+		grabLeftHand = mcactor.grabLeftHand
 	end
 	
 	
@@ -112,6 +122,32 @@ class AARecordAnimation extends AABase
 		
 		var SessionSettings settings = SessionSettings.get()
 		projectToGround.setEnabled(settings.getProjectToGround())
+	end
+	
+	
+	
+	/** Trigger pulled. */
+	public func void triggerPull(bool rightHand)
+		if rightHand
+			if grabRightHand.triggerPull()
+				
+			end
+			
+		else
+			if grabLeftHand.triggerPull()
+				
+			end
+		end
+	end
+	
+	/** Trigger released. */
+	public func void triggerRelease(bool rightHand)
+		if rightHand
+			grabRightHand.triggerRelease()
+			
+		else
+			grabLeftHand.triggerRelease()
+		end
 	end
 	
 	
@@ -150,9 +186,36 @@ class AARecordAnimation extends AABase
 	
 	
 	
+	/** Grip grab. */
+	public func void gripGrab(bool rightHand)
+		if rightHand
+			if grabRightHand.grab()
+			end
+			
+		else
+			if grabLeftHand.grab()
+			end
+		end
+	end
+	
+	/** Grip ungrab. */
+	public func void gripUngrab(bool rightHand)
+		if rightHand
+			grabRightHand.ungrab()
+			
+		else
+			grabLeftHand.ungrab()
+		end
+	end
+	
+	
+	
 	/** Frame update. */
 	public func void think(float elapsed)
 		super.think(elapsed)
+		
+		grabRightHand.updateGrab()
+		grabLeftHand.updateGrab()
 		
 		select state
 		case State.prepare
