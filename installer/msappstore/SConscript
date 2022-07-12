@@ -4,7 +4,7 @@ env = Environment()
 env.Tool('runExternalCommand')
 
 # parameters
-version = '0.6'
+version = '0.7'
 
 # build
 def globFiles(env, search, pattern, result, recursive=True):
@@ -36,8 +36,13 @@ def copyDataFiles(copied, directory, basePath):
 
 def msixBuild(target, source, env):
 	script = []
-	script.append('makemsix pack -d "{}" -p "{}" || exit 1'.format(
-		source[0].get_dir().abspath, target[0].abspath))
+	#script.append('makemsix pack -d "{}" -p "{}" || exit 1'.format(
+	#	source[0].get_dir().abspath, target[0].abspath))
+	script.append('docker run -it --rm --volume="{}":/sources compile-windows-crosscompile makemsix pack -d "{}" -p "{}"'.format(
+		source[0].get_dir().up().abspath,
+		'/sources/msix',
+		'/sources/{}'.format(target[0].name)))
+	print(script)
 	if not env.RunExternalCommand(script):
 		raise Exception('Failed building MSIX')
 
