@@ -6,11 +6,11 @@ env.Tool('runExternalCommand')
 # parameters
 params = Variables(['custom.py']) 
 params.Add(('releaseVersion', 'Release version (string)', '1.0'))
-params.Add(('democapVersion', 'DEMoCap version or empty string (string)', ''))
+params.Add(('delgaVersion', 'DEMoCap version or empty string (string)', ''))
 params.Update(env)
 
 version = env['releaseVersion']
-democapVersion = env['democapVersion'] if env['democapVersion'] else version
+delgaVersion = env['delgaVersion'] if env['delgaVersion'] else version
 
 # build
 def globFiles(env, search, pattern, result, recursive=True):
@@ -71,7 +71,7 @@ def copyManifest(env, target, source):
 	with open(target[0].abspath, 'w') as f:
 		f.write(content)
 
-delgaFilename = 'DEMoCap-{}.delga'.format(democapVersion)
+delgaFilename = 'DEMoCap-{}.delga'.format(delgaVersion)
 
 copied = []
 
@@ -85,7 +85,7 @@ copied.append(env.Command('msix/VFS/ProgramFilesX64/DEMoCap/Launcher.ini', 'Laun
 	env.Action(copyLauncherInit, 'Copy $TARGET'), DELGA_FILENAME=delgaFilename))
 
 copied.append(env.Command('msix/AppxManifest.xml', 'AppxManifest.xml',
-	env.Action(copyManifest, 'Copy $TARGET'), DEMOCAP_VERSION=democapVersion))
+	env.Action(copyManifest, 'Copy $TARGET'), DEMOCAP_VERSION=delgaVersion))
 
 msix = env.Command('DEMoCap-{}.msix'.format(version),
 	'msix/AppxManifest.xml', env.Action(msixBuild, 'Build MSIX $TARGET'))

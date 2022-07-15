@@ -6,7 +6,7 @@ on:
       version:
         required: true
         type: string
-      democapVersion:
+      versionDelga:
         required: true
         type: string
       artifactDistribute:
@@ -30,12 +30,15 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.artifactDistribute }}
-          path: distribute
       
+      - name: Copy DELGA
+        run: |
+          cp -a DEMoCap-${{ inputs.version }}.msix distribute/DEMoCap-${{ inputs.versionDelga }}.msix
+        
       - name: Build MSIX
         working-directory: installer/msappstore
         run: |
-          scons releaseVersion=${{ inputs.version }} democapVersion=${{ inputs.democapVersion }}
+          scons releaseVersion=${{ inputs.version }} delgaVersion=${{ inputs.versionDelga }}
         
       - name: Copy MSXI
         run: |
