@@ -1,0 +1,42 @@
+name: BuildMsix
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      artifactDistribute:
+        required: true
+        type: string
+      artifactMsix:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+        
+      - name: Get Distribution
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.artifactDistribute }}
+          path: distribute
+      
+      - name: Build MSIX
+        working-directory: installer/msappstore
+        run: scons releaseVersion=${{ inputs.version }}
+        
+      - name: Copy MSXI
+        run: |
+          cp -a installer/msappstore/build/DEMoCap-${{ inputs.version }}.msix DEMoCap-${{ inputs.version }}.msix
+        
+      - name: Store MSIX
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.artifact }}
+          path: DEMoCap-${{ inputs.version }}.msix
+          if-no-files-found: error
