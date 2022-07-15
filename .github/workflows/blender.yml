@@ -1,0 +1,37 @@
+name: BlenderScripts
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      artifact:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+        
+      - name: Install required packages
+        run: sudo apt -y install scons
+      
+      - name: Build Blender Scripts
+        working-directory: tools/blender
+        run: |
+          scons releaseVersion=${{ inputs.version }}
+        
+      - name: Copy Blender Scripts
+        run: |
+          cp -a tools/blender/build/blender-democap-tools-${{ inputs.version }}.zip blender-democap-tools-${{ inputs.version }}.zip
+        
+      - name: Store Blender Scripts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.artifact }}
+          path: blender-democap-tools-${{ inputs.version }}.zip
+          if-no-files-found: error
