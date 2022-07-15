@@ -7,8 +7,9 @@ on:
         required: true
         type: string
       versionDelga:
-        required: true
+        required: false
         type: string
+        default: ''
       artifactDistribute:
         required: true
         type: string
@@ -30,10 +31,13 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.artifactDistribute }}
+          path: distribute
       
       - name: Copy DELGA
+        if: ${{ inputs.versionDelga != '' }}
+        working-directory: distribute
         run: |
-          cp -a DEMoCap-${{ inputs.versionDelga }}.msix distribute/DEMoCap-${{ inputs.version }}.msix
+          cp -a DEMoCap-${{ inputs.version }}.delga DEMoCap-${{ inputs.versionDelga }}.delga
         
       - name: Build MSIX
         working-directory: installer/msappstore
