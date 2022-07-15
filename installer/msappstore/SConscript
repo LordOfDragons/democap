@@ -73,6 +73,9 @@ def copyManifest(env, target, source):
 
 delgaFilename = 'DEMoCap-{}.delga'.format(delgaVersion)
 
+democapVersion = delgaVersion
+democapVersion = democapVersion + '.0' * (4 - len(democapVersion.split('.')))
+
 copied = []
 
 copied.append(env.InstallAs(
@@ -85,7 +88,7 @@ copied.append(env.Command('msix/VFS/ProgramFilesX64/DEMoCap/Launcher.ini', 'Laun
 	env.Action(copyLauncherInit, 'Copy $TARGET'), DELGA_FILENAME=delgaFilename))
 
 copied.append(env.Command('msix/AppxManifest.xml', 'AppxManifest.xml',
-	env.Action(copyManifest, 'Copy $TARGET'), DEMOCAP_VERSION=delgaVersion))
+	env.Action(copyManifest, 'Copy $TARGET'), DEMOCAP_VERSION=democapVersion))
 
 msix = env.Command('DEMoCap-{}.msix'.format(version),
 	'msix/AppxManifest.xml', env.Action(msixBuild, 'Build MSIX $TARGET'))
