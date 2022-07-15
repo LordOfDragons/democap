@@ -35,6 +35,9 @@ jobs:
             exit 1
           fi
       
+      - name: Install required packages
+        run: sudo apt -y install scons
+      
       - name: Distribute
         id: distribute
         uses: LordOfDragons/build-delga@v1
@@ -46,9 +49,16 @@ jobs:
         run: |
           cp -a distribute/DEMoCap.delga DEMoCap-${{ inputs.version }}.delga
         
+      - name: Build Blender scripts
+        working-directory: tools/blender
+        run: |
+          scons releaseVersion=${{ inputs.version }}
+        
       - name: Store DELGA
         uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.artifact }}
-          path: DEMoCap-${{ inputs.version }}.delga
+          path: |
+            DEMoCap-${{ inputs.version }}.delga
+            tools/blender/build/blender-democap-tools-${{ inputs.version }}.zip
           if-no-files-found: error
