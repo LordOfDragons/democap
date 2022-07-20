@@ -9,6 +9,7 @@ public class DEMoCapLiveLink : ModuleRules
 	public DEMoCapLiveLink(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		bEnableExceptions = true;
 
 		PublicAdditionalLibraries.AddRange(
 			new string[] {

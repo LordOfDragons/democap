@@ -24,6 +24,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "DEMoCapLiveLinkCaptureBoneLayout.h"
 #include "DEMoCapLiveLinkCaptureFrame.h"
 
