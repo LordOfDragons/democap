@@ -131,6 +131,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var bool pFullRecording
 		private var bool pFirstFrame
 		private var RecordStateChanged pRecordStateChanged
+		private var bool pAutoStopRecord
 		
 		
 		
@@ -385,6 +386,9 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			pIsPreparing = true
 			
+			pAutoStopRecord = SessionSettings.get().getModelAutoStopRecord().getToggled()\
+				and GameApp.getGameApp().getPlaybackScene().getPlaytime() > 0
+			
 			pListeners.forEach(block Listener each
 				each.prepareRecording(this)
 			end)
@@ -595,6 +599,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 		public func void stopRecording()
 			var GameApp app = GameApp.getGameApp()
 			
+			pAutoStopRecord = false
+			
 			if pIsRecording
 				pIsRecording = false
 				
@@ -727,6 +733,16 @@ class ECBRecordAnimation extends DefaultECBehavior
 		end
 		
 		
+		
+		/** Frame update. */
+		public func void think(float elapsed)
+			if pIsRecording and pAutoStopRecord
+				var PlaybackScene playback = GameApp.getGameApp().getPlaybackScene()
+				if playback.getTime() == playback.getPlaytime()
+					stopRecording()
+				end
+			end
+		end
 		
 		/** Post think. Called after rendering and thus when animation frame is ready to record. */
 		public func void postThink(float elapsed)

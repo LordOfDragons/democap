@@ -427,7 +427,7 @@ class WMPanelSession extends Panel
 				p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 3, FlowLayout.Stretch.last), block Panel p2
 					tooltip = "Frame rate to use for recording animations"
 					
-					label = Label.new("Rate:", "Label.FormCaption")
+					label = Label.new("Rate:", "Label.FormCaption.SingleLine")
 					label.setToolTip(tooltip)
 					p2.addWidget(label)
 					
@@ -446,7 +446,7 @@ class WMPanelSession extends Panel
 				p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 3, FlowLayout.Stretch.last), block Panel p2
 					tooltip = "Slot smoothing strength (0=none, 10=full)"
 					
-					label = Label.new("Smooth:", "Label.FormCaption")
+					label = Label.new("Smooth:", "Label.FormCaption.SingleLine")
 					label.setToolTip(tooltip)
 					p2.addWidget(label)
 					
@@ -464,7 +464,7 @@ class WMPanelSession extends Panel
 				p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 3, FlowLayout.Stretch.last), block Panel p2
 					tooltip = "Animation smoothing strength (0=none, 10=full)"
 					
-					label = Label.new("Record:", "Label.FormCaption")
+					label = Label.new("Record:", "Label.FormCaption.SingleLine")
 					label.setToolTip(tooltip)
 					p2.addWidget(label)
 					
@@ -529,15 +529,29 @@ class WMPanelSession extends Panel
 					button.setToolTip("Fast forward to end of playback")
 					p2.addWidget(button)
 				end))
-				
-				var DefaultComboBoxEditor editor = DefaultComboBoxEditor.new(pModelTextPlaybackSpeed, 2)
-				editor.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
-				comboBox = ComboBox.new(pModelListPlaybackSpeed, editor)
-				comboBox.setToolTip("Playback speed in percentage (100 = normal speed)")
-				p.addWidget(comboBox)
-				editor.addTextActionListener(BlockActionListener.new(block ActionEvent event
-					GameApp.getGameApp().getPlaybackScene().setSpeed(0.01 * pModelTextPlaybackSpeed.getText().toInt())
+			end))
+			
+			gp.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p
+				p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 5, FlowLayout.Stretch.last), block Panel p2
+					tooltip = "Playback speed in percentage (100 = normal speed)"
+					
+					label = Label.new("Speed:", "Label.FormCaption.SingleLine")
+					label.setToolTip(tooltip)
+					p2.addWidget(label)
+					
+					var DefaultComboBoxEditor editor = DefaultComboBoxEditor.new(pModelTextPlaybackSpeed, 2)
+					editor.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
+					comboBox = ComboBox.new(pModelListPlaybackSpeed, editor)
+					comboBox.setToolTip(tooltip)
+					p2.addWidget(comboBox)
+					editor.addTextActionListener(BlockActionListener.new(block ActionEvent event
+						GameApp.getGameApp().getPlaybackScene().setSpeed(0.01 * pModelTextPlaybackSpeed.getText().toInt())
+					end))
 				end))
+				
+				checkBox = CheckBox.new(sessionSettings.getModelAutoStopRecord(), "Auto Stop Record")
+				checkBox.setToolTip("Automatically stop recording if play time is reached. Has no effects on the first recording.")
+				p.addWidget(checkBox)
 			end))
 		end))
 		

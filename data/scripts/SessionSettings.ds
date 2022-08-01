@@ -177,6 +177,7 @@ public class SessionSettings
 	private var DefaultRangeModel pModelRecordFrameRate
 	private var DefaultListModel pModelRecordDevices
 	private var DefaultRangeModel pModelSmoothSlotStrength
+	private var DefaultToggleModel pModelAutoStopRecord
 	
 	private var DefaultListModel pModelHudCamera
 	private var DefaultToggleModel pModelShowVRControllers
@@ -215,6 +216,9 @@ public class SessionSettings
 		pModelSmoothSlotStrength = DefaultRangeModel.new(0, 10, 5, 10, 1)
 		pModelSmoothSlotStrength.setValue((10.0 * s.getFloatAt("SmoothSlotStrength", 1) + 0.5) cast int)
 		pModelSmoothSlotStrength.addListener(SaveSmoothSlotStrength.new())
+		
+		pModelAutoStopRecord = DefaultToggleModel.new(s.getBoolAt("AutoStopRecord", true))
+		pModelAutoStopRecord.addListener(SaveToggleModelChanged.new("AutoStopRecord"))
 		
 		pModelHudCamera = DefaultListModel.new()
 		pModelHudCamera.add(null)
@@ -298,6 +302,11 @@ public class SessionSettings
 	/** Smooth slot strength. */
 	public func float getSmoothSlotStrength()
 		return 0.1 * pModelSmoothSlotStrength.getValue()
+	end
+	
+	/** Auto stop recording model. */
+	public func DefaultToggleModel getModelAutoStopRecord()
+		return pModelAutoStopRecord
 	end
 	
 	
