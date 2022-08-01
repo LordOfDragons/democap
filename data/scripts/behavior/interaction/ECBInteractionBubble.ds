@@ -1,0 +1,208 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Gui
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+
+
+/**
+ * Behavior adding an interaction bubble to the element.
+ */
+class ECBInteractionBubble extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBInteractionBubble pECBehavior
+		private var Window pWindow
+		private var Vector pAttachPosition
+		private var Quaternion pAttachOrientation
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBInteractionBubble ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pAttachPosition = Vector.new()
+			pAttachOrientation = Quaternion.newFromEulerY(180)
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			var Desktop desktop = pECBehavior.renderableDesktop.instance(getElement()).getDesktop()
+			
+			pWindow = Window.new(Point.new(), desktop.getSize())
+			pWindow.runWhileBlockingLayout(block
+				pWindow.setDesignerSelector("Window.Bubble")
+				pWindow.setCanClose(false)
+				pWindow.setCanMaximize(true)
+				pWindow.setCanMinimize(false)
+				pWindow.setCanMove(false)
+				pWindow.setCanResize(false)
+				pWindow.setCanReorder(false)
+				pWindow.setWindowState(Window.WindowState.maximized)
+				pWindow.setLayout(GridLayout.new(4, 0))
+			end)
+			desktop.addWindow(pWindow)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pWindow = null
+			super.dispose()
+		end
+		
+		
+		/** Behavior. */
+		public func ECBInteractionBubble getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Window. */
+		public func Window getWindow()
+			return pWindow
+		end
+		
+		/** Container to add buttons to. */
+		public func Container getButtonContainer()
+			return pWindow
+		end
+		
+		
+		/** Align bubble. */
+		public func void alignBubble()
+			var BehaviorElement element = getElement()
+			if element.getVisible()
+				element.setOrientation(pAttachOrientation * GameApp.getGameApp().getVRCamera().getOrientation())
+			end
+		end
+		
+		/** State changed for example visibility. */
+		public func void stateChanged()
+			updateRequiresThink()
+		end
+		
+		/** Post think. */
+		public func void postThink(float elapsed)
+			alignBubble()
+		end
+		
+		/** Attach to parent. */
+		public func void attachToParent(Element parent)
+			if not parent castable BehaviorElement
+				return
+			end
+			
+			var BehaviorElement parentElement = parent cast BehaviorElement
+			
+			var Collider parentCollider = ECBehaviorCollider.getInstanceIn(parentElement).getCollider()
+			if parentCollider == null
+				return
+			end
+			
+			var Vector parentMinExtend = Vector.new(-0.5, -0.5, -0.5)
+			var Vector parentMaxExtend = Vector.new(0.5, 0.5, 0.5)
+			
+			var Component parentComponent = ECBehaviorComponent.getInstanceIn(parentElement).getComponent()
+			if parentComponent != null
+				var Model parentModel = parentComponent.getModel()
+				if parentModel != null
+					parentMinExtend = parentModel.getMinimumExtend()
+					parentMaxExtend = parentModel.getMaximumExtend()
+				end
+			end
+			
+			var Vector parentCenter = (parentMinExtend + parentMaxExtend) / 2
+			
+			pAttachPosition = Vector.new(parentCenter.getX(), parentMaxExtend.getY(), parentCenter.getZ())
+			
+			pAttachPosition = pAttachPosition + Vector.new(0, 0.1, 0) // offset. make this configurable
+			
+			getElement().setPosition(parentElement.getElementMatrix() * DVector.new(pAttachPosition))
+			
+			var Collider collider = pECBehavior.attachable.instance(getElement()).getCollider().getCollider()
+			parentCollider.attachRelativeMovement(collider)
+			
+			updateRequiresThink()
+		end
+		
+		protected func void updateRequiresThink()
+			setRequiresThink(getElement().getVisible())
+		end
+	end
+	
+	
+	public var ECBehaviorAttachable attachable
+	public var ECBehaviorRenderableDesktop renderableDesktop
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorAttachable attachable,\
+	ECBehaviorRenderableDesktop renderabledesktop) super(eclass)
+		if attachable == null
+			throw ENullPointer.new("attachable")
+		end
+		if renderabledesktop == null
+			throw ENullPointer.new("renderabledesktop")
+		end
+		
+		this.attachable = attachable
+		this.renderableDesktop = renderabledesktop
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		attachable = null
+		renderableDesktop = null
+		super.dispose()
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBInteractionBubble getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBInteractionBubble each
+			return true
+		end) cast ECBInteractionBubble
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

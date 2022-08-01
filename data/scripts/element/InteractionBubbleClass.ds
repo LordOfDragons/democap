@@ -1,0 +1,90 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Elements
+
+pin Democap.Behaviors
+
+pin Dragengine.Commands
+pin Dragengine.Gui
+pin Dragengine.Scenery
+
+
+
+/**
+ * Interaction bubble element class.
+ */
+class InteractionBubbleClass extends BehaviorElementClass
+	public var ECBehaviorComponent component
+	public var ECBehaviorCollider collider
+	public var ECBehaviorAttachable attachable
+	public var ECBehaviorDynamicSkin dynamicSkin
+	public var ECBehaviorRenderableDesktop renderableDesktop
+	public var ECBInteractionBubble interactionBubble
+	public var ECBehaviorVRHandPointedAt vrHandPointedAt
+	public var ECBehaviorControlDesktop controlDesktop
+	public var ECBHideWhileRecording hideWhileRecording
+	
+	
+	/** Create element class. */
+	public func new() this("InteractionBubble")
+	end
+	
+	public func new(String name) super(name)
+		setPersistable(false)
+		
+		var ShapeList shape = ShapeList.new()
+		shape.addBox(Vector.new(0, 0.164, 0.005), Vector.new(0.145, 0.13, 0.005))
+		
+		collider = ECBehaviorCollider.new(this, null)
+		collider.getCollider().getShape().setShapeList(shape)
+		collider.getCollider().getPhysicsType().setEnumeration(CollisionResponse.kinematic)
+		collider.getCollider().getLocalGravity().setVector(Vector.new())
+		
+		collider.getCollider().setCollisionFilter(CollisionFilter.new(\
+			LayerMask.newWith(GameApp.CollisionFilterBit.interaction)))
+		
+		component = ECBehaviorComponent.new(this, collider)
+		component.setCommonPath("/content/models/interactionBubble", "bubble.demodel", "bubble.deskin", null)
+		component.getComponent().setLayerMask(LayerMask.newWith(GameApp.WorldLayerBit.remoteView))
+		
+		attachable = ECBehaviorAttachable.new(this, collider)
+		
+		dynamicSkin = ECBehaviorDynamicSkin.new(this, component)
+		
+		renderableDesktop = ECBehaviorRenderableDesktop.new(this, dynamicSkin)
+		renderableDesktop.getGuiTheme().setPath("/content/models/interactionBubble/bubble.guitheme.xml")
+		renderableDesktop.getRenderable().setValue("screen.content")
+		renderableDesktop.getRenderableSolidity().setValue("screen.solidity")
+		renderableDesktop.getSize().setPoint(Point.new(256, 256))
+		
+		interactionBubble = ECBInteractionBubble.new(this, attachable, renderableDesktop)
+		
+		vrHandPointedAt = ECBehaviorVRHandPointedAt.new(this)
+		
+		controlDesktop = ECBehaviorControlDesktop.new(this, renderableDesktop)
+		controlDesktop.getLowerLeft().setVector(Vector.new(-0.15, 0, 0))
+		controlDesktop.getLowerRight().setVector(Vector.new(0.15, 0, 0))
+		controlDesktop.getUpperLeft().setVector(Vector.new(-0.15, 0.3, 0))
+		
+		hideWhileRecording = ECBHideWhileRecording.new(this)
+	end
+end

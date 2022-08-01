@@ -1,0 +1,273 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior showing interaction bubble.
+ */
+class ECBShowInteractionBubble extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Attach to record animation behavior. */
+		class AttachRecordAnimation extends ECBehaviorPlayerControllable.Tracker.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void activeActorChanged(ECBehaviorPlayerControllable.Tracker tracker)
+				if tracker.getActor() != null
+					pInstance.setRecordAnimation(ECBRecordAnimation.getInstanceIn(tracker.getActor().getElement()))
+					
+				else
+					pInstance.setRecordAnimation(null)
+				end
+			end
+		end
+		
+		class RecordingStateChanged extends ECBRecordAnimation.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void prepareRecording(ECBRecordAnimation.Instance instance)
+				pInstance.updateVisibility()
+			end
+			
+			public func void stopRecording(ECBRecordAnimation.Instance instance)
+				pInstance.updateVisibility()
+			end
+		end
+		
+		
+		
+		private var ECBShowInteractionBubble pECBehavior
+		private var ECBRecordAnimation.Instance pRecordAnimation
+		private var AttachRecordAnimation pAttachRecordAnimation
+		private var RecordingStateChanged pRecordingStateChanged
+		private var ElementClass pBubbleClass
+		private var BehaviorElement pBubble
+		private var Array pButtons
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBShowInteractionBubble ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pButtons = Array.new()
+			pRecordingStateChanged = RecordingStateChanged.new(this)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pButtons = null
+			pRecordAnimation = null
+			pAttachRecordAnimation = null
+			pRecordingStateChanged = null
+			
+			if pBubble != null
+				pBubble.safeDispose()
+				pBubble = null
+			end
+			pBubbleClass = null
+			
+			super.dispose()
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			var CodecPropertyString codec = getElement().getClass().getCodecPropertyString()
+			
+			pButtons = pECBehavior.buttons.getList(stub, codec)
+			pBubbleClass = pECBehavior.bubbleClass.getElementClass(stub)
+		end
+		
+		
+		
+		/** Behavior. */
+		public func ECBShowInteractionBubble getECBehavior()
+			return pECBehavior
+		end
+		
+		
+		
+		/** Record animation or null. */
+		public func ECBRecordAnimation.Instance getRecordAnimation()
+			return pRecordAnimation
+		end
+		
+		/** Set record animation or null. */
+		public func void setRecordAnimation(ECBRecordAnimation.Instance recordAnimation)
+			if recordAnimation == pRecordAnimation
+				return
+			end
+			
+			if pRecordAnimation != null
+				if pRecordAnimation.getElement() != null // not disposed
+					pRecordAnimation.removeListener(pRecordingStateChanged)
+				end
+			end
+			
+			pRecordAnimation = recordAnimation
+			
+			if recordAnimation != null
+				recordAnimation.addListener(pRecordingStateChanged)
+			end
+			
+			updateVisibility()
+		end
+		
+		
+		
+		/** Update visibility. */
+		public func void updateVisibility()
+			if pBubble == null
+				return
+			end
+			
+			pBubble.setVisible(getElement().getVisible()\
+				and (pRecordAnimation == null or pRecordAnimation.isNotRecording()))
+		end
+		
+		
+		
+		/** State changed for example visibility. */
+		public func void stateChanged()
+			updateVisibility()
+		end
+		
+		/** Added to game world. */
+		public func void addToGameWorld()
+			if pBubble == null
+				createBubble()
+			end
+			
+			pAttachRecordAnimation = AttachRecordAnimation.new(this)
+			GameApp.getGameApp().getPlayerControlledActor().addListener(pAttachRecordAnimation)
+			pAttachRecordAnimation.activeActorChanged(GameApp.getGameApp().getPlayerControlledActor())
+			
+			updateVisibility()
+		end
+		
+		/** Remove from game world. */
+		public func void removeFromGameWorld()
+			setRecordAnimation(null)
+			GameApp.getGameApp().getPlayerControlledActor().removeListener(pAttachRecordAnimation)
+			pAttachRecordAnimation = null
+			
+			if pBubble != null
+				pBubble.safeDispose()
+				pBubble = null
+			end
+		end
+		
+		
+		
+		/** Create bubble adding it to game world. */
+		protected func void createBubble()
+			if pBubbleClass == null
+				return
+			end
+			
+			var BehaviorElement element = getElement()
+			
+			var StubElement stub = StubElement.new(pBubbleClass) // no generated ID on purpose
+			pBubble = stub.createElement() cast BehaviorElement
+			
+			element.getGameWorld().addElement(pBubble)
+			pBubble.attachToParent(element)
+			
+			createButtons()
+		end
+		
+		protected func void createButtons()
+			pButtons.forEach(block String buttonType
+				
+			end)
+		end
+	end
+	
+	
+	
+	public var ECPStringList buttons
+	public var ECPElementClass bubbleClass
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass) super(eclass)
+		var String prefix = "showInteractionBubble."
+		
+		buttons = ECPStringList.new(prefix + "buttons")
+		eclass.addProperty(buttons)
+		
+		bubbleClass = ECPElementClass.new(prefix + "class",\
+			GameApp.getGameApp().getElementClassList(), "InteractionBubble")
+		eclass.addProperty(bubbleClass)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		buttons = null
+		bubbleClass = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBShowInteractionBubble getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBShowInteractionBubble each
+			return true
+		end) cast ECBShowInteractionBubble
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
