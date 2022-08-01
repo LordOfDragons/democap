@@ -25,6 +25,7 @@
 #pragma once
 
 #include <string>
+#include <memory>
 
 class FDEMoCapLiveLinkSource;
 class FDEMoCapLiveLinkCaptureBoneLayout;

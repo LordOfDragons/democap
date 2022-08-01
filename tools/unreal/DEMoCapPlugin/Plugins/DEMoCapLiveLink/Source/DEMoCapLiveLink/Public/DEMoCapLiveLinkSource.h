@@ -24,6 +24,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "ILiveLinkSource.h"
 #include "DEMoCapLiveLinkConnectionSettings.h"
 #include "DEMoCapLiveLinkSourceSettings.h"
