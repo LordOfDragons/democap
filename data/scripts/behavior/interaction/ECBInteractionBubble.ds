@@ -53,12 +53,13 @@ class ECBInteractionBubble extends DefaultECBehavior
 		
 		class FlexibleGridLayout implements Layout
 			private var Point cellSize, cellHalfSize
-			private var int gap
+			private var int gap, minColumns
 			
-			public func new()
+			public func new(int minColumns)
 				cellSize = Point.new(48, 48)
 				cellHalfSize = Point.new(24, 24)
 				gap = 12
+				this.minColumns = minColumns
 			end
 			
 			public func void addWidget(Widget widget, Object settings)
@@ -70,7 +71,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 			public func Point getMinimumSize(Container container)
 				var int count = getVisibleWidgets(container).getCount()
 				var int rows = (DEMath.max(count - 1, 0)) / 4 + 1
-				var int columns = DEMath.clamp(count, 1, 4)
+				var int columns = DEMath.clamp(count, minColumns, 4)
 				return container.getPadding().getSize() + Point.new(\
 					cellSize.getX() * columns + gap * (columns - 1),\
 					cellSize.getY() * rows + gap * (rows - 1))
@@ -88,7 +89,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 				var Array list = getVisibleWidgets(container)
 				var int count = list.getCount()
 				var int rows = (DEMath.max(count - 1, 0)) / 4 + 1
-				var int columns = DEMath.clamp(count, 1, 4)
+				var int columns = DEMath.clamp(count, minColumns, 4)
 				var int halfRows = rows * 2
 				var int halfColumns = columns * 2
 				var int width = container.getContainerWidth()
@@ -211,7 +212,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 					p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p2
 						p2.setDesignerSelector("Panel.Bubble")
 						
-						pPanelButtonsDeselected = Panel.new(FlexibleGridLayout.new())
+						pPanelButtonsDeselected = Panel.new(FlexibleGridLayout.new(1))
 							pPanelButtonsDeselected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/capture_on.png")))
 							pPanelButtonsDeselected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/record_on.png")))
 						p2.addWidget(pPanelButtonsDeselected)
@@ -224,7 +225,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 						
 						// TODO label with object type/id on top
 						
-						pPanelButtonsSelected = Panel.new(GridLayout.new(4, 0))
+						pPanelButtonsSelected = Panel.new(FlexibleGridLayout.new(4))
 							pPanelButtonsSelected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/delete.png")))
 							pPanelButtonsSelected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/capture_on.png")))
 							pPanelButtonsSelected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/record_on.png")))
@@ -298,6 +299,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 			var float scaleValue = referenceSize * SessionSettings.get().getInteractionBubbleSize()
 			
 			var Vector scale = Vector.new(scaleValue, scaleValue, scaleValue)
+			GameApp.getGameApp().getConsole().addMessage("SCALE " + scale)
 			element.setScaling(scale)
 		end
 		
