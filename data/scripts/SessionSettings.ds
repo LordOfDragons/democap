@@ -107,22 +107,15 @@ public class SessionSettings
 	
 	class SaveRangeModelChanged extends DefaultRangeModelListener
 		private var String pSettingPath
+		private var float pScale
 		
-		public func new(String settingPath)
+		public func new(String settingPath, float scale)
 			pSettingPath = settingPath
+			pScale = scale
 		end
 		
 		public func void valueChanged(RangeModel rangeModel)
-			GameApp.getGameApp().getSettings().setAt(pSettingPath, rangeModel.getValue())
-		end
-	end
-	
-	class SaveSmoothSlotStrength extends DefaultRangeModelListener
-		public func new()
-		end
-		
-		public func void valueChanged(RangeModel rangeModel)
-			GameApp.getGameApp().getSettings().setAt("SmoothSlotStrength", 0.1 * rangeModel.getValue())
+			GameApp.getGameApp().getSettings().setAt(pSettingPath, pScale * rangeModel.getValue())
 		end
 	end
 	
@@ -178,6 +171,7 @@ public class SessionSettings
 	private var DefaultListModel pModelRecordDevices
 	private var DefaultRangeModel pModelSmoothSlotStrength
 	private var DefaultToggleModel pModelAutoStopRecord
+	private var DefaultRangeModel pModelInteractionBubbleSize
 	
 	private var DefaultListModel pModelHudCamera
 	private var DefaultToggleModel pModelShowVRControllers
@@ -211,14 +205,18 @@ public class SessionSettings
 		
 		pModelRecordFrameRate = DefaultRangeModel.new(5, 90, 10, 25, 1)
 		pModelRecordFrameRate.setValue(s.getIntAt("RecordFrameRate", 25))
-		pModelRecordFrameRate.addListener(SaveRangeModelChanged.new("RecordFrameRate"))
+		pModelRecordFrameRate.addListener(SaveRangeModelChanged.new("RecordFrameRate", 1))
 		
 		pModelSmoothSlotStrength = DefaultRangeModel.new(0, 10, 5, 10, 1)
-		pModelSmoothSlotStrength.setValue((10.0 * s.getFloatAt("SmoothSlotStrength", 1) + 0.5) cast int)
-		pModelSmoothSlotStrength.addListener(SaveSmoothSlotStrength.new())
+		pModelSmoothSlotStrength.setValue((s.getFloatAt("SmoothSlotStrength", 1) * 10 + 0.5) cast int)
+		pModelSmoothSlotStrength.addListener(SaveRangeModelChanged.new("SmoothSlotStrength", 0.1))
 		
 		pModelAutoStopRecord = DefaultToggleModel.new(s.getBoolAt("AutoStopRecord", true))
 		pModelAutoStopRecord.addListener(SaveToggleModelChanged.new("AutoStopRecord"))
+		
+		pModelInteractionBubbleSize = DefaultRangeModel.new(20, 80, 20, 40, 1)
+		pModelInteractionBubbleSize.setValue((s.getFloatAt("InteractionBubbleSize", 0.4) * 100 + 0.5) cast int)
+		pModelInteractionBubbleSize.addListener(SaveRangeModelChanged.new("InteractionBubbleSize", 0.01))
 		
 		pModelHudCamera = DefaultListModel.new()
 		pModelHudCamera.add(null)
@@ -307,6 +305,16 @@ public class SessionSettings
 	/** Auto stop recording model. */
 	public func DefaultToggleModel getModelAutoStopRecord()
 		return pModelAutoStopRecord
+	end
+	
+	/** Interaction bubble size model. */
+	public func DefaultRangeModel getModelInteractionBubbleSize()
+		return pModelInteractionBubbleSize
+	end
+	
+	/** Interaction bubble size. */
+	public func float getInteractionBubbleSize()
+		return 0.01 * pModelInteractionBubbleSize.getValue()
 	end
 	
 	

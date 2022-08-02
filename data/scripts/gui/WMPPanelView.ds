@@ -32,15 +32,15 @@ pin Dragengine.Utils
 
 
 /**
- * Debug panel.
+ * View settings panel.
  */
-class WMPPanelDebug extends CollapsibleGroup
+class WMPPanelView extends CollapsibleGroup
 	protected var String pPrefixUIOptions
 	
 	/** Create panel. */
-	public func new(WMPanelSettings panelSettings) super("Debug / Performance",\
-	"democap:uipanelsettings#debug_performance",\
-	CollapsibleGroup.persistModel(prefixUIOptions(panelSettings), false))
+	public func new(WMPanelSettings panelSettings) super("View Settings",\
+	"democap:uipanelsettings#view_settings",\
+	CollapsibleGroup.persistModel(prefixUIOptions(panelSettings), true))
 		pPrefixUIOptions = prefixUIOptions(panelSettings)
 		
 		getPanelContent().runWhileBlockingLayout(block
@@ -55,14 +55,24 @@ class WMPPanelDebug extends CollapsibleGroup
 	
 	/** UI options prefix. */
 	static public func String prefixUIOptions(WMPanelSettings panelSettings)
-		return panelSettings.getPrefixUIOptions() + "/WMPPanelDebug"
+		return panelSettings.getPrefixUIOptions() + "/WMPPanelView"
 	end
 	
 	
 	
 	/** Create panel content. */
 	protected func void createContent(Panel content)
-		content.setLayout(FlowLayout.new(LayoutAxis.y))
-		content.addWidget(PanelFPSRates.new())
+		var SessionSettings sessionSettings = SessionSettings.get()
+		var Slider slider
+		
+		content.setLayout(FormLayout.new(true, 5, 2))
+		
+		// interaction bubble size
+		content.addWidget(Label.new("Bubble Size:", "Label.FormCaption"))
+		
+		slider = Slider.new(Orientation.horizontal, sessionSettings.getModelInteractionBubbleSize())
+		slider.setShowTicks(true)
+		slider.setToolTip("Size of interaction bubbles")
+		content.addWidget(slider)
 	end
 end

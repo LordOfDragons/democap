@@ -35,10 +35,141 @@ pin Dragengine.Scenery
 class ECBInteractionBubble extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
+		class SelectableChanged extends ECBSelectable.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void selected(ECBSelectable.Instance instance)
+				pInstance.selectableChanged()
+			end
+			
+			public func void deselected(ECBSelectable.Instance instance)
+				pInstance.selectableChanged()
+			end
+		end
+		
+		class FlexibleGridLayout implements Layout
+			private var Point cellSize, cellHalfSize
+			private var int gap
+			
+			public func new()
+				cellSize = Point.new(48, 48)
+				cellHalfSize = Point.new(24, 24)
+				gap = 12
+			end
+			
+			public func void addWidget(Widget widget, Object settings)
+			end
+			
+			public func void removeWidget(Widget widget)
+			end
+			
+			public func Point getMinimumSize(Container container)
+				var int count = getVisibleWidgets(container).getCount()
+				var int rows = (DEMath.max(count - 1, 0)) / 4 + 1
+				var int columns = DEMath.clamp(count, 1, 4)
+				return container.getPadding().getSize() + Point.new(\
+					cellSize.getX() * columns + gap * (columns - 1),\
+					cellSize.getY() * rows + gap * (rows - 1))
+			end
+			
+			public func Point getMinimumSizeForWidth(Container container, int width)
+				return getMinimumSize(container)
+			end
+			
+			public func Point getMinimumSizeForHeight(Container container, int height)
+				return getMinimumSize(container)
+			end
+			
+			public func void doLayout(Container container)
+				var Array list = getVisibleWidgets(container)
+				var int count = list.getCount()
+				var int rows = (DEMath.max(count - 1, 0)) / 4 + 1
+				var int columns = DEMath.clamp(count, 1, 4)
+				var int halfRows = rows * 2
+				var int halfColumns = columns * 2
+				var int width = container.getContainerWidth()
+				var int height = container.getContainerHeight()
+				var BorderSize padding = container.getPadding()
+				var Point cellCenter
+				var Point cellOffset = Point.new(padding.getLeft(), padding.getTop())
+				
+				list.forEach(block int index, Widget each
+					cellCenter = cellOffset + Point.new(\
+						width * ((index % columns) * 2 + 1) / halfColumns,\
+						height * ((index / columns) * 2 + 1) / halfRows)
+					
+					each.setSize(cellSize)
+					each.setPosition(cellCenter - cellHalfSize)
+				end)
+			end
+			
+			protected func Array getVisibleWidgets(Container container)
+				var Array list = Array.new()
+				container.forEachWidget(block Widget each
+					if each.getVisible()
+						list.add(each)
+					end
+				end)
+				return list
+			end
+		end
+		
+		class AttachRecordAnimation extends ECBehaviorPlayerControllable.Tracker.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void activeActorChanged(ECBehaviorPlayerControllable.Tracker tracker)
+				if tracker.getActor() != null
+					pInstance.setRecordAnimation(ECBRecordAnimation.getInstanceIn(tracker.getActor().getElement()))
+					
+				else
+					pInstance.setRecordAnimation(null)
+				end
+			end
+		end
+		
+		class RecordingStateChanged extends ECBRecordAnimation.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void prepareRecording(ECBRecordAnimation.Instance instance)
+				pInstance.updateVisibility()
+			end
+			
+			public func void stopRecording(ECBRecordAnimation.Instance instance)
+				pInstance.updateVisibility()
+			end
+		end
+		
+		
+		
 		private var ECBInteractionBubble pECBehavior
+		private var ECBRecordAnimation.Instance pRecordAnimation
+		private var AttachRecordAnimation pAttachRecordAnimation
+		private var RecordingStateChanged pRecordingStateChanged
+		private var ColliderVolume pCollider
+		
 		private var Window pWindow
+		private var TabLayout pTabLayout
+		private var Panel pPanelButtonsSelected
+		private var Panel pPanelButtonsDeselected
 		private var Vector pAttachPosition
 		private var Quaternion pAttachOrientation
+		private var ECBSelectable.Instance pParentSelectable
+		private var bool pShowSelected
+		private var float pDesktopFactorHalfX, pDesktopFactorHalfY
+		private var float pDesktopFactorX, pDesktopFactorY
+		private var Vector2 pEnlargePanelSize
 		
 		
 		/** Create behavior instance. */
@@ -46,11 +177,21 @@ class ECBInteractionBubble extends DefaultECBehavior
 			pECBehavior = ecbehavior
 			pAttachPosition = Vector.new()
 			pAttachOrientation = Quaternion.newFromEulerY(180)
+			pRecordingStateChanged = RecordingStateChanged.new(this)
+			pEnlargePanelSize = Vector2.new(20, 20)
 		end
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
-			var Desktop desktop = pECBehavior.renderableDesktop.instance(getElement()).getDesktop()
+			var BehaviorElement element = getElement()
+			
+			pCollider = pECBehavior.attachable.instance(element).getCollider().getCollider() cast ColliderVolume
+			
+			var Desktop desktop = pECBehavior.renderableDesktop.instance(element).getDesktop()
+			pDesktopFactorHalfX = 0.5 / desktop.getWidth()
+			pDesktopFactorHalfY = 0.5 / desktop.getHeight()
+			pDesktopFactorX = 1.0 / desktop.getWidth()
+			pDesktopFactorY = 1.0 / desktop.getHeight()
 			
 			pWindow = Window.new(Point.new(), desktop.getSize())
 			pWindow.runWhileBlockingLayout(block
@@ -62,14 +203,55 @@ class ECBInteractionBubble extends DefaultECBehavior
 				pWindow.setCanResize(false)
 				pWindow.setCanReorder(false)
 				pWindow.setWindowState(Window.WindowState.maximized)
-				pWindow.setLayout(GridLayout.new(4, 0))
+				
+				pTabLayout = TabLayout.new()
+				pWindow.setLayout(pTabLayout)
+				
+				pWindow.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.y, 0.5, 1), block Panel p
+					p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p2
+						p2.setDesignerSelector("Panel.Bubble")
+						
+						pPanelButtonsDeselected = Panel.new(FlexibleGridLayout.new())
+							pPanelButtonsDeselected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/capture_on.png")))
+							pPanelButtonsDeselected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/record_on.png")))
+						p2.addWidget(pPanelButtonsDeselected)
+					end))
+				end))
+				
+				pWindow.addWidget(Panel.new(BorderLayout.new(), block Panel p
+					p.addWidget(Panel.new(BorderLayout.new(), block Panel p2
+						p2.setDesignerSelector("Panel.Bubble.Selected")
+						
+						// TODO label with object type/id on top
+						
+						pPanelButtonsSelected = Panel.new(GridLayout.new(4, 0))
+							pPanelButtonsSelected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/delete.png")))
+							pPanelButtonsSelected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/capture_on.png")))
+							pPanelButtonsSelected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/record_on.png")))
+							pPanelButtonsSelected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/teleport.png")))
+						p2.addWidget(pPanelButtonsSelected, BorderLayout.Area.content)
+						
+						// TODO label with tooltip on bottom
+					end), BorderLayout.Area.bottom)
+				end))
 			end)
+			pWindow.doLayout()
 			desktop.addWindow(pWindow)
 		end
 		
 		/** Dispose of behavior instance. */
 		public func void dispose()
+			pPanelButtonsSelected = null
+			pPanelButtonsDeselected = null
 			pWindow = null
+			pTabLayout = null
+			pParentSelectable = null
+			
+			pRecordAnimation = null
+			pAttachRecordAnimation = null
+			pRecordingStateChanged = null
+			pCollider = null
+			
 			super.dispose()
 		end
 		
@@ -84,19 +266,100 @@ class ECBInteractionBubble extends DefaultECBehavior
 			return pWindow
 		end
 		
-		/** Container to add buttons to. */
-		public func Container getButtonContainer()
-			return pWindow
+		/** Selected panel to add buttons to. */
+		public func Panel getPanelButtonsSelected()
+			return pPanelButtonsSelected
 		end
+		
+		/** Deselected panel to add buttons to. */
+		public func Panel getPanelButtonsDeselected()
+			return pPanelButtonsDeselected
+		end
+		
 		
 		
 		/** Align bubble. */
 		public func void alignBubble()
 			var BehaviorElement element = getElement()
-			if element.getVisible()
-				element.setOrientation(pAttachOrientation * GameApp.getGameApp().getVRCamera().getOrientation())
+			if not element.getVisible()
+				return
 			end
+			
+			var Camera camera = GameApp.getGameApp().getVRCamera()
+			/* temp */ camera = GameApp.getGameApp().getWindowGameWorld().getCamera()
+			
+			element.setOrientation(pAttachOrientation * camera.getOrientation())
+			
+			// we use 90 degrees as field of view because this way it is easier to calculate.
+			// the maximum size is limited to avoid problems
+			var float distance = (element.getPosition() - camera.getPosition()).getLength()
+			var float referenceSize = DEMath.min(distance, 10.0)
+			
+			var float scaleValue = referenceSize * SessionSettings.get().getInteractionBubbleSize()
+			
+			var Vector scale = Vector.new(scaleValue, scaleValue, scaleValue)
+			element.setScaling(scale)
 		end
+		
+		/** Selectable changed. */
+		public func void selectableChanged()
+			setShowSelected(pParentSelectable != null and pParentSelectable.isSelected())
+		end
+		
+		
+		
+		/** Record animation or null. */
+		public func ECBRecordAnimation.Instance getRecordAnimation()
+			return pRecordAnimation
+		end
+		
+		/** Set record animation or null. */
+		public func void setRecordAnimation(ECBRecordAnimation.Instance recordAnimation)
+			if recordAnimation == pRecordAnimation
+				return
+			end
+			
+			if pRecordAnimation != null
+				if pRecordAnimation.getElement() != null // not disposed
+					pRecordAnimation.removeListener(pRecordingStateChanged)
+				end
+			end
+			
+			pRecordAnimation = recordAnimation
+			
+			if recordAnimation != null
+				recordAnimation.addListener(pRecordingStateChanged)
+			end
+			
+			updateVisibility()
+		end
+		
+		
+		
+		/** Update visibility. */
+		public func void updateVisibility()
+			var bool visible = true
+			
+			var BehaviorElement element = getElement()
+			if element.getParent() != null
+				visible &= element.getParent().getVisible()
+			end
+			
+			if pRecordAnimation != null
+				visible &= pRecordAnimation.isRecording()
+			end
+			
+			if not pShowSelected
+				visible &= pPanelButtonsDeselected.findWidget(block Widget each
+					return each.getVisible()
+				end) != null
+			end
+			
+			element.setVisible(visible)
+			updateColliderShape()
+		end
+		
+		
 		
 		/** State changed for example visibility. */
 		public func void stateChanged()
@@ -108,6 +371,22 @@ class ECBInteractionBubble extends DefaultECBehavior
 			alignBubble()
 		end
 		
+		/** Added to game world. */
+		public func void addToGameWorld()
+			pAttachRecordAnimation = AttachRecordAnimation.new(this)
+			GameApp.getGameApp().getPlayerControlledActor().addListener(pAttachRecordAnimation)
+			pAttachRecordAnimation.activeActorChanged(GameApp.getGameApp().getPlayerControlledActor())
+			
+			updateVisibility()
+		end
+		
+		/** Remove from game world. */
+		public func void removeFromGameWorld()
+			setRecordAnimation(null)
+			GameApp.getGameApp().getPlayerControlledActor().removeListener(pAttachRecordAnimation)
+			pAttachRecordAnimation = null
+		end
+		
 		/** Attach to parent. */
 		public func void attachToParent(Element parent)
 			if not parent castable BehaviorElement
@@ -115,9 +394,10 @@ class ECBInteractionBubble extends DefaultECBehavior
 			end
 			
 			var BehaviorElement parentElement = parent cast BehaviorElement
-			
+			var ECBSelectable.Instance parentSelectable = ECBSelectable.getInstanceIn(parentElement)
+			var ECBShowInteractHandles.Instance parentSih = ECBShowInteractHandles.getInstanceIn(parentElement)
 			var Collider parentCollider = ECBehaviorCollider.getInstanceIn(parentElement).getCollider()
-			if parentCollider == null
+			if parentSelectable == null or parentCollider == null
 				return
 			end
 			
@@ -137,18 +417,59 @@ class ECBInteractionBubble extends DefaultECBehavior
 			
 			pAttachPosition = Vector.new(parentCenter.getX(), parentMaxExtend.getY(), parentCenter.getZ())
 			
-			pAttachPosition = pAttachPosition + Vector.new(0, 0.1, 0) // offset. make this configurable
+			pAttachPosition = pAttachPosition + Vector.new(0, 0.01, 0)
 			
-			getElement().setPosition(parentElement.getElementMatrix() * DVector.new(pAttachPosition))
+			if parentSih != null
+				pAttachPosition = pAttachPosition + Vector.new(0, parentSih.getHandleSize(), 0)
+			end
 			
-			var Collider collider = pECBehavior.attachable.instance(getElement()).getCollider().getCollider()
-			parentCollider.attachRelativeMovement(collider)
+			var BehaviorElement element = getElement()
+			element.setPosition(parentElement.getElementMatrix() * DVector.new(pAttachPosition))
+			
+			parentCollider.attachRelativeMovement(pCollider)
+			
+			element.setParent(parentElement)
+			
+			parentSelectable.addListener(SelectableChanged.new(this))
+			
+			pParentSelectable = parentSelectable
 			
 			updateRequiresThink()
+			selectableChanged()
 		end
 		
 		protected func void updateRequiresThink()
 			setRequiresThink(getElement().getVisible())
+		end
+		
+		protected func void setShowSelected(bool showSelected)
+			if showSelected == pShowSelected
+				return
+			end
+			
+			pShowSelected = showSelected
+			
+			pTabLayout.selectTab(pWindow, showSelected if 1 else 0)
+			updateVisibility()
+		end
+		
+		protected func void updateColliderShape()
+			var Panel panel = pShowSelected if pPanelButtonsSelected else pPanelButtonsDeselected
+			var Vector2 panelSize = Vector2.new(panel.getSize())
+			var Vector2 panelCenter = Vector2.new(panel.getDesktopPosition()) + panelSize / 2
+			panelSize = panelSize + pEnlargePanelSize
+			
+			var float halfSizeX = pDesktopFactorHalfX * panelSize.getX()
+			var float halfSizeY = pDesktopFactorHalfY * panelSize.getY()
+			var float positionX = 0.5 - pDesktopFactorX * panelCenter.getX()
+			var float positionY = 1.0 - pDesktopFactorY * panelCenter.getY()
+			
+			var ShapeList shape = ShapeList.new()
+			shape.addBox(Vector.new(positionX, positionY, 0.005), Vector.new(halfSizeX, halfSizeY, 0.005))
+			
+			pCollider.setShape(shape)
+			
+			//GameApp.getGameApp().getConsole().addMessage("OOPS pos=" + panel.getDesktopPosition() + " size=" + panel.getSize() + " center=" + panelCenter)
 		end
 	end
 	
@@ -166,6 +487,8 @@ class ECBInteractionBubble extends DefaultECBehavior
 		if renderabledesktop == null
 			throw ENullPointer.new("renderabledesktop")
 		end
+		
+		var String prefix = "interactionBubble."
 		
 		this.attachable = attachable
 		this.renderableDesktop = renderabledesktop

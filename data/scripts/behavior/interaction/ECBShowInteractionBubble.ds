@@ -33,48 +33,9 @@ pin Dragengine.Utils
 class ECBShowInteractionBubble extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
-		/** Attach to record animation behavior. */
-		class AttachRecordAnimation extends ECBehaviorPlayerControllable.Tracker.DefaultListener
-			private var Instance pInstance
-			
-			public func new(Instance instance)
-				pInstance = instance
-			end
-			
-			public func void activeActorChanged(ECBehaviorPlayerControllable.Tracker tracker)
-				if tracker.getActor() != null
-					pInstance.setRecordAnimation(ECBRecordAnimation.getInstanceIn(tracker.getActor().getElement()))
-					
-				else
-					pInstance.setRecordAnimation(null)
-				end
-			end
-		end
-		
-		class RecordingStateChanged extends ECBRecordAnimation.DefaultListener
-			private var Instance pInstance
-			
-			public func new(Instance instance)
-				pInstance = instance
-			end
-			
-			public func void prepareRecording(ECBRecordAnimation.Instance instance)
-				pInstance.updateVisibility()
-			end
-			
-			public func void stopRecording(ECBRecordAnimation.Instance instance)
-				pInstance.updateVisibility()
-			end
-		end
-		
-		
-		
 		private var ECBShowInteractionBubble pECBehavior
-		private var ECBRecordAnimation.Instance pRecordAnimation
-		private var AttachRecordAnimation pAttachRecordAnimation
-		private var RecordingStateChanged pRecordingStateChanged
 		private var ElementClass pBubbleClass
-		private var BehaviorElement pBubble
+		private var ECBInteractionBubble.Instance pBubble
 		private var Array pButtons
 		
 		
@@ -83,22 +44,12 @@ class ECBShowInteractionBubble extends DefaultECBehavior
 		public func new(ECBShowInteractionBubble ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pButtons = Array.new()
-			pRecordingStateChanged = RecordingStateChanged.new(this)
 		end
 		
 		/** Dispose of behavior instance. */
 		public func void dispose()
+			disposeBubble()
 			pButtons = null
-			pRecordAnimation = null
-			pAttachRecordAnimation = null
-			pRecordingStateChanged = null
-			
-			if pBubble != null
-				pBubble.safeDispose()
-				pBubble = null
-			end
-			pBubbleClass = null
-			
 			super.dispose()
 		end
 		
@@ -119,49 +70,11 @@ class ECBShowInteractionBubble extends DefaultECBehavior
 		
 		
 		
-		/** Record animation or null. */
-		public func ECBRecordAnimation.Instance getRecordAnimation()
-			return pRecordAnimation
-		end
-		
-		/** Set record animation or null. */
-		public func void setRecordAnimation(ECBRecordAnimation.Instance recordAnimation)
-			if recordAnimation == pRecordAnimation
-				return
-			end
-			
-			if pRecordAnimation != null
-				if pRecordAnimation.getElement() != null // not disposed
-					pRecordAnimation.removeListener(pRecordingStateChanged)
-				end
-			end
-			
-			pRecordAnimation = recordAnimation
-			
-			if recordAnimation != null
-				recordAnimation.addListener(pRecordingStateChanged)
-			end
-			
-			updateVisibility()
-		end
-		
-		
-		
-		/** Update visibility. */
-		public func void updateVisibility()
-			if pBubble == null
-				return
-			end
-			
-			pBubble.setVisible(getElement().getVisible()\
-				and (pRecordAnimation == null or pRecordAnimation.isNotRecording()))
-		end
-		
-		
-		
 		/** State changed for example visibility. */
 		public func void stateChanged()
-			updateVisibility()
+			if pBubble != null
+				pBubble.updateVisibility()
+			end
 		end
 		
 		/** Added to game world. */
@@ -169,24 +82,11 @@ class ECBShowInteractionBubble extends DefaultECBehavior
 			if pBubble == null
 				createBubble()
 			end
-			
-			pAttachRecordAnimation = AttachRecordAnimation.new(this)
-			GameApp.getGameApp().getPlayerControlledActor().addListener(pAttachRecordAnimation)
-			pAttachRecordAnimation.activeActorChanged(GameApp.getGameApp().getPlayerControlledActor())
-			
-			updateVisibility()
 		end
 		
 		/** Remove from game world. */
 		public func void removeFromGameWorld()
-			setRecordAnimation(null)
-			GameApp.getGameApp().getPlayerControlledActor().removeListener(pAttachRecordAnimation)
-			pAttachRecordAnimation = null
-			
-			if pBubble != null
-				pBubble.safeDispose()
-				pBubble = null
-			end
+			disposeBubble()
 		end
 		
 		
@@ -200,18 +100,30 @@ class ECBShowInteractionBubble extends DefaultECBehavior
 			var BehaviorElement element = getElement()
 			
 			var StubElement stub = StubElement.new(pBubbleClass) // no generated ID on purpose
-			pBubble = stub.createElement() cast BehaviorElement
+			var BehaviorElement bubble = stub.createElement() cast BehaviorElement
 			
-			element.getGameWorld().addElement(pBubble)
-			pBubble.attachToParent(element)
+			element.getGameWorld().addElement(bubble)
+			bubble.attachToParent(element)
 			
 			createButtons()
+			
+			pBubble = ECBInteractionBubble.getInstanceIn(bubble)
 		end
 		
 		protected func void createButtons()
 			pButtons.forEach(block String buttonType
 				
 			end)
+		end
+		
+		protected func void disposeBubble()
+			if pBubble != null
+				if pBubble.getElement() != null // could be disposed already
+					pBubble.getElement().safeDispose()
+				end
+				pBubble = null
+			end
+			pBubbleClass = null
 		end
 	end
 	
