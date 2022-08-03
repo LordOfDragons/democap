@@ -65,9 +65,12 @@ class ECBInteractTeleport extends ECBInteractHandle
 			
 			// teleport actor element. place the calibration center at the target
 			// point not the playspace center
-			var DMatrix matrix = ECBCharacterConfiguration.getInstanceIn(actor)\
-				.getCharacter().getMatrixCalibrate().toDMatrix()\
-					* element.getElementMatrix()
+			var ECBCharacterConfiguration.Instance configuration = ECBCharacterConfiguration.getInstanceIn(actor)
+			if configuration == null
+				return
+			end
+			
+			var DMatrix matrix = configuration.getCharacter().getMatrixCalibrate().toDMatrix() * element.getElementMatrix()
 			
 			actor.setGeometry(matrix.getPosition(), matrix.toQuaternion())
 			

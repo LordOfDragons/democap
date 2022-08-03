@@ -77,7 +77,9 @@ class GameApp extends BaseGameApp
 	private var VRCameraDirector pVRCameraDirector
 	private var ElementClassList pECListHandles
 	private var ECBSelectable.Tracker pSelectionTracker
+	private var ECBCapturable.Tracker pCapturableTracker
 	private var ElementClassList pECListSceneObjects
+	private var Dictionary pInteractionBubbleButtonFactories
 	
 	private var Project pProject
 	private var Scene pScene
@@ -231,6 +233,16 @@ class GameApp extends BaseGameApp
 		return pSelectionTracker
 	end
 	
+	/** Captured tracker. */
+	public func ECBCapturable.Tracker getCapturableTracker()
+		return pCapturableTracker
+	end
+	
+	/** Interaction bubble button factories as Dictionary of String key and ECBInteractionBubble.ButtonFactory value. */
+	public func Dictionary getInteractionBubbleButtonFactories()
+		return pInteractionBubbleButtonFactories
+	end
+	
 	/** Server. */
 	public func DNServer getServer()
 		return pServer
@@ -276,6 +288,7 @@ class GameApp extends BaseGameApp
 		pRecordScene.stop(true)
 		pPlaybackScene.stop()
 		pSelectionTracker.clear()
+		pCapturableTracker.clear()
 		
 		if pScene != null
 			pScene.getFileUsage().setLocked(true)
@@ -360,6 +373,7 @@ class GameApp extends BaseGameApp
 		// has to come before super call since createAndAddElementClasses() uses it
 		pECListHandles = ElementClassList.new()
 		pECListSceneObjects = ElementClassList.new()
+		pInteractionBubbleButtonFactories = Dictionary.new()
 		
 		super.initGame()
 		
@@ -372,6 +386,7 @@ class GameApp extends BaseGameApp
 		getLoaders().getPersistency().setDebugEnableCanaryValue(true)
 		
 		// has to come after super call since class list is filled not earlier
+		addInteractionBubbleButtonFactories()
 		addECListHandles()
 		addECListSceneObjects()
 		
@@ -389,6 +404,7 @@ class GameApp extends BaseGameApp
 		pLoadActorProfile = LoadActorProfile.new(getConsole())
 		pLoadCharacterProfile = LoadCharacterProfile.new(getConsole())
 		pSelectionTracker = ECBSelectable.Tracker.new()
+		pCapturableTracker = ECBCapturable.Tracker.new()
 		
 		pActorProfiles = ActorProfiles.new("/config/actors")
 		pCharacterProfiles = CharacterProfiles.new("/config/characters")
@@ -589,6 +605,15 @@ class GameApp extends BaseGameApp
 		end)
 	end
 	
+	/** Add interaction bubble button factories. */
+	protected func void addInteractionBubbleButtonFactories()
+		pInteractionBubbleButtonFactories.setAt("remove", IBRemove.Factory.new())
+		pInteractionBubbleButtonFactories.setAt("hide", IBHide.Factory.new())
+		pInteractionBubbleButtonFactories.setAt("teleport", IBTeleport.Factory.new())
+		pInteractionBubbleButtonFactories.setAt("record", IBRecord.Factory.new())
+		pInteractionBubbleButtonFactories.setAt("capture", IBCapture.Factory.new())
+	end
+	
 	/** Add commands. */
 	protected func void createAndAddCommands()
 		var CommandManager commands = getCommandManager()
@@ -685,6 +710,7 @@ class GameApp extends BaseGameApp
 		
 		pServer = null
 		pSelectionTracker = null
+		pCapturableTracker = null
 		pLoadCharacterProfile = null
 		pLoadActorProfile = null
 		pSessionSettings = null

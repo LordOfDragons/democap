@@ -33,6 +33,23 @@ pin Dragengine.Scenery
  * motion capture actor which is not saved.
  */
 class ECBSceneObject extends DefaultECBehavior
+	/** Listener for behavior instance events. */
+	interface Listener
+		/** Name changed. */
+		func void nameChanged(Instance instance)
+	end
+	
+	/** Default implementation of behavior instance listener. */
+	class DefaultListener implements Listener
+		/** Create default listener. */
+		public func new()
+		end
+		
+		/** Name changed. */
+		public func void nameChanged(Instance instance)
+		end
+	end
+	
 	/** Create scene object stub initializer interace. */
 	interface SceneObjectStubInitializer
 		/** Init stub. Returns true if sucessful or false otherwise. */
@@ -44,6 +61,7 @@ class ECBSceneObject extends DefaultECBehavior
 		private var ECBSceneObject pECBehavior
 		private var String pName
 		private var String pDisplayName
+		protected var Array pListeners
 		
 		
 		
@@ -51,11 +69,13 @@ class ECBSceneObject extends DefaultECBehavior
 		public func new(ECBSceneObject ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pName = ""
+			pListeners = Array.new()
 		end
 		
 		/** Dispose of instance. */
 		public func void dispose()
 			super.dispose()
+			pListeners = null
 		end
 		
 		/** Init behavior. */
@@ -82,6 +102,10 @@ class ECBSceneObject extends DefaultECBehavior
 			
 			pName = name
 			pDisplayName = null
+			
+			pListeners.forEach(block Listener each
+				each.nameChanged(this)
+			end)
 			
 			var Scene scene = getScene()
 			if scene != null
@@ -113,6 +137,21 @@ class ECBSceneObject extends DefaultECBehavior
 				return GameApp.getGameApp().getScene()
 			end
 			return null
+		end
+		
+		
+		
+		/** Add listener. */
+		public func void addListener(Listener listener)
+			if listener == null
+				throw ENullPointer.new("listener")
+			end
+			pListeners.add(listener)
+		end
+		
+		/** Remove listener. */
+		public func void removeListener(Listener listener)
+			pListeners.remove(listener)
 		end
 		
 		

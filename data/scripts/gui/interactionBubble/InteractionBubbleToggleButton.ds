@@ -1,0 +1,73 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Dragengine.Gui.Events
+
+
+/**
+ * Base class for toggle interaction bubble buttons.
+ */
+class InteractionBubbleToggleButton extends InteractionBubbleButton
+	protected var Image pImageOn
+	protected var Image pImageOff
+	protected var bool pHideIfOff
+	
+	/** Create button. */
+	public func new(ECBInteractionBubble.Instance bubble, Image image)\
+	this(bubble, image, image, false)
+	end
+	
+	public func new(ECBInteractionBubble.Instance bubble, Image imageOn, Image imageOff)\
+	this(bubble, imageOn, imageOff, false)
+	end
+	
+	public func new(ECBInteractionBubble.Instance bubble, Image imageOn, Image imageOff,\
+	bool hideIfOff) super(bubble, imageOn)
+		pImageOn = imageOn
+		pImageOff = imageOff
+		pHideIfOff = hideIfOff
+	end
+	
+	/** Determine if button should be toggled or not. Subclass responsibility. */
+	public func bool getToggled()
+		return true
+	end
+	
+	/** Update image to match toggle state. */
+	public func void updateImage(bool notifyBubble)
+		var bool toggled = getToggled()
+		setImage(toggled if pImageOn else pImageOff)
+		
+		var bool visible = toggled or not pHideIfOff
+		setVisible(visible)
+		
+		if not visible and notifyBubble
+			pBubble.updateVisibility()
+		end
+	end
+	
+	/** Fire action. Subclass has to change toggle state then call updateImage(). */
+	public func void fireAction()
+	end
+end

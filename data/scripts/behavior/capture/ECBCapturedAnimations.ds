@@ -35,6 +35,23 @@ pin Dragengine.Utils
  * Behavior adding captured animation support to owner element.
  */
 class ECBCapturedAnimations extends DefaultECBehavior
+	/** Listener for behavior instance events. */
+	interface Listener
+		/** Record changed. */
+		func void recordChanged(Instance instance)
+	end
+	
+	/** Default implementation of behavior instance listener. */
+	class DefaultListener implements Listener
+		/** Create default listener. */
+		public func new()
+		end
+		
+		/** Record changed. */
+		public func void recordChanged(Instance instance)
+		end
+	end
+	
 	/** Create scene object stub initializer to initialize from activet character. */
 	class InitActiveCharacterSOStub implements ECBSceneObject.SceneObjectStubInitializer
 		public func new()
@@ -144,6 +161,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		protected var CaptureTarget pCaptureTarget
 		protected var bool pRecord
 		protected var String pAnimationName
+		protected var Array pListeners
 		
 		
 		
@@ -153,6 +171,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			pAnimatorInstances = Array.new()
 			pPlaybackControllers = Array.new()
 			pPlaybackSceneChanged = PlaybackSceneChanged.new(this)
+			pListeners = Array.new()
 			
 			pComponent = ecbehavior.getComponent().instance(element)
 			
@@ -184,6 +203,8 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			
 			pPlaybackSceneChanged = null
 			pComponent = null
+			pListeners = null
+			
 			super.dispose()
 		end
 		
@@ -220,7 +241,15 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		end
 		
 		public func void setRecord(bool record)
+			if record == pRecord
+				return
+			end
+			
 			pRecord = record
+			
+			pListeners.forEach(block Listener each
+				each.recordChanged(this)
+			end)
 		end
 		
 		/** Name for new animations. */
@@ -284,6 +313,21 @@ class ECBCapturedAnimations extends DefaultECBehavior
 				component.setPosition(DVector.new(pObjectAnimationComponent.boneGetPosition(0)))
 				component.setOrientation(pObjectAnimationComponent.boneGetRotation(0))
 			end
+		end
+		
+		
+		
+		/** Add listener. */
+		public func void addListener(Listener listener)
+			if listener == null
+				throw ENullPointer.new("listener")
+			end
+			pListeners.add(listener)
+		end
+		
+		/** Remove listener. */
+		public func void removeListener(Listener listener)
+			pListeners.remove(listener)
 		end
 		
 		

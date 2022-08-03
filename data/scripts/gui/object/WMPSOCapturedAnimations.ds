@@ -187,6 +187,18 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		end
 	end
 	
+	class CapturedAnimationsChanged extends ECBCapturedAnimations.DefaultListener
+		protected var DefaultToggleModel pModelRecord
+		
+		public func new(DefaultToggleModel modelRecord)
+			pModelRecord = modelRecord
+		end
+		
+		public func void recordChanged(ECBCapturedAnimations.Instance instance)
+			pModelRecord.setToggled(instance.getRecord())
+		end
+	end
+	
 	
 	
 	protected var ECBCapturedAnimations.Instance pBehaviorCapturedAnimations
@@ -195,6 +207,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	protected var DefaultToggleModel pModelRecord
 	protected var AnimationsChangedListener pAnimationsChangedListener
 	protected var CharacterAnimation pAnimation
+	protected var CapturedAnimationsChanged pCapturedAnimationsChanged
 	
 	
 	
@@ -220,10 +233,18 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		
 		pAnimationsChangedListener = AnimationsChangedListener.new(this)
 		behavior.getAnimations().addListener(pAnimationsChangedListener)
+		
+		pCapturedAnimationsChanged = CapturedAnimationsChanged.new(pModelRecord)
+		behavior.addListener(pCapturedAnimationsChanged)
 	end
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		if pCapturedAnimationsChanged != null
+			pBehaviorCapturedAnimations.removeListener(pCapturedAnimationsChanged)
+			pCapturedAnimationsChanged = null
+		end
+		
 		setAnimation(null)
 		
 		if pAnimationsChangedListener != null

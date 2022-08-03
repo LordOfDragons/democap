@@ -111,6 +111,8 @@ class InteractMouseListener extends DefaultMouseListener
 	protected var CollisionFilter pCollisionFilter
 	protected var float pRayDistance
 	protected var ECBInteractHandle.Instance pHandle
+	protected var ECBehaviorControlDesktop.Instance pControlDesktop
+	protected var bool pDragging
 	
 	
 	
@@ -139,8 +141,8 @@ class InteractMouseListener extends DefaultMouseListener
 	
 	/** Mouse button pressed. */
 	public func void onButtonPress(MouseEvent event)
-		// already interacting with a handle
-		if pHandle != null
+		// already interacting
+		if pHandle != null or pDragging
 			return
 		end
 		
@@ -160,11 +162,18 @@ class InteractMouseListener extends DefaultMouseListener
 			return
 		end
 		
-		// ray cast to find all hit elements sorted by distance
+		// if hovering over a control desktop update mouse to be on the save side
 		var Camera camera = director.getCamera()
 		var DVector rayOrigin = camera.getPosition()
-		var Vector rayDirection = window.backProject(event) * pRayDistance
+		var Vector rayNormDir = window.backProject(event)
+		var Vector rayDirection = rayNormDir * pRayDistance
 		
+		if pControlDesktop != null
+			pControlDesktop.moveMouseRay(camera.getPosition(), DVector.new(rayNormDir))
+			pControlDesktop = null
+		end
+		
+		// ray cast to find all hit elements sorted by distance
 		var Array hits = Array.new()
 		var CollectHits listener = CollectHits.new(hits, rayOrigin, rayDirection)
 		
@@ -175,10 +184,20 @@ class InteractMouseListener extends DefaultMouseListener
 		if hits.find(block HitResult each
 			var BehaviorElement element = each.getElement()
 			
+			if ECBInteractionBubble.getInstanceIn(element) != null
+				pControlDesktop = ECBehaviorControlDesktop.getInstanceIn(element)
+				if pControlDesktop != null
+					pControlDesktop.moveMouseEverywhere(each.getHitPoint())
+					pControlDesktop.leftMousePress()
+					pDragging = true
+					return true
+				end
+			end
+			
 			pHandle = ECBInteractHandle.getInstanceIn(element)
 			if pHandle != null
 				pHandle.startInteract(Matrix.newFromQuaternion(camera.getOrientation()),\
-					rayOrigin, rayDirection.normalize(), each.getHitPoint())
+					rayOrigin, rayNormDir, each.getHitPoint())
 				return true
 			end
 			
@@ -197,27 +216,68 @@ class InteractMouseListener extends DefaultMouseListener
 	
 	/** Mouse moved. */
 	public func void onMouseMove(MouseEvent event)
-		if pHandle == null
-			return
-		end
-		
+		var bool showVRCamera = SessionSettings.get().getModelShowVRCamera().getToggled()
 		var GameApp app = GameApp.getGameApp()
-		if SessionSettings.get().getModelShowVRCamera().getToggled()
-			pHandle.stopInteract()
-			pHandle = null
-			return
-		end
 		
-		var WindowGameWorld window = app.getWindowGameWorld()
-		var CameraDirector director = window.getCameraDirector()
-		if director == null
-			pHandle.stopInteract()
-			pHandle = null
+		if pHandle != null
+			if showVRCamera
+				pHandle.stopInteract()
+				pHandle = null
+				return
+			end
+			
+			var WindowGameWorld window = app.getWindowGameWorld()
+			var CameraDirector director = window.getCameraDirector()
+			if director == null
+				pHandle.stopInteract()
+				pHandle = null
+			end
+			
+			var Camera camera = director.getCamera()
+			pHandle.updateInteract(Matrix.newFromQuaternion(camera.getOrientation()),\
+				camera.getPosition(), window.backProject(event).normalize())
+			
+		elif pDragging
+			if showVRCamera
+				onButtonRelease(event)
+				return
+			end
+			
+			if pControlDesktop != null
+				var WindowGameWorld window = app.getWindowGameWorld()
+				var Camera camera = window.getCameraDirector().getCamera()
+				pControlDesktop.moveMouseRay(camera.getPosition(), DVector.new(window.backProject(event)))
+			end
+			
+		elif not showVRCamera
+			var WindowGameWorld window = app.getWindowGameWorld()
+			var Camera camera = window.getCameraDirector().getCamera()
+			var DVector rayOrigin = camera.getPosition()
+			var Vector rayNormDir = window.backProject(event)
+			var Vector rayDirection = rayNormDir * pRayDistance
+			var Array hits = Array.new()
+			var CollectHits listener = CollectHits.new(hits, rayOrigin, rayDirection)
+			var ECBehaviorControlDesktop.Instance oldControlDesktop = pControlDesktop
+			
+			pControlDesktop = null
+			
+			window.getGameWorld().getWorld().rayHits(rayOrigin, rayDirection, listener, pCollisionFilter)
+			hits.sort()
+			
+			hits.find(block HitResult each
+				var BehaviorElement element = each.getElement()
+				if ECBInteractionBubble.getInstanceIn(element) != null
+					pControlDesktop = ECBehaviorControlDesktop.getInstanceIn(element)
+					pControlDesktop.moveMouseEverywhere(each.getHitPoint())
+					return true
+				end
+				return false
+			end)
+			
+			if pControlDesktop != oldControlDesktop and oldControlDesktop != null
+				oldControlDesktop.moveMouseRay(camera.getPosition(), DVector.new(rayNormDir))
+			end
 		end
-		
-		var Camera camera = director.getCamera()
-		pHandle.updateInteract(Matrix.newFromQuaternion(camera.getOrientation()),\
-			camera.getPosition(), window.backProject(event).normalize())
 	end
 	
 	/** Mouse button released. */
@@ -226,11 +286,15 @@ class InteractMouseListener extends DefaultMouseListener
 			return
 		end
 		
-		if pHandle == null
-			return
+		if pHandle != null
+			pHandle.stopInteract()
+			pHandle = null
+			
+		elif pDragging
+			if pControlDesktop != null
+				pControlDesktop.leftMouseRelease()
+				pDragging = false
+			end
 		end
-		
-		pHandle.stopInteract()
-		pHandle = null
 	end
 end

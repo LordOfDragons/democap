@@ -1,0 +1,83 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Interaction bubble button teleport actor.
+ */
+class IBTeleport extends InteractionBubbleButton
+	/** Factory. */
+	class Factory implements ECBInteractionBubble.ButtonFactory
+		protected var Image pImage
+		
+		public func new()
+			pImage = Image.new("/content/gui/images/interactionBubble/icons/teleport.png")
+		end
+		
+		public func void createAndAddButtons(ECBInteractionBubble.Instance instance)
+			instance.getPanelButtonsSelected().addWidget(IBTeleport.new(instance, pImage))
+		end
+	end
+	
+	
+	/** Create button. */
+	public func new(ECBInteractionBubble.Instance bubble, Image image) super(bubble, image)
+		setToolTip("Teleport actor here")
+	end
+	
+	/** Fire action. */
+	public func void fireAction()
+		var BehaviorElement element = getElement()
+		if element == null
+			return
+		end
+		
+		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+		if actor == null
+			return
+		end
+		
+		// teleport actor element. place the calibration center at the target point not the playspace center
+		var ECBCharacterConfiguration.Instance configuration = ECBCharacterConfiguration.getInstanceIn(actor)
+		if configuration == null
+			return
+		end
+		
+		var DMatrix matrix = configuration.getCharacter().getMatrixCalibrate().toDMatrix() * element.getElementMatrix()
+		
+		actor.setGeometry(matrix.getPosition(), matrix.toQuaternion())
+		
+		// if physics attachments are used init collider bone states from component.
+		// this is required since collider bone states are in world space and do not
+		// move if the actor moves due to teleportation
+		var Collider collider = actor.getCollider().getCollider()
+		if collider.getResponseType() == CollisionResponse.dynamic and collider castable ColliderComponent
+			(collider cast ColliderComponent).copyStatesFromComponent()
+		end
+	end
+end

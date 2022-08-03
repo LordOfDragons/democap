@@ -98,6 +98,7 @@ class ECBColliderPhysics extends DefaultECBehavior
 		private var float pWeight
 		private var RecordStateChanged pRecordStateChanged
 		private var PlaybackStateChanged pPlaybackStateChanged
+		private var ECBCapturedAnimations.Instance pCapturedAnimations
 		
 		
 		
@@ -128,6 +129,7 @@ class ECBColliderPhysics extends DefaultECBehavior
 			end
 			
 			pColliders = null
+			pCapturedAnimations = null
 			super.dispose()
 		end
 		
@@ -136,6 +138,10 @@ class ECBColliderPhysics extends DefaultECBehavior
 			pUsePhysics = pECBehavior.getUsePhysics().getValue(stub)
 			pLivePhysics = pECBehavior.getLivePhysics().getValue(stub)
 			pWeight = pECBehavior.getWeight().getValue(stub)
+			
+			if pECBehavior.capturedAnimations != null
+				pCapturedAnimations = pECBehavior.capturedAnimations.instance(getElement())
+			end
 			
 			updateMass()
 			updatePhysicsState(true)
@@ -147,6 +153,13 @@ class ECBColliderPhysics extends DefaultECBehavior
 		public func ECBColliderPhysics getECBehavior()
 			return pECBehavior
 		end
+		
+		/** Captured animations or null. */
+		public func ECBCapturedAnimations.Instance getCapturedAnimations()
+			return pCapturedAnimations
+		end
+		
+		
 		
 		/** Use physics. */
 		public func bool getUsePhysics()
@@ -236,19 +249,23 @@ class ECBColliderPhysics extends DefaultECBehavior
 			// - playing back (includes playback paused)
 			// - neither recording nor playing back
 			// 
-			// live physics is only used if use physics is true
+			// live physics is only used if use physics is true.
+			// 
+			// if ECBCapturedAnimations is present physics will be only enabled
+			// if recording is enabled.
+			var bool canRecord = pCapturedAnimations == null or pCapturedAnimations.getRecord()
 			var bool physicsEnabled
 			
 			if GameApp.getGameApp().getRecordScene().isRecording()
-				physicsEnabled = pUsePhysics
+				physicsEnabled = pUsePhysics and canRecord
 				
 			elif GameApp.getGameApp().getRecordScene().isPreparing()
-				physicsEnabled = pUsePhysics and pLivePhysics
+				physicsEnabled = pUsePhysics and canRecord and pLivePhysics
 				
 			elif not GameApp.getGameApp().getPlaybackScene().isStopped()
 				physicsEnabled = false
 				
-			else
+			else // playing back or pausued
 				physicsEnabled = pUsePhysics and pLivePhysics
 			end
 			
@@ -312,13 +329,7 @@ class ECBColliderPhysics extends DefaultECBehavior
 				pWeight = reader.readFloat()
 				
 				updateMass()
-				
-				if pPhysicsEnabled
-					enablePhysics()
-					
-				else
-					disablePhysics()
-				end
+				updatePhysicsState(true)
 				
 			else
 				throw EInvalidParam.new("unsupported version")
@@ -340,6 +351,8 @@ class ECBColliderPhysics extends DefaultECBehavior
 	end
 	
 	
+	
+	public var ECBCapturedAnimations capturedAnimations
 	
 	private var Array pColliders
 	private var ECPBoolean pUsePhysics
@@ -372,6 +385,7 @@ class ECBColliderPhysics extends DefaultECBehavior
 	/** Dispose of behavior. */
 	public func void dispose()
 		pColliders = null
+		capturedAnimations = null
 		super.dispose()
 	end
 	

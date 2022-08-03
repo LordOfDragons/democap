@@ -1,0 +1,252 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+
+
+/**
+ * Behavior adding support for element to be captured by actor. Capturable tracker is present
+ * in the game application. Only one element can be capturable at each time or none at all.
+ */
+class ECBCapturable extends DefaultECBehavior
+	/** Keeps track of the captured element. */
+	class Tracker
+		/** Listener for tracker events. */
+		interface Listener
+			/** Captured element changed. */
+			func void capturedElementChanged(Tracker tracker)
+		end
+		
+		/** Default implementation of tracker listener. */
+		class DefaultListener implements Listener
+			/** Create default listener. */
+			public func new()
+			end
+			
+			/** Captured element changed. */
+			public func void capturedElementChanged(Tracker tracker)
+			end
+		end
+		
+		
+		private var Instance pElement
+		private var Array pListeners
+		
+		
+		/** Create tracker. */
+		public func new()
+			pListeners = Array.new()
+		end
+		
+		
+		/** Captured element or null if not assigned. */
+		public func Instance getElement()
+			return pElement
+		end
+		
+		/** Set captured element or null if not assigned. */
+		public func void setElement(Instance element)
+			if pElement == element
+				return
+			end
+			
+			var Instance previous = pElement
+			
+			pElement = element
+			
+			if previous != null
+				previous.notifyDecaptured()
+			end
+			if element != null
+				pElement.notifyCaptured()
+			end
+			
+			pListeners.forEach(block Listener each
+				each.capturedElementChanged(this)
+			end)
+		end
+		
+		/** Clear selection. */
+		public func void clear()
+			setElement(null)
+		end
+		
+		
+		/** Add listener. */
+		public func void addListener(Listener listener)
+			if listener == null
+				throw ENullPointer.new("listener")
+			end
+			pListeners.add(listener)
+		end
+		
+		/** Remove listener. */
+		public func void removeListener(Listener listener)
+			pListeners.remove(listener)
+		end
+	end
+	
+	/** Listener for behavior instance events. */
+	interface Listener
+		/** Became captured element. */
+		func void captured(Instance instance)
+		
+		/** Ceased being captured element. */
+		func void decaptured(Instance instance)
+	end
+	
+	/** Default implementation of behavior instance listener. */
+	class DefaultListener implements Listener
+		/** Create default listener. */
+		public func new()
+		end
+		
+		/** Became captured element. */
+		public func void captured(Instance instance)
+		end
+		
+		/** Ceased being captured element. */
+		public func void decaptured(Instance instance)
+		end
+	end
+	
+	
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		private var ECBCapturable pECBehavior
+		private var Array pListeners
+		
+		
+		/** Create instance. */
+		public func new(ECBCapturable ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pListeners = Array.new()
+		end
+		
+		/** Dispose of instance. */
+		public func void dispose()
+			if GameApp.getGameApp().getCapturableTracker() != null
+				if GameApp.getGameApp().getCapturableTracker().getElement() == this
+					GameApp.getGameApp().getCapturableTracker().setElement(null)
+				end
+				GameApp.getGameApp().getCapturableTracker() = null
+			end
+			
+			pListeners = null
+			super.dispose()
+		end
+		
+		
+		/** Behavior. */
+		public func ECBCapturable getECBehavior()
+			return pECBehavior
+		end
+		
+		
+		/** Element is the captured element. */
+		public func bool isCaptured()
+			return GameApp.getGameApp().getCapturableTracker().getElement() == this
+		end
+		
+		/** Element is not the captured element. */
+		public func bool isNotCaptured()
+			return GameApp.getGameApp().getCapturableTracker().getElement() != this
+		end
+		
+		/** Capture element. */
+		public func void captureElement()
+			GameApp.getGameApp().getCapturableTracker().setElement(this)
+		end
+		
+		/** Stop capture element. */
+		public func void stopCaptureElement()
+			GameApp.getGameApp().getCapturableTracker().setElement(null)
+		end
+		
+		/** Capture element. */
+		public func Instance getCaptured()
+			return GameApp.getGameApp().getCapturableTracker().getElement()
+		end
+		
+		/** Called by Tracker to notify behavior listeners. */
+		public func void notifyCaptured()
+			pListeners.forEach(block Listener each
+				each.captured(this)
+			end)
+		end
+		
+		/** Called by Tracker to notify behavior listeners. */
+		public func void notifyDecaptured()
+			pListeners.forEach(block Listener each
+				each.decaptured(this)
+			end)
+		end
+		
+		
+		/** Add listener. */
+		public func void addListener(Listener listener)
+			if listener == null
+				throw EInvalidParam.new()
+			end
+			pListeners.add(listener)
+		end
+		
+		/** Remove listener. */
+		public func void removeListener(Listener listener)
+			pListeners.remove(listener)
+		end
+	end
+	
+	
+	/** Create behavior element class. */
+	public func new(BehaviorElementClass eclass) super(eclass)
+		eclass.addBehavior(this)
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBCapturable getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBCapturable each
+			return true
+		end) cast ECBCapturable
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

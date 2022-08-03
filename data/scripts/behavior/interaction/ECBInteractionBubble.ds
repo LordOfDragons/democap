@@ -33,6 +33,12 @@ pin Dragengine.Scenery
  * Behavior adding an interaction bubble to the element.
  */
 class ECBInteractionBubble extends DefaultECBehavior
+	/** Factory creating buttons. */
+	interface ButtonFactory
+		/** Create buttons and add it to the appropriate panel. */
+		func void createAndAddButtons(Instance instance)
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class SelectableChanged extends ECBSelectable.DefaultListener
@@ -43,11 +49,15 @@ class ECBInteractionBubble extends DefaultECBehavior
 			end
 			
 			public func void selected(ECBSelectable.Instance instance)
-				pInstance.selectableChanged()
+				if pInstance.getElement() != null
+					pInstance.selectableChanged()
+				end
 			end
 			
 			public func void deselected(ECBSelectable.Instance instance)
-				pInstance.selectableChanged()
+				if pInstance.getElement() != null
+					pInstance.selectableChanged()
+				end
 			end
 		end
 		
@@ -152,12 +162,42 @@ class ECBInteractionBubble extends DefaultECBehavior
 			end
 		end
 		
+		class BubbleToolTipManager extends ToolTipManager
+			private var DefaultTextModel pModel
+			
+			public func new(Desktop desktop, DefaultTextModel model) super(desktop)
+				pModel = model
+				setPopup(null)
+			end
+			
+			public func void onToolTipChanged()
+				var Object toolTip = getToolTip()
+				if toolTip == null
+					toolTip = ""
+				end
+				pModel.setText(toolTip.toString())
+			end
+		end
+		
+		class SceneObjectNameChanged extends ECBSceneObject.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void nameChanged(ECBSceneObject.Instance instance)
+				pInstance.updateModelObjectName()
+			end
+		end
+		
 		
 		
 		private var ECBInteractionBubble pECBehavior
 		private var ECBRecordAnimation.Instance pRecordAnimation
 		private var AttachRecordAnimation pAttachRecordAnimation
 		private var RecordingStateChanged pRecordingStateChanged
+		private var ECBSceneObject.Instance pSceneObject
 		private var ColliderVolume pCollider
 		
 		private var Window pWindow
@@ -171,6 +211,8 @@ class ECBInteractionBubble extends DefaultECBehavior
 		private var float pDesktopFactorHalfX, pDesktopFactorHalfY
 		private var float pDesktopFactorX, pDesktopFactorY
 		private var Vector2 pEnlargePanelSize
+		private var DefaultTextModel pModelObjectName
+		private var DefaultTextModel pModelToolTip
 		
 		
 		/** Create behavior instance. */
@@ -180,6 +222,8 @@ class ECBInteractionBubble extends DefaultECBehavior
 			pAttachOrientation = Quaternion.newFromEulerY(180)
 			pRecordingStateChanged = RecordingStateChanged.new(this)
 			pEnlargePanelSize = Vector2.new(20, 20)
+			pModelObjectName = DefaultTextModel.new()
+			pModelToolTip = DefaultTextModel.new()
 		end
 		
 		/** Init behavior instance. */
@@ -213,35 +257,33 @@ class ECBInteractionBubble extends DefaultECBehavior
 						p2.setDesignerSelector("Panel.Bubble")
 						
 						pPanelButtonsDeselected = Panel.new(FlexibleGridLayout.new(1))
-							pPanelButtonsDeselected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/capture_on.png")))
-							pPanelButtonsDeselected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/record_on.png")))
 						p2.addWidget(pPanelButtonsDeselected)
 					end))
 				end))
 				
 				pWindow.addWidget(Panel.new(BorderLayout.new(), block Panel p
-					p.addWidget(Panel.new(BorderLayout.new(), block Panel p2
+					p.addWidget(Panel.new(BorderLayout.new(2), block Panel p2
 						p2.setDesignerSelector("Panel.Bubble.Selected")
 						
-						// TODO label with object type/id on top
+						p2.addWidget(Label.new(pModelObjectName, "Label.Bubble.ObjectName"), BorderLayout.Area.top)
 						
-						pPanelButtonsSelected = Panel.new(FlexibleGridLayout.new(4))
-							pPanelButtonsSelected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/delete.png")))
-							pPanelButtonsSelected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/capture_on.png")))
-							pPanelButtonsSelected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/record_on.png")))
-							pPanelButtonsSelected.addWidget(DisplayImage.new(Image.new("/content/gui/images/interactionBubble/icons/teleport.png")))
+						pPanelButtonsSelected = Panel.new(FlexibleGridLayout.new(1))
 						p2.addWidget(pPanelButtonsSelected, BorderLayout.Area.content)
 						
-						// TODO label with tooltip on bottom
+						p2.addWidget(Label.new(pModelToolTip, "Label.Bubble.ToolTip"), BorderLayout.Area.bottom)
 					end), BorderLayout.Area.bottom)
 				end))
 			end)
-			pWindow.doLayout()
 			desktop.addWindow(pWindow)
+			pWindow.doLayout()
+			
+			desktop.setToolTipManager(BubbleToolTipManager.new(desktop, pModelToolTip))
 		end
 		
 		/** Dispose of behavior instance. */
 		public func void dispose()
+			super.dispose()
+			
 			pPanelButtonsSelected = null
 			pPanelButtonsDeselected = null
 			pWindow = null
@@ -252,8 +294,9 @@ class ECBInteractionBubble extends DefaultECBehavior
 			pAttachRecordAnimation = null
 			pRecordingStateChanged = null
 			pCollider = null
-			
-			super.dispose()
+			pSceneObject = null
+			pModelObjectName = null
+			pModelToolTip = null
 		end
 		
 		
@@ -297,10 +340,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 			var float referenceSize = DEMath.min(distance, 10.0)
 			
 			var float scaleValue = referenceSize * SessionSettings.get().getInteractionBubbleSize()
-			
-			var Vector scale = Vector.new(scaleValue, scaleValue, scaleValue)
-			GameApp.getGameApp().getConsole().addMessage("SCALE " + scale)
-			element.setScaling(scale)
+			element.setScaling(Vector.new(scaleValue, scaleValue, scaleValue))
 		end
 		
 		/** Selectable changed. */
@@ -348,7 +388,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 			end
 			
 			if pRecordAnimation != null
-				visible &= pRecordAnimation.isRecording()
+				visible &= pRecordAnimation.isNotRecording()
 			end
 			
 			if not pShowSelected
@@ -358,6 +398,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 			end
 			
 			element.setVisible(visible)
+			element.setTouchable(visible)
 			updateColliderShape()
 		end
 		
@@ -398,8 +439,9 @@ class ECBInteractionBubble extends DefaultECBehavior
 			var BehaviorElement parentElement = parent cast BehaviorElement
 			var ECBSelectable.Instance parentSelectable = ECBSelectable.getInstanceIn(parentElement)
 			var ECBShowInteractHandles.Instance parentSih = ECBShowInteractHandles.getInstanceIn(parentElement)
+			var ECBSceneObject.Instance parentSceneObject = ECBSceneObject.getInstanceIn(parentElement)
 			var Collider parentCollider = ECBehaviorCollider.getInstanceIn(parentElement).getCollider()
-			if parentSelectable == null or parentCollider == null
+			if parentSelectable == null or parentCollider == null or parentSceneObject == null
 				return
 			end
 			
@@ -435,9 +477,21 @@ class ECBInteractionBubble extends DefaultECBehavior
 			parentSelectable.addListener(SelectableChanged.new(this))
 			
 			pParentSelectable = parentSelectable
+			pSceneObject = parentSceneObject
+			pSceneObject.addListener(SceneObjectNameChanged.new(this))
 			
+			updateModelObjectName()
 			updateRequiresThink()
 			selectableChanged()
+		end
+		
+		public func void updateModelObjectName()
+			if pSceneObject != null
+				pModelObjectName.setText(pSceneObject.getDisplayName())
+				
+			else
+				pModelObjectName.setText("??")
+			end
 		end
 		
 		protected func void updateRequiresThink()
@@ -470,8 +524,6 @@ class ECBInteractionBubble extends DefaultECBehavior
 			shape.addBox(Vector.new(positionX, positionY, 0.005), Vector.new(halfSizeX, halfSizeY, 0.005))
 			
 			pCollider.setShape(shape)
-			
-			//GameApp.getGameApp().getConsole().addMessage("OOPS pos=" + panel.getDesktopPosition() + " size=" + panel.getSize() + " center=" + panelCenter)
 		end
 	end
 	

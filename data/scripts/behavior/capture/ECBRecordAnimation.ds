@@ -252,13 +252,13 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end
 			
 			// find captured animations to use
-			var BehaviorElement selectionElement
+			var BehaviorElement capturedElement
 			
 			if pCharacter != null
-				var ECBSelectable.Instance selection = GameApp.getGameApp().getSelectionTracker().getElement()
-				if selection != null
-					selectionElement = selection.getElement()
-					pCapturedAnimations = ECBCapturedAnimations.getInstanceIn(selectionElement)
+				var ECBCapturable.Instance captured = GameApp.getGameApp().getCapturableTracker().getElement()
+				if captured != null
+					capturedElement = captured.getElement()
+					pCapturedAnimations = ECBCapturedAnimations.getInstanceIn(capturedElement)
 					if pCapturedAnimations.getCaptureTarget() == ECBCapturedAnimations.CaptureTarget.character
 						if not pCapturedAnimations.getCharacterProfile().equals(pCharacter.getCharacter().getProfile().getName())
 							throw EInvalidParam.new("character profile mismatch")
@@ -327,14 +327,14 @@ class ECBRecordAnimation extends DefaultECBehavior
 			
 			var BehaviorElement element = getElement()
 			
-			if selectionElement != null
-				// ensure actor element lines up with selection element. if this is not
+			if capturedElement != null
+				// ensure actor element lines up with captured element. if this is not
 				// the case the captured animation would be played back at the wrong
 				// position. we could calculate the transformation matrix from actor
-				// element in selection element coordinate system but this hides the
+				// element in captured element coordinate system but this hides the
 				// problem and causes troubles later on while using the animation
-// 				element.setGeometry(selectionElement.getPosition(), selectionElement.getOrientation())
-				pTransformRootBones = (element.getElementMatrix() * selectionElement.getInverseElementMatrix()).toMatrix()
+// 				element.setGeometry(capturedElement.getPosition(), capturedElement.getOrientation())
+				pTransformRootBones = (element.getElementMatrix() * capturedElement.getInverseElementMatrix()).toMatrix()
 			end
 			
 			// if physics attachments are used init collider bone states from component.

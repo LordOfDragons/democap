@@ -49,6 +49,7 @@ class ECBShowInteractionBubble extends DefaultECBehavior
 		/** Dispose of behavior instance. */
 		public func void dispose()
 			disposeBubble()
+			pBubbleClass = null
 			pButtons = null
 			super.dispose()
 		end
@@ -105,25 +106,27 @@ class ECBShowInteractionBubble extends DefaultECBehavior
 			element.getGameWorld().addElement(bubble)
 			bubble.attachToParent(element)
 			
-			createButtons()
-			
 			pBubble = ECBInteractionBubble.getInstanceIn(bubble)
+			createButtons()
+			pBubble.updateVisibility()
 		end
 		
 		protected func void createButtons()
+			var Dictionary factories = GameApp.getGameApp().getInteractionBubbleButtonFactories()
 			pButtons.forEach(block String buttonType
-				
+				(factories.getAt(buttonType) cast ECBInteractionBubble.ButtonFactory).createAndAddButtons(pBubble)
 			end)
 		end
 		
 		protected func void disposeBubble()
-			if pBubble != null
-				if pBubble.getElement() != null // could be disposed already
-					pBubble.getElement().safeDispose()
-				end
-				pBubble = null
+			if pBubble == null
+				return
 			end
-			pBubbleClass = null
+			
+			if pBubble.getElement() != null // could be disposed already
+				pBubble.getElement().safeDispose()
+			end
+			pBubble = null
 		end
 	end
 	

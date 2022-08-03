@@ -37,6 +37,52 @@ pin Dragengine.Scenery
  * Main window character panel.
  */
 class WMPanelSession extends Panel
+	/** Game changes listener. */
+	class GameChangedListener extends DefaultGameListener
+		protected var WMPanelSession pPanel
+		
+		public func new(WMPanelSession panel)
+			pPanel = panel
+		end
+		
+		public func void projectChanged(GameApp app)
+			pPanel.setScene(null)
+		end
+		
+		public func void sceneChanged(GameApp app)
+			pPanel.setScene(app.getScene())
+		end
+		
+		public func void gameWorldChanged(GameApp app)
+			pPanel.updateModelCapturables()
+		end
+	end
+	
+	/** Scene changed listener. */
+	class SceneChangedListener extends DefaultSceneListener
+		protected var WMPanelSession pPanel
+		
+		public func new(WMPanelSession panel)
+			pPanel = panel
+		end
+		
+		public func void objectAdded(Scene scene, ECBSceneObject.Instance object)
+			pPanel.updateModelCapturables()
+		end
+		
+		public func void objectRemoved(Scene scene, ECBSceneObject.Instance object)
+			pPanel.updateModelCapturables()
+		end
+		
+		public func void allObjectsRemoved(Scene scene)
+			pPanel.updateModelCapturables()
+		end
+		
+		public func void objectNameChanged(Scene scene, ECBSceneObject.Instance object)
+			pPanel.updateModelCapturables()
+		end
+	end
+	
 	/** Playback changed. */
 	class PlaybackChanged extends PlaybackScene.DefaultListener
 		protected var WMPanelSession pPanel
@@ -145,6 +191,46 @@ class WMPanelSession extends Panel
 		end
 	end
 	
+	class SelectCapturable extends DefaultListModelListener
+		protected var WMPanelSession pPanel
+		
+		public func new(WMPanelSession panel)
+			pPanel = panel
+		end
+		
+		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+			selectionChanged(model)
+		end
+		
+		public func void selectionChanged(ListModel model)
+			var int index = model.getSelected()
+			if index != -1
+				var ECBSceneObject.Instance capturable = model.getAt(index) cast ECBSceneObject.Instance
+				if capturable != null
+					GameApp.getGameApp().getCapturableTracker().setElement(ECBCapturable.getInstanceIn(capturable.getElement()))
+					
+				else
+					GameApp.getGameApp().getCapturableTracker().setElement(null)
+				end
+				
+			else
+				GameApp.getGameApp().getCapturableTracker().setElement(null)
+			end
+		end
+	end
+	
+	class SelectedCaptureableChanged extends ECBCapturable.Tracker.DefaultListener
+		protected var WMPanelSession pPanel
+		
+		public func new(WMPanelSession panel)
+			pPanel = panel
+		end
+		
+		public func void capturedElementChanged(ECBCapturable.Tracker tracker)
+			pPanel.selectCapturableFromTracker()
+		end
+	end
+	
 	
 	
 	protected var bool pInVR
@@ -152,6 +238,7 @@ class WMPanelSession extends Panel
 	protected var DefaultRangeModel pModelPlaybackPosition
 	protected var DefaultListModel pModelListPlaybackSpeed
 	protected var DefaultTextModel pModelTextPlaybackSpeed
+	protected var DefaultListModel pModelCapturables
 	protected var Button pButtonPlaybackPlay
 	protected var Button pButtonPlaybackPlayBackwards
 	protected var Button pButtonPlaybackPause
@@ -160,6 +247,10 @@ class WMPanelSession extends Panel
 	protected var Button pButtonRecordStop
 	protected var PlaybackChanged pPlaybackChanged
 	protected var RecordStateChanged pRecordStateChanged
+	protected var SelectedCaptureableChanged pSelectedCaptureableChanged
+	protected var GameChangedListener pGameChangedListener
+	protected var SceneChangedListener pSceneChangedListener
+	protected var Scene pScene
 	
 	
 	
@@ -176,30 +267,60 @@ class WMPanelSession extends Panel
 		
 		pModelTextPlaybackSpeed = DefaultTextModel.new("100")
 		
+		pModelCapturables = DefaultListModel.new()
+		pModelCapturables.setAutoSelect(false)
+		
 		runWhileBlockingLayout(block
 			createContent()
+			updateModelCapturables()
 			updatePlaybackState()
 			updateRecordState()
 		end)
 		
+		pModelCapturables.addListener(SelectCapturable.new(this))
+		
+		var GameApp app = GameApp.getGameApp()
+		
+		pSceneChangedListener = SceneChangedListener.new(this)
+		
 		pPlaybackChanged = PlaybackChanged.new(this)
-		GameApp.getGameApp().getPlaybackScene().addListener(pPlaybackChanged)
+		app.getPlaybackScene().addListener(pPlaybackChanged)
 		
 		pRecordStateChanged = RecordStateChanged.new(this)
-		GameApp.getGameApp().getRecordScene().addListener(pRecordStateChanged)
+		app.getRecordScene().addListener(pRecordStateChanged)
+		
+		pSelectedCaptureableChanged = SelectedCaptureableChanged.new(this)
+		app.getCapturableTracker().addListener(pSelectedCaptureableChanged)
+		
+		pGameChangedListener = GameChangedListener.new(this)
+		app.addListener(pGameChangedListener)
 	end
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		setScene(null)
+		
+		var GameApp app = GameApp.getGameApp()
+		
+		if pSelectedCaptureableChanged != null
+			app.getCapturableTracker().removeListener(pSelectedCaptureableChanged)
+			pSelectedCaptureableChanged = null
+		end
 		if pRecordStateChanged != null
-			GameApp.getGameApp().getRecordScene().removeListener(pRecordStateChanged)
+			app.getRecordScene().removeListener(pRecordStateChanged)
 			pRecordStateChanged = null
 		end
-		
 		if pPlaybackChanged != null
-			GameApp.getGameApp().getPlaybackScene().removeListener(pPlaybackChanged)
+			app.getPlaybackScene().removeListener(pPlaybackChanged)
 			pPlaybackChanged = null
 		end
+		if pGameChangedListener != null
+			app.removeListener(pGameChangedListener)
+			pGameChangedListener = null
+		end
+		
+		pSceneChangedListener = null
+		pModelCapturables = null
 		
 		pButtonPlaybackPlay = null
 		pButtonPlaybackPlayBackwards = null
@@ -220,6 +341,86 @@ class WMPanelSession extends Panel
 	/** UI prefix options. */
 	public func String getPrefixUIOptions()
 		return pPrefixUIOptions
+	end
+	
+	
+	
+	/** Active scene or null. */
+	public func Scene getScene()
+		return pScene
+	end
+	
+	/** Set active scene or null. */
+	public func void setScene(Scene scene)
+		if scene == pScene
+			return
+		end
+		
+		if pScene != null
+			pScene.removeListener(pSceneChangedListener)
+		end
+		
+		pScene = scene
+		
+		if scene != null
+			scene.addListener(pSceneChangedListener)
+		end
+		
+		updateModelCapturables()
+	end
+	
+	
+	
+	/** Capturables model. */
+	public func DefaultListModel getModelCapturables()
+		return pModelCapturables
+	end
+	
+	/** Selected capturable from tracker. */
+	public func ECBSceneObject.Instance getCapturableFromTracker()
+		var ECBCapturable.Instance capturable = GameApp.getGameApp().getCapturableTracker().getElement()
+		if capturable != null
+			return ECBSceneObject.getInstanceIn(capturable.getElement())
+		end
+		return null
+	end
+	
+	/** Select capturable from tracker. */
+	public func void selectCapturableFromTracker()
+		pModelCapturables.setSelectedElement(getCapturableFromTracker())
+	end
+	
+	/** Update capturables model. */
+	public func void updateModelCapturables()
+		if pModelCapturables == null
+			return // dispose protection
+		end
+		
+		var ECBSceneObject.Instance selection = getCapturableFromTracker()
+		var Array content = Array.new()
+		
+		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+		if gameWorld != null
+			gameWorld.forEachElement(block BehaviorElement each
+				var ECBCapturable.Instance capturable = ECBCapturable.getInstanceIn(each)
+				if capturable != null
+					content.add(ECBSceneObject.getInstanceIn(each))
+				end
+			end)
+		end
+		
+		content.sort(block ECBSceneObject.Instance a, ECBSceneObject.Instance b
+			return a.getDisplayName().compare(b.getDisplayName())
+		end)
+		
+		content.insert(0, null)
+		
+		pModelCapturables.setContent(content)
+		
+		pModelCapturables.setSelectedElement(selection)
+		if pModelCapturables.getSelected() != -1
+			pModelCapturables.notifyElementChanged(pModelCapturables.getSelected())
+		end
 	end
 	
 	
@@ -246,11 +447,11 @@ class WMPanelSession extends Panel
 			return
 		end
 		
-		var ECBSelectable.Instance selection = app.getSelectionTracker().getElement()
+		var ECBCapturable.Instance capturable = app.getCapturableTracker().getElement()
 		var ECBCapturedAnimations.Instance capturedAnimations
 		
-		if selection != null
-			capturedAnimations = ECBCapturedAnimations.getInstanceIn(selection.getElement())
+		if capturable != null
+			capturedAnimations = ECBCapturedAnimations.getInstanceIn(capturable.getElement())
 			
 			if capturedAnimations != null
 				if capturedAnimations.getCaptureTarget() == ECBCapturedAnimations.CaptureTarget.character
@@ -275,13 +476,7 @@ class WMPanelSession extends Panel
 			end
 		end
 		
-		if capturedAnimations == null and app.getWorldSpawnCharacter().getGameWorld().findElement(block Element each
-			if each castable BehaviorElement
-				var ECBCapturedAnimations.Instance i = ECBCapturedAnimations.getInstanceIn(each cast BehaviorElement)
-				return i != null and i.getCaptureTarget() == ECBCapturedAnimations.CaptureTarget.character
-			end
-			return false
-		end) != null
+		if capturedAnimations == null and pModelCapturables.getCount() > 0
 			WindowDialog.question(getWindow(), "Record Animation",\
 				"Captured Character Objects are present but none is selected to record into. " +\
 				"Do you want to record free animation?", null,\
@@ -552,6 +747,18 @@ class WMPanelSession extends Panel
 				checkBox = CheckBox.new(sessionSettings.getModelAutoStopRecord(), "Auto Stop Record")
 				checkBox.setToolTip("Automatically stop recording if play time is reached. Has no effects on the first recording.")
 				p.addWidget(checkBox)
+			end))
+			
+			gp.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+				tooltip = "Capturable object to attach actor to or none to do free recording."
+				
+				label = Label.new("Capturable:", "Label.FormCaption")
+				label.setToolTip(tooltip)
+				p.addWidget(label)
+				
+				comboBox = ComboBox.new(pModelCapturables, WMPanelProject.ObjectElementRenderer.new())
+				comboBox.setToolTip(tooltip)
+				p.addWidget(comboBox)
 			end))
 		end))
 		

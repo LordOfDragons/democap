@@ -1,0 +1,64 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Interaction bubble button delete object.
+ */
+class IBRemove extends InteractionBubbleButton
+	/** Factory. */
+	class Factory implements ECBInteractionBubble.ButtonFactory
+		protected var Image pImage
+		
+		public func new()
+			pImage = Image.new("/content/gui/images/interactionBubble/icons/delete.png")
+		end
+		
+		public func void createAndAddButtons(ECBInteractionBubble.Instance instance)
+			instance.getPanelButtonsSelected().addWidget(IBRemove.new(instance, pImage))
+		end
+	end
+	
+	
+	/** Create button. */
+	public func new(ECBInteractionBubble.Instance bubble, Image image) super(bubble, image)
+		setToolTip("Remove object from scene")
+	end
+	
+	/** Fire action. */
+	public func void fireAction()
+		var BehaviorElement element = getElement()
+		if element == null
+			return
+		end
+		
+		TimerBlock.new(0, false, block
+			element.safeDispose()
+		end)
+	end
+end

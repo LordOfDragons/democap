@@ -1,0 +1,112 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Interaction bubble button capture actor.
+ */
+class IBCapture extends InteractionBubbleToggleButton
+	/** Factory. */
+	class Factory implements ECBInteractionBubble.ButtonFactory
+		protected var Image pImageOn
+		protected var Image pImageOff
+		
+		public func new()
+			pImageOn = Image.new("/content/gui/images/interactionBubble/icons/capture_on.png")
+			pImageOff = Image.new("/content/gui/images/interactionBubble/icons/capture_off.png")
+		end
+		
+		public func void createAndAddButtons(ECBInteractionBubble.Instance instance)
+			instance.getPanelButtonsSelected().addWidget(IBCapture.new(instance, pImageOn, pImageOff, false))
+			instance.getPanelButtonsDeselected().addWidget(IBCapture.new(instance, pImageOn, pImageOff, true))
+		end
+	end
+	
+	class CapturedChanged extends ECBCapturable.DefaultListener
+		protected var IBCapture pOwner
+		
+		public func new(IBCapture owner)
+			pOwner = owner
+		end
+		
+		public func void captured(ECBCapturable.Instance instance)
+			pOwner.updateImage(true)
+		end
+		
+		public func void decaptured(ECBCapturable.Instance instance)
+			pOwner.updateImage(true)
+		end
+	end
+	
+	
+	protected var ECBCapturable.Instance pCapturable
+	protected var CapturedChanged pCapturedChanged
+	
+	
+	/** Create button. */
+	public func new(ECBInteractionBubble.Instance bubble, Image imageOn, Image imageOff, bool hideIfOff)\
+	super(bubble, imageOn, imageOff, hideIfOff)
+		pCapturable = ECBCapturable.getInstanceIn(getElement())
+		pCapturedChanged = CapturedChanged.new(this)
+		pCapturable.addListener(pCapturedChanged)
+		
+		updateImage(false)
+		
+		setToolTip("Motion capture actor")
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		if pCapturedChanged != null
+			pCapturable.removeListener(pCapturedChanged)
+			pCapturedChanged = null
+		end
+		
+		super.dispose()
+	end
+	
+	/** Determine if button should be toggled or not. Subclass responsibility. */
+	protected func bool getToggled()
+		return pCapturable.isCaptured()
+	end
+	
+	/** Fire action. */
+	public func void fireAction()
+		TimerBlock.new(0, false, block
+			if pCapturable != null
+				if pCapturable.isCaptured()
+					pCapturable.stopCaptureElement()
+					
+				else
+					pCapturable.captureElement()
+				end
+				updateImage(true)
+			end
+		end)
+	end
+end
