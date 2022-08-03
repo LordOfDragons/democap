@@ -149,6 +149,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		
 		protected var ECBCapturedAnimations pECBehavior
 		protected var ECBehaviorComponent.Instance pComponent
+		protected var ECBehaviorCollider.Instance pCollider
 		protected var String pActorProfile
 		protected var String pCharacterProfile
 		protected var CharacterAnimations pAnimations
@@ -174,6 +175,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			pListeners = Array.new()
 			
 			pComponent = ecbehavior.getComponent().instance(element)
+			pCollider = ecbehavior.getCollider().instance(element)
 			
 			setRequiresThink(true)
 			
@@ -203,6 +205,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			
 			pPlaybackSceneChanged = null
 			pComponent = null
+			pCollider = null
 			pListeners = null
 			
 			super.dispose()
@@ -309,9 +312,16 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			if pHasObjectAnimation
 				pObjectAnimationComponent.updateBones()
 				
+				var DVector position = DVector.new(pObjectAnimationComponent.boneGetPosition(0))
+				var Quaternion orientation = pObjectAnimationComponent.boneGetRotation(0)
+				
 				var Component component = pComponent.getComponent()
-				component.setPosition(DVector.new(pObjectAnimationComponent.boneGetPosition(0)))
-				component.setOrientation(pObjectAnimationComponent.boneGetRotation(0))
+				component.setPosition(position)
+				component.setOrientation(orientation)
+				
+				var Collider collider = pCollider.getCollider()
+				collider.setPosition(position)
+				collider.setOrientation(orientation)
 			end
 		end
 		
@@ -535,6 +545,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	
 	
 	protected var ECBehaviorComponent pComponent
+	protected var ECBehaviorCollider pCollider
 	
 	public var ECPString actorProfile
 	public var ECPString characterProfile
@@ -545,10 +556,11 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBehaviorComponent component) super(eclass)
+	public func new(BehaviorElementClass eclass, ECBehaviorComponent component, ECBehaviorCollider collider) super(eclass)
 		var String prefix = "capturedAnimations."
 		
 		pComponent = component
+		pCollider = collider
 		
 		actorProfile = ECPString.new(prefix + "actorProfile", "")
 		eclass.addProperty(actorProfile)
@@ -571,6 +583,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	/** Dispose of behavior. */
 	public func void dispose()
 		pComponent = null
+		pCollider = null
 		super.dispose()
 	end
 	
@@ -579,6 +592,11 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	/** Component behavior. */
 	public func ECBehaviorComponent getComponent()
 		return pComponent
+	end
+	
+	/** Collider behavior. */
+	public func ECBehaviorCollider getCollider()
+		return pCollider
 	end
 	
 	

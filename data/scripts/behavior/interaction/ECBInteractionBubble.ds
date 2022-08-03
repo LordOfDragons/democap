@@ -329,18 +329,39 @@ class ECBInteractionBubble extends DefaultECBehavior
 				return
 			end
 			
-			var Camera camera = GameApp.getGameApp().getVRCamera()
-			/* temp */ camera = GameApp.getGameApp().getWindowGameWorld().getCamera()
+			var bool sphericalRotation
+			var Camera camera
 			
-			element.setOrientation(pAttachOrientation * camera.getOrientation())
+			if SessionSettings.get().getModelShowVRCamera().getToggled()
+				camera = GameApp.getGameApp().getVRCamera()
+				sphericalRotation = true
+				
+			else
+				camera = GameApp.getGameApp().getWindowGameWorld().getCamera()
+			end
 			
 			// we use 90 degrees as field of view because this way it is easier to calculate.
 			// the maximum size is limited to avoid problems
-			var float distance = (element.getPosition() - camera.getPosition()).getLength()
+			var DVector direction = element.getPosition() - camera.getPosition()
+			var float distance = direction.getLength()
 			var float referenceSize = DEMath.min(distance, 10.0)
 			
 			var float scaleValue = referenceSize * SessionSettings.get().getInteractionBubbleSize()
 			element.setScaling(Vector.new(scaleValue, scaleValue, scaleValue))
+			
+			// rotate
+			var Quaternion orientation
+			
+			if sphericalRotation
+				var DVector view = direction.normalize()
+				var DVector up = DMatrix.newFromQuaternion(camera.getOrientation()).getUpVector()
+				orientation = DMatrix.newVU(view, up).toQuaternion()
+				
+			else
+				orientation = camera.getOrientation()
+			end
+			
+			element.setOrientation(pAttachOrientation * orientation)
 		end
 		
 		/** Selectable changed. */
