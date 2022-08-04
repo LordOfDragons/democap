@@ -35,6 +35,23 @@ pin Dragengine.Utils
  * all component textures with ghost texture. If disabled restored previous textures.
  */
 class ECBTemporaryGhost extends DefaultECBehavior
+	/** Listener for behavior instance events. */
+	interface Listener
+		/** Enabled changed. */
+		func void enabledChanged(Instance instance)
+	end
+	
+	/** Default implementation of behavior instance listener. */
+	class DefaultListener implements Listener
+		/** Create default listener. */
+		public func new()
+		end
+		
+		/** Enabled changed. */
+		public func void enabledChanged(Instance instance)
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		/** Component texture. */
@@ -82,12 +99,14 @@ class ECBTemporaryGhost extends DefaultECBehavior
 		private var Array pTextures // Texture
 		private var Skin pSkin
 		private var bool pEnabled
+		protected var Array pListeners
 		
 		
 		
 		/** Create behavior instance. */
 		public func new(ECBTemporaryGhost ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
+			pListeners = Array.new()
 			
 			pComponents = ecbehavior.getComponents().map(block ECBehaviorComponent each
 				return each.instance(element)
@@ -98,6 +117,7 @@ class ECBTemporaryGhost extends DefaultECBehavior
 		public func void dispose()
 			pTextures = null
 			pComponents = null
+			pListeners = null
 			super.dispose()
 		end
 		
@@ -127,6 +147,25 @@ class ECBTemporaryGhost extends DefaultECBehavior
 			else
 				restoreTextures()
 			end
+			
+			pListeners.forEach(block Listener each
+				each.enabledChanged(this)
+			end)
+		end
+		
+		
+		
+		/** Add listener. */
+		public func void addListener(Listener listener)
+			if listener == null
+				throw ENullPointer.new("listener")
+			end
+			pListeners.add(listener)
+		end
+		
+		/** Remove listener. */
+		public func void removeListener(Listener listener)
+			pListeners.remove(listener)
 		end
 		
 		

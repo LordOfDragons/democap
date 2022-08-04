@@ -84,42 +84,25 @@ class ECBAControlDesktop extends DefaultECBehavior
 						pControlDesktop.moveMouseRay(behavior.getPointAtOrigin(), behavior.getPointAtDirection())
 						return true
 						
-					elif hitPoint != null
-						if pControlDesktop.moveMouse(hitPoint)
-							return true
-						end
+					elif hitPoint != null and pControlDesktop.moveMouse(hitPoint)
+						return true
 						
+					else
 						pControlDesktop.moveMouseRay(behavior.getPointAtOrigin(), behavior.getPointAtDirection())
 						pControlDesktop = null
 						pPointAt = null
-						return false
-						
-					else
-						pControlDesktop = null
-						pPointAt = null
-						return false
 					end
-					
-				else
-					return false
 				end
+				return false
 			end
 			
 			if hitPoint != null
 				var BehaviorElement element = behavior.getPointAtBehaviorElement()
 				if element != null and not element.isDisposed()
-					var ECBehaviorControlDesktop.Instance controlDesktop =\
-						behavior.getPointAtBehaviorElement().findInstance(\
-							block ECBehaviorControlDesktop.Instance each
-								return each.moveMouse(hitPoint)
-							end) cast ECBehaviorControlDesktop.Instance
-					
-					if controlDesktop != pControlDesktop
-						if pControlDesktop != null
-							pControlDesktop.moveMouseEverywhere(hitPoint)
-						end
-						pControlDesktop = controlDesktop
-					end
+					pControlDesktop = behavior.getPointAtBehaviorElement().findInstance(\
+						block ECBehaviorControlDesktop.Instance each
+							return each.moveMouse(hitPoint)
+						end) cast ECBehaviorControlDesktop.Instance
 				end
 			end
 			

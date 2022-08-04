@@ -51,10 +51,23 @@ class WMPSOTemporaryGhost extends WMPPanelSceneObject
 		end
 	end
 	
+	class BehaviorEnabledChanged extends ECBTemporaryGhost.DefaultListener
+		protected var DefaultToggleModel pModelEnabled
+		
+		public func new(DefaultToggleModel modelEnabled)
+			pModelEnabled = modelEnabled
+		end
+		
+		public func void enabledChanged(ECBTemporaryGhost.Instance instance)
+			pModelEnabled.setToggled(instance.getEnabled())
+		end
+	end
+	
 	
 	
 	protected var ECBTemporaryGhost.Instance pBehaviorTemporaryGhost
 	protected var DefaultToggleModel pModelEnabled
+	protected var BehaviorEnabledChanged pEnabledChanged
 	
 	
 	
@@ -70,11 +83,20 @@ class WMPSOTemporaryGhost extends WMPPanelSceneObject
 		end)
 		
 		pModelEnabled.addListener(EnabledChanged.new(behavior))
+		
+		pEnabledChanged = BehaviorEnabledChanged.new(pModelEnabled)
+		behavior.addListener(pEnabledChanged)
 	end
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		if pEnabledChanged != null
+			pBehaviorTemporaryGhost.removeListener(pEnabledChanged)
+			pEnabledChanged = null
+		end
+		
 		pModelEnabled = null
+		
 		super.dispose()
 	end
 	

@@ -28,59 +28,59 @@ pin Dragengine.Utils
 
 
 /**
- * Interaction bubble button record actor.
+ * Interaction bubble button temporary ghost actor.
  */
-class IBRecord extends InteractionBubbleToggleButton
+class IBGhost extends InteractionBubbleToggleButton
 	/** Factory. */
 	class Factory implements ECBInteractionBubble.ButtonFactory
 		protected var Image pImageOn
 		protected var Image pImageOff
 		
 		public func new()
-			pImageOn = Image.new("/content/gui/images/interactionBubble/icons/record_on.png")
-			pImageOff = Image.new("/content/gui/images/interactionBubble/icons/record_off.png")
+			pImageOn = Image.new("/content/gui/images/interactionBubble/icons/ghost_on.png")
+			pImageOff = Image.new("/content/gui/images/interactionBubble/icons/ghost_off.png")
 		end
 		
 		public func void createAndAddButtons(ECBInteractionBubble.Instance instance)
-			instance.getPanelButtonsSelected().addWidget(IBRecord.new(instance, pImageOn, pImageOff, false))
-			instance.getPanelButtonsDeselected().addWidget(IBRecord.new(instance, pImageOn, pImageOff, true))
+			instance.getPanelButtonsSelected().addWidget(IBGhost.new(instance, pImageOn, pImageOff, false))
+			instance.getPanelButtonsDeselected().addWidget(IBGhost.new(instance, pImageOn, pImageOff, true))
 		end
 	end
 	
-	class RecordChanged extends ECBCapturedAnimations.DefaultListener
-		protected var IBRecord pOwner
+	class EnabledChanged extends ECBTemporaryGhost.DefaultListener
+		protected var IBGhost pOwner
 		
-		public func new(IBRecord owner)
+		public func new(IBGhost owner)
 			pOwner = owner
 		end
 		
-		public func void recordChanged(ECBCapturedAnimations.Instance instance)
+		public func void enabledChanged(ECBTemporaryGhost.Instance instance)
 			pOwner.updateImage(true)
 		end
 	end
 	
 	
-	protected var ECBCapturedAnimations.Instance pCapturedAnimations
-	protected var RecordChanged pRecordChanged
+	protected var ECBTemporaryGhost.Instance pTemporaryGhost
+	protected var EnabledChanged pEnabledChanged
 	
 	
 	/** Create button. */
 	public func new(ECBInteractionBubble.Instance bubble, Image imageOn, Image imageOff, bool hideIfOff)\
 	super(bubble, imageOn, imageOff, hideIfOff)
-		pCapturedAnimations = ECBCapturedAnimations.getInstanceIn(getElement())
-		pRecordChanged = RecordChanged.new(this)
-		pCapturedAnimations.addListener(pRecordChanged)
+		pTemporaryGhost = ECBTemporaryGhost.getInstanceIn(getElement())
+		pEnabledChanged = EnabledChanged.new(this)
+		pTemporaryGhost.addListener(pEnabledChanged)
 		
 		updateImage(false)
 		
-		setToolTip("Record object during capturing")
+		setToolTip("Show using ghost textures")
 	end
 	
 	/** Dispose of widget. */
 	public func void dispose()
-		if pRecordChanged != null
-			pCapturedAnimations.removeListener(pRecordChanged)
-			pRecordChanged = null
+		if pEnabledChanged != null
+			pTemporaryGhost.removeListener(pEnabledChanged)
+			pEnabledChanged = null
 		end
 		
 		super.dispose()
@@ -88,15 +88,13 @@ class IBRecord extends InteractionBubbleToggleButton
 	
 	/** Determine if button should be toggled or not. Subclass responsibility. */
 	protected func bool getToggled()
-		return pCapturedAnimations.getRecord()
+		return pTemporaryGhost.getEnabled()
 	end
 	
 	/** Fire action. */
 	public func void fireAction()
-		TimerBlock.new(0, false, block
-			if pCapturedAnimations != null
-				pCapturedAnimations.setRecord(not pCapturedAnimations.getRecord())
-			end
-		end)
+		if pTemporaryGhost != null
+			pTemporaryGhost.setEnabled(not pTemporaryGhost.getEnabled())
+		end
 	end
 end

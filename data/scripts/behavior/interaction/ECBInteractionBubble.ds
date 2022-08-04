@@ -349,12 +349,18 @@ class ECBInteractionBubble extends DefaultECBehavior
 			var float scaleValue = referenceSize * SessionSettings.get().getInteractionBubbleSize()
 			element.setScaling(Vector.new(scaleValue, scaleValue, scaleValue))
 			
-			// rotate
+			// rotate. for operator view use the camera orientation. this yields a screen oriented
+			// billboard type of bubble. for vr lock the up-axis.
 			var Quaternion orientation
 			
 			if sphericalRotation
 				var DVector view = direction.normalize()
-				var DVector up = DMatrix.newFromQuaternion(camera.getOrientation()).getUpVector()
+				var DVector up = DVector.new(0, 1, 0)
+				
+				if DEMath.fabs(up * view) > 0.999
+					return
+				end
+				
 				orientation = DMatrix.newVU(view, up).toQuaternion()
 				
 			else
