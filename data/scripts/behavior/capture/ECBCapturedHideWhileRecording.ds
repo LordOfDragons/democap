@@ -27,9 +27,9 @@ pin Dragengine.Scenery
 
 
 /**
- * Behavior hide element while recording if element is the selected element.
+ * Behavior hide element while recording if element is the captured element.
  */
-class ECBSelectedHideWhileRecording extends DefaultECBehavior
+class ECBCapturedHideWhileRecording extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		/** Attach to record animation behavior. */
@@ -58,7 +58,7 @@ class ECBSelectedHideWhileRecording extends DefaultECBehavior
 			end
 			
 			public func void prepareRecording(ECBRecordAnimation.Instance instance)
-				if pInstance.getSelectable().isSelected()
+				if pInstance.getCapturable().isCaptured()
 					pInstance.hide()
 				end
 			end
@@ -70,10 +70,10 @@ class ECBSelectedHideWhileRecording extends DefaultECBehavior
 		
 		
 		
-		private var ECBSelectedHideWhileRecording pECBehavior
+		private var ECBCapturedHideWhileRecording pECBehavior
 		private var ECBehaviorPlayerControllable.Instance pPlayer
 		private var ECBRecordAnimation.Instance pRecordAnimation
-		private var ECBSelectable.Instance pSelectable
+		private var ECBCapturable.Instance pCapturable
 		private var AttachRecordAnimation pAttachRecordAnimation
 		private var RecordingStateChanged pRecordingStateChanged
 		private var Boolean pRestoreVisibility
@@ -81,24 +81,24 @@ class ECBSelectedHideWhileRecording extends DefaultECBehavior
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBSelectedHideWhileRecording ecbehavior, BehaviorElement element) super(element)
+		public func new(ECBCapturedHideWhileRecording ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
-			pSelectable = ecbehavior.getSelectable().instance(element)
+			pCapturable = ecbehavior.getCapturable().instance(element)
 			pRecordingStateChanged = RecordingStateChanged.new(this)
 		end
 		
 		/** Dispose of behavior. */
 		public func void dispose()
 			pRecordingStateChanged = null
-			pSelectable = null
+			pCapturable = null
 			super.dispose()
 		end
 		
 		
 		
-		/** Selectable behavior instalce. */
-		public func ECBSelectable.Instance getSelectable()
-			return pSelectable
+		/** Capturable behavior instalce. */
+		public func ECBCapturable.Instance getCapturable()
+			return pCapturable
 		end
 		
 		/** Record animation or null. */
@@ -179,21 +179,21 @@ class ECBSelectedHideWhileRecording extends DefaultECBehavior
 	
 	
 	
-	protected var ECBSelectable pSelectable
+	protected var ECBCapturable pCapturable
 	
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBSelectable selectable) super(eclass)
-		pSelectable = selectable
+	public func new(BehaviorElementClass eclass, ECBCapturable capturable) super(eclass)
+		pCapturable = capturable
 		eclass.addBehavior(this)
 	end
 	
 	
 	
-	/** Selectable behavior. */
-	public func ECBSelectable getSelectable()
-		return pSelectable
+	/** Capturable behavior. */
+	public func ECBCapturable getCapturable()
+		return pCapturable
 	end
 	
 	

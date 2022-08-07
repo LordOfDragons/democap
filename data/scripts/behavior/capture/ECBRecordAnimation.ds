@@ -270,8 +270,17 @@ class ECBRecordAnimation extends DefaultECBehavior
 				end
 			end
 			
-			if pCapturedAnimations != null and not pCapturedAnimations.getRecord()
-				return
+			// this check is only used if this is not the captured character or this is not
+			// a CapturedCharacter. for captured character recording is always enabled.
+			// 
+			// right now this check affects only non-CapturedCharacter objects because
+			// not captured CapturedCharacter are ruled out above in the "NOTE". to enable
+			// recording for other objects new code has to be done since this behavior is
+			// present on the MoCap actor but not CapturedCharacter
+			if pCharacter == null
+				if pCapturedAnimations != null and not pCapturedAnimations.getRecord()
+					return
+				end
 			end
 			
 			// find animation to record
@@ -763,7 +772,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				end
 				
 				if pRecordAnimationObject != null
-					var BehaviorElement element = getElement()
+					var BehaviorElement element = pCapturedAnimations.getElement()
 					pRecordAnimationObject.addKeyframe(pRecordTime,\
 						element.getPosition().toVector(), element.getOrientation())
 				end
