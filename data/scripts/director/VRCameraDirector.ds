@@ -52,6 +52,7 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 		setLayerMask(LayerMask.newWith(\
 			BaseGameApp.WorldLayerBit.default,\
 			GameApp.WorldLayerBit.remoteView))
+		setEnableGI(SessionSettings.get().getModelCameraEnableGI().getToggled())
 	end
 	
 	/** Camera director has been activated. */
@@ -90,17 +91,6 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 		vrHudInfo = ECBVRHudInfo.getInstanceIn(element)
 	end
 	
-	/** Init camera parameters. */
-	/*
-	public func void initCameraParameters()
-		super.initCameraParameters()
-		
-		if getCamera() != pVRCamera
-			getCamera().setEnableGI(false)
-		end
-	end
-	*/
-	
 	/** Set VR camera. */
 	public func void setVRCamera(Camera camera)
 		pVRCamera = camera
@@ -110,9 +100,6 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	public func void updateCamera(float elapsed)
 		// update stalling protection timer
 		pStallProtectionTimer += elapsed
-		
-		// update VR camera
-		//pVRCamera.setEnableGI(false)
 		
 		if pHMD == null or pHMD.isDetached()
 			// try finding the input device directly. this is temporary

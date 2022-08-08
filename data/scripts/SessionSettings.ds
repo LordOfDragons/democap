@@ -23,6 +23,7 @@ namespace Democap
 
 pin Democap.Behaviors
 
+pin Dragengine.CameraDirectors
 pin Dragengine.Gui.Events
 pin Dragengine.Utils
 pin Dragengine.Scenery
@@ -105,6 +106,30 @@ public class SessionSettings
 		end
 	end
 	
+	class ToggleCameraEnableGI extends DefaultToggleModelListener
+		public func new()
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			var bool enable = model.getToggled()
+			
+			var CameraDirector director = GameApp.getGameApp().getVRCameraDirector()
+			if director != null
+				director.setEnableGI(enable)
+			end
+			
+			var Camera camera = GameApp.getGameApp().getWindowGameWorld().getCamera()
+			if camera != null
+				camera.setEnableGI(enable)
+			end
+			
+			camera = GameApp.getGameApp().getVRCamera()
+			if camera != null
+				camera.setEnableGI(enable)
+			end
+		end
+	end
+	
 	class SaveRangeModelChanged extends DefaultRangeModelListener
 		private var String pSettingPath
 		private var float pScale
@@ -172,6 +197,7 @@ public class SessionSettings
 	private var DefaultRangeModel pModelSmoothSlotStrength
 	private var DefaultToggleModel pModelAutoStopRecord
 	private var DefaultRangeModel pModelInteractionBubbleSize
+	private var DefaultToggleModel pModelCameraEnableGI
 	
 	private var DefaultListModel pModelHudCamera
 	private var DefaultToggleModel pModelShowVRControllers
@@ -217,6 +243,10 @@ public class SessionSettings
 		pModelInteractionBubbleSize = DefaultRangeModel.new(20, 80, 20, 40, 1)
 		pModelInteractionBubbleSize.setValue((s.getFloatAt("InteractionBubbleSize", 0.4) * 100 + 0.5) cast int)
 		pModelInteractionBubbleSize.addListener(SaveRangeModelChanged.new("InteractionBubbleSize", 0.01))
+		
+		pModelCameraEnableGI = DefaultToggleModel.new(s.getBoolAt("CameraEnableGI", true))
+		pModelCameraEnableGI.addListener(SaveToggleModelChanged.new("CameraEnableGI"))
+		pModelCameraEnableGI.addListener(ToggleCameraEnableGI.new())
 		
 		pModelHudCamera = DefaultListModel.new()
 		pModelHudCamera.add(null)
@@ -315,6 +345,11 @@ public class SessionSettings
 	/** Interaction bubble size. */
 	public func float getInteractionBubbleSize()
 		return 0.01 * pModelInteractionBubbleSize.getValue()
+	end
+	
+	/** Camera enable GI model. */
+	public func DefaultToggleModel getModelCameraEnableGI()
+		return pModelCameraEnableGI
 	end
 	
 	
