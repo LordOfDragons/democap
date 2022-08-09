@@ -111,6 +111,7 @@ class InteractMouseListener extends DefaultMouseListener
 	protected var CollisionFilter pCollisionFilter
 	protected var float pRayDistance
 	protected var ECBInteractHandle.Instance pHandle
+	protected var ECBShowInteractHandles.Instance pShowHandles
 	protected var ECBehaviorControlDesktop.Instance pControlDesktop
 	protected var bool pDragging
 	
@@ -196,8 +197,12 @@ class InteractMouseListener extends DefaultMouseListener
 			
 			pHandle = ECBInteractHandle.getInstanceIn(element)
 			if pHandle != null
+				pShowHandles = ECBShowInteractHandles.getInstanceIn(element.getParent() cast BehaviorElement)
 				pHandle.startInteract(Matrix.newFromQuaternion(camera.getOrientation()),\
 					rayOrigin, rayNormDir, each.getHitPoint())
+				if pShowHandles != null
+					pShowHandles.notifyStartInteract(pHandle)
+				end
 				return true
 			end
 			
@@ -222,7 +227,11 @@ class InteractMouseListener extends DefaultMouseListener
 		if pHandle != null
 			if showVRCamera
 				pHandle.stopInteract()
+				if pShowHandles != null
+					pShowHandles.notifyStopInteract(pHandle)
+				end
 				pHandle = null
+				pShowHandles = null
 				return
 			end
 			
@@ -230,7 +239,11 @@ class InteractMouseListener extends DefaultMouseListener
 			var CameraDirector director = window.getCameraDirector()
 			if director == null
 				pHandle.stopInteract()
+				if pShowHandles != null
+					pShowHandles.notifyStopInteract(pHandle)
+				end
 				pHandle = null
+				pShowHandles = null
 			end
 			
 			var Camera camera = director.getCamera()
@@ -288,7 +301,11 @@ class InteractMouseListener extends DefaultMouseListener
 		
 		if pHandle != null
 			pHandle.stopInteract()
+			if pShowHandles != null
+				pShowHandles.notifyStopInteract(pHandle)
+			end
 			pHandle = null
+			pShowHandles = null
 			
 		elif pDragging
 			if pControlDesktop != null

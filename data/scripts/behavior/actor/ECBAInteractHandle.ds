@@ -37,6 +37,7 @@ class ECBAInteractHandle extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		private var ECBAInteractHandle pECBehavior
+		private var ECBShowInteractHandles.Instance pShowInteractHandles
 		private var ECBInteractHandle.Instance pInteractHandle
 		private var ECBehaviorVRHandPointAt.Instance pPointAt
 		private var bool pTriggerPulled
@@ -52,10 +53,16 @@ class ECBAInteractHandle extends DefaultECBehavior
 		public func void dispose()
 			pPointAt = null
 			pInteractHandle = null
+			pShowInteractHandles = null
 			super.dispose()
 		end
 		
 		
+		
+		/** Behavior instance show interact handles or null. */
+		public func ECBShowInteractHandles.Instance getShowInteractHandles()
+			return pShowInteractHandles
+		end
 		
 		/** Behavior instance interact handle or null. */
 		public func ECBInteractHandle.Instance getInteractHandle()
@@ -94,6 +101,7 @@ class ECBAInteractHandle extends DefaultECBehavior
 					
 				else
 					pInteractHandle = null
+					pShowInteractHandles = null
 					pPointAt = null
 					return false
 				end
@@ -104,6 +112,7 @@ class ECBAInteractHandle extends DefaultECBehavior
 				end
 				
 				if pInteractHandle != null
+					pShowInteractHandles = ECBShowInteractHandles.getInstanceIn(element.getParent() cast BehaviorElement)
 					pPointAt = behavior
 					return true
 					
@@ -121,6 +130,9 @@ class ECBAInteractHandle extends DefaultECBehavior
 			end
 			
 			pInteractHandle.startInteract(pPointAt)
+			if pShowInteractHandles != null
+				pShowInteractHandles.notifyStartInteract(pInteractHandle)
+			end
 			
 			pTriggerPulled = true
 			return true
@@ -133,8 +145,12 @@ class ECBAInteractHandle extends DefaultECBehavior
 			end
 			
 			pInteractHandle.stopInteract()
+			if pShowInteractHandles != null
+				pShowInteractHandles.notifyStopInteract(pInteractHandle)
+			end
 			
 			pInteractHandle = null
+			pShowInteractHandles = null
 			pPointAt = null
 			pTriggerPulled = false
 			return true
@@ -147,8 +163,12 @@ class ECBAInteractHandle extends DefaultECBehavior
 			end
 			
 			pInteractHandle.cancelInteract()
+			if pShowInteractHandles != null
+				pShowInteractHandles.notifyStopInteract(pInteractHandle)
+			end
 			
 			pInteractHandle = null
+			pShowInteractHandles = null
 			pPointAt = null
 			pTriggerPulled = false
 		end

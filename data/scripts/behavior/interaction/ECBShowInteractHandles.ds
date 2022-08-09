@@ -30,6 +30,30 @@ pin Dragengine.Scenery
  * Behavior showing interaction handles.
  */
 class ECBShowInteractHandles extends DefaultECBehavior
+	/** Listener for behavior instance events. */
+	interface Listener
+		/** Start interacting with handle. */
+		func void startInteract(Instance instance, ECBInteractHandle.Instance handle)
+		
+		/** Stop interacting with handle. */
+		func void stopInteract(Instance instance, ECBInteractHandle.Instance handle)
+	end
+	
+	/** Default implementation of behavior instance listener. */
+	class DefaultListener implements Listener
+		/** Create default listener. */
+		public func new()
+		end
+		
+		/** Start interacting with handle. */
+		public func void startInteract(Instance instance, ECBInteractHandle.Instance handle)
+		end
+		
+		/** Stop interacting with handle. */
+		public func void stopInteract(Instance instance, ECBInteractHandle.Instance handle)
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		/** Show handles listener. */
@@ -94,6 +118,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		private var Array pHandleClasses
 		private var Array pHandleElements
 		private var bool pVisible
+		private var Array pListeners
 		
 		
 		
@@ -103,6 +128,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 			pHandleClasses = Array.new()
 			pHandleElements = Array.new()
 			pRecordingStateChanged = RecordingStateChanged.new(this)
+			pListeners = Array.new()
 			
 			pSelectable = ecbehavior.getSelectable().instance(element)
 		end
@@ -115,6 +141,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 			pRecordAnimation = null
 			pAttachRecordAnimation = null
 			pRecordingStateChanged = null
+			pListeners = null
 			super.dispose()
 		end
 		
@@ -248,6 +275,36 @@ class ECBShowInteractHandles extends DefaultECBehavior
 			else
 				hide()
 			end
+		end
+		
+		
+		
+		/** Notify listeners start interacting with handle. */
+		public func void notifyStartInteract(ECBInteractHandle.Instance handle)
+			pListeners.forEach(block Listener each
+				each.startInteract(this, handle)
+			end)
+		end
+		
+		/** Notify listeners stop interacting with handle. */
+		public func void notifyStopInteract(ECBInteractHandle.Instance handle)
+			pListeners.forEach(block Listener each
+				each.stopInteract(this, handle)
+			end)
+		end
+		
+		
+		/** Add listener. */
+		public func void addListener(Listener listener)
+			if listener == null
+				throw EInvalidParam.new()
+			end
+			pListeners.add(listener)
+		end
+		
+		/** Remove listener. */
+		public func void removeListener(Listener listener)
+			pListeners.remove(listener)
 		end
 		
 		
