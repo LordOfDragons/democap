@@ -175,6 +175,7 @@ class ECBAGrab extends DefaultECBehavior
 		
 		protected func bool tryGrabAttach(ECBGrabAttach.Instance grabAttach)
 			var ECBehaviorAttachable.Instance attachable = grabAttach.getAttachable()
+			var ECBehaviorCollider.Instance parentCollider = grabAttach.getParentCollider()
 			
 			pGrabber.regrab(grabAttach.getGrabSpot())
 			
@@ -193,6 +194,10 @@ class ECBAGrab extends DefaultECBehavior
 				// TODO: use pPhysicsToucher attach bone and position
 				
 				attachable.reattachWorld(pAttachSlot)
+				
+			elif parentCollider != null
+				// grab parent object
+				pAttachSlot.getSlotCollider().attachRelativeMovement(parentCollider.getCollider())
 			end
 			
 			return true
@@ -292,11 +297,29 @@ class ECBAGrab extends DefaultECBehavior
 				pPhysicsGrabCollider = null
 				
 			elif pGrabAttach != null
-				pGrabAttach.getAttachable().detach()
+				var ECBehaviorAttachable.Instance attachable = pGrabAttach.getAttachable()
+				var ECBehaviorCollider.Instance parentCollider = pGrabAttach.getParentCollider()
+				var Collider slotCollider = pAttachSlot.getSlotCollider()
+				var Collider attachedCollider
+				
+				if attachable != null
+					attachedCollider = attachable.getCollider().getCollider()
+					attachable.detach()
+					
+				elif parentCollider != null
+					attachedCollider = parentCollider.getCollider()
+					slotCollider.detach(attachedCollider)
+				end
+				
 				pGrabAttach.getGrabSpot().release()
 				pGrabAttach = null
+				
+				// apply velocities to object if dynamic
+				if attachedCollider.getResponseType() == CollisionResponse.dynamic
+					attachedCollider.setLinearVelocity(slotCollider.getLinearVelocity())
+					attachedCollider.setAngularVelocity(slotCollider.getAngularVelocity())
+				end
 			end
-			// TODO if object is dynamic give it linear/angular velocity while recording?
 		end
 	end
 	
