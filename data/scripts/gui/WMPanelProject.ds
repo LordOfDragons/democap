@@ -535,11 +535,15 @@ class WMPanelProject extends Panel
 				parent = null
 			end
 			
+			var UniqueID parentId = parent != null if parent.getElement().getID() else null
 			var BehaviorElement element = object.getElement()
-			var GameWorld gameWorld = element.getGameWorld()
-			gameWorld.removeElement(element)
-			element.getStub().setAttachTo(parent != null if parent.getElement().getID() else null)
-			gameWorld.addElement(element)
+			var UniqueID oldParentId = element.getStub().getAttachTo()
+			if parentId == oldParentId or (parentId != null and parentId.equals(oldParentId))
+				return
+			end
+			
+			element.getStub().setAttachTo(parentId)
+			pPanel.elementStubChanged()
 		end
 	end
 	
@@ -1378,7 +1382,7 @@ class WMPanelProject extends Panel
 				parent = element.getGameWorld().getElementWithID(parentId)
 			end
 			if parent != null
-				pModelParent.setSelectedElement(ECBSceneObject.getInstanceIn(element cast BehaviorElement))
+				pModelParent.setSelectedElement(ECBSceneObject.getInstanceIn(parent cast BehaviorElement))
 				
 			else
 				pModelParent.setSelectedElement(null)
@@ -1641,9 +1645,8 @@ class WMPanelProject extends Panel
 		var FindClosestParent visitor = FindClosestParent.new(pObject.getElement())
 		gameWorld.visitElements(visitor)
 		
-		gameWorld.removeElement(element)
 		element.getStub().setAttachTo(visitor.bestParent != null if visitor.bestParent.getElement().getID() else null)
-		gameWorld.addElement(element)
+		elementStubChanged()
 	end
 	
 	/** Detach object. */
@@ -1690,6 +1693,67 @@ class WMPanelProject extends Panel
 		return pPanelBehaviors.findWidget(block WMPPanelSceneObject each
 			return each.getPrefixUIOptions().equals(prefix)
 		end) cast WMPPanelSceneObject
+	end
+	
+	
+	
+	/** Element stub changed. */
+	public func void elementStubChanged()
+		var BehaviorElement element = pObject.getElement()
+		var GameWorld gameWorld = element.getGameWorld()
+		
+		var Widget focusWidget = getDesktop().getDesktop().getFocusWidget()
+		var Point focusPosition
+		var String puio
+		
+		if focusWidget != null
+			var Container widget = focusWidget.getParent()
+			while widget != null
+				if widget castable WMPPanelSceneObject
+					focusPosition = focusWidget.getRelativePosition(widget) + focusWidget.getSize() / 2
+					puio = (widget cast WMPPanelSceneObject).getPrefixUIOptions()
+					break
+				end
+				widget = widget.getParent()
+			end
+		end
+		
+		// we delay this by one frame update to avoid complicated problems due to disposing
+		TimerBlock.new(0, false, block
+			var StubElement stub = element.getStub()
+			stub.setPosition(element.getPosition())
+			stub.setRotation(element.getOrientation().getEulerAngles())
+			
+			var Dictionary storage = Dictionary.new()
+			element.forEachInstance(block ECBehaviorInstance each
+				if each castable TakeOverBehaviorState
+					(each cast TakeOverBehaviorState).takeOverStoreState(storage)
+				end
+			end)
+			
+			element.safeDispose()
+			
+			element = stub.createElement() cast BehaviorElement
+			
+			element.forEachInstance(block ECBehaviorInstance each
+				if each castable TakeOverBehaviorState
+					(each cast TakeOverBehaviorState).takeOverRestoreState(storage)
+				end
+			end)
+			
+			gameWorld.addElement(element)
+			ECBSelectable.getInstanceIn(element).selectElement()
+			
+			if focusPosition != null
+				var WMPPanelSceneObject pso = getBehaviorPanelWith(puio)
+				if pso != null
+					focusWidget = pso.getWidgetAt(focusPosition)
+					if focusWidget != null
+						focusWidget.grabFocus()
+					end
+				end
+			end
+		end)
 	end
 	
 	

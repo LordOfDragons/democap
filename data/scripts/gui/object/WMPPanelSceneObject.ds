@@ -133,62 +133,6 @@ class WMPPanelSceneObject extends CollapsibleGroup
 	
 	/** Notify element stub changed. */
 	protected func void notifyStubChanged()
-		var WMPanelProject panelProject = pPanelProject
-		var ECBSceneObject.Instance object = pPanelProject.getObject()
-		var BehaviorElement element = object.getElement()
-		var GameWorld gameWorld = element.getGameWorld()
-		
-		var Widget focusWidget = getDesktop().getDesktop().getFocusWidget()
-		var Point focusPosition
-		var String puio
-		
-		if focusWidget != null
-			var Container widget = focusWidget.getParent()
-			while widget != null
-				if widget castable WMPPanelSceneObject
-					focusPosition = focusWidget.getRelativePosition(widget) + focusWidget.getSize() / 2
-					puio = (widget cast WMPPanelSceneObject).pPrefixUIOptions
-					break
-				end
-				widget = widget.getParent()
-			end
-		end
-		
-		// we delay this by one frame update to avoid complicated problems due to disposing
-		TimerBlock.new(0, false, block
-			var StubElement stub = element.getStub()
-			stub.setPosition(element.getPosition())
-			stub.setRotation(element.getOrientation().getEulerAngles())
-			
-			var Dictionary storage = Dictionary.new()
-			element.forEachInstance(block ECBehaviorInstance each
-				if each castable TakeOverBehaviorState
-					(each cast TakeOverBehaviorState).takeOverStoreState(storage)
-				end
-			end)
-			
-			element.safeDispose()
-			
-			element = stub.createElement() cast BehaviorElement
-			
-			element.forEachInstance(block ECBehaviorInstance each
-				if each castable TakeOverBehaviorState
-					(each cast TakeOverBehaviorState).takeOverRestoreState(storage)
-				end
-			end)
-			
-			gameWorld.addElement(element)
-			ECBSelectable.getInstanceIn(element).selectElement()
-			
-			if focusPosition != null
-				var WMPPanelSceneObject pso = panelProject.getBehaviorPanelWith(puio)
-				if pso != null
-					focusWidget = pso.getWidgetAt(focusPosition)
-					if focusWidget != null
-						focusWidget.grabFocus()
-					end
-				end
-			end
-		end)
+		pPanelProject.elementStubChanged()
 	end
 end

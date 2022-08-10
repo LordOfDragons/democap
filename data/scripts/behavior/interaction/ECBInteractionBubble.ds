@@ -207,6 +207,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 		private var Vector pAttachPosition
 		private var Quaternion pAttachOrientation
 		private var ECBSelectable.Instance pParentSelectable
+		private var ECBShowInteractHandles.Instance pParentShowInteractHandles
 		private var bool pShowSelected
 		private var float pDesktopFactorHalfX, pDesktopFactorHalfY
 		private var float pDesktopFactorX, pDesktopFactorY
@@ -289,6 +290,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 			pWindow = null
 			pTabLayout = null
 			pParentSelectable = null
+			pParentShowInteractHandles = null
 			
 			pRecordAnimation = null
 			pAttachRecordAnimation = null
@@ -472,30 +474,14 @@ class ECBInteractionBubble extends DefaultECBehavior
 				return
 			end
 			
-			var Vector parentMinExtend = Vector.new(-0.5, -0.5, -0.5)
-			var Vector parentMaxExtend = Vector.new(0.5, 0.5, 0.5)
+			pParentSelectable = parentSelectable
+			pParentShowInteractHandles = parentSih
+			pSceneObject = parentSceneObject
 			
-			var Component parentComponent = ECBehaviorComponent.getInstanceIn(parentElement).getComponent()
-			if parentComponent != null
-				var Model parentModel = parentComponent.getModel()
-				if parentModel != null
-					parentMinExtend = parentModel.getMinimumExtend()
-					parentMaxExtend = parentModel.getMaximumExtend()
-				end
-			end
-			
-			var Vector parentCenter = (parentMinExtend + parentMaxExtend) / 2
-			
-			pAttachPosition = Vector.new(parentCenter.getX(), parentMaxExtend.getY(), parentCenter.getZ())
-			
-			pAttachPosition = pAttachPosition + Vector.new(0, 0.01, 0)
-			
-			if parentSih != null
-				pAttachPosition = pAttachPosition + Vector.new(0, parentSih.getHandleSize(), 0)
-			end
+			updateAttachPosition()
 			
 			var BehaviorElement element = getElement()
-			element.setPosition(parentElement.getElementMatrix() * DVector.new(pAttachPosition))
+			element.setPosition(parentElement.getPosition() + DVector.new(pAttachPosition))
 			
 			parentCollider.attachRelativeMovement(pCollider)
 			
@@ -503,8 +489,6 @@ class ECBInteractionBubble extends DefaultECBehavior
 			
 			parentSelectable.addListener(SelectableChanged.new(this))
 			
-			pParentSelectable = parentSelectable
-			pSceneObject = parentSceneObject
 			pSceneObject.addListener(SceneObjectNameChanged.new(this))
 			
 			updateModelObjectName()
@@ -552,6 +536,37 @@ class ECBInteractionBubble extends DefaultECBehavior
 			shape.addBox(Vector.new(positionX, positionY, 0.005), Vector.new(halfSizeX, halfSizeY, 0.005))
 			
 			pCollider.setShape(shape)
+		end
+		
+		protected func void updateAttachPosition()
+			if pSceneObject == null
+				return
+			end
+			
+			var Vector parentMinExtend = Vector.new(-0.5, -0.5, -0.5)
+			var Vector parentMaxExtend = Vector.new(0.5, 0.5, 0.5)
+			
+			var Component parentComponent = ECBehaviorComponent.getInstanceIn(pSceneObject.getElement()).getComponent()
+			if parentComponent != null
+				var Model parentModel = parentComponent.getModel()
+				if parentModel != null
+					var Matrix matrix = Matrix.newFromQuaternion(pSceneObject.getElement().getOrientation())
+					parentMinExtend = matrix * parentModel.getMinimumExtend()
+					parentMaxExtend = matrix * parentModel.getMaximumExtend()
+				end
+			end
+			
+			pAttachPosition = (parentMinExtend + parentMaxExtend) / 2
+			parentMinExtend = parentMinExtend - pAttachPosition
+			parentMaxExtend = parentMaxExtend - pAttachPosition
+			
+			var float offsetTop = DEMath.max(parentMaxExtend.getY(), parentMinExtend.getY())
+			offsetTop += 0.01
+			if pParentShowInteractHandles != null
+				offsetTop += pParentShowInteractHandles.getHandleSize()
+			end
+			
+			pAttachPosition = pAttachPosition + Vector.new(0, offsetTop, 0)
 		end
 	end
 	

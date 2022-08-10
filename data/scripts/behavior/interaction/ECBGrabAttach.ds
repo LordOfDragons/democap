@@ -63,8 +63,6 @@ class ECBGrabAttach extends DefaultECBehavior
 		protected var ECBehaviorCollider.Instance pParentCollider
 		protected var String pBone
 		protected var bool pTemporaryDetached
-		protected var ECBShowInteractHandles.Instance pParentShowInteractHandles
-		protected var TemporaryDetachListener pTemporaryDetachListener
 		
 		
 		
@@ -77,8 +75,14 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
+			var BehaviorElement element = getElement()
+			
 			if pECBehavior.getAttachable() != null
-				pAttachable = pECBehavior.getAttachable().instance(getElement())
+				pAttachable = pECBehavior.getAttachable().instance(element)
+			end
+			
+			if pECBehavior.getShowInteractHandles() != null
+				pECBehavior.getShowInteractHandles().instance(element).addListener(TemporaryDetachListener.new(this))
 			end
 			
 			pBone = pECBehavior.getBone().getValue(stub)
@@ -91,8 +95,6 @@ class ECBGrabAttach extends DefaultECBehavior
 			pAttachable = null
 			
 			pParentCollider = null
-			pParentShowInteractHandles = null
-			pTemporaryDetachListener = null
 			super.dispose()
 		end
 		
@@ -122,13 +124,7 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		/** Remove from game world. */
 		public func void removeFromGameWorld()
-			if pTemporaryDetachListener != null
-				pParentShowInteractHandles.removeListener(pTemporaryDetachListener)
-				pTemporaryDetachListener = null
-			end
-			pParentShowInteractHandles = null
 			pParentCollider = null
-			pTemporaryDetached = false
 		end
 		
 		
@@ -155,12 +151,6 @@ class ECBGrabAttach extends DefaultECBehavior
  			
 			getElement().setParent(parent)
 			addToAttachments(parent)
-			
-			pParentShowInteractHandles = ECBShowInteractHandles.getInstanceIn(parent)
-			if pParentShowInteractHandles != null
-				pTemporaryDetachListener = TemporaryDetachListener.new(this)
-				pParentShowInteractHandles.addListener(pTemporaryDetachListener)
-			end
 		end
 		
 		/** Attach to collider. */
@@ -205,6 +195,7 @@ class ECBGrabAttach extends DefaultECBehavior
 		public func void reattachTemporaryDetach()
 			if pTemporaryDetached and pParentCollider != null
 				attachToCollider(pParentCollider.getCollider())
+				pTemporaryDetached = false
 			end
 		end
 	end
@@ -214,20 +205,29 @@ class ECBGrabAttach extends DefaultECBehavior
 	private var ECBehaviorGrabSpot pGrabSpot
 	private var ECBehaviorCollider pCollider
 	private var ECBehaviorAttachable pAttachable
+	private var ECBShowInteractHandles pShowInteractHandles
 	private var ECPString pBone
 	
 	// TODO hand model to show. this though should be the job of ECBehaviorComponent present
 	//      in the owner class which has for example the hand model set with a modified skin.
 	//      the skin could be transparent but for aligning a solid model is better.
+	//      
+	//      "wrist.r" "attachHand.r"
 	
 	
 	
 	/** Create behavior and add it to element class. */
 	public func new(BehaviorElementClass eclass, ECBehaviorGrabSpot grabSpot,\
-	ECBehaviorCollider collider, ECBehaviorAttachable attachable, String id) super(eclass, id)
+	ECBehaviorCollider collider, ECBehaviorAttachable attachable,\
+	ECBShowInteractHandles showInteractHandles, String id) super(eclass, id)
+		if grabSpot == null
+			throw ENullPointer.new("grabSpot")
+		end
+		
 		pGrabSpot = grabSpot
 		pCollider = collider
 		pAttachable = attachable
+		pShowInteractHandles = showInteractHandles
 		
 		var String prefix = "grabAttach."
 		
@@ -242,6 +242,7 @@ class ECBGrabAttach extends DefaultECBehavior
 		pGrabSpot = null
 		pCollider = null
 		pAttachable = null
+		pShowInteractHandles = null
 		super.dispose()
 	end
 	
@@ -260,6 +261,11 @@ class ECBGrabAttach extends DefaultECBehavior
 	/** Attachable behavior. */
 	public func ECBehaviorAttachable getAttachable()
 		return pAttachable
+	end
+	
+	/** Show interact handles behavior. */
+	public func ECBShowInteractHandles getShowInteractHandles()
+		return pShowInteractHandles
 	end
 	
 	/** Bone to attach to. */
