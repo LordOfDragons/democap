@@ -1,0 +1,315 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Scenery
+
+
+/**
+ * Behavior hide component if condition is true. User can change conditions.
+ */
+class ECBHideCondition extends DefaultECBehavior
+	/** Listener for behavior instance events. */
+	interface Listener
+		/** Hide object. */
+		func bool hideObject(Instance instance)
+	end
+	
+	/** Default implementation of behavior instance listener. */
+	class DefaultListener implements Listener
+		/** Create default listener. */
+		public func new()
+		end
+		
+		/** Hide object. */
+		public func bool hideObject(Instance instance)
+			return false
+		end
+	end
+	
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class RecordingStateChanged extends RecordScene.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void prepareRecording(RecordScene recordScene)
+				pInstance.updateVisibility()
+			end
+			
+			public func void stopRecording(RecordScene recordScene)
+				pInstance.updateVisibility()
+			end
+		end
+		
+		class PlaybackChanged extends PlaybackScene.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void startPlayback(PlaybackScene playbackScene)
+				pInstance.updateVisibility()
+			end
+			
+			public func void stopPlayback(PlaybackScene playbackScene)
+				pInstance.updateVisibility()
+			end
+			
+			public func void pausePlayback(PlaybackScene playbackScene)
+				pInstance.updateVisibility()
+			end
+		end
+		
+		
+		
+		private var ECBHideCondition pECBehavior
+		private var RecordingStateChanged pRecordingStateChanged
+		private var PlaybackChanged pPlaybackChanged
+		private var Boolean pRestoreVisible
+		private var bool pLive
+		private var bool pPlayback
+		private var bool pRecord
+		private var Array pListeners
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBHideCondition ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pListeners = Array.new()
+		end
+		
+		/** Dispose of behavior.  */
+		public func void dispose()
+			pListeners = null
+			super.dispose()
+		end
+		
+		/** Init behavior from stubu. */
+		public func void init(Preloading.StubElement stub)
+			pLive = pECBehavior.getLive().getValue(stub)
+			pPlayback = pECBehavior.getPlayback().getValue(stub)
+			pRecord = pECBehavior.getRecord().getValue(stub)
+		end
+		
+		
+		
+		/** Hide during live preview. */
+		public func bool getLive()
+			return pLive
+		end
+		
+		/** Set hide during live preview. */
+		public func void setLive(bool hide)
+			if hide == pLive
+				return
+			end
+			pLive = hide
+			updateVisibility()
+		end
+		
+		/** Hide during playback. */
+		public func bool getPlayback()
+			return pPlayback
+		end
+		
+		/** Set hide during playback. */
+		public func void setPlayback(bool hide)
+			if hide == pPlayback
+				return
+			end
+			
+			pPlayback = hide
+			
+			updateVisibility()
+		end
+		
+		/** Hide during recording. */
+		public func bool getRecord()
+			return pRecord
+		end
+		
+		/** Set hide during recording. */
+		public func void setRecord(bool hide)
+			if hide == pRecord
+				return
+			end
+			
+			pRecord = hide
+			
+			updateVisibility()
+		end
+		
+		
+		
+		/** Add listener. */
+		public func void addListener(Listener listener)
+			if listener == null
+				throw EInvalidParam.new()
+			end
+			pListeners.add(listener)
+		end
+		
+		/** Remove listener. */
+		public func void removeListener(Listener listener)
+			pListeners.remove(listener)
+		end
+		
+		
+		
+		/** Update visibility. */
+		public func void updateVisibility()
+			var bool doHide
+			
+			if GameApp.getGameApp().getRecordScene().isStopped()
+				if GameApp.getGameApp().getPlaybackScene().isStopped()
+					doHide = pLive
+					
+				else
+					doHide = pPlayback
+				end
+				
+			else
+				doHide = pRecord
+			end
+			
+			doHide |= pListeners.find(block Listener each
+				return each.hideObject(this)
+			end) != null
+			
+			if doHide
+				hide()
+				
+			else
+				show()
+			end
+		end
+		
+		
+		
+		/** Hide element. */
+		public func void hide()
+			if pRestoreVisible != null
+				return
+			end
+			
+			var BehaviorElement element = getElement()
+			pRestoreVisible = Boolean.new(element.getVisible())
+			element.setVisible(false)
+		end
+		
+		/** Show element. */
+		public func void show()
+			if pRestoreVisible == null
+				return
+			end
+			
+			getElement().setVisible(pRestoreVisible.value())
+			pRestoreVisible = null
+		end
+		
+		
+		
+		/** Added to game world. */
+		public func void addToGameWorld()
+			pPlaybackChanged = PlaybackChanged.new(this)
+			GameApp.getGameApp().getPlaybackScene().addListener(pPlaybackChanged)
+			
+			pRecordingStateChanged = RecordingStateChanged.new(this)
+			GameApp.getGameApp().getRecordScene().addListener(pRecordingStateChanged)
+			
+			updateVisibility()
+		end
+		
+		/** Remove from game world. */
+		public func void removeFromGameWorld()
+			show()
+			
+			if pPlaybackChanged != null
+				GameApp.getGameApp().getPlaybackScene().removeListener(pPlaybackChanged)
+				pPlaybackChanged = null
+			end
+			
+			if pRecordingStateChanged != null
+				GameApp.getGameApp().getRecordScene().removeListener(pRecordingStateChanged)
+				pRecordingStateChanged = null
+			end
+		end
+	end
+	
+	
+	
+	protected var ECPBoolean pLive
+	protected var ECPBoolean pPlayback
+	protected var ECPBoolean pRecord
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass) super(eclass)
+		var String prefix = "hideCondition."
+		
+		pLive = ECPBoolean.new(prefix + "live", false)
+		eclass.addProperty(pLive)
+		
+		pPlayback = ECPBoolean.new(prefix + "playback", true)
+		eclass.addProperty(pPlayback)
+		
+		pRecord = ECPBoolean.new(prefix + "record", true)
+		eclass.addProperty(pRecord)
+		
+		eclass.addBehavior(this)
+	end
+	
+	
+	
+	public func ECPBoolean getLive()
+		return pLive
+	end
+	
+	public func ECPBoolean getPlayback()
+		return pPlayback
+	end
+	
+	public func ECPBoolean getRecord()
+		return pRecord
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

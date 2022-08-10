@@ -1,0 +1,147 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * ECBHideCondition panel.
+ */
+class WMPSOHideCondition extends WMPPanelSceneObject
+	class LiveChanged extends DefaultToggleModelListener
+		protected var WMPSOHideCondition pPanel
+		
+		public func new(WMPSOHideCondition panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorHideCondition().setLive(model.getToggled())
+		end
+	end
+	
+	class PlaybackChanged extends DefaultToggleModelListener
+		protected var WMPSOHideCondition pPanel
+		
+		public func new(WMPSOHideCondition panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorHideCondition().setPlayback(model.getToggled())
+		end
+	end
+	
+	class RecordChanged extends DefaultToggleModelListener
+		protected var WMPSOHideCondition pPanel
+		
+		public func new(WMPSOHideCondition panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorHideCondition().setRecord(model.getToggled())
+		end
+	end
+	
+	
+	
+	protected var ECBHideCondition.Instance pBehaviorHideCondition
+	protected var DefaultToggleModel pModelLive
+	protected var DefaultToggleModel pModelPlayback
+	protected var DefaultToggleModel pModelRecord
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelProject panelProject, ECBHideCondition.Instance behavior)\
+		super(panelProject, behavior, "", "Hide Condition", "WMPSOHideCondition", "ppob_hidecondition")
+		
+		pBehaviorHideCondition = behavior
+		
+		pModelLive = DefaultToggleModel.new(false)
+		pModelPlayback = DefaultToggleModel.new(true)
+		pModelRecord = DefaultToggleModel.new(true)
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+		
+		pModelLive.addListener(LiveChanged.new(this))
+		pModelPlayback.addListener(PlaybackChanged.new(this))
+		pModelRecord.addListener(RecordChanged.new(this))
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		pModelLive = null
+		pModelPlayback = null
+		pModelRecord = null
+		super.dispose()
+	end
+	
+	
+	
+	/** HideCondition behavior. */
+	public func ECBHideCondition.Instance getBehaviorHideCondition()
+		return pBehaviorHideCondition
+	end
+	
+	/** Update behavior. */
+	public func void updateBehavior()
+		pModelLive.setToggled(pBehaviorHideCondition.getLive())
+		pModelPlayback.setToggled(pBehaviorHideCondition.getPlayback())
+		pModelRecord.setToggled(pBehaviorHideCondition.getRecord())
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var CheckBox checkBox
+		
+		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		content.addWidget(Panel.new(GridLayout.new(3, 1), block Panel p
+			checkBox = CheckBox.new(pModelRecord, "Record")
+			checkBox.setToolTip("Hide while recording.")
+			p.addWidget(checkBox)
+			
+			checkBox = CheckBox.new(pModelPlayback, "Playback")
+			checkBox.setToolTip("Hide while playing back.")
+			p.addWidget(checkBox)
+			
+			checkBox = CheckBox.new(pModelLive, "Live")
+			checkBox.setToolTip("Hide during live editing (not recording nor playing back).")
+			p.addWidget(checkBox)
+		end))
+	end
+end

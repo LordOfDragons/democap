@@ -1,7 +1,7 @@
 /* 
  * Drag[en]gine Motion Capture
  *
- * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
  * 
  * This program is free software; you can redistribute it and/or 
  * modify it under the terms of the GNU General Public License 
@@ -30,55 +30,49 @@ pin Dragengine.Scenery
 
 
 /**
- * Dynamic prop element class.
+ * Grab object element class. Interactive element the user can place near objects to indicate
+ * a grab object location. The object is then parented to the object to affect it.
  */
-class DynamicPropClass extends BehaviorElementClass
+class GrabObjectClass extends BehaviorElementClass
 	public var ECBehaviorComponent component
 	public var ECBehaviorCollider collider
-	public var ECBTemporaryGhost temporaryGhost
+	public var ECBehaviorAnimated animated
 	public var ECBehaviorVRHandPointedAt vrHandPointedAt
 	public var ECBHighlightPointedAt highlightPointedAt
-	public var ECBehaviorAttachable attachable
 	public var ECBSceneObject sceneObject
 	public var ECBSelectable selectable
 	public var ECBShowInteractHandles showInteractHandles
 	public var ECBShowInteractionBubble showInteractionBubble
 	public var ECBHelpTopic helpTopic
-	public var ECBColliderPhysics colliderPhysics
-	public var ECBCapturedAnimations capturedAnimations
-	public var ECBRecordAnimation recordAnimation
-	public var ECBehaviorAttachments attachments
+	public var ECBHideCondition hideCondition
+	public var ECBehaviorGrabSpot grabSpot
+	public var ECBGrabAttach grabAttach
 	
 	
 	/** Create element class. */
-	public func new() this("DynamicProp")
+	public func new() this("GrabObject")
 	end
 	
 	public func new(String name) super(name)
+		setPersistable(false)
+		
 		component = ECBehaviorComponent.new(this, null)
-		component.setCommonPath("/content/models/unknownObject",\
-			"object.demodel", "object.deskin", "object.derig")
+		component.setCommonPath("/content/models/hands", "right.demodel", "hand.deskin", "right.derig")
+		component.getComponent().setLayerMask(LayerMask.newWith(GameApp.WorldLayerBit.remoteView))
 		
 		collider = ECBehaviorCollider.new(this, component)
+		collider.getCollider().getPhysicsType().setEnumeration(CollisionResponse.kinematic)
+		collider.getCollider().getLocalGravity().setVector(Vector.new())
 		
-		var LayerMask cfcategory = LayerMask.newWith(BaseGameApp.CollisionFilterBit.dynamic)
+		collider.getCollider().setCollisionFilter(CollisionFilter.new(\
+			LayerMask.newWith(GameApp.CollisionFilterBit.interaction)))
 		
-		var LayerMask cffilter = LayerMask.new()
-		cffilter.setBit(BaseGameApp.CollisionFilterBit.actor)
-		//cffilter.setBit(BaseGameApp.CollisionFilterBit.actorAI)
-		cffilter.setBit(BaseGameApp.CollisionFilterBit.dynamic)
-		cffilter.setBit(BaseGameApp.CollisionFilterBit.geometry)
-		cffilter.setBit(BaseGameApp.CollisionFilterBit.particle)
-		cffilter.setBit(GameApp.CollisionFilterBit.interaction)
-		
-		collider.getCollider().setCollisionFilter(CollisionFilter.new(cfcategory, cffilter))
-		
-		temporaryGhost = ECBTemporaryGhost.new(this, component)
+		animated = ECBehaviorAnimated.new(this, component)
+		animated.getAnimator().getAnimator().setPath("/content/models/hands/animator/grab_grip_right.deanimator")
+		animated.getAnimator().getPlaying().setValue(true)
 		
 		vrHandPointedAt = ECBehaviorVRHandPointedAt.new(this)
 		highlightPointedAt = ECBHighlightPointedAt.new(this, component, collider, vrHandPointedAt)
-		
-		attachable = ECBehaviorAttachable.new(this, collider)
 		
 		sceneObject = ECBSceneObject.new(this)
 		sceneObject.addActorOffset.setVector(Vector.new(0, 1, 0.5))
@@ -96,29 +90,29 @@ class DynamicPropClass extends BehaviorElementClass
 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateX")
 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateY")
 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleRotateZ")
+		showInteractHandles.getHandleSize().setValue(0.05)
 		
 		showInteractionBubble = ECBShowInteractionBubble.new(this)
-		showInteractionBubble.buttons.add("record")
-		showInteractionBubble.buttons.add("ghost")
 		showInteractionBubble.buttons.add("duplicate")
 		showInteractionBubble.buttons.add("remove")
 		
 		helpTopic = ECBHelpTopic.new(this)
-		helpTopic.getHelpTopic().setValue("ocls_dynamicprop")
+		helpTopic.getHelpTopic().setValue("ocls_grabobject")
 		
-		colliderPhysics = ECBColliderPhysics.new(this, collider)
+		hideCondition = ECBHideCondition.new(this)
 		
-		capturedAnimations = ECBCapturedAnimations.new(this, component, collider)
-		colliderPhysics.capturedAnimations = capturedAnimations
+		grabSpot = ECBehaviorGrabSpot.new(this, collider)
 		
-		recordAnimation = ECBRecordAnimation.new(this, component, capturedAnimations)
+		var ShapeList shape = ShapeList.new()
+		shape.addSphere(Vector.new(), 0.05)
+		grabSpot.getTouchCollider().getShape().setShapeList(shape)
 		
-		attachments = ECBehaviorAttachments.new(this)
+		grabAttach = ECBGrabAttach.new(this, grabSpot, collider, null, "")
 	end
 	
 	
 	/** Create copy of element class with new name. Required for XML subclassing. */
 	public func ElementClass duplicateNamed(String classname)
-		return DynamicPropClass.new(classname)
+		return GrabObjectClass.new(classname)
 	end
 end

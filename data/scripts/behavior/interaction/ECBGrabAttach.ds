@@ -39,11 +39,32 @@ pin Dragengine.Utils
 class ECBGrabAttach extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
+		class TemporaryDetachListener extends ECBShowInteractHandles.DefaultListener
+			protected var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void startInteract(ECBShowInteractHandles.Instance instance, ECBInteractHandle.Instance handle)
+				pInstance.temporaryDetach()
+			end
+			
+			public func void stopInteract(ECBShowInteractHandles.Instance instance, ECBInteractHandle.Instance handle)
+				pInstance.reattachTemporaryDetach()
+			end
+		end
+		
+		
 		protected var ECBGrabAttach pECBehavior
 		protected var ECBehaviorGrabSpot.Instance pGrabSpot
 		protected var ECBehaviorCollider.Instance pCollider
 		protected var ECBehaviorAttachable.Instance pAttachable
+		protected var ECBehaviorCollider.Instance pParentCollider
 		protected var String pBone
+		protected var bool pTemporaryDetached
+		protected var ECBShowInteractHandles.Instance pParentShowInteractHandles
+		protected var TemporaryDetachListener pTemporaryDetachListener
 		
 		
 		
@@ -68,6 +89,10 @@ class ECBGrabAttach extends DefaultECBehavior
 			pGrabSpot = null
 			pCollider = null
 			pAttachable = null
+			
+			pParentCollider = null
+			pParentShowInteractHandles = null
+			pTemporaryDetachListener = null
 			super.dispose()
 		end
 		
@@ -95,6 +120,19 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		
 		
+		/** Remove from game world. */
+		public func void removeFromGameWorld()
+			if pTemporaryDetachListener != null
+				pParentShowInteractHandles.removeListener(pTemporaryDetachListener)
+				pTemporaryDetachListener = null
+			end
+			pParentShowInteractHandles = null
+			pParentCollider = null
+			pTemporaryDetached = false
+		end
+		
+		
+		
 		/** Attach element to parent object. */
 		public func void attachToParent(Element parent)
 			if pCollider.getCollider() == null
@@ -108,14 +146,21 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		/** Attach to behavior element. */
 		protected func void attachToBehaviorElement(BehaviorElement parent)
-			var ECBehaviorCollider.Instance parentCollider = ECBehaviorCollider.getInstanceIn(parent)
-			if parentCollider == null or parentCollider.getCollider() == null
+			pParentCollider = ECBehaviorCollider.getInstanceIn(parent)
+			if pParentCollider == null or pParentCollider.getCollider() == null
 				return
  			end
  			
- 			attachToCollider(parentCollider.getCollider())
+ 			attachToCollider(pParentCollider.getCollider())
+ 			
 			getElement().setParent(parent)
 			addToAttachments(parent)
+			
+			pParentShowInteractHandles = ECBShowInteractHandles.getInstanceIn(parent)
+			if pParentShowInteractHandles != null
+				pTemporaryDetachListener = TemporaryDetachListener.new(this)
+				pParentShowInteractHandles.addListener(pTemporaryDetachListener)
+			end
 		end
 		
 		/** Attach to collider. */
@@ -131,11 +176,6 @@ class ECBGrabAttach extends DefaultECBehavior
 			end
 			
 			collider.attachStatic(thisCollider)
-			//collider.attachRelativeMovement(thisCollider)
-			
-			// NOTE to allow moving the object has to be detached while moving then reattached
-			//      attachRelativeMovement would allow to do this without needing to do this
-			//      manually but bone relative attachment is not yet supported
 		end
 		
 		/** Add as attachment to ECBehaviorAttachments if parent has this behavior. */
@@ -143,6 +183,28 @@ class ECBGrabAttach extends DefaultECBehavior
 			var ECBehaviorAttachments.Instance behavior = ECBehaviorAttachments.getInstanceIn(parent)
 			if behavior != null
 				behavior.addAttachment(getElement())
+			end
+		end
+		
+		
+		
+		/** Is temporarily detached. */
+		public func bool isTemporaryDetached()
+			return pTemporaryDetached
+		end
+		
+		/** Temporarily detach from parent. */
+		public func void temporaryDetach()
+			if not pTemporaryDetached and pParentCollider != null
+				pParentCollider.getCollider().detach(pCollider.getCollider())
+				pTemporaryDetached = true
+ 			end
+		end
+		
+		/** Reattach after temporary detach. */
+		public func void reattachTemporaryDetach()
+			if pTemporaryDetached and pParentCollider != null
+				attachToCollider(pParentCollider.getCollider())
 			end
 		end
 	end
@@ -163,10 +225,6 @@ class ECBGrabAttach extends DefaultECBehavior
 	/** Create behavior and add it to element class. */
 	public func new(BehaviorElementClass eclass, ECBehaviorGrabSpot grabSpot,\
 	ECBehaviorCollider collider, ECBehaviorAttachable attachable, String id) super(eclass, id)
-		if grabSpot == null
-			throw ENullPointer.new("grabSpot")
-		end
-		
 		pGrabSpot = grabSpot
 		pCollider = collider
 		pAttachable = attachable

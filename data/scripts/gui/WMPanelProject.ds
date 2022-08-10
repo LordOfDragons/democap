@@ -507,6 +507,71 @@ class WMPanelProject extends Panel
 		end
 	end
 	
+	class SelectParent extends DefaultListModelListener
+		protected var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+		end
+		
+		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+			selectionChanged(model)
+		end
+		
+		public func void selectionChanged(ListModel model)
+			var ECBSceneObject.Instance object = pPanel.getObject()
+			if object == null
+				return
+			end
+			
+			var ECBSceneObject.Instance parent
+			var int index = model.getSelected()
+			if index != -1
+				parent = model.getAt(index) cast ECBSceneObject.Instance
+			end
+			
+			if parent == object
+				WindowDialog.message(pPanel.getWindow(), "Set Parent", "Can not attach to yourself", null, null, null)
+				parent = null
+			end
+			
+			var BehaviorElement element = object.getElement()
+			var GameWorld gameWorld = element.getGameWorld()
+			gameWorld.removeElement(element)
+			element.getStub().setAttachTo(parent != null if parent.getElement().getID() else null)
+			gameWorld.addElement(element)
+		end
+	end
+	
+	class ParentPopupAction extends DefaultActionListener
+		private var WMPanelProject pPanel
+		
+		public func new(WMPanelProject panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			var Widget widget = event.getSource() cast Widget
+			var MenuPopup menu = MenuPopup.new()
+			var MenuItemCommand item
+			
+			item = MenuItemCommand.new("Attach Closest", BlockActionListener.new(block ActionEvent event
+				pPanel.objectAttachClosest()
+			end))
+			item.setToolTip("Attach to closest suitable object")
+			menu.addWidget(item)
+			
+			item = MenuItemCommand.new("Detach", BlockActionListener.new(block ActionEvent event
+				pPanel.objectDetach()
+			end))
+			item.setToolTip("Detach object")
+			menu.addWidget(item)
+			
+			pPanel.getDesktop().addWindow(menu)
+			menu.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
+		end
+	end
+	
 	/** Object position changed. */
 	class ObjectPositionChanged implements ActionListener
 		private var WMPanelProject pPanel
@@ -576,6 +641,7 @@ class WMPanelProject extends Panel
 	protected var DefaultListModel pModelSavedAnimations
 	protected var DefaultListModel pModelObjects
 	protected var DefaultTextModel pModelObjectClass
+	protected var DefaultListModel pModelParent
 	protected var EditVector pEditObjectPosition
 	protected var EditVector pEditObjectRotation
 	protected var ECBSceneObject.Instance pObject
@@ -609,6 +675,8 @@ class WMPanelProject extends Panel
 		
 		pModelObjectClass = DefaultTextModel.new("")
 		
+		pModelParent = DefaultListModel.new()
+		
 		runWhileBlockingLayout(block
 			createContent()
 		end)
@@ -620,6 +688,7 @@ class WMPanelProject extends Panel
 		
 		pModelScenes.addListener(SelectScene.new(this))
 		pModelObjects.addListener(SelectObject.new(this))
+		pModelParent.addListener(SelectParent.new(this))
 		
 		pScenesChangedListener = ScenesChangedListener.new(this)
 		pSceneChangedListener = SceneChangedListener.new(this)
@@ -659,6 +728,7 @@ class WMPanelProject extends Panel
 		pGameChangedListener = null
 		pListenLoadableWorlds = null
 		
+		pModelParent = null
 		pModelObjectClass = null
 		pModelObjects = null
 		pModelLoadableWorlds = null
@@ -1222,6 +1292,10 @@ class WMPanelProject extends Panel
 						elif each castable ECBTemporaryGhost.Instance
 							pPanelBehaviors.addWidget(WMPSOTemporaryGhost.new(this,\
 								each cast ECBTemporaryGhost.Instance))
+							
+						elif each castable ECBHideCondition.Instance
+							pPanelBehaviors.addWidget(WMPSOHideCondition.new(this,\
+								each cast ECBHideCondition.Instance))
 						end
 					end)
 				end)
@@ -1254,6 +1328,7 @@ class WMPanelProject extends Panel
 		end
 		
 		var ECBSceneObject.Instance selection = getTrackerSelectedObject()
+		var ECBSceneObject.Instance selectionParent = pModelParent.getSelectedElement() cast ECBSceneObject.Instance
 		
 		var Array content = Array.new()
 		
@@ -1272,12 +1347,20 @@ class WMPanelProject extends Panel
 		end)
 		
 		content.insert(0, null)
-		
 		pModelObjects.setContent(content)
+		
+		pModelParent.setContent(content.collect(block ECBSceneObject.Instance each
+			return each == null or ECBehaviorAttachments.getInstanceIn(each.getElement()) != null
+		end))
 		
 		pModelObjects.setSelectedElement(selection)
 		if pModelObjects.getSelected() != -1
 			pModelObjects.notifyElementChanged(pModelObjects.getSelected())
+		end
+		
+		pModelParent.setSelectedElement(selectionParent)
+		if pModelParent.getSelected() != -1
+			pModelParent.notifyElementChanged(pModelParent.getSelected())
 		end
 	end
 	
@@ -1289,12 +1372,25 @@ class WMPanelProject extends Panel
 			pEditObjectPosition.setVector(element.getPosition().toVector())
 			pEditObjectRotation.setVector(element.getOrientation().getEulerAngles())
 			
+			var UniqueID parentId = element.getStub().getAttachTo()
+			var Element parent
+			if parentId != null
+				parent = element.getGameWorld().getElementWithID(parentId)
+			end
+			if parent != null
+				pModelParent.setSelectedElement(ECBSceneObject.getInstanceIn(element cast BehaviorElement))
+				
+			else
+				pModelParent.setSelectedElement(null)
+			end
+			
 			pPanelBehaviors.forEachWidget(block WMPPanelSceneObject each
 				each.updateBehavior()
 			end)
 			
 		else
 			pModelObjectClass.setText("")
+			pModelParent.setSelectedElement(null)
 			pEditObjectPosition.setVector(Vector.new())
 			pEditObjectRotation.setVector(Vector.new())
 		end
@@ -1504,6 +1600,69 @@ class WMPanelProject extends Panel
 		FileSystem.browseOverlay(GameApp.getGameApp().getPathObjects())
 	end
 	
+	/** Attach to closest suitable object. */
+	protected class FindClosestParent extends ElementVisitor
+		public var ECBSceneObject.Instance bestParent
+		public var BehaviorElement object
+		public var DVector position
+		public var float bestDistance
+		
+		public func new(BehaviorElement object)
+			this.object = object
+			position = object.getPosition()
+		end
+		
+		public func void visitBehaviorElement(BehaviorElement element)
+			if element == object
+				return
+			end
+			
+			var ECBSceneObject.Instance sceneObject = ECBSceneObject.getInstanceIn(element)
+			var ECBehaviorAttachments.Instance attachments = ECBehaviorAttachments.getInstanceIn(element)
+			if sceneObject == null or attachments == null
+				return
+			end
+			
+			var float distance = (element.getPosition() - position).getLength()
+			if bestParent == null or distance < bestDistance
+				bestParent = sceneObject
+				bestDistance = distance
+			end
+		end
+	end
+	
+	public func void objectAttachClosest()
+		if pObject == null
+			return
+		end
+		
+		var BehaviorElement element = pObject.getElement()
+		var GameWorld gameWorld = element.getGameWorld()
+		var FindClosestParent visitor = FindClosestParent.new(pObject.getElement())
+		gameWorld.visitElements(visitor)
+		
+		gameWorld.removeElement(element)
+		element.getStub().setAttachTo(visitor.bestParent != null if visitor.bestParent.getElement().getID() else null)
+		gameWorld.addElement(element)
+	end
+	
+	/** Detach object. */
+	public func void objectDetach()
+		if pObject == null
+			return
+		end
+		
+		var BehaviorElement element = pObject.getElement()
+		if element.getStub().getAttachTo() == null
+			return
+		end
+		
+		var GameWorld gameWorld = element.getGameWorld()
+		gameWorld.removeElement(element)
+		element.getStub().setAttachTo(null)
+		gameWorld.addElement(element)
+	end
+	
 	/** Move object. */
 	public func void moveObject(DVector direction)
 		if pObject != null
@@ -1593,6 +1752,21 @@ class WMPanelProject extends Panel
 				p2.addWidget(ComboBox.new(pModelObjects, ObjectElementRenderer.new()))
 				
 				button = Button.new("...", ObjectPopupAction.new(this))
+				button.setDesignerSelector("Button.Popup")
+				p2.addWidget(button)
+			end))
+		end))
+		
+		addWidget(CollapsibleGroup.new("Parenting", "uipanelproject", \
+		CollapsibleGroup.persistModel(pPrefixUIOptions + "/ObjectParenting"),\
+		FormLayout.new(true, 5, 2), block Panel p
+			p.addWidget(Label.new("Parent:", "Label.FormCaption"))
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.first), block Panel p2
+				comboBox = ComboBox.new(pModelParent, ObjectElementRenderer.new())
+				comboBox.setToolTip("Parent object. Has no effect if no attach behavior is present.")
+				p2.addWidget(comboBox)
+				
+				button = Button.new("...", ParentPopupAction.new(this))
 				button.setDesignerSelector("Button.Popup")
 				p2.addWidget(button)
 			end))
