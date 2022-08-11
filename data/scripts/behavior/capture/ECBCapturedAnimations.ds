@@ -297,6 +297,25 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			end)
 		end
 		
+		/** Disable animators using active character animation. */
+		public func void disableActiveAnimationAnimators()
+			var CharacterAnimation canimation = pAnimations.getActive()
+			if canimation == null
+				return
+			end
+			
+			var Animation animation = canimation.getAnimation()
+			var Animation animationObject = canimation.getAnimationObject()
+			var Animation animatorAnimation
+			
+			pAnimatorInstances.forEach(block AnimatorInstance each
+				animatorAnimation = each.getAnimator().getAnimation()
+				if animatorAnimation.equals(animation) or animatorAnimation.equals(animationObject)
+					each.setBlendFactor(0)
+				end
+			end)
+		end
+		
 		/** Update controllers. */
 		public func void updateControllers()
 			var float time = GameApp.getGameApp().getPlaybackScene().getTime()
