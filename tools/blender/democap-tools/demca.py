@@ -79,6 +79,8 @@ class Demca:
 			if nodeObject:
 				self.pathObjectRig = nodeObject.find("pathRig", ns).text
 				self.pathObjectAnimation = nodeObject.find("pathAnimation", ns).text
+				self.playtime = float(nodeObject.find("playtime", ns).text)
+				self.frameRate = int(nodeObject.find("frameRate", ns).text)
 			
 			self.success = True
 		except Exception:
