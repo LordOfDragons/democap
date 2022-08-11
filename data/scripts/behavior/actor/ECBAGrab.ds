@@ -196,8 +196,38 @@ class ECBAGrab extends DefaultECBehavior
 				attachable.reattachWorld(pAttachSlot)
 				
 			elif parentCollider != null
-				// grab parent object
-				pAttachSlot.getSlotCollider().attachRelativeMovement(parentCollider.getCollider())
+				// get matching attach bone from character configuration if present
+				var MoCapActor actor = getElement() cast MoCapActor
+				var ECBCharacterConfiguration.Instance characterConfig = ECBCharacterConfiguration.getInstanceIn(actor)
+				var Collider attachingCollider = parentCollider.getCollider()
+				
+				if characterConfig == null
+					pAttachSlot.getSlotCollider().attachStatic(attachingCollider)
+					return true
+				end
+				
+				var Collider actorCollider = actor.getCollider().getCollider()
+				if not (actorCollider castable ColliderComponent)
+					actorCollider.attachStatic(attachingCollider)
+					return true
+				end
+				
+				var ColliderComponent actorCCollider = actorCollider cast ColliderComponent
+				var String attachBone
+				
+				if pGrabber.getECBehavior().getID().equals(BaseVRActorClass.idNonVRRightHand)
+					attachBone = characterConfig.getCharacter().getGrabBoneRight()
+					
+				else
+					attachBone = characterConfig.getCharacter().getGrabBoneLeft()
+				end
+				
+				if not attachBone.empty()
+					actorCCollider.attachBone(attachingCollider, attachBone)
+					
+				else
+					actorCCollider.attachStatic(attachingCollider)
+				end
 			end
 			
 			return true
@@ -308,7 +338,16 @@ class ECBAGrab extends DefaultECBehavior
 					
 				elif parentCollider != null
 					attachedCollider = parentCollider.getCollider()
-					slotCollider.detach(attachedCollider)
+					
+					var MoCapActor actor = getElement() cast MoCapActor
+					var ECBCharacterConfiguration.Instance characterConfig = ECBCharacterConfiguration.getInstanceIn(actor)
+					
+					if characterConfig != null
+						actor.getCollider().getCollider().detach(attachedCollider)
+						
+					else
+						slotCollider.detach(attachedCollider)
+					end
 				end
 				
 				pGrabAttach.getGrabSpot().release()
