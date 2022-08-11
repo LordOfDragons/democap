@@ -35,10 +35,12 @@ pin Dragengine.Utils
  */
 class ECBAPhysicsToucher extends DefaultECBehavior
 	class TouchObject
+		public var BehaviorElement element
 		public var Collider collider
 		public var int bone
 		
-		public func new(Collider collider, int bone)
+		public func new(BehaviorElement element, Collider collider, int bone)
+			this.element = element
 			this.collider = collider
 			this.bone = bone
 		end
@@ -84,6 +86,7 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 					return
 				end
 				
+				var BehaviorElement hitElement = hitOwner cast BehaviorElement
 				var int index = info.getBone()
 				if index != -1
 					var Rig rig = (collider cast ColliderRig).getRig()
@@ -91,10 +94,10 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 						return
 					end
 					
-					pObjects.add(TouchObject.new(collider, index))
+					pObjects.add(TouchObject.new(hitElement, collider, index))
 					
 				else
-					pObjects.add(TouchObject.new(collider, -1))
+					pObjects.add(TouchObject.new(hitElement, collider, -1))
 				end
 			end
 			

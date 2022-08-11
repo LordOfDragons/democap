@@ -291,14 +291,11 @@ class ECBCapturedAnimations extends DefaultECBehavior
 				createResetAnimator()
 			end
 			
-			pPlaybackControllers.forEach(block AnimatorController each
-				each.setRange(0, pPlaytime)
-				each.setValue(0)
-			end)
+			updateControllers()
 		end
 		
-		/** Disable animators using active character animation. */
-		public func void disableActiveAnimationAnimators()
+		/** Disable active character animation playback. */
+		public func void disableActiveAnimationPlayback()
 			var CharacterAnimation canimation = pAnimations.getActive()
 			if canimation == null
 				return
@@ -306,14 +303,16 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			
 			var Animation animation = canimation.getAnimation()
 			var Animation animationObject = canimation.getAnimationObject()
-			var Animation animatorAnimation
+			var Animation amrAnim
 			
 			pAnimatorInstances.forEach(block AnimatorInstance each
-				animatorAnimation = each.getAnimator().getAnimation()
-				if animatorAnimation.equals(animation) or animatorAnimation.equals(animationObject)
+				amrAnim = each.getAnimator().getAnimation()
+				if amrAnim != null and (amrAnim.equals(animation) or amrAnim.equals(animationObject))
 					each.setBlendFactor(0)
 				end
 			end)
+			
+			pHasObjectAnimation = false
 		end
 		
 		/** Update controllers. */
@@ -449,16 +448,19 @@ class ECBCapturedAnimations extends DefaultECBehavior
 					animator.addBone(animation.getBoneName(i))
 				end
 				
+				var String move = animation.getMoveName(0)
+				var float playtime = animation.getMovePlaytime(move)
+				
 				animator.setControllerCount(1)
 				var AnimatorController controller = animator.getControllerAt(0)
 				controller.setName("playback")
+				controller.setRange(0, playtime)
 				controller.setClamp(true)
 				
 				animator.addLink(0)
 				animator.setLinkCurve(0, CurveBezier.newDefaultLinear())
 				
 				var ARAnimation rule = ARAnimation.new()
-				var String move = animation.getMoveName(0)
 				rule.setMoveName(move)
 				rule.targetAddLink(ARAnimationTarget.moveTime, 0)
 				for i = 0 to boneCount
@@ -470,7 +472,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 				pAnimatorInstances.add(ainst)
 				pPlaybackControllers.add(ainst.getControllerAt(0))
 				
-				pPlaytime = DEMath.max(pPlaytime, animation.getMovePlaytime(move))
+				pPlaytime = DEMath.max(pPlaytime, playtime)
 			end
 			
 			animation = characterAnimation.getAnimationObject()
@@ -487,16 +489,19 @@ class ECBCapturedAnimations extends DefaultECBehavior
 					animator.addBone(animation.getBoneName(i))
 				end
 				
+				var String move = animation.getMoveName(0)
+				var float playtime = animation.getMovePlaytime(move)
+				
 				animator.setControllerCount(1)
 				var AnimatorController controller = animator.getControllerAt(0)
 				controller.setName("playback")
+				controller.setRange(0, playtime)
 				controller.setClamp(true)
 				
 				animator.addLink(0)
 				animator.setLinkCurve(0, CurveBezier.newDefaultLinear())
 				
 				var ARAnimation rule = ARAnimation.new()
-				var String move = animation.getMoveName(0)
 				rule.setMoveName(move)
 				rule.targetAddLink(ARAnimationTarget.moveTime, 0)
 				for i = 0 to boneCount
@@ -508,7 +513,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 				pAnimatorInstances.add(ainst)
 				pPlaybackControllers.add(ainst.getControllerAt(0))
 				
-				pPlaytime = DEMath.max(pPlaytime, animation.getMovePlaytime(move))
+				pPlaytime = DEMath.max(pPlaytime, playtime)
 				pHasObjectAnimation = true
 			end
 		end

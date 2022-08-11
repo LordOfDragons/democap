@@ -194,12 +194,15 @@ class ECBAGrab extends DefaultECBehavior
 				// TODO: use pPhysicsToucher attach bone and position
 				
 				attachable.reattachWorld(pAttachSlot)
+				breakPlayback(attachable.getElement())
 				
 			elif parentCollider != null
 				// get matching attach bone from character configuration if present
 				var MoCapActor actor = getElement() cast MoCapActor
 				var ECBCharacterConfiguration.Instance characterConfig = ECBCharacterConfiguration.getInstanceIn(actor)
 				var Collider attachingCollider = parentCollider.getCollider()
+				
+				breakPlayback(parentCollider.getElement())
 				
 				if characterConfig == null
 					pAttachSlot.getSlotCollider().attachStatic(attachingCollider)
@@ -314,6 +317,7 @@ class ECBAGrab extends DefaultECBehavior
 			
 			pPhysicsGrabCollider.addConstraint(pPhysicsGrabConstraint)
 			
+			breakPlayback(touchObject.element)
 			return true
 		end
 		
@@ -358,6 +362,18 @@ class ECBAGrab extends DefaultECBehavior
 					attachedCollider.setLinearVelocity(slotCollider.getLinearVelocity())
 					attachedCollider.setAngularVelocity(slotCollider.getAngularVelocity())
 				end
+			end
+		end
+		
+		/** Break playback for element if recording. */
+		protected func void breakPlayback(BehaviorElement element)
+			if not GameApp.getGameApp().getRecordScene().isRecording()
+				return
+			end
+			
+			var ECBCapturedAnimations.Instance capturedAnimations = ECBCapturedAnimations.getInstanceIn(element)
+			if capturedAnimations != null
+				capturedAnimations.disableActiveAnimationPlayback()
 			end
 		end
 	end
