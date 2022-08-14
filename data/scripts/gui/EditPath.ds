@@ -43,8 +43,16 @@ class EditPath extends Panel
 				filename = pEditPath.getStartDirectory()
 			end
 			
-			DialogFileSelect.showOpenFile(pEditPath.getWindow(), "Select File",\
-				pEditPath.getResourceType(), filename, this)
+			select pEditPath.getType()
+			case FileType.animator
+				DialogFileSelect.showOpenFile(pEditPath.getWindow(), "Select File",\
+					Array.newWith(FileExtension.new("Animator",\
+						Array.newWith("*.deanimator"), ".deanimator")), filename, this)
+				
+			else
+				DialogFileSelect.showOpenFile(pEditPath.getWindow(), "Select File",\
+					pEditPath.getType() cast ResourceLoaderType, filename, this)
+			end
 		end
 		
 		public func void onResult(Object result)
@@ -59,15 +67,21 @@ class EditPath extends Panel
 	
 	
 	
+	enum FileType
+		animator
+	end
+	
+	
+	
 	private var TextField pEditPath
 	private var Button pButton
-	private var ResourceLoaderType pResourceType
+	private var Enumeration pType
 	private var String pStartDirectory
 	
 	
 	
 	/** Create widget. */
-	public func new(TextModel model, ResourceLoaderType type, String startDirectory)
+	public func new(TextModel model, Enumeration type, String startDirectory)
 		if model == null
 			throw ENullPointer.new("model")
 		end
@@ -78,7 +92,7 @@ class EditPath extends Panel
 			throw ENullPointer.new("startDirectory")
 		end
 		
-		pResourceType = type
+		pType = type
 		pStartDirectory = startDirectory
 		
 		runWhileBlockingLayout(block
@@ -110,17 +124,17 @@ class EditPath extends Panel
 		pEditPath.fireAction(0)
 	end
 	
-	/** Resource type. */
-	public func ResourceLoaderType getResourceType()
-		return pResourceType
+	/** Type. */
+	public func Enumeration getType()
+		return pType
 	end
 	
-	/** Set resource type. */
-	public func void setResourceType(ResourceLoaderType type)
+	/** Set type. */
+	public func void setType(Enumeration type)
 		if type == null
 			throw ENullPointer.new("type")
 		end
-		pResourceType = type
+		pType = type
 	end
 	
 	/** Start directory. */

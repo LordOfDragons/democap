@@ -1,0 +1,146 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Actors
+pin Democap.Actions
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * ECBehaviorAnimated panel.
+ */
+class WMPSOAnimated extends WMPPanelSceneObject
+	protected var ECBehaviorAnimated.Instance pBehaviorAnimated
+	protected var DefaultTextModel pModelPathAnimator
+	protected var DefaultListModel pModelPlaybackControllerList
+	protected var DefaultTextModel pModelPlaybackControllerText
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelProject panelProject, ECBehaviorAnimated.Instance behavior)\
+		super(panelProject, behavior, behavior.getECBehavior().getID(),\
+			"Animated", "WMPSOAnimated", "ppob_animated")
+		
+		pBehaviorAnimated = behavior
+		
+		pModelPathAnimator = DefaultTextModel.new("")
+		
+		pModelPlaybackControllerList = DefaultListModel.new()
+		pModelPlaybackControllerList.setAutoSelect(false)
+		
+		pModelPlaybackControllerText = DefaultTextModel.new("")
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		pModelPathAnimator = null
+		pModelPlaybackControllerList = null
+		pModelPlaybackControllerText = null
+		super.dispose()
+	end
+	
+	/** Update behavior. */
+	public func void updateBehavior()
+		var ECBehaviorAnimated behavior = pBehaviorAnimated.getECBehavior()
+		var StubElement stub = pBehaviorAnimated.getElement().getStub()
+		var ECComposeAnimator animator = behavior.getAnimator()
+		
+		pModelPathAnimator.setText(stubParamPath(stub, animator.getAnimator()))
+		
+		updatePlaybackControllerList()
+		pModelPlaybackControllerText.setText(stubParamValue(stub, animator.getPlaybackController()))
+	end
+	
+	
+	
+	/** Update playback controller list. */
+	protected func void updatePlaybackControllerList()
+		var Array names = Array.new()
+		
+		if pBehaviorAnimated.getAnimatorInstance() != null
+			var Animator animator = pBehaviorAnimated.getAnimatorInstance().getAnimator()
+			if animator != null
+				var int i, count = animator.getControllerCount()
+				for i = 0 to count
+					names.add(animator.getControllerAt(i).getName())
+				end
+			end
+		end
+		
+		pModelPlaybackControllerList.setContent(names)
+	end
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var ECBehaviorAnimated behavior = pBehaviorAnimated.getECBehavior()
+		var StubElement stub = pBehaviorAnimated.getElement().getStub()
+		var ECComposeAnimator animator = behavior.getAnimator()
+		var String startDirectory = GameApp.getGameApp().getPathObjects()
+		var DefaultComboBoxEditor editor
+		var EditPath editPath
+		var ComboBox comboBox
+		
+		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			// path animator resource
+			p.addWidget(Label.new("Animator:", "Label.FormCaption"))
+			
+			editPath = EditPath.new(pModelPathAnimator, EditPath.FileType.animator, startDirectory)
+			editPath.setToolTip("Animator to use")
+			p.addWidget(editPath)
+			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
+				if setStubParamValue(stub, animator.getAnimator().getName(), pModelPathAnimator.getText())
+					TimerBlock.new(0.1, false, block
+						updatePlaybackControllerList()
+					end)
+				end
+			end))
+			
+			// playback controller name
+			p.addWidget(Label.new("Controller:", "Label.FormCaption"))
+			
+			editor = DefaultComboBoxEditor.new(pModelPlaybackControllerText)
+			comboBox = ComboBox.new(pModelPlaybackControllerList, editor)
+			comboBox.setToolTip("Controller to use as playback controller increment with elapsed time")
+			p.addWidget(comboBox)
+			editor.addTextActionListener(BlockActionListener.new(block ActionEvent event
+				setStubParamValue(stub, animator.getPlaybackController().getName(), pModelPlaybackControllerText.getText())
+			end))
+		end))
+	end
+end

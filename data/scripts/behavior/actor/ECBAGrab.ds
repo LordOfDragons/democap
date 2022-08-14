@@ -121,7 +121,7 @@ class ECBAGrab extends DefaultECBehavior
 		
 		/** Stop grabbing. */
 		public func void ungrab()
-			if pPhysicsGrabConstraint != null or pGrabAttach != null
+			if pGrabAttach != null or pPhysicsGrabConstraint != null
 				ungrabGrabAttach()
 			end
 		end
@@ -177,8 +177,6 @@ class ECBAGrab extends DefaultECBehavior
 			var ECBehaviorAttachable.Instance attachable = grabAttach.getAttachable()
 			var ECBehaviorCollider.Instance parentCollider = grabAttach.getParentCollider()
 			
-			pGrabber.regrab(grabAttach.getGrabSpot())
-			
 			if attachable != null
 				// grab using predefined position
 				/*
@@ -193,14 +191,32 @@ class ECBAGrab extends DefaultECBehavior
 				
 				// TODO: use pPhysicsToucher attach bone and position
 				
+				// physics simulated objects have to be physically attached
+				var Collider attachingCollider = attachable.getCollider().getCollider()
+				if attachingCollider.getResponseType() == CollisionResponse.dynamic
+					return tryGrabAttach(ECBAPhysicsToucher.TouchObject.new(\
+						parentCollider.getElement(), attachingCollider, -1))
+				end
+				
+				pGrabber.regrab(grabAttach.getGrabSpot())
+				
 				attachable.reattachWorld(pAttachSlot)
 				breakPlayback(attachable.getElement())
 				
 			elif parentCollider != null
+				var Collider attachingCollider = parentCollider.getCollider()
+				
+				// physics simulated objects have to be physically attached
+				if attachingCollider.getResponseType() == CollisionResponse.dynamic
+					return tryGrabAttach(ECBAPhysicsToucher.TouchObject.new(\
+						parentCollider.getElement(), attachingCollider, -1))
+				end
+				
+				pGrabber.regrab(grabAttach.getGrabSpot())
+				
 				// get matching attach bone from character configuration if present
 				var MoCapActor actor = getElement() cast MoCapActor
 				var ECBCharacterConfiguration.Instance characterConfig = ECBCharacterConfiguration.getInstanceIn(actor)
-				var Collider attachingCollider = parentCollider.getCollider()
 				
 				breakPlayback(parentCollider.getElement())
 				
@@ -322,6 +338,8 @@ class ECBAGrab extends DefaultECBehavior
 		end
 		
 		protected func void ungrabGrabAttach()
+			var bool hasPhysicsConstraint
+			
 			if pPhysicsGrabConstraint != null
 				if pPhysicsGrabCollider.hasConstraint(pPhysicsGrabConstraint)
 					pPhysicsGrabCollider.removeConstraint(pPhysicsGrabConstraint)
@@ -329,8 +347,17 @@ class ECBAGrab extends DefaultECBehavior
 				
 				pPhysicsGrabConstraint = null
 				pPhysicsGrabCollider = null
+				hasPhysicsConstraint = true
+			end
+			
+			if pGrabAttach != null
+				pGrabAttach.getGrabSpot().release()
 				
-			elif pGrabAttach != null
+				if hasPhysicsConstraint
+					pGrabAttach = null
+					return
+				end
+				
 				var ECBehaviorAttachable.Instance attachable = pGrabAttach.getAttachable()
 				var ECBehaviorCollider.Instance parentCollider = pGrabAttach.getParentCollider()
 				var Collider slotCollider = pAttachSlot.getSlotCollider()
@@ -354,14 +381,9 @@ class ECBAGrab extends DefaultECBehavior
 					end
 				end
 				
-				pGrabAttach.getGrabSpot().release()
+				attachedCollider.setLinearVelocity(slotCollider.getLinearVelocity())
+				attachedCollider.setAngularVelocity(slotCollider.getAngularVelocity())
 				pGrabAttach = null
-				
-				// apply velocities to object if dynamic
-				if attachedCollider.getResponseType() == CollisionResponse.dynamic
-					attachedCollider.setLinearVelocity(slotCollider.getLinearVelocity())
-					attachedCollider.setAngularVelocity(slotCollider.getAngularVelocity())
-				end
 			end
 		end
 		

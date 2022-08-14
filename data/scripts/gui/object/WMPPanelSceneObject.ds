@@ -111,6 +111,10 @@ class WMPPanelSceneObject extends CollapsibleGroup
 		return value
 	end
 	
+	protected func String stubParamValue(StubElement stub, ECPString param)
+		return stubParamValue(stub, param.getName(), param.getValue())
+	end
+	
 	protected func String stubParamPath(StubElement stub, ECPString param)
 		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getValue())
 	end
@@ -129,6 +133,24 @@ class WMPPanelSceneObject extends CollapsibleGroup
 	
 	protected func String stubParamPath(StubElement stub, ECPOcclusionMesh param)
 		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
+	end
+	
+	protected func String stubParamPath(StubElement stub, ECPAnimator param)
+		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
+	end
+	
+	/**
+	 * Set string stub parameter and call notifyStubChanged if value is different than
+	 * the stored value. Returns true if value changed or false otherwise.
+	 */
+	protected func bool setStubParamValue(StubElement stub, String name, String value)
+		if stubParamValue(stub, name, value).equals(value)
+			return false
+		end
+		
+		stub.setPropertyValueFor(name, value)
+		notifyStubChanged()
+		return true
 	end
 	
 	/** Notify element stub changed. */
