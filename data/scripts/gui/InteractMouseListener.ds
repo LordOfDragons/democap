@@ -223,9 +223,11 @@ class InteractMouseListener extends DefaultMouseListener
 	public func void onMouseMove(MouseEvent event)
 		var bool showVRCamera = SessionSettings.get().getModelShowVRCamera().getToggled()
 		var GameApp app = GameApp.getGameApp()
+		var WindowGameWorld window = app.getWindowGameWorld()
+		var CameraDirector director = window.getCameraDirector()
 		
 		if pHandle != null
-			if showVRCamera
+			if showVRCamera or director == null
 				pHandle.stopInteract()
 				if pShowHandles != null
 					pShowHandles.notifyStopInteract(pHandle)
@@ -233,17 +235,6 @@ class InteractMouseListener extends DefaultMouseListener
 				pHandle = null
 				pShowHandles = null
 				return
-			end
-			
-			var WindowGameWorld window = app.getWindowGameWorld()
-			var CameraDirector director = window.getCameraDirector()
-			if director == null
-				pHandle.stopInteract()
-				if pShowHandles != null
-					pShowHandles.notifyStopInteract(pHandle)
-				end
-				pHandle = null
-				pShowHandles = null
 			end
 			
 			var Camera camera = director.getCamera()
@@ -251,20 +242,23 @@ class InteractMouseListener extends DefaultMouseListener
 				camera.getPosition(), window.backProject(event).normalize())
 			
 		elif pDragging
-			if showVRCamera
+			if showVRCamera or director == null
 				onButtonRelease(event)
 				return
 			end
 			
 			if pControlDesktop != null
-				var WindowGameWorld window = app.getWindowGameWorld()
-				var Camera camera = window.getCameraDirector().getCamera()
+				var Camera camera = director.getCamera()
 				pControlDesktop.moveMouseRay(camera.getPosition(), DVector.new(window.backProject(event)))
 			end
 			
 		elif not showVRCamera
-			var WindowGameWorld window = app.getWindowGameWorld()
-			var Camera camera = window.getCameraDirector().getCamera()
+			if director == null
+				pControlDesktop = null
+				return
+			end
+			
+			var Camera camera = director.getCamera()
 			var DVector rayOrigin = camera.getPosition()
 			var Vector rayNormDir = window.backProject(event)
 			var Vector rayDirection = rayNormDir * pRayDistance
