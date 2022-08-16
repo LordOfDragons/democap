@@ -659,6 +659,7 @@ class WMPanelProject extends Panel
 	protected var ListenLoadableWorlds pListenLoadableWorlds
 	protected var GameChangedListener pGameChangedListener
 	protected var SelectedSelectableObjectChanged pSelectedSelectableObjectChanged
+	protected var CollapsibleGroup pPanelParenting
 	protected var Panel pPanelBehaviors
 	
 	
@@ -1256,9 +1257,13 @@ class WMPanelProject extends Panel
 			GameApp.getGameApp().getSelectionTracker().setElement(selectable)
 		end
 		
+		var bool showParenting = true
+		
 		if object != null
 			var bool noBehaviors = object.getECBehavior().editPanelNoBehaviors.getValue()
 			var bool noPhysics = object.getECBehavior().editPanelNoPhysics.getValue()
+			
+			showParenting &= not noBehaviors
 			
 			if not noBehaviors
 				pPanelBehaviors.runWhileBlockingLayout(block
@@ -1311,6 +1316,8 @@ class WMPanelProject extends Panel
 			
 			pPanelBehaviors.doLayoutIfBlocked()
 		end
+		
+		pPanelParenting.setVisible(showParenting)
 		
 		updateObject()
 	end
@@ -1825,7 +1832,7 @@ class WMPanelProject extends Panel
 			end))
 		end))
 		
-		addWidget(CollapsibleGroup.new("Parenting", "uipanelproject#parenting", \
+		pPanelParenting = CollapsibleGroup.new("Parenting", "uipanelproject#parenting", \
 		CollapsibleGroup.persistModel(pPrefixUIOptions + "/ObjectParenting"),\
 		FormLayout.new(true, 5, 2), block Panel p
 			p.addWidget(Label.new("Parent:", "Label.FormCaption"))
@@ -1838,7 +1845,8 @@ class WMPanelProject extends Panel
 				button.setDesignerSelector("Button.Popup")
 				p2.addWidget(button)
 			end))
-		end))
+		end)
+		addWidget(pPanelParenting)
 		
 		addWidget(CollapsibleGroup.new("Geometry", "uipanelproject#geometry", \
 		CollapsibleGroup.persistModel(pPrefixUIOptions + "/ObjectGeometry"),\
