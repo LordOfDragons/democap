@@ -96,6 +96,7 @@ class GameApp extends BaseGameApp
 	private var Array pListeners
 	
 	private var bool pGameArgsEnableVR
+	private var String pGameArgsLoadProject
 	
 	private var DNServer pServer
 	
@@ -516,13 +517,26 @@ class GameApp extends BaseGameApp
 		worldRenderer.addMouseListener(InteractMouseListener.new())
 		
 		// load auto save project if present
-		var String pathAutoSaveProject = File.new(pPathProjects, "autosave.demcp").getPath()
-		if FileSystem.existsFile(pathAutoSaveProject)
+		if pGameArgsLoadProject != null
 			try
-				setProject(Project.load(pathAutoSaveProject))
+				setProject(Project.load(pGameArgsLoadProject))
 				
 			catch Exception e
-				getConsole().addError("Failed loading auto save project", e)
+				getConsole().addError("open project failed: " + pGameArgsLoadProject, e)
+				WindowDialog.message(getWindowGameWorld(), "Open Project",\
+					"Failed opening project\n" + pGameArgsLoadProject + "\n" + e, null, null, null)
+			end
+		end
+		
+		var String pathAutoSaveProject = File.new(pPathProjects, "autosave.demcp").getPath()
+		if pProject == null
+			if FileSystem.existsFile(pathAutoSaveProject)
+				try
+					setProject(Project.load(pathAutoSaveProject))
+					
+				catch Exception e
+					getConsole().addError("Failed loading auto save project", e)
+				end
 			end
 		end
 		
@@ -773,6 +787,9 @@ class GameApp extends BaseGameApp
 			
 			if arg.equals("--enable-vr")
 				pGameArgsEnableVR = true
+				
+			elif pGameArgsLoadProject == null
+				pGameArgsLoadProject = arg
 				
 			else
 				getConsole().addMessage("Unknown game argument '" + arg + "'")
