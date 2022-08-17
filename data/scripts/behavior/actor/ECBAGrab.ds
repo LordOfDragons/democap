@@ -37,13 +37,31 @@ pin Dragengine.Utils
 class ECBAGrab extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
+		public class GrabConstraint
+			public var ColliderConstraint constraint
+			public var String handBoneName
+			public var int handBoneIndex
+			public var Collider grabbedCollider
+			public var ColliderRig grabbedColliderRig
+			public var int grabbedBoneIndex
+			public var DMatrix grabbedMatrix
+			public var bool useImpulse
+			
+			public func new()
+				handBoneName = ""
+				handBoneIndex = -1
+				grabbedBoneIndex = -1
+				useImpulse = false
+				grabbedMatrix = DMatrix.new()
+			end
+		end
+		
 		private var ECBAGrab pECBehavior
 		private var ECBehaviorGrabber.Instance pGrabber
 		private var ECBehaviorAttachSlot.Instance pAttachSlot
 		private var ECBAPhysicsToucher.Instance pPhysicsToucher
 		private var ECBGrabAttach.Instance pGrabAttach
-		private var Collider pPhysicsGrabCollider
-		private var ColliderConstraint pPhysicsGrabConstraint
+		private var GrabConstraint pPhysicsGrabConstraint
 		private var bool pTriggerPulled
 		
 		
@@ -59,7 +77,6 @@ class ECBAGrab extends DefaultECBehavior
 		/** Dispose of behavior instance. */
 		public func void dispose()
 			pPhysicsGrabConstraint = null
-			pPhysicsGrabCollider = null
 			pGrabber = null
 			pPhysicsToucher = null
 			pAttachSlot = null
@@ -85,7 +102,7 @@ class ECBAGrab extends DefaultECBehavior
 			return pGrabAttach
 		end
 		
-		public func ColliderConstraint getPhysicsGrabConstraint()
+		public func GrabConstraint getPhysicsGrabConstraint()
 			return pPhysicsGrabConstraint
 		end
 		
@@ -173,6 +190,13 @@ class ECBAGrab extends DefaultECBehavior
 		
 		
 		
+		/** Post think. */
+		public func void postThink(float elapsed)
+			applyGrabImpulse(elapsed)
+		end
+		
+		
+		
 		protected func bool tryGrabAttach(ECBGrabAttach.Instance grabAttach)
 			var ECBehaviorAttachable.Instance attachable = grabAttach.getAttachable()
 			var ECBehaviorCollider.Instance parentCollider = grabAttach.getParentCollider()
@@ -194,8 +218,7 @@ class ECBAGrab extends DefaultECBehavior
 				// physics simulated objects have to be physically attached
 				var Collider attachingCollider = attachable.getCollider().getCollider()
 				if attachingCollider.getResponseType() == CollisionResponse.dynamic
-					return tryGrabAttach(ECBAPhysicsToucher.TouchObject.new(\
-						parentCollider.getElement(), attachingCollider, -1))
+					return tryGrabAttachDynamic(grabAttach)
 				end
 				
 				pGrabber.regrab(grabAttach.getGrabSpot())
@@ -208,8 +231,7 @@ class ECBAGrab extends DefaultECBehavior
 				
 				// physics simulated objects have to be physically attached
 				if attachingCollider.getResponseType() == CollisionResponse.dynamic
-					return tryGrabAttach(ECBAPhysicsToucher.TouchObject.new(\
-						parentCollider.getElement(), attachingCollider, -1))
+					return tryGrabAttachDynamic(grabAttach)
 				end
 				
 				pGrabber.regrab(grabAttach.getGrabSpot())
@@ -252,7 +274,54 @@ class ECBAGrab extends DefaultECBehavior
 			return true
 		end
 		
+		protected func bool tryGrabAttachDynamic(ECBGrabAttach.Instance grabAttach)
+			var ECBehaviorAttachable.Instance attachable = grabAttach.getAttachable()
+			var ECBehaviorCollider.Instance parentCollider = grabAttach.getParentCollider()
+			var BehaviorElement attachingElement
+			var Collider attachingCollider
+			
+			if attachable != null
+				attachingCollider = attachable.getCollider().getCollider()
+				attachingElement = attachable.getElement()
+				
+			elif parentCollider != null
+				attachingCollider = parentCollider.getCollider()
+				attachingElement = parentCollider.getElement()
+			end
+			
+			var int bone = -1
+			if not grabAttach.getBone().empty() and attachingCollider castable ColliderRig
+				bone = (attachingCollider cast ColliderRig).getRig().indexOfBoneNamed(grabAttach.getBone())
+			end
+			
+			pPhysicsGrabConstraint = createGrabConstraint(\
+				ECBAPhysicsToucher.TouchObject.new(attachingElement, attachingCollider, bone))
+			if pPhysicsGrabConstraint == null
+				return false
+			end
+			
+			pPhysicsGrabConstraint.useImpulse = grabAttach.getUseImpulse()
+			if not pPhysicsGrabConstraint.useImpulse
+				pPhysicsGrabConstraint.grabbedCollider.addConstraint(pPhysicsGrabConstraint.constraint)
+			end
+			breakPlayback(attachingElement)
+			
+			setRequiresThink(pPhysicsGrabConstraint.useImpulse)
+			return true
+		end
+		
 		protected func bool tryGrabAttach(ECBAPhysicsToucher.TouchObject touchObject)
+			pPhysicsGrabConstraint = createGrabConstraint(touchObject)
+			if pPhysicsGrabConstraint == null
+				return false
+			end
+			
+			pPhysicsGrabConstraint.grabbedCollider.addConstraint(pPhysicsGrabConstraint.constraint)
+			breakPlayback(touchObject.element)
+			return true
+		end
+		
+		protected func GrabConstraint createGrabConstraint(ECBAPhysicsToucher.TouchObject touchObject)
 			var MoCapActor actor = getElement() cast MoCapActor
 			var Component component = actor.getComponent().getComponent()
 			var Collider collider = actor.getCollider().getCollider()
@@ -301,7 +370,7 @@ class ECBAGrab extends DefaultECBehavior
 			// note: later on add a fallback mode which uses a world constraint. this requires
 			//       updating the constraint position properly every think()
 			if constraintBone == null
-				return false
+				return null
 			end
 			
 			//var Collider handCollider = pPhysicsToucher.getVRHand().getCollider()
@@ -310,43 +379,46 @@ class ECBAGrab extends DefaultECBehavior
 			
 			var Matrix coordSysObj
 			
-			pPhysicsGrabCollider = touchObject.collider
-			
-			pPhysicsGrabConstraint = ColliderConstraint.new()
-			pPhysicsGrabConstraint.setTargetCollider(collider)
-			pPhysicsGrabConstraint.setTargetBone(constraintBone)
+			var ColliderRig touchColliderRig
+			var ColliderConstraint constraint = ColliderConstraint.new()
+			constraint.setTargetCollider(collider)
+			constraint.setTargetBone(constraintBone)
 			
 			if touchObject.bone != -1
-				pPhysicsGrabConstraint.setBone(touchObject.bone)
+				constraint.setBone(touchObject.bone)
 				
-				var ColliderRig pcrig = pPhysicsGrabCollider cast ColliderRig
-				coordSysObj = (attachMatrix * pcrig.boneGetInverseMatrix(touchObject.bone)).toMatrix()
+				touchColliderRig = touchObject.collider cast ColliderRig
+				coordSysObj = (attachMatrix * touchColliderRig.boneGetInverseMatrix(touchObject.bone)).toMatrix()
 				
 			else
-				coordSysObj = (attachMatrix * pPhysicsGrabCollider.getInverseMatrix()).toMatrix()
+				coordSysObj = (attachMatrix * touchObject.collider.getInverseMatrix()).toMatrix()
 			end
 			
-			pPhysicsGrabConstraint.setPosition1(coordSysObj.getPosition())
-			pPhysicsGrabConstraint.setOrientation1(coordSysObj.toQuaternion())
+			constraint.setPosition1(coordSysObj.getPosition())
+			constraint.setOrientation1(coordSysObj.toQuaternion())
 			
-			pPhysicsGrabConstraint.lockAll()
+			constraint.lockAll()
 			
-			pPhysicsGrabCollider.addConstraint(pPhysicsGrabConstraint)
-			
-			breakPlayback(touchObject.element)
-			return true
+			var GrabConstraint grabConstraint = GrabConstraint.new()
+			grabConstraint.constraint = constraint
+			grabConstraint.handBoneName = attachBone
+			grabConstraint.handBoneIndex = constraintBoneIndex
+			grabConstraint.grabbedCollider = touchObject.collider
+			grabConstraint.grabbedColliderRig = touchColliderRig
+			grabConstraint.grabbedBoneIndex = touchObject.bone
+			grabConstraint.grabbedMatrix = coordSysObj.toDMatrix()
+			return grabConstraint
 		end
 		
 		protected func void ungrabGrabAttach()
 			var bool hasPhysicsConstraint
 			
 			if pPhysicsGrabConstraint != null
-				if pPhysicsGrabCollider.hasConstraint(pPhysicsGrabConstraint)
-					pPhysicsGrabCollider.removeConstraint(pPhysicsGrabConstraint)
+				if pPhysicsGrabConstraint.grabbedCollider.hasConstraint(pPhysicsGrabConstraint.constraint)
+					pPhysicsGrabConstraint.grabbedCollider.removeConstraint(pPhysicsGrabConstraint.constraint)
 				end
 				
 				pPhysicsGrabConstraint = null
-				pPhysicsGrabCollider = null
 				hasPhysicsConstraint = true
 			end
 			
@@ -358,10 +430,11 @@ class ECBAGrab extends DefaultECBehavior
 					return
 				end
 				
-				var ECBehaviorAttachable.Instance attachable = pGrabAttach.getAttachable()
-				var ECBehaviorCollider.Instance parentCollider = pGrabAttach.getParentCollider()
 				var Collider slotCollider = pAttachSlot.getSlotCollider()
 				var Collider attachedCollider
+				
+				var ECBehaviorCollider.Instance parentCollider = pGrabAttach.getParentCollider()
+				var ECBehaviorAttachable.Instance attachable = pGrabAttach.getAttachable()
 				
 				if attachable != null
 					attachedCollider = attachable.getCollider().getCollider()
@@ -385,6 +458,8 @@ class ECBAGrab extends DefaultECBehavior
 				attachedCollider.setAngularVelocity(slotCollider.getAngularVelocity())
 				pGrabAttach = null
 			end
+			
+			setRequiresThink(false)
 		end
 		
 		/** Break playback for element if recording. */
@@ -396,6 +471,41 @@ class ECBAGrab extends DefaultECBehavior
 			var ECBCapturedAnimations.Instance capturedAnimations = ECBCapturedAnimations.getInstanceIn(element)
 			if capturedAnimations != null
 				capturedAnimations.disableActiveAnimationPlayback()
+			end
+		end
+		
+		/** Apply grab impulse. */
+		protected func void applyGrabImpulse(float elapsed)
+			if elapsed == 0 or pPhysicsGrabConstraint == null or not pPhysicsGrabConstraint.useImpulse
+				return
+			end
+			
+			var Component component = (getElement() cast MoCapActor).getComponent().getComponent()
+			var DMatrix handMatrix = component.boneGetMatrix(\
+				pPhysicsGrabConstraint.handBoneIndex).toDMatrix() * component.getMatrix()
+			
+			var DMatrix attachedMatrix = pPhysicsGrabConstraint.grabbedCollider.getMatrix()
+			if pPhysicsGrabConstraint.grabbedBoneIndex != -1
+				attachedMatrix = pPhysicsGrabConstraint.grabbedColliderRig.boneGetMatrix(\
+					pPhysicsGrabConstraint.grabbedBoneIndex) * attachedMatrix
+			end
+			attachedMatrix = pPhysicsGrabConstraint.grabbedMatrix * attachedMatrix
+			
+			var DVector handPosition = handMatrix.getPosition()
+			var DVector attachedPosition = attachedMatrix.getPosition()
+			
+			var Vector displacement = (handPosition - attachedPosition).toVector()
+			
+			var Vector linearVelocity = pPhysicsGrabConstraint.grabbedCollider.getLinearVelocity()
+			var Vector pullVelocity = (displacement / elapsed) - linearVelocity
+			var Vector impulse = pullVelocity * pPhysicsGrabConstraint.grabbedCollider.getMass()
+			
+			if pPhysicsGrabConstraint.grabbedBoneIndex != -1
+				pPhysicsGrabConstraint.grabbedColliderRig.boneApplyImpuls(\
+					pPhysicsGrabConstraint.grabbedBoneIndex, impulse)
+				
+			else
+				pPhysicsGrabConstraint.grabbedCollider.applyImpuls(impulse)
 			end
 		end
 	end

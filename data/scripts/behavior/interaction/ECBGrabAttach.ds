@@ -21,6 +21,7 @@
 
 namespace Democap.Behaviors
 
+pin Dragengine.LoadSave
 pin Dragengine.Scenery
 pin Dragengine.Preloading
 pin Dragengine.Utils
@@ -62,6 +63,7 @@ class ECBGrabAttach extends DefaultECBehavior
 		protected var ECBehaviorAttachable.Instance pAttachable
 		protected var ECBehaviorCollider.Instance pParentCollider
 		protected var String pBone
+		protected var bool pUseImpulse
 		protected var bool pTemporaryDetached
 		
 		
@@ -69,23 +71,24 @@ class ECBGrabAttach extends DefaultECBehavior
 		/** Create behavior instance. */
 		public func new(ECBGrabAttach ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
-			pGrabSpot = ecbehavior.getGrabSpot().instance(element)
-			pCollider = ecbehavior.getCollider().instance(element)
+			pGrabSpot = ecbehavior.grabSpot.instance(element)
+			pCollider = ecbehavior.collider.instance(element)
 		end
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
 			var BehaviorElement element = getElement()
 			
-			if pECBehavior.getAttachable() != null
-				pAttachable = pECBehavior.getAttachable().instance(element)
+			if pECBehavior.attachable != null
+				pAttachable = pECBehavior.attachable.instance(element)
 			end
 			
-			if pECBehavior.getShowInteractHandles() != null
-				pECBehavior.getShowInteractHandles().instance(element).addListener(TemporaryDetachListener.new(this))
+			if pECBehavior.showInteractHandles != null
+				pECBehavior.showInteractHandles.instance(element).addListener(TemporaryDetachListener.new(this))
 			end
 			
-			pBone = pECBehavior.getBone().getValue(stub)
+			pBone = pECBehavior.bone.getValue(stub)
+			pUseImpulse = pECBehavior.useImpulse.getValue(stub)
 		end
 		
 		/** Dispose of behavior instance. */
@@ -118,6 +121,10 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		public func String getBone()
 			return pBone
+		end
+		
+		public func bool getUseImpulse()
+			return pUseImpulse
 		end
 		
 		public func ECBehaviorCollider.Instance getParentCollider()
@@ -201,15 +208,42 @@ class ECBGrabAttach extends DefaultECBehavior
 				pTemporaryDetached = false
 			end
 		end
+		
+		
+		
+		/** Read behavior from file. */
+		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+			select reader.readByte() // version
+			case 0
+				// nothing
+				
+			case 1
+				var PersistencyFlags flags = PersistencyFlags.new(1, reader)
+				pUseImpulse = flags.getAt(0)
+				
+			else
+				throw EInvalidParam.new("unsupported version")
+			end
+		end
+		
+		/** Write behavior to file. */
+		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+			writer.writeByte(1) // version
+			
+			var PersistencyFlags flags = PersistencyFlags.new(1)
+			flags.setAt(0, pUseImpulse)
+			flags.writeToFile(writer)
+		end
 	end
 	
 	
 	
-	private var ECBehaviorGrabSpot pGrabSpot
-	private var ECBehaviorCollider pCollider
-	private var ECBehaviorAttachable pAttachable
-	private var ECBShowInteractHandles pShowInteractHandles
-	private var ECPString pBone
+	public var ECBehaviorGrabSpot grabSpot
+	public var ECBehaviorCollider collider
+	public var ECBehaviorAttachable attachable
+	public var ECBShowInteractHandles showInteractHandles
+	public var ECPString bone
+	public var ECPBoolean useImpulse
 	
 	// TODO hand model to show. this though should be the job of ECBehaviorComponent present
 	//      in the owner class which has for example the hand model set with a modified skin.
@@ -227,53 +261,29 @@ class ECBGrabAttach extends DefaultECBehavior
 			throw ENullPointer.new("grabSpot")
 		end
 		
-		pGrabSpot = grabSpot
-		pCollider = collider
-		pAttachable = attachable
-		pShowInteractHandles = showInteractHandles
+		this.grabSpot = grabSpot
+		this.collider = collider
+		this.attachable = attachable
+		this.showInteractHandles = showInteractHandles
 		
 		var String prefix = "grabAttach."
 		
-		pBone = ECPString.new(prefix + "bone", "")
-		eclass.addProperty(pBone)
+		bone = ECPString.new(prefix + "bone", "")
+		eclass.addProperty(bone)
+		
+		useImpulse = ECPBoolean.new(prefix + "useImpulse", false)
+		eclass.addProperty(useImpulse)
 		
 		eclass.addBehavior(this)
 	end
 	
 	/** Dispose of behavior. */
 	public func void dispose()
-		pGrabSpot = null
-		pCollider = null
-		pAttachable = null
-		pShowInteractHandles = null
+		grabSpot = null
+		collider = null
+		attachable = null
+		showInteractHandles = null
 		super.dispose()
-	end
-	
-	
-	
-	/** Grab spot behavior. */
-	public func ECBehaviorGrabSpot getGrabSpot()
-		return pGrabSpot
-	end
-	
-	/** Collider behavior. */
-	public func ECBehaviorCollider getCollider()
-		return pCollider
-	end
-	
-	/** Attachable behavior. */
-	public func ECBehaviorAttachable getAttachable()
-		return pAttachable
-	end
-	
-	/** Show interact handles behavior. */
-	public func ECBShowInteractHandles getShowInteractHandles()
-		return pShowInteractHandles
-	end
-	
-	/** Bone to attach to. */
-	public func ECPString getBone()
-		return pBone
 	end
 	
 	
