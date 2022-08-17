@@ -551,8 +551,44 @@ class ECBInteractionBubble extends DefaultECBehavior
 				var Model parentModel = parentComponent.getModel()
 				if parentModel != null
 					var Matrix matrix = Matrix.newFromQuaternion(pSceneObject.getElement().getOrientation())
-					parentMinExtend = matrix * parentModel.getMinimumExtend()
-					parentMaxExtend = matrix * parentModel.getMaximumExtend()
+					var Vector a = parentModel.getMaximumExtend()
+					var Vector b = parentModel.getMinimumExtend()
+					var Vector p
+					
+					parentMinExtend = Vector.new(1000, 1000, 1000)
+					parentMaxExtend = Vector.new(-1000, -1000, -1000)
+					
+					p = matrix * a
+					parentMinExtend = parentMinExtend.smallest(p)
+					parentMaxExtend = parentMaxExtend.largest(p)
+					
+					p = matrix * Vector.new(a.getX(), a.getY(), b.getZ())
+					parentMinExtend = parentMinExtend.smallest(p)
+					parentMaxExtend = parentMaxExtend.largest(p)
+					
+					p = matrix * Vector.new(a.getX(), b.getY(), a.getZ())
+					parentMinExtend = parentMinExtend.smallest(p)
+					parentMaxExtend = parentMaxExtend.largest(p)
+					
+					p = matrix * Vector.new(a.getX(), b.getY(), b.getZ())
+					parentMinExtend = parentMinExtend.smallest(p)
+					parentMaxExtend = parentMaxExtend.largest(p)
+					
+					p = matrix * Vector.new(b.getX(), a.getY(), a.getZ())
+					parentMinExtend = parentMinExtend.smallest(p)
+					parentMaxExtend = parentMaxExtend.largest(p)
+					
+					p = matrix * Vector.new(b.getX(), a.getY(), b.getZ())
+					parentMinExtend = parentMinExtend.smallest(p)
+					parentMaxExtend = parentMaxExtend.largest(p)
+					
+					p = matrix * Vector.new(b.getX(), b.getY(), a.getZ())
+					parentMinExtend = parentMinExtend.smallest(p)
+					parentMaxExtend = parentMaxExtend.largest(p)
+					
+					p = matrix * b
+					parentMinExtend = parentMinExtend.smallest(p)
+					parentMaxExtend = parentMaxExtend.largest(p)
 				end
 			end
 			
