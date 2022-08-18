@@ -1,0 +1,25 @@
+name: Rebuild MSIX
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version'
+        required: true
+        type: string
+        default: 'X.Y{.Z}'
+
+jobs:
+  distribute:
+    uses: ./.github/workflows/distribute.yml
+    with:
+      version: ${{ github.event.inputs.version }}
+      artifact: distribution
+
+  buildmsix:
+    needs: [distribute]
+    uses: ./.github/workflows/buildmsix.yml
+    with:
+      version: ${{ github.event.inputs.version }}
+      artifactDistribute: distribution
+      artifactMsix: msix
