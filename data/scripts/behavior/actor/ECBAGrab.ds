@@ -44,15 +44,19 @@ class ECBAGrab extends DefaultECBehavior
 			public var Collider grabbedCollider
 			public var ColliderRig grabbedColliderRig
 			public var int grabbedBoneIndex
-			public var DMatrix grabbedMatrix
+			public var DVector grabbedBoneCmp
+			public var DMatrix refCoordSystem
+			public var DMatrix targetCoordSystem
 			public var bool useImpulse
 			
 			public func new()
 				handBoneName = ""
 				handBoneIndex = -1
 				grabbedBoneIndex = -1
+				grabbedBoneCmp = DVector.new()
 				useImpulse = false
-				grabbedMatrix = DMatrix.new()
+				refCoordSystem = DMatrix.new()
+				targetCoordSystem = DMatrix.new()
 			end
 		end
 		
@@ -190,8 +194,8 @@ class ECBAGrab extends DefaultECBehavior
 		
 		
 		
-		/** Post think. */
-		public func void postThink(float elapsed)
+		/** Thinking. */
+		public func void think(float elapsed)
 			applyGrabImpulse(elapsed)
 		end
 		
@@ -294,11 +298,15 @@ class ECBAGrab extends DefaultECBehavior
 				bone = (attachingCollider cast ColliderRig).getRig().indexOfBoneNamed(grabAttach.getBone())
 			end
 			
-			pPhysicsGrabConstraint = createGrabConstraint(\
-				ECBAPhysicsToucher.TouchObject.new(attachingElement, attachingCollider, bone))
+			pPhysicsGrabConstraint = createGrabConstraint(ECBAPhysicsToucher.TouchObject.new(\
+				attachingElement, attachingCollider, bone), grabAttach.getElement().getElementMatrix())
 			if pPhysicsGrabConstraint == null
 				return false
 			end
+			
+			// physics constraint is set to lockAll(). modify the dof-limits
+			pPhysicsGrabConstraint.constraint.setToBallJoint()
+			// TODO
 			
 			pPhysicsGrabConstraint.useImpulse = grabAttach.getUseImpulse()
 			if not pPhysicsGrabConstraint.useImpulse
@@ -311,7 +319,7 @@ class ECBAGrab extends DefaultECBehavior
 		end
 		
 		protected func bool tryGrabAttach(ECBAPhysicsToucher.TouchObject touchObject)
-			pPhysicsGrabConstraint = createGrabConstraint(touchObject)
+			pPhysicsGrabConstraint = createGrabConstraint(touchObject, null)
 			if pPhysicsGrabConstraint == null
 				return false
 			end
@@ -321,7 +329,7 @@ class ECBAGrab extends DefaultECBehavior
 			return true
 		end
 		
-		protected func GrabConstraint createGrabConstraint(ECBAPhysicsToucher.TouchObject touchObject)
+		protected func GrabConstraint createGrabConstraint(ECBAPhysicsToucher.TouchObject touchObject, DMatrix anchorMatrix)
 			var MoCapActor actor = getElement() cast MoCapActor
 			var Component component = actor.getComponent().getComponent()
 			var Collider collider = actor.getCollider().getCollider()
@@ -374,28 +382,43 @@ class ECBAGrab extends DefaultECBehavior
 			end
 			
 			//var Collider handCollider = pPhysicsToucher.getVRHand().getCollider()
-			//var DMatrix handMatrix = handCollider.getMatrix()
-			var DMatrix attachMatrix = component.boneGetMatrix(constraintBoneIndex).toDMatrix() * component.getMatrix()
+			//var DMatrix targetMatrix = handCollider.getMatrix()
+			var DMatrix targetMatrix = component.boneGetMatrix(constraintBoneIndex).toDMatrix() * component.getMatrix()
 			
-			var Matrix coordSysObj
+			if anchorMatrix == null
+				anchorMatrix = targetMatrix
+			end
 			
 			var ColliderRig touchColliderRig
+			var Matrix refCoordSystem
+			
 			var ColliderConstraint constraint = ColliderConstraint.new()
-			constraint.setTargetCollider(collider)
-			constraint.setTargetBone(constraintBone)
+			var Vector grabbedBoneCmp = Vector.new()
 			
 			if touchObject.bone != -1
 				constraint.setBone(touchObject.bone)
 				
 				touchColliderRig = touchObject.collider cast ColliderRig
-				coordSysObj = (attachMatrix * touchColliderRig.boneGetInverseMatrix(touchObject.bone)).toMatrix()
+				refCoordSystem = (anchorMatrix * touchColliderRig.boneGetInverseMatrix(touchObject.bone)).toMatrix()
+				
+				// constraints store position relative to local bone in contrary to
+				// ColliderRig which stores them relative to the bone center mass point
+				grabbedBoneCmp = touchColliderRig.getRig().boneGetCentralMassPoint(touchObject.bone)
+				refCoordSystem = refCoordSystem * Matrix.newTranslation(grabbedBoneCmp)
 				
 			else
-				coordSysObj = (attachMatrix * touchObject.collider.getInverseMatrix()).toMatrix()
+				refCoordSystem = (anchorMatrix * touchObject.collider.getInverseMatrix()).toMatrix()
 			end
 			
-			constraint.setPosition1(coordSysObj.getPosition())
-			constraint.setOrientation1(coordSysObj.toQuaternion())
+			constraint.setPosition1(refCoordSystem.getPosition())
+			constraint.setOrientation1(refCoordSystem.toQuaternion())
+			
+			constraint.setTargetCollider(collider)
+			constraint.setTargetBone(constraintBone)
+			
+			var Matrix targetCoordSys = (anchorMatrix * targetMatrix.getInverse()).toMatrix()
+			constraint.setPosition2(targetCoordSys.getPosition())
+			constraint.setOrientation2(targetCoordSys.toQuaternion())
 			
 			constraint.lockAll()
 			
@@ -406,7 +429,9 @@ class ECBAGrab extends DefaultECBehavior
 			grabConstraint.grabbedCollider = touchObject.collider
 			grabConstraint.grabbedColliderRig = touchColliderRig
 			grabConstraint.grabbedBoneIndex = touchObject.bone
-			grabConstraint.grabbedMatrix = coordSysObj.toDMatrix()
+			grabConstraint.grabbedBoneCmp = DVector.new(grabbedBoneCmp)
+			grabConstraint.refCoordSystem = refCoordSystem.toDMatrix()
+			grabConstraint.targetCoordSystem = targetCoordSys.toDMatrix()
 			return grabConstraint
 		end
 		
@@ -481,28 +506,32 @@ class ECBAGrab extends DefaultECBehavior
 			end
 			
 			var Component component = (getElement() cast MoCapActor).getComponent().getComponent()
-			var DMatrix handMatrix = component.boneGetMatrix(\
+			var DMatrix anchorMatrix = component.boneGetMatrix(\
 				pPhysicsGrabConstraint.handBoneIndex).toDMatrix() * component.getMatrix()
 			
-			var DMatrix attachedMatrix = pPhysicsGrabConstraint.grabbedCollider.getMatrix()
-			if pPhysicsGrabConstraint.grabbedBoneIndex != -1
-				attachedMatrix = pPhysicsGrabConstraint.grabbedColliderRig.boneGetMatrix(\
-					pPhysicsGrabConstraint.grabbedBoneIndex) * attachedMatrix
+			var DMatrix targetMatrix = pPhysicsGrabConstraint.grabbedCollider.getMatrix()
+			var int grabbedBone = pPhysicsGrabConstraint.grabbedBoneIndex
+			var Vector linearVelocity
+			
+			if grabbedBone != -1
+				targetMatrix = pPhysicsGrabConstraint.grabbedColliderRig.boneGetMatrix(grabbedBone)
+				linearVelocity = pPhysicsGrabConstraint.grabbedColliderRig.boneGetLinearVelocity(grabbedBone)
+				
+			else
+				linearVelocity = pPhysicsGrabConstraint.grabbedCollider.getLinearVelocity()
 			end
-			attachedMatrix = pPhysicsGrabConstraint.grabbedMatrix * attachedMatrix
+			targetMatrix = pPhysicsGrabConstraint.refCoordSystem * targetMatrix
 			
-			var DVector handPosition = handMatrix.getPosition()
-			var DVector attachedPosition = attachedMatrix.getPosition()
+			var DVector anchorPosition = anchorMatrix.getPosition()
+			var DVector targetPosition = targetMatrix.getPosition()
 			
-			var Vector displacement = (handPosition - attachedPosition).toVector()
+			var Vector displacement = (anchorPosition - targetPosition).toVector()
 			
-			var Vector linearVelocity = pPhysicsGrabConstraint.grabbedCollider.getLinearVelocity()
 			var Vector pullVelocity = (displacement / elapsed) - linearVelocity
 			var Vector impulse = pullVelocity * pPhysicsGrabConstraint.grabbedCollider.getMass()
 			
-			if pPhysicsGrabConstraint.grabbedBoneIndex != -1
-				pPhysicsGrabConstraint.grabbedColliderRig.boneApplyImpuls(\
-					pPhysicsGrabConstraint.grabbedBoneIndex, impulse)
+			if grabbedBone != -1
+				pPhysicsGrabConstraint.grabbedColliderRig.boneApplyImpuls(grabbedBone, impulse)
 				
 			else
 				pPhysicsGrabConstraint.grabbedCollider.applyImpuls(impulse)

@@ -1,0 +1,173 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Worlds
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * ECBGrabAttach panel.
+ */
+class WMPSOGrabAttach extends WMPPanelSceneObject
+	class UseImpulseChanged extends DefaultToggleModelListener
+		protected var WMPSOGrabAttach pPanel
+		
+		public func new(WMPSOGrabAttach panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorGrabAttach().setUseImpulse(model.getToggled())
+		end
+	end
+	
+	
+	
+	protected var ECBGrabAttach.Instance pBehaviorGrabAttach
+	protected var DefaultToggleModel pModelUseImpulse
+	protected var DefaultListModel pModelBoneList
+	protected var DefaultTextModel pModelBoneText
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelProject panelProject, ECBGrabAttach.Instance behavior)\
+		super(panelProject, behavior, behavior.getECBehavior().getID(),\
+			"GrabAttach", "WMPSOGrabAttach", "ppob_grabattach")
+		
+		pBehaviorGrabAttach = behavior
+		
+		pModelUseImpulse = DefaultToggleModel.new(false)
+		
+		pModelBoneList = DefaultListModel.new()
+		pModelBoneList.setAutoSelect(false)
+		
+		pModelBoneText = DefaultTextModel.new()
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+		
+		pModelUseImpulse.addListener(UseImpulseChanged.new(this))
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		pModelUseImpulse = null
+		pModelBoneText = null
+		pModelBoneList = null
+		super.dispose()
+	end
+	
+	
+	
+	/** GrabAttach behavior. */
+	public func ECBGrabAttach.Instance getBehaviorGrabAttach()
+		return pBehaviorGrabAttach
+	end
+	
+	/** Update behavior. */
+	public func void updateBehavior()
+		pModelUseImpulse.setToggled(pBehaviorGrabAttach.getUseImpulse())
+		pModelBoneText.setText(pBehaviorGrabAttach.getBone())
+		updateModelBone()
+	end
+	
+	
+	
+	/** Update bone model. */
+	public func void updateModelBone()
+		var Array content = Array.new()
+		content.add("")
+		
+		var Rig rig
+		if pBehaviorGrabAttach.getParentCollider() != null
+			var ECBehaviorComponent.Instance component = ECBehaviorComponent.getInstanceIn(\
+				pBehaviorGrabAttach.getParentCollider().getElement())
+			if component != null and component.getComponent() != null
+				rig = component.getComponent().getRig()
+			end
+		end
+		
+		if rig != null
+			var int i, count = rig.getBoneCount()
+			for i = 0 to count
+				content.add(rig.boneGetName(i))
+			end
+		end
+		
+		pModelBoneList.setContent(content)
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var DefaultComboBoxEditor editor
+		var CheckBox checkBox
+		var ComboBox comboBox
+		var String tooltip
+		var Button button
+		var Label label
+		
+		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			// use impulse
+			p.addWidget(Label.new("", "Label.FormCaption"))
+			checkBox = CheckBox.new(pModelUseImpulse, "Use Impulse")
+			checkBox.setToolTip("Use apply impulse instead of collider constraint for grabbing.")
+			p.addWidget(checkBox)
+			
+			// attach bone
+			tooltip = "Bone in parent object to grab or empty string to grab entire object."
+			
+			label = Label.new("Bone", "Label.FormCaption")
+			label.setToolTip(tooltip)
+			p.addWidget(label)
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 2, FlowLayout.Stretch.first), block Panel p2
+				editor = DefaultComboBoxEditor.new(pModelBoneText)
+				comboBox = ComboBox.new(pModelBoneList, editor)
+				comboBox.setToolTip(tooltip)
+				p2.addWidget(comboBox)
+				editor.addTextActionListener(BlockActionListener.new(block ActionEvent event
+					pBehaviorGrabAttach.setBone(pModelBoneText.getText())
+				end))
+				
+				button = Button.new("Update", BlockActionListener.new(block ActionEvent event
+					updateModelBone()
+				end))
+				button.setToolTip("Update list of bones to grab to.")
+				p2.addWidget(button)
+			end))
+		end))
+	end
+end
