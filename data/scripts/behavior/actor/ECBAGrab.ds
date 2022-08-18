@@ -47,14 +47,12 @@ class ECBAGrab extends DefaultECBehavior
 			public var DVector grabbedBoneCmp
 			public var DMatrix refCoordSystem
 			public var DMatrix targetCoordSystem
-			public var bool useImpulse
 			
 			public func new()
 				handBoneName = ""
 				handBoneIndex = -1
 				grabbedBoneIndex = -1
 				grabbedBoneCmp = DVector.new()
-				useImpulse = false
 				refCoordSystem = DMatrix.new()
 				targetCoordSystem = DMatrix.new()
 			end
@@ -196,9 +194,12 @@ class ECBAGrab extends DefaultECBehavior
 		
 		/** Thinking. */
 		public func void think(float elapsed)
-			applyGrabImpulse(elapsed)
+			limitGrabPosition()
 		end
 		
+		/** Post physics think. */
+		public func void postThink(float elapsed)
+		end
 		
 		
 		protected func bool tryGrabAttach(ECBGrabAttach.Instance grabAttach)
@@ -308,13 +309,10 @@ class ECBAGrab extends DefaultECBehavior
 			pPhysicsGrabConstraint.constraint.setToBallJoint()
 			// TODO
 			
-			pPhysicsGrabConstraint.useImpulse = grabAttach.getUseImpulse()
-			if not pPhysicsGrabConstraint.useImpulse
-				pPhysicsGrabConstraint.grabbedCollider.addConstraint(pPhysicsGrabConstraint.constraint)
-			end
+			pPhysicsGrabConstraint.grabbedCollider.addConstraint(pPhysicsGrabConstraint.constraint)
 			breakPlayback(attachingElement)
 			
-			setRequiresThink(pPhysicsGrabConstraint.useImpulse)
+			setRequiresThink(true)
 			return true
 		end
 		
@@ -499,12 +497,9 @@ class ECBAGrab extends DefaultECBehavior
 			end
 		end
 		
-		/** Apply grab impulse. */
-		protected func void applyGrabImpulse(float elapsed)
-			if elapsed == 0 or pPhysicsGrabConstraint == null or not pPhysicsGrabConstraint.useImpulse
-				return
-			end
-			
+		/** Limit grab position to grabbed constraint. */
+		protected func void limitGrabPosition()
+			/*
 			var Component component = (getElement() cast MoCapActor).getComponent().getComponent()
 			var DMatrix anchorMatrix = component.boneGetMatrix(\
 				pPhysicsGrabConstraint.handBoneIndex).toDMatrix() * component.getMatrix()
@@ -536,6 +531,7 @@ class ECBAGrab extends DefaultECBehavior
 			else
 				pPhysicsGrabConstraint.grabbedCollider.applyImpuls(impulse)
 			end
+			*/
 		end
 	end
 	

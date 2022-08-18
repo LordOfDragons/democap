@@ -36,22 +36,7 @@ pin Dragengine.Utils
  * ECBGrabAttach panel.
  */
 class WMPSOGrabAttach extends WMPPanelSceneObject
-	class UseImpulseChanged extends DefaultToggleModelListener
-		protected var WMPSOGrabAttach pPanel
-		
-		public func new(WMPSOGrabAttach panel)
-			pPanel = panel
-		end
-		
-		public func void toggledChanged(ToggleModel model)
-			pPanel.getBehaviorGrabAttach().setUseImpulse(model.getToggled())
-		end
-	end
-	
-	
-	
 	protected var ECBGrabAttach.Instance pBehaviorGrabAttach
-	protected var DefaultToggleModel pModelUseImpulse
 	protected var DefaultListModel pModelBoneList
 	protected var DefaultTextModel pModelBoneText
 	
@@ -64,8 +49,6 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 		
 		pBehaviorGrabAttach = behavior
 		
-		pModelUseImpulse = DefaultToggleModel.new(false)
-		
 		pModelBoneList = DefaultListModel.new()
 		pModelBoneList.setAutoSelect(false)
 		
@@ -74,13 +57,10 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
 		end)
-		
-		pModelUseImpulse.addListener(UseImpulseChanged.new(this))
 	end
 	
 	/** Dispose of widget. */
 	public func void dispose()
-		pModelUseImpulse = null
 		pModelBoneText = null
 		pModelBoneList = null
 		super.dispose()
@@ -95,7 +75,6 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 	
 	/** Update behavior. */
 	public func void updateBehavior()
-		pModelUseImpulse.setToggled(pBehaviorGrabAttach.getUseImpulse())
 		pModelBoneText.setText(pBehaviorGrabAttach.getBone())
 		updateModelBone()
 	end
@@ -140,12 +119,6 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
 		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
-			// use impulse
-			p.addWidget(Label.new("", "Label.FormCaption"))
-			checkBox = CheckBox.new(pModelUseImpulse, "Use Impulse")
-			checkBox.setToolTip("Use apply impulse instead of collider constraint for grabbing.")
-			p.addWidget(checkBox)
-			
 			// attach bone
 			tooltip = "Bone in parent object to grab or empty string to grab entire object."
 			

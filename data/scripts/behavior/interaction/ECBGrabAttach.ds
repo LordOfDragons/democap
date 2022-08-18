@@ -63,7 +63,6 @@ class ECBGrabAttach extends DefaultECBehavior
 		protected var ECBehaviorAttachable.Instance pAttachable
 		protected var ECBehaviorCollider.Instance pParentCollider
 		protected var String pBone
-		protected var bool pUseImpulse
 		protected var bool pTemporaryDetached
 		
 		
@@ -88,7 +87,6 @@ class ECBGrabAttach extends DefaultECBehavior
 			end
 			
 			pBone = pECBehavior.bone.getValue(stub)
-			pUseImpulse = pECBehavior.useImpulse.getValue(stub)
 		end
 		
 		/** Dispose of behavior instance. */
@@ -125,14 +123,6 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		public func void setBone(String bone)
 			pBone = bone
-		end
-		
-		public func bool getUseImpulse()
-			return pUseImpulse
-		end
-		
-		public func void setUseImpulse(bool useImpulse)
-			pUseImpulse = useImpulse
 		end
 		
 		public func ECBehaviorCollider.Instance getParentCollider()
@@ -227,7 +217,6 @@ class ECBGrabAttach extends DefaultECBehavior
 				
 			case 1
 				var PersistencyFlags flags = PersistencyFlags.new(1, reader)
-				pUseImpulse = flags.getAt(0)
 				
 				pBone = reader.readString8()
 				
@@ -241,7 +230,6 @@ class ECBGrabAttach extends DefaultECBehavior
 			writer.writeByte(1) // version
 			
 			var PersistencyFlags flags = PersistencyFlags.new(1)
-			flags.setAt(0, pUseImpulse)
 			flags.writeToFile(writer)
 			
 			writer.writeString8(pBone)
@@ -255,7 +243,6 @@ class ECBGrabAttach extends DefaultECBehavior
 	public var ECBehaviorAttachable attachable
 	public var ECBShowInteractHandles showInteractHandles
 	public var ECPString bone
-	public var ECPBoolean useImpulse
 	
 	// TODO hand model to show. this though should be the job of ECBehaviorComponent present
 	//      in the owner class which has for example the hand model set with a modified skin.
@@ -282,9 +269,6 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		bone = ECPString.new(prefix + "bone", "")
 		eclass.addProperty(bone)
-		
-		useImpulse = ECPBoolean.new(prefix + "useImpulse", false)
-		eclass.addProperty(useImpulse)
 		
 		eclass.addBehavior(this)
 	end
