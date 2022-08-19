@@ -30,6 +30,7 @@ pin Democap.Worlds
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Preloading
+pin Dragengine.LoadSave
 pin Dragengine.Scenery
 pin Dragengine.Utils
 
@@ -1739,22 +1740,15 @@ class WMPanelProject extends Panel
 			stub.setPosition(element.getPosition())
 			stub.setRotation(element.getOrientation().getEulerAngles())
 			
-			var Dictionary storage = Dictionary.new()
-			element.forEachInstance(block ECBehaviorInstance each
-				if each castable TakeOverBehaviorState
-					(each cast TakeOverBehaviorState).takeOverStoreState(storage)
-				end
-			end)
+			var MemoryFile objectState = MemoryFile.new("objectState")
+			var PersistencyEnvironment env = PersistencyEnvironment.new(GameApp.getGameApp().getLoaders().getPersistency())
+			element.writeToFile(env, objectState.getWriter(false))
 			
 			element.safeDispose()
 			
 			element = stub.createElement() cast BehaviorElement
 			
-			element.forEachInstance(block ECBehaviorInstance each
-				if each castable TakeOverBehaviorState
-					(each cast TakeOverBehaviorState).takeOverRestoreState(storage)
-				end
-			end)
+			element.readFromFile(env, objectState.getReader())
 			
 			gameWorld.addElement(element)
 			ECBSelectable.getInstanceIn(element).selectElement()
