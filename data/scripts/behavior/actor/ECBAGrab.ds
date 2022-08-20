@@ -37,7 +37,90 @@ pin Dragengine.Utils
 class ECBAGrab extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
-		public class GrabConstraint
+		class GrabConstraint
+			class Constraint
+				private var ColliderRig pCollider
+				private var int pBone, pTargetBone
+				private var DVector pLinearLimitLower
+				private var DVector pLinearLimitUpper
+				private var DVector pAngularLimitLower
+				private var DVector pAngularLimitUpper
+				private var DVector pAnchorOffset
+				private var DMatrix pMatrix
+				
+				public func new(ColliderRig collider, int bone, int constraintIndex, DVector anchor)
+					var Rig rig = collider.getRig()
+					var ColliderConstraint constraint = rig.boneGetConstraintAt(bone, constraintIndex)
+					
+					pCollider = collider
+					pBone = bone
+					pTargetBone = constraint.getBone()
+					
+					if pTargetBone == -1
+						return
+					end
+					
+					var DMatrix boneInvMat = collider.boneGetInverseMatrix(bone)
+					
+					var DVector refCmp = DVector.new(rig.boneGetCentralMassPoint(bone))
+					var DVector refPos = DVector.new(constraint.getPosition1())
+					var Quaternion refQuat = constraint.getOrientation1()
+					var DMatrix refMat = DMatrix.newWorld(refPos - refCmp, refQuat)
+					
+					var DVector tarCmp = DVector.new(rig.boneGetCentralMassPoint(pTargetBone))
+					var DVector tarPos = DVector.new(constraint.getPosition2())
+					var Quaternion tarQuat = constraint.getOrientation2()
+					var DMatrix tarMat = DMatrix.newWorld(tarPos - tarCmp, tarQuat)
+					
+					var DVector lanchor = boneInvMat * anchor
+					
+					pAnchorOffset = refMat.getInverse() * lanchor
+					
+					pMatrix = tarMat
+					var DMatrix matrixRefInv = pMatrix.getInverse()
+					
+					pLinearLimitLower = DVector.new(constraint.getLinearLowerLimits())
+					pLinearLimitUpper = DVector.new(constraint.getLinearUpperLimits())
+					pAngularLimitLower = DVector.new(constraint.getAngularLowerLimits())
+					pAngularLimitUpper = DVector.new(constraint.getAngularUpperLimits())
+					
+					/*
+					var DVector difference = pLinearLimitUpper - pLinearLimitLower
+					var bool lockedX = difference.getX() < 0.0001
+					var bool lockedY = difference.getY() < 0.0001
+					var bool lockedZ = difference.getZ() < 0.0001
+					
+					// slightly reduce the limits to avoid subtle problems with physics calculations
+					var DVector safetyMargin = DVector.new(0.001, 0.001, 0.001)
+					
+					pLinearLimitLower = pLinearLimitLower + safetyMargin
+					pLinearLimitUpper = pLinearLimitUpper - safetyMargin
+					
+					// fix locked limits pushed apart by the safety margin
+					var DVector locked = (pLinearLimitLower + pLinearLimitUpper) / 2
+					pLinearLimitLower = locked.combine(pLinearLimitLower, lockedX, lockedY, lockedZ)
+					pLinearLimitUpper = locked.combine(pLinearLimitUpper, lockedX, lockedY, lockedZ)
+					*/
+				end
+				
+				public func DVector limit(DVector point)
+					var DMatrix matrix = pMatrix * pCollider.boneGetMatrix(pTargetBone)
+					
+					point = matrix.getInverse() * point - pAnchorOffset
+					
+					point = point.largest(pLinearLimitLower).smallest(pLinearLimitUpper)
+					// TODO angular limits
+					
+					point = matrix * (point + pAnchorOffset)
+					
+					return point
+				end
+				
+				public func bool valid()
+					return pBone != -1 and pTargetBone != -1
+				end
+			end
+			
 			public var ColliderConstraint constraint
 			public var String handBoneName
 			public var int handBoneIndex
@@ -47,6 +130,7 @@ class ECBAGrab extends DefaultECBehavior
 			public var DVector grabbedBoneCmp
 			public var DMatrix refCoordSystem
 			public var DMatrix targetCoordSystem
+			public var Array anchorConstraints
 			
 			public func new()
 				handBoneName = ""
@@ -55,6 +139,16 @@ class ECBAGrab extends DefaultECBehavior
 				grabbedBoneCmp = DVector.new()
 				refCoordSystem = DMatrix.new()
 				targetCoordSystem = DMatrix.new()
+				anchorConstraints = Array.new()
+			end
+			
+			public func DVector limitAnchor(DVector anchor)
+				if anchorConstraints.getCount() > 0
+					anchor = anchorConstraints.inject(anchor, block DVector result, Constraint each
+						return each.limit(result)
+					end) cast DVector
+				end
+				return anchor
 			end
 		end
 		
@@ -65,6 +159,7 @@ class ECBAGrab extends DefaultECBehavior
 		private var ECBGrabAttach.Instance pGrabAttach
 		private var GrabConstraint pPhysicsGrabConstraint
 		private var bool pTriggerPulled
+		private var ColliderVolume pGhostCollider
 		
 		
 		
@@ -74,10 +169,23 @@ class ECBAGrab extends DefaultECBehavior
 			pGrabber = ecbehavior.grabber.instance(element)
 			pAttachSlot = ecbehavior.attachSlot.instance(element)
 			pPhysicsToucher = ecbehavior.physicsToucher.instance(element)
+			
+			var ShapeList shape = ShapeList.new()
+			shape.addSphere(Vector.new(), 0.01)
+			
+			pGhostCollider = ColliderVolume.new()
+			pGhostCollider.setShape(shape)
+			pGhostCollider.setCollisionFilter(CollisionFilter.new())
+			pGhostCollider.setResponseType(CollisionResponse.kinematic)
+			pGhostCollider.setOwner(element)
+			pGhostCollider.setUseLocalGravity(true)
+			
+			setRequiresThink(true)
 		end
 		
 		/** Dispose of behavior instance. */
 		public func void dispose()
+			pGhostCollider = null
 			pPhysicsGrabConstraint = null
 			pGrabber = null
 			pPhysicsToucher = null
@@ -194,12 +302,23 @@ class ECBAGrab extends DefaultECBehavior
 		
 		/** Thinking. */
 		public func void think(float elapsed)
-			limitGrabPosition()
+			updateGhostPosition()
 		end
 		
 		/** Post physics think. */
 		public func void postThink(float elapsed)
 		end
+		
+		/** Added to game world. */
+		public func void addToGameWorld()
+			getElement().getGameWorld().getWorld().addCollider(pGhostCollider)
+		end
+		
+		/** Remove from game world. */
+		public func void removeFromGameWorld()
+			getElement().getGameWorld().getWorld().removeCollider(pGhostCollider)
+		end
+		
 		
 		
 		protected func bool tryGrabAttach(ECBGrabAttach.Instance grabAttach)
@@ -299,8 +418,9 @@ class ECBAGrab extends DefaultECBehavior
 				bone = (attachingCollider cast ColliderRig).getRig().indexOfBoneNamed(grabAttach.getBone())
 			end
 			
+			var DMatrix anchorMatrix = grabAttach.getElement().getElementMatrix()
 			pPhysicsGrabConstraint = createGrabConstraint(ECBAPhysicsToucher.TouchObject.new(\
-				attachingElement, attachingCollider, bone), grabAttach.getElement().getElementMatrix())
+				attachingElement, attachingCollider, bone), anchorMatrix)
 			if pPhysicsGrabConstraint == null
 				return false
 			end
@@ -309,10 +429,29 @@ class ECBAGrab extends DefaultECBehavior
 			pPhysicsGrabConstraint.constraint.setToBallJoint()
 			// TODO
 			
+			var DVector anchor = anchorMatrix.getPosition()
+			
+			var ColliderRig crig = pPhysicsGrabConstraint.grabbedColliderRig
+			if crig != null
+				var Rig rig = crig.getRig()
+				if rig != null
+					var int bone = pPhysicsGrabConstraint.grabbedBoneIndex
+					var int i, count = rig.boneGetConstraintCount(bone)
+					var GrabConstraint.Constraint anchorConstr
+					
+					for i = 0 to count
+						anchorConstr = GrabConstraint.Constraint.new(crig, bone, i, anchor)
+						if anchorConstr.valid()
+							pPhysicsGrabConstraint.anchorConstraints.add(anchorConstr)
+						end
+					end
+				end
+			end
+			
+			pPhysicsGrabConstraint.grabbedCollider.setLinearVelocity(Vector.new())
+			pPhysicsGrabConstraint.grabbedCollider.setAngularVelocity(Vector.new())
 			pPhysicsGrabConstraint.grabbedCollider.addConstraint(pPhysicsGrabConstraint.constraint)
 			breakPlayback(attachingElement)
-			
-			setRequiresThink(true)
 			return true
 		end
 		
@@ -322,6 +461,8 @@ class ECBAGrab extends DefaultECBehavior
 				return false
 			end
 			
+			pPhysicsGrabConstraint.grabbedCollider.setLinearVelocity(Vector.new())
+			pPhysicsGrabConstraint.grabbedCollider.setAngularVelocity(Vector.new())
 			pPhysicsGrabConstraint.grabbedCollider.addConstraint(pPhysicsGrabConstraint.constraint)
 			breakPlayback(touchObject.element)
 			return true
@@ -331,7 +472,7 @@ class ECBAGrab extends DefaultECBehavior
 			var MoCapActor actor = getElement() cast MoCapActor
 			var Component component = actor.getComponent().getComponent()
 			var Collider collider = actor.getCollider().getCollider()
-			var String attachBone
+			var String attachBone = ""
 			var String constraintBone
 			var ColliderRig colliderRig
 			var int constraintBoneIndex
@@ -360,11 +501,12 @@ class ECBAGrab extends DefaultECBehavior
 					if rig != null
 						var int index = rig.indexOfBoneNamed(attachBone)
 						while index != -1
-							if rig.boneGetShapes(index).getCount() > 0
+							// no shape check not required anymore since ghost collider is used
+// 							if rig.boneGetShapes(index).getCount() > 0
 								constraintBone = rig.boneGetName(index)
 								constraintBoneIndex = index
 								break
-							end
+// 							end
 							index = rig.boneGetParent(index)
 						end
 					end
@@ -411,12 +553,13 @@ class ECBAGrab extends DefaultECBehavior
 			constraint.setPosition1(refCoordSystem.getPosition())
 			constraint.setOrientation1(refCoordSystem.toQuaternion())
 			
-			constraint.setTargetCollider(collider)
-			constraint.setTargetBone(constraintBone)
+// 			constraint.setTargetCollider(collider)
+// 			constraint.setTargetBone(constraintBone)
+			constraint.setTargetCollider(pGhostCollider)
 			
 			var Matrix targetCoordSys = (anchorMatrix * targetMatrix.getInverse()).toMatrix()
-			constraint.setPosition2(targetCoordSys.getPosition())
-			constraint.setOrientation2(targetCoordSys.toQuaternion())
+// 			constraint.setPosition2(targetCoordSys.getPosition())
+// 			constraint.setOrientation2(targetCoordSys.toQuaternion())
 			
 			constraint.lockAll()
 			
@@ -481,8 +624,6 @@ class ECBAGrab extends DefaultECBehavior
 				attachedCollider.setAngularVelocity(slotCollider.getAngularVelocity())
 				pGrabAttach = null
 			end
-			
-			setRequiresThink(false)
 		end
 		
 		/** Break playback for element if recording. */
@@ -495,6 +636,32 @@ class ECBAGrab extends DefaultECBehavior
 			if capturedAnimations != null
 				capturedAnimations.disableActiveAnimationPlayback()
 			end
+		end
+		
+		/** Update ghost position. */
+		protected func void updateGhostPosition()
+			if pPhysicsGrabConstraint == null
+				return
+			end
+			
+			var int bone = pPhysicsGrabConstraint.handBoneIndex
+			if bone == -1
+				return
+			end
+			
+			// calculate ghost position reflecting actor hand
+			var MoCapActor actor = getElement() cast MoCapActor
+			var Component component = actor.getComponent().getComponent()
+			var DMatrix targetMatrix = pPhysicsGrabConstraint.targetCoordSystem\
+				* component.boneGetMatrix(bone).toDMatrix() * component.getMatrix()
+			
+			var DVector position = targetMatrix.getPosition()
+			
+			// limit ghost position to avoid violating rig constraints if possible
+			position = pPhysicsGrabConstraint.limitAnchor(position)
+			
+			// update ghost position
+			pGhostCollider.setPosition(position)
 		end
 		
 		/** Limit grab position to grabbed constraint. */
