@@ -391,21 +391,46 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		
 		
 		
+		/** Get list of non-physics bones in rig. */
+		protected func Array findNonPhysicsBones(Rig rig)
+			var int i, count = rig.getBoneCount()
+			var Array list = Array.new()
+			
+			for i = 0 to count
+				if not rig.boneGetDynamic(i)
+					list.add(rig.boneGetName(i))
+				end
+			end
+			
+			return list
+		end
+		
 		/** Create reset animator instance. */
 		protected func void createResetAnimator()
 			var Component component = pComponent.getComponent()
 			var Rig rig = component.getRig()
+			
+			var Array nonPhysicsBones = findNonPhysicsBones(rig)
+			if nonPhysicsBones.getCount() == 0
+				return
+			end
 			
 			var AnimatorInstance ainst = AnimatorInstance.new()
 			ainst.setComponent(component)
 			
 			var Animator animator = Animator.new()
 			animator.setRig(rig)
+			nonPhysicsBones.forEach(block String each
+				animator.addBone(each)
+			end)
 			
 			var ARStateManipulator rule = ARStateManipulator.new()
 			rule.setEnableOrientation(true)
 			rule.setEnablePosition(true)
 			rule.setEnableSize(true)
+			nonPhysicsBones.forEach(block String each
+				rule.addBone(each)
+			end)
 			animator.addRule(rule)
 			
 			ainst.setAnimator(animator)
