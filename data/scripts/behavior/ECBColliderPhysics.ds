@@ -94,8 +94,12 @@ class ECBColliderPhysics extends DefaultECBehavior
 		private var Array pColliders // ECBehaviorCollider.Instance
 		private var bool pUsePhysics
 		private var bool pLivePhysics
+		private var bool pTouchActor
 		private var bool pPhysicsEnabled
+		private var bool pUseLocalGravity
+		private var Vector pGravity
 		private var float pWeight
+		private var bool pCanGrabActor
 		private var RecordStateChanged pRecordStateChanged
 		private var PlaybackStateChanged pPlaybackStateChanged
 		private var ECBCapturedAnimations.Instance pCapturedAnimations
@@ -106,7 +110,7 @@ class ECBColliderPhysics extends DefaultECBehavior
 		public func new(ECBColliderPhysics ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			
-			pColliders = ecbehavior.getColliders().map(block ECBehaviorCollider each
+			pColliders = ecbehavior.colliders.map(block ECBehaviorCollider each
 				return each.instance(element)
 			end)
 			
@@ -135,9 +139,15 @@ class ECBColliderPhysics extends DefaultECBehavior
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
-			pUsePhysics = pECBehavior.getUsePhysics().getValue(stub)
-			pLivePhysics = pECBehavior.getLivePhysics().getValue(stub)
-			pWeight = pECBehavior.getWeight().getValue(stub)
+			var CodecPropertyString codec = getElement().getClass().getCodecPropertyString()
+			
+			pUsePhysics = pECBehavior.usePhysics.getValue(stub)
+			pLivePhysics = pECBehavior.livePhysics.getValue(stub)
+			pTouchActor = pECBehavior.touchActor.getValue(stub)
+			pWeight = pECBehavior.weight.getValue(stub)
+			pUseLocalGravity = pECBehavior.useLocalGravity.getValue(stub)
+			pGravity = pECBehavior.gravity.getVector(stub, codec)
+			pCanGrabActor = pECBehavior.canGrabActor.getValue(stub)
 			
 			if pECBehavior.capturedAnimations != null
 				pCapturedAnimations = pECBehavior.capturedAnimations.instance(getElement())
@@ -145,6 +155,7 @@ class ECBColliderPhysics extends DefaultECBehavior
 			
 			updateMass()
 			updatePhysicsState(true)
+			updateCollisionFilter()
 		end
 		
 		
@@ -207,6 +218,61 @@ class ECBColliderPhysics extends DefaultECBehavior
 			updateMass()
 		end
 		
+		/** Touch actor. */
+		public func bool getTouchActor()
+			return pTouchActor
+		end
+		
+		/** Set touch actor. */
+		public func void setTouchActor(bool touchActor)
+			if touchActor == pTouchActor
+				return
+			end
+			
+			pTouchActor = touchActor
+			updateCollisionFilter()
+		end
+		
+		/** Use gravity. */
+		public func bool getUseLocalGravity()
+			return pUseLocalGravity
+		end
+		
+		/** Set use gravity. */
+		public func void setUseLocalGravity(bool useGravity)
+			if useGravity == pUseLocalGravity
+				return
+			end
+			
+			pUseLocalGravity = useGravity
+			updatePhysicsState(true)
+		end
+		
+		/** Gravity. */
+		public func Vector getGravity()
+			return pGravity
+		end
+		
+		/** Set gravity. */
+		public func void setGravity(Vector gravity)
+			if gravity.equals(pGravity)
+				return
+			end
+			
+			pGravity = gravity
+			updatePhysicsState(true)
+		end
+		
+		/** Can physics grab. */
+		public func bool getCanGrabActor()
+			return pCanGrabActor
+		end
+		
+		/** Set can physics grab. */
+		public func void setCanGrabActor(bool canGrabActor)
+			pCanGrabActor = canGrabActor
+		end
+		
 		/** Recording state changed. */
 		public func void onRecordStateChanged()
 			updatePhysicsState(false)
@@ -215,6 +281,55 @@ class ECBColliderPhysics extends DefaultECBehavior
 		/** Playback state changed. */
 		public func void onPlaybackStateChanged()
 			updatePhysicsState(false)
+		end
+		
+		/** Reset dynamic bone. */
+		public func void resetDynamicBones()
+			pColliders.forEach(block ECBehaviorCollider.Instance each
+				if each.getCollider() castable ColliderRig
+					var ColliderRig collider = each.getCollider() cast ColliderRig
+					var Rig rig = collider.getRig()
+					if rig != null
+						var DMatrix matrixCollider = collider.getMatrix()
+						var int i, count = rig.getBoneCount()
+						for i = 0 to count
+							if rig.boneGetDynamic(i)
+								var DMatrix matrixBone = \
+									Matrix.newTranslation(rig.boneGetCentralMassPoint(i)).toDMatrix()\
+									* rig.getBoneMatrix(i).toDMatrix()\
+									* matrixCollider
+								collider.boneSetPosition(i, matrixBone.getPosition())
+								collider.boneSetOrientation(i, matrixBone.toQuaternion())
+								collider.boneSetLinearVelocity(i, Vector.new())
+								collider.boneSetAngularVelocity(i, Vector.new())
+							end
+						end
+					end
+					
+					if each.getCollider() castable ColliderComponent
+						(each.getCollider() cast ColliderComponent).copyStatesToComponent()
+					end
+				end
+			end)
+		end
+		
+		/** Reset dynamic bone velocities. */
+		public func void resetDynamicBoneVelocities()
+			pColliders.forEach(block ECBehaviorCollider.Instance each
+				if each.getCollider() castable ColliderRig
+					var ColliderRig collider = each.getCollider() cast ColliderRig
+					var Rig rig = collider.getRig()
+					if rig != null
+						var int i, count = rig.getBoneCount()
+						for i = 0 to count
+							if rig.boneGetDynamic(i)
+								collider.boneSetLinearVelocity(i, Vector.new())
+								collider.boneSetAngularVelocity(i, Vector.new())
+							end
+						end
+					end
+				end
+			end)
 		end
 		
 		
@@ -284,6 +399,28 @@ class ECBColliderPhysics extends DefaultECBehavior
 			end
 		end
 		
+		/** Update collision filter. */
+		protected func void updateCollisionFilter()
+			pColliders.forEach(block ECBehaviorCollider.Instance each
+				var Collider collider = each.getCollider()
+				if collider == null
+					return null
+				end
+				
+				var CollisionFilter cf = collider.getCollisionFilter()
+				var LayerMask cffilter = LayerMask.new(cf.getFilter())
+				
+				if pTouchActor
+					cffilter.setBit(BaseGameApp.CollisionFilterBit.actor)
+					
+				else
+					cffilter.clearBit(BaseGameApp.CollisionFilterBit.actor)
+				end
+				
+				collider.setCollisionFilter(CollisionFilter.new(cf.getCategory(), cffilter))
+			end)
+		end
+		
 		/** Enable physics. */
 		protected func void enablePhysics()
 			pColliders.forEach(block ECBehaviorCollider.Instance each
@@ -295,7 +432,14 @@ class ECBColliderPhysics extends DefaultECBehavior
 			var Collider collider = behavior.getCollider()
 			
 			collider.setResponseType(CollisionResponse.dynamic)
-			collider.setUseLocalGravity(false)
+			
+			if pUseLocalGravity
+				collider.setGravity(pGravity)
+				collider.setUseLocalGravity(true)
+				
+			else
+				collider.setUseLocalGravity(false)
+			end
 			
 			if collider castable ColliderComponent
 				(collider cast ColliderComponent).copyStatesFromComponent()
@@ -331,25 +475,42 @@ class ECBColliderPhysics extends DefaultECBehavior
 				
 				pWeight = reader.readFloat()
 				
-				updateMass()
-				updatePhysicsState(true)
+			case 1
+				var PersistencyFlags flags = PersistencyFlags.new(6, reader)
+				pUsePhysics = flags.getAt(0)
+				pLivePhysics = flags.getAt(1)
+				pPhysicsEnabled = flags.getAt(2)
+				pTouchActor = flags.getAt(3)
+				pUseLocalGravity = flags.getAt(4)
+				pCanGrabActor = flags.getAt(5)
+				
+				pWeight = reader.readFloat()
+				pGravity = Vector.readFromFile(reader)
 				
 			else
 				throw EInvalidParam.new("unsupported version")
 			end
+			
+			updateMass()
+			updatePhysicsState(true)
+			updateCollisionFilter()
 		end
 		
 		/** Write to file. */
 		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
-			writer.writeByte(0) // version
+			writer.writeByte(1) // version
 			
-			var PersistencyFlags flags = PersistencyFlags.new(3)
+			var PersistencyFlags flags = PersistencyFlags.new(6)
 			flags.setAt(0, pUsePhysics)
 			flags.setAt(1, pLivePhysics)
 			flags.setAt(2, pPhysicsEnabled)
+			flags.setAt(3, pTouchActor)
+			flags.setAt(4, pUseLocalGravity)
+			flags.setAt(5, pCanGrabActor)
 			flags.writeToFile(writer)
 			
 			writer.writeFloat(pWeight)
+			pGravity.writeToFile(writer)
 		end
 	end
 	
@@ -357,10 +518,14 @@ class ECBColliderPhysics extends DefaultECBehavior
 	
 	public var ECBCapturedAnimations capturedAnimations
 	
-	private var Array pColliders
-	private var ECPBoolean pUsePhysics
-	private var ECPBoolean pLivePhysics
-	private var ECPFloat pWeight
+	public var Array colliders
+	public var ECPBoolean usePhysics
+	public var ECPBoolean livePhysics
+	public var ECPBoolean touchActor
+	public var ECPBoolean useLocalGravity
+	public var ECPBoolean canGrabActor
+	public var ECPVector gravity
+	public var ECPFloat weight
 	
 	
 	
@@ -368,50 +533,40 @@ class ECBColliderPhysics extends DefaultECBehavior
 	public func new(BehaviorElementClass eclass, ECBehaviorCollider collider) super(eclass)
 		var String prefix = "colliderPhysics."
 		
-		pColliders = Array.new()
+		colliders = Array.new()
 		if collider != null
-			pColliders.add(collider)
+			colliders.add(collider)
 		end
 		
-		pUsePhysics = ECPBoolean.new(prefix + "usePhysics", false)
-		eclass.addProperty(pUsePhysics)
+		usePhysics = ECPBoolean.new(prefix + "usePhysics", false)
+		eclass.addProperty(usePhysics)
 		
-		pLivePhysics = ECPBoolean.new(prefix + "livePhysics", false)
-		eclass.addProperty(pLivePhysics)
+		livePhysics = ECPBoolean.new(prefix + "livePhysics", false)
+		eclass.addProperty(livePhysics)
 		
-		pWeight = ECPFloat.new(prefix + "weight", 1)
-		eclass.addProperty(pWeight)
+		touchActor = ECPBoolean.new(prefix + "touchActor", true)
+		eclass.addProperty(touchActor)
+		
+		useLocalGravity = ECPBoolean.new(prefix + "useLocalGravity", false)
+		eclass.addProperty(useLocalGravity)
+		
+		gravity = ECPVector.new(prefix + "gravity")
+		eclass.addProperty(gravity)
+		
+		weight = ECPFloat.new(prefix + "weight", 1)
+		eclass.addProperty(weight)
+		
+		canGrabActor = ECPBoolean.new(prefix + "canGrabActor", true)
+		eclass.addProperty(canGrabActor)
 		
 		eclass.addBehavior(this)
 	end
 	
 	/** Dispose of behavior. */
 	public func void dispose()
-		pColliders = null
+		colliders = null
 		capturedAnimations = null
 		super.dispose()
-	end
-	
-	
-	
-	/** Array of ECBehaviorCollider. */
-	public func Array getColliders()
-		return pColliders
-	end
-	
-	/** Use physics. */
-	public func ECPBoolean getUsePhysics()
-		return pUsePhysics
-	end
-	
-	/** Live physics. */
-	public func ECPBoolean getLivePhysics()
-		return pLivePhysics
-	end
-	
-	/** Weight. */
-	public func ECPFloat getWeight()
-		return pWeight
 	end
 	
 	

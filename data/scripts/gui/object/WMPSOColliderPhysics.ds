@@ -60,6 +60,18 @@ class WMPSOColliderPhysics extends WMPPanelSceneObject
 		end
 	end
 	
+	class TouchActorChanged extends DefaultToggleModelListener
+		protected var WMPSOColliderPhysics pPanel
+		
+		public func new(WMPSOColliderPhysics panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorColliderPhysics().setTouchActor(model.getToggled())
+		end
+	end
+	
 	class WeightChanged implements ActionListener
 		protected var WMPSOColliderPhysics pPanel
 		protected var DefaultTextModel pModel
@@ -74,12 +86,54 @@ class WMPSOColliderPhysics extends WMPPanelSceneObject
 		end
 	end
 	
+	class UseLocalGravityChanged extends DefaultToggleModelListener
+		protected var WMPSOColliderPhysics pPanel
+		
+		public func new(WMPSOColliderPhysics panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorColliderPhysics().setUseLocalGravity(model.getToggled())
+		end
+	end
+	
+	class GravityChanged implements ActionListener
+		protected var WMPSOColliderPhysics pPanel
+		protected var EditVector pEditVector
+		
+		public func new(WMPSOColliderPhysics panel, EditVector editVector)
+			pPanel = panel
+			pEditVector = editVector
+		end
+		
+		public func void onAction(ActionEvent event)
+			pPanel.getBehaviorColliderPhysics().setGravity(pEditVector.getVector())
+		end
+	end
+	
+	class CanGrabActorChanged extends DefaultToggleModelListener
+		protected var WMPSOColliderPhysics pPanel
+		
+		public func new(WMPSOColliderPhysics panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorColliderPhysics().setCanGrabActor(model.getToggled())
+		end
+	end
+	
 	
 	
 	protected var ECBColliderPhysics.Instance pBehaviorColliderPhysics
 	protected var DefaultToggleModel pModelUsePhysics
 	protected var DefaultToggleModel pModelLivePhysics
+	protected var DefaultToggleModel pModelTouchActor
 	protected var DefaultTextModel pModelWeight
+	protected var DefaultToggleModel pModelUseLocalGravity
+	protected var EditVector pEditGravity
+	protected var DefaultToggleModel pModelCanGrabActor
 	
 	
 	
@@ -92,7 +146,10 @@ class WMPSOColliderPhysics extends WMPPanelSceneObject
 		
 		pModelUsePhysics = DefaultToggleModel.new(false)
 		pModelLivePhysics = DefaultToggleModel.new(false)
+		pModelTouchActor = DefaultToggleModel.new(true)
 		pModelWeight = DefaultTextModel.new("1")
+		pModelUseLocalGravity = DefaultToggleModel.new(false)
+		pModelCanGrabActor = DefaultToggleModel.new(true)
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
@@ -100,13 +157,20 @@ class WMPSOColliderPhysics extends WMPPanelSceneObject
 		
 		pModelUsePhysics.addListener(UsePhysicsChanged.new(this))
 		pModelLivePhysics.addListener(LivePhysicsChanged.new(this))
+		pModelTouchActor.addListener(TouchActorChanged.new(this))
+		pModelUseLocalGravity.addListener(UseLocalGravityChanged.new(this))
+		pModelCanGrabActor.addListener(CanGrabActorChanged.new(this))
 	end
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		pModelTouchActor = null
 		pModelLivePhysics = null
 		pModelUsePhysics = null
 		pModelWeight = null
+		pModelUseLocalGravity = null
+		pEditGravity = null
+		pModelCanGrabActor = null
 		super.dispose()
 	end
 	
@@ -121,7 +185,11 @@ class WMPSOColliderPhysics extends WMPPanelSceneObject
 	public func void updateBehavior()
 		pModelUsePhysics.setToggled(pBehaviorColliderPhysics.getUsePhysics())
 		pModelLivePhysics.setToggled(pBehaviorColliderPhysics.getLivePhysics())
+		pModelTouchActor.setToggled(pBehaviorColliderPhysics.getTouchActor())
 		pModelWeight.setText(pBehaviorColliderPhysics.getWeight().toString())
+		pModelUseLocalGravity.setToggled(pBehaviorColliderPhysics.getUseLocalGravity())
+		pEditGravity.setVector(pBehaviorColliderPhysics.getGravity())
+		pModelCanGrabActor.setToggled(pBehaviorColliderPhysics.getCanGrabActor())
 	end
 	
 	
@@ -130,6 +198,7 @@ class WMPSOColliderPhysics extends WMPPanelSceneObject
 	protected func void createContent(Panel content)
 		var TextField textField
 		var CheckBox checkBox
+		var Button button
 		
 		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
@@ -146,6 +215,20 @@ class WMPSOColliderPhysics extends WMPPanelSceneObject
 				p2.addWidget(checkBox)
 			end))
 			
+			// collision
+			p.addWidget(Label.new("Collision:", "Label.FormCaption"))
+			p.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p2
+				checkBox = CheckBox.new(pModelTouchActor, "Actor")
+				checkBox.setToolTip("Colliders collide with motion capture actor. Disable to avoid actor limbs to push object.")
+				p2.addWidget(checkBox)
+			end))
+			
+			// interaction
+			p.addWidget(Label.new("Grab:", "Label.FormCaption"))
+			checkBox = CheckBox.new(pModelCanGrabActor, "Actor")
+			checkBox.setToolTip("Actor can grab object and physics bones. Disable to avoid accidentially grab object.")
+			p.addWidget(checkBox)
+			
 			// weight
 			p.addWidget(Label.new("Weight:", "Label.FormCaption"))
 			
@@ -154,6 +237,32 @@ class WMPSOColliderPhysics extends WMPPanelSceneObject
 			textField.setToolTip("Weight in kg distributed equally over all colliders.")
 			p.addWidget(textField)
 			textField.addActionListener(WeightChanged.new(this, pModelWeight))
+			
+			// local gravity
+			checkBox = CheckBox.new(pModelUseLocalGravity, "Local Gravity:")
+			checkBox.setToolTip("Use local gravity instead of world gravity. Check this if you do not need world gravity.")
+			p.addWidget(checkBox)
+			
+			pEditGravity = EditVector.new()
+			pEditGravity.setToolTip("Gravity to use if 'Local Gravity' is checked.")
+			p.addWidget(pEditGravity)
+			pEditGravity.addActionListener(GravityChanged.new(this, pEditGravity))
+			
+			// reset bones
+			p.addWidget(Label.new("Reset:", "Label.FormCaption"))
+			p.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p2
+				button = Button.new("Geometry", BlockActionListener.new(block ActionEvent event
+					pBehaviorColliderPhysics.resetDynamicBones()
+				end))
+				button.setToolTip("Reset dynamic bone position, orientation and velocities.")
+				p2.addWidget(button)
+				
+				button = Button.new("Velocities", BlockActionListener.new(block ActionEvent event
+					pBehaviorColliderPhysics.resetDynamicBoneVelocities()
+				end))
+				button.setToolTip("Reset dynamic bone velocities only.")
+				p2.addWidget(button)
+			end))
 		end))
 	end
 end

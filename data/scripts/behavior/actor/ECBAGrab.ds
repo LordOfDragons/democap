@@ -45,8 +45,15 @@ class ECBAGrab extends DefaultECBehavior
 				private var DVector pLinearLimitUpper
 				private var DVector pAngularLimitLower
 				private var DVector pAngularLimitUpper
+				private var bool pApplyLimitAngularX
+				private var bool pApplyLimitAngularY
+				private var bool pApplyLimitLinearX
+				private var bool pApplyLimitLinearY
+				private var bool pApplyLimitLinearZ
 				private var DVector pAnchorOffset
 				private var DMatrix pMatrix
+				private var DMatrix pAngularMatrix
+				private var DMatrix pAngularMatrixInv
 				
 				public func new(ColliderRig collider, int bone, int constraintIndex, DVector anchor)
 					var Rig rig = collider.getRig()
@@ -76,6 +83,14 @@ class ECBAGrab extends DefaultECBehavior
 					
 					pAnchorOffset = refMat.getInverse() * lanchor
 					
+					var float angleY = -DEMath.atan2(pAnchorOffset.getX(), pAnchorOffset.getZ())
+					var float angleX = DEMath.atan2(pAnchorOffset.getY(),\
+						Vector2.new(pAnchorOffset.getX(), pAnchorOffset.getZ()).getLength())
+					
+					GameApp.getGameApp().getConsole().addMessage("angles " + angleX + " " + angleY)
+					pAngularMatrix = DMatrix.newRotation(angleX, angleY, 0)
+					pAngularMatrixInv = pAngularMatrix.getInverse()
+					
 					pMatrix = tarMat
 					var DMatrix matrixRefInv = pMatrix.getInverse()
 					
@@ -83,6 +98,17 @@ class ECBAGrab extends DefaultECBehavior
 					pLinearLimitUpper = DVector.new(constraint.getLinearUpperLimits())
 					pAngularLimitLower = DVector.new(constraint.getAngularLowerLimits())
 					pAngularLimitUpper = DVector.new(constraint.getAngularUpperLimits())
+					
+					var DVector diffAngular = pAngularLimitUpper - pAngularLimitLower
+					var DVector diffLinear = pLinearLimitUpper - pLinearLimitLower
+					
+					pApplyLimitAngularX = diffAngular.getX() > 0.01 // limited
+					pApplyLimitAngularY = diffAngular.getY() > 0.01 // limited
+					
+					pApplyLimitLinearX = diffLinear.getX() > -0.001 // limited or locked
+					pApplyLimitLinearY = diffLinear.getY() > -0.001 // limited or locked
+					pApplyLimitLinearZ = diffLinear.getZ() > -0.001 // limited or locked
+					GameApp.getGameApp().getConsole().addMessage("apply " + Array.newWith(pApplyLimitAngularX, pApplyLimitAngularY, pApplyLimitLinearX, pApplyLimitLinearY, pApplyLimitLinearZ))
 					
 					/*
 					var DVector difference = pLinearLimitUpper - pLinearLimitLower
@@ -105,13 +131,46 @@ class ECBAGrab extends DefaultECBehavior
 				
 				public func DVector limit(DVector point)
 					var DMatrix matrix = pMatrix * pCollider.boneGetMatrix(pTargetBone)
+					var DVector anchorOffset = pAnchorOffset
 					
-					point = matrix.getInverse() * point - pAnchorOffset
+					point = matrix.getInverse() * point
 					
-					point = point.largest(pLinearLimitLower).smallest(pLinearLimitUpper)
-					// TODO angular limits
+					if pApplyLimitAngularX or pApplyLimitAngularY
+						point = pAngularMatrixInv * point
+						
+						var float length = point.getLength()
+						var float angleY = -DEMath.atan2(point.getX(), point.getZ())
+						var float angleX = DEMath.atan2(point.getY(), Vector2.new(point.getX(), point.getZ()).getLength())
+							GameApp.getGameApp().getConsole().addMessage("limit angles " + angleX + " " + angleY)
+						
+						if pApplyLimitAngularY
+							angleY = DEMath.clamp(angleY, pAngularLimitLower.getY(), pAngularLimitUpper.getY())
+						end
+						if pApplyLimitAngularX
+							angleX = DEMath.clamp(angleX, pAngularLimitLower.getX(), pAngularLimitUpper.getX())
+						end
+						
+							GameApp.getGameApp().getConsole().addMessage("limit angles2 " + angleX + " " + angleY)
+						var float radius = DEMath.cos(angleX) * length
+						point = DVector.new(DEMath.sin(-angleY) * radius, DEMath.sin(angleX) * length, DEMath.cos(angleY) * radius)
+							GameApp.getGameApp().getConsole().addMessage("limit point " + point)
+						
+						point = pAngularMatrix * point
+						
+						anchorOffset = pAngularMatrixInv.transformNormal(anchorOffset)
+						anchorOffset = DMatrix.newRotation(angleX, angleY, 0).transformNormal(anchorOffset)
+						anchorOffset = pAngularMatrix.transformNormal(anchorOffset)
+							GameApp.getGameApp().getConsole().addMessage("anchor offset " + pAnchorOffset + " " + anchorOffset)
+					end
 					
-					point = matrix * (point + pAnchorOffset)
+					point = point - anchorOffset
+					
+					if pApplyLimitLinearX or pApplyLimitLinearY or pApplyLimitLinearZ
+						var DVector clamped = point.largest(pLinearLimitLower).smallest(pLinearLimitUpper)
+						point = clamped.combine(point, pApplyLimitLinearX, pApplyLimitLinearY, pApplyLimitLinearZ)
+					end
+					
+					point = matrix * (point + anchorOffset)
 					
 					return point
 				end
@@ -486,28 +545,24 @@ class ECBAGrab extends DefaultECBehavior
 				else
 					attachBone = characterConfig.getCharacter().getGrabBoneLeft()
 				end
+				
+			else
+				if pGrabber.getECBehavior().getID().equals(BaseVRActorClass.idNonVRRightHand)
+					attachBone = "attachHand.r"
+					
+				else
+					attachBone = "attachHand.l"
+				end
 			end
 			
-			// determine if the actor has a bone with shape as attach bone. only a bone
-			// with shapes can be physically active in the game world and thus can only
-			// be used as attachment point for physics objects. for this the attach bone
-			// is tested. if it has no shapes go up to the parent and test. continue
-			// until a valid bone is found. in general the attach bone has no shape but
-			// the hand bone it is attached to does
 			if not attachBone.empty() and collider != null and collider castable ColliderRig and component != null
 				colliderRig = collider cast ColliderRig
 				if colliderRig.getRig() != null
 					var Rig rig = colliderRig.getRig()
 					if rig != null
-						var int index = rig.indexOfBoneNamed(attachBone)
-						while index != -1
-							// no shape check not required anymore since ghost collider is used
-// 							if rig.boneGetShapes(index).getCount() > 0
-								constraintBone = rig.boneGetName(index)
-								constraintBoneIndex = index
-								break
-// 							end
-							index = rig.boneGetParent(index)
+						constraintBoneIndex = rig.indexOfBoneNamed(attachBone)
+						if constraintBoneIndex != -1
+							constraintBone = attachBone
 						end
 					end
 				end
