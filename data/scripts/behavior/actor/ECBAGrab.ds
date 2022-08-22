@@ -87,7 +87,6 @@ class ECBAGrab extends DefaultECBehavior
 					var float angleX = DEMath.atan2(pAnchorOffset.getY(),\
 						Vector2.new(pAnchorOffset.getX(), pAnchorOffset.getZ()).getLength())
 					
-					GameApp.getGameApp().getConsole().addMessage("angles " + angleX + " " + angleY)
 					pAngularMatrix = DMatrix.newRotation(angleX, angleY, 0)
 					pAngularMatrixInv = pAngularMatrix.getInverse()
 					
@@ -108,7 +107,6 @@ class ECBAGrab extends DefaultECBehavior
 					pApplyLimitLinearX = diffLinear.getX() > -0.001 // limited or locked
 					pApplyLimitLinearY = diffLinear.getY() > -0.001 // limited or locked
 					pApplyLimitLinearZ = diffLinear.getZ() > -0.001 // limited or locked
-					GameApp.getGameApp().getConsole().addMessage("apply " + Array.newWith(pApplyLimitAngularX, pApplyLimitAngularY, pApplyLimitLinearX, pApplyLimitLinearY, pApplyLimitLinearZ))
 					
 					/*
 					var DVector difference = pLinearLimitUpper - pLinearLimitLower
@@ -141,7 +139,6 @@ class ECBAGrab extends DefaultECBehavior
 						var float length = point.getLength()
 						var float angleY = -DEMath.atan2(point.getX(), point.getZ())
 						var float angleX = DEMath.atan2(point.getY(), Vector2.new(point.getX(), point.getZ()).getLength())
-							GameApp.getGameApp().getConsole().addMessage("limit angles " + angleX + " " + angleY)
 						
 						if pApplyLimitAngularY
 							angleY = DEMath.clamp(angleY, pAngularLimitLower.getY(), pAngularLimitUpper.getY())
@@ -150,17 +147,14 @@ class ECBAGrab extends DefaultECBehavior
 							angleX = DEMath.clamp(angleX, pAngularLimitLower.getX(), pAngularLimitUpper.getX())
 						end
 						
-							GameApp.getGameApp().getConsole().addMessage("limit angles2 " + angleX + " " + angleY)
 						var float radius = DEMath.cos(angleX) * length
 						point = DVector.new(DEMath.sin(-angleY) * radius, DEMath.sin(angleX) * length, DEMath.cos(angleY) * radius)
-							GameApp.getGameApp().getConsole().addMessage("limit point " + point)
 						
 						point = pAngularMatrix * point
 						
 						anchorOffset = pAngularMatrixInv.transformNormal(anchorOffset)
 						anchorOffset = DMatrix.newRotation(angleX, angleY, 0).transformNormal(anchorOffset)
 						anchorOffset = pAngularMatrix.transformNormal(anchorOffset)
-							GameApp.getGameApp().getConsole().addMessage("anchor offset " + pAnchorOffset + " " + anchorOffset)
 					end
 					
 					point = point - anchorOffset
