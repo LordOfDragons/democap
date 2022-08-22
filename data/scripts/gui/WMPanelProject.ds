@@ -590,7 +590,7 @@ class WMPanelProject extends Panel
 		public func void onAction(ActionEvent event)
 			var ECBSceneObject.Instance object = pPanel.getObject()
 			if object != null and not pEditVector.isEqualTo(object.getElement().getPosition().toVector())
-				object.getElement().setPosition(DVector.new(pEditVector.getVector()))
+				ECBShowInteractHandles.directMoveObjectTo(object.getElement(), DVector.new(pEditVector.getVector()))
 			end
 		end
 	end
@@ -608,8 +608,7 @@ class WMPanelProject extends Panel
 		public func void onAction(ActionEvent event)
 			var ECBSceneObject.Instance object = pPanel.getObject()
 			if object != null and not pEditVector.isEqualTo(object.getElement().getOrientation().getEulerAngles())
-				// TODO if object is attached object has to be temporarily detached to rotate or move => ECBGrabAttach
-				object.getElement().setOrientation(Quaternion.newFromEuler(pEditVector.getVector()))
+				ECBShowInteractHandles.directRotateObjectTo(object.getElement(), Quaternion.newFromEuler(pEditVector.getVector()))
 			end
 		end
 	end
@@ -1686,20 +1685,28 @@ class WMPanelProject extends Panel
 	/** Move object. */
 	public func void moveObject(DVector direction)
 		if pObject != null
-			var Element element = pObject.getElement()
-			var DMatrix matrix = DMatrix.newFromQuaternion(element.getOrientation())
-			element.setPosition(element.getPosition() + matrix.transformNormal(direction)\
-				* SessionSettings.get().getManualMovementStep())
+			ECBShowInteractHandles.directMoveObject(pObject.getElement(), direction)
+		end
+	end
+	
+	/** Move object. */
+	public func void moveObjectTo(DVector position)
+		if pObject != null
+			ECBShowInteractHandles.directMoveObjectTo(pObject.getElement(), position)
 		end
 	end
 	
 	/** Rotate object. */
 	public func void rotateObject(Vector axis)
 		if pObject != null
-			var Element element = pObject.getElement()
-			var Matrix matrix = Matrix.newFromQuaternion(element.getOrientation())
-			element.setOrientation(element.getOrientation() * Quaternion.newFromAxis(\
-				matrix.transformNormal(axis), -SessionSettings.get().getManualRotationStep()))
+			ECBShowInteractHandles.directRotateObject(pObject.getElement(), axis)
+		end
+	end
+	
+	/** Rotate object. */
+	public func void rotateObjectTo(Quaternion orientation)
+		if pObject != null
+			ECBShowInteractHandles.directRotateObjectTo(pObject.getElement(), orientation)
 		end
 	end
 	

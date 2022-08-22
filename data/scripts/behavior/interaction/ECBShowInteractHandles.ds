@@ -279,14 +279,20 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		
 		
 		
-		/** Notify listeners start interacting with handle. */
+		/**
+		 * Notify listeners start interacting with handle. Handle can be null if geometry
+		 * parameters of object are adjusted numerically.
+		 */
 		public func void notifyStartInteract(ECBInteractHandle.Instance handle)
 			pListeners.forEach(block Listener each
 				each.startInteract(this, handle)
 			end)
 		end
 		
-		/** Notify listeners stop interacting with handle. */
+		/**
+		 * Notify listeners stop interacting with handle. Handle can be null if geometry
+		 * parameters of object are adjusted numerically.
+		 */
 		public func void notifyStopInteract(ECBInteractHandle.Instance handle)
 			pListeners.forEach(block Listener each
 				each.stopInteract(this, handle)
@@ -401,6 +407,50 @@ class ECBShowInteractHandles extends DefaultECBehavior
 	/** Base handle size. */
 	public func ECPFloat getHandleSize()
 		return pHandleSize
+	end
+	
+	
+	
+	/** Move object as if handlers have been used. */
+	public static func void directMoveObject(BehaviorElement element, DVector direction)
+		var DMatrix matrix = DMatrix.newFromQuaternion(element.getOrientation())
+		directMoveObjectTo(element, element.getPosition() + matrix.transformNormal(direction)\
+			* SessionSettings.get().getManualMovementStep())
+	end
+	
+	/** Move object as if handlers have been used. */
+	public static func void directMoveObjectTo(BehaviorElement element, DVector position)
+		var Instance instance = getInstanceIn(element)
+		
+		if instance != null
+			instance.notifyStartInteract(null)
+			element.setPosition(position)
+			instance.notifyStopInteract(null)
+			
+		else
+			element.setPosition(position)
+		end
+	end
+	
+	/** Rotate object as if handlers have been used. */
+	public static func void directRotateObject(BehaviorElement element, Vector axis)
+		var Matrix matrix = Matrix.newFromQuaternion(element.getOrientation())
+		directRotateObjectTo(element, element.getOrientation() * Quaternion.newFromAxis(\
+			matrix.transformNormal(axis), -SessionSettings.get().getManualRotationStep()))
+	end
+	
+	/** Rotate object as if handlers have been used. */
+	public static func void directRotateObjectTo(BehaviorElement element, Quaternion orientation)
+		var Instance instance = getInstanceIn(element)
+		
+		if instance != null
+			instance.notifyStartInteract(null)
+			element.setOrientation(orientation)
+			instance.notifyStopInteract(null)
+			
+		else
+			element.setOrientation(orientation)
+		end
 	end
 	
 	
