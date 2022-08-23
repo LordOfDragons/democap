@@ -1,0 +1,180 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Grab constraint.
+ */
+class GrabConstraint
+	class Constraint
+		private var ColliderRig pCollider
+		private var int pBone
+		private var int pTargetBone
+		private var DVector pLinearLimitLower
+		private var DVector pLinearLimitUpper
+		private var DVector pAngularLimitLower
+		private var DVector pAngularLimitUpper
+		private var bool pApplyLimitAngularX
+		private var bool pApplyLimitAngularY
+		private var bool pApplyLimitLinearX
+		private var bool pApplyLimitLinearY
+		private var bool pApplyLimitLinearZ
+		private var DVector pAnchorOffset
+		private var DMatrix pMatrix
+		private var DMatrix pAngularMatrix
+		private var DMatrix pAngularMatrixInv
+		
+		public func new(ColliderRig collider, int bone, int constraintIndex, DVector anchor)
+			var Rig rig = collider.getRig()
+			var ColliderConstraint constraint = rig.boneGetConstraintAt(bone, constraintIndex)
+			
+			pCollider = collider
+			pBone = bone
+			pTargetBone = constraint.getBone()
+			
+			if pTargetBone == -1
+				return
+			end
+			
+			var DMatrix boneInvMat = collider.boneGetInverseMatrix(bone)
+			
+			var DVector refCmp = DVector.new(rig.boneGetCentralMassPoint(bone))
+			var DVector refPos = DVector.new(constraint.getPosition1())
+			var Quaternion refQuat = constraint.getOrientation1()
+			var DMatrix refMat = DMatrix.newWorld(refPos - refCmp, refQuat)
+			
+			var DVector tarCmp = DVector.new(rig.boneGetCentralMassPoint(pTargetBone))
+			var DVector tarPos = DVector.new(constraint.getPosition2())
+			var Quaternion tarQuat = constraint.getOrientation2()
+			var DMatrix tarMat = DMatrix.newWorld(tarPos - tarCmp, tarQuat)
+			
+			var DVector lanchor = boneInvMat * anchor
+			
+			pAnchorOffset = refMat.getInverse() * lanchor
+			
+			var float angleY = -DEMath.atan2(pAnchorOffset.getX(), pAnchorOffset.getZ())
+			var float angleX = DEMath.atan2(pAnchorOffset.getY(),\
+				Vector2.new(pAnchorOffset.getX(), pAnchorOffset.getZ()).getLength())
+			
+			pAngularMatrix = DMatrix.newRotation(angleX, angleY, 0)
+			pAngularMatrixInv = pAngularMatrix.getInverse()
+			
+			pMatrix = tarMat
+			var DMatrix matrixRefInv = pMatrix.getInverse()
+			
+			pLinearLimitLower = DVector.new(constraint.getLinearLowerLimits())
+			pLinearLimitUpper = DVector.new(constraint.getLinearUpperLimits())
+			pAngularLimitLower = DVector.new(constraint.getAngularLowerLimits())
+			pAngularLimitUpper = DVector.new(constraint.getAngularUpperLimits())
+			
+			var DVector diffAngular = pAngularLimitUpper - pAngularLimitLower
+			var DVector diffLinear = pLinearLimitUpper - pLinearLimitLower
+			
+			pApplyLimitAngularX = diffAngular.getX() > 0.01 // limited
+			pApplyLimitAngularY = diffAngular.getY() > 0.01 // limited
+			
+			pApplyLimitLinearX = diffLinear.getX() > -0.001 // limited or locked
+			pApplyLimitLinearY = diffLinear.getY() > -0.001 // limited or locked
+			pApplyLimitLinearZ = diffLinear.getZ() > -0.001 // limited or locked
+		end
+		
+		public func DVector limit(DVector point)
+			var DMatrix matrix = pMatrix * pCollider.boneGetMatrix(pTargetBone)
+			var DVector anchorOffset = pAnchorOffset
+			
+			point = matrix.getInverse() * point
+			
+			if pApplyLimitAngularX or pApplyLimitAngularY
+				point = pAngularMatrixInv * point
+				
+				var float length = point.getLength()
+				var float angleY = -DEMath.atan2(point.getX(), point.getZ())
+				var float angleX = DEMath.atan2(point.getY(), Vector2.new(point.getX(), point.getZ()).getLength())
+				
+				if pApplyLimitAngularY
+					angleY = DEMath.clamp(angleY, pAngularLimitLower.getY(), pAngularLimitUpper.getY())
+				end
+				if pApplyLimitAngularX
+					angleX = DEMath.clamp(angleX, pAngularLimitLower.getX(), pAngularLimitUpper.getX())
+				end
+				
+				var float radius = DEMath.cos(angleX) * length
+				point = DVector.new(DEMath.sin(-angleY) * radius, DEMath.sin(angleX) * length, DEMath.cos(angleY) * radius)
+				
+				point = pAngularMatrix * point
+				
+				anchorOffset = pAngularMatrixInv.transformNormal(anchorOffset)
+				anchorOffset = DMatrix.newRotation(angleX, angleY, 0).transformNormal(anchorOffset)
+				anchorOffset = pAngularMatrix.transformNormal(anchorOffset)
+			end
+			
+			point = point - anchorOffset
+			
+			if pApplyLimitLinearX or pApplyLimitLinearY or pApplyLimitLinearZ
+				var DVector clamped = point.largest(pLinearLimitLower).smallest(pLinearLimitUpper)
+				point = clamped.combine(point, pApplyLimitLinearX, pApplyLimitLinearY, pApplyLimitLinearZ)
+			end
+			
+			point = matrix * (point + anchorOffset)
+			
+			return point
+		end
+		
+		public func bool valid()
+			return pBone != -1 and pTargetBone != -1
+		end
+	end
+	
+	public var ColliderConstraint constraint
+	public var String handBoneName
+	public var int handBoneIndex
+	public var Collider grabbedCollider
+	public var ColliderRig grabbedColliderRig
+	public var int grabbedBoneIndex
+	public var DVector grabbedBoneCmp
+	public var DMatrix refCoordSystem
+	public var DMatrix targetCoordSystem
+	public var Array anchorConstraints
+	
+	public func new()
+		handBoneName = ""
+		handBoneIndex = -1
+		grabbedBoneIndex = -1
+		grabbedBoneCmp = DVector.new()
+		refCoordSystem = DMatrix.new()
+		targetCoordSystem = DMatrix.new()
+		anchorConstraints = Array.new()
+	end
+	
+	public func DVector limitAnchor(DVector anchor)
+		if anchorConstraints.getCount() > 0
+			anchor = anchorConstraints.inject(anchor, block DVector result, Constraint each
+				return each.limit(result)
+			end) cast DVector
+		end
+		return anchor
+	end
+end
