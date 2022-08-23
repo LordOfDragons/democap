@@ -70,6 +70,32 @@ class CPEBoneChain extends CPEBone
 		end
 	end
 	
+	public func new(WidgetCharacterPreview preview, LabelledComboBox cbBone,\
+	LabelledComboBox cbBoneBase, bool updateBase) super(preview, cbBone, not updateBase)
+		if cbBoneBase == null
+			throw ENullPointer.new("cbBoneBase")
+		end
+		
+		if updateBase
+			pLabelBone = null
+			pLabelBoneBase = cbBoneBase.getLabel()
+		end
+		
+		pCBBoneBase = cbBoneBase
+		pUpdateBase = updateBase
+		
+		if updateBase
+			if cbBoneBase.getEditor() != null
+				cbBoneBase.getEditor().getWidget().addFocusListener(ReceiveFocusActivateEditor.new(this))
+				cbBoneBase.getEditor().addActionListener(UpdateOnAction.new(this))
+				
+			else
+				cbBoneBase.addFocusListener(ReceiveFocusActivateEditor.new(this))
+			end
+			cbBoneBase.getModel().addListener(UpdateOnListChanged.new(this))
+		end
+	end
+	
 	
 	
 	/** Combo box bone base. */

@@ -118,6 +118,29 @@ class CPEBone extends CharacterPreviewEditor
 		end
 	end
 	
+	public func new(WidgetCharacterPreview preview, LabelledComboBox cbBone) this(preview, cbBone, true)
+	end
+	
+	protected func new(WidgetCharacterPreview preview, LabelledComboBox cbBone, bool addListeners) super(preview)
+		if cbBone == null
+			throw ENullPointer.new("cbBone")
+		end
+		pCBBone = cbBone
+		pLabelBone = cbBone.getLabel()
+		pSelectBoneRenderer = SelectBoneRenderer.new()
+		
+		if addListeners
+			if cbBone.getEditor() != null
+				cbBone.getEditor().getWidget().addFocusListener(ReceiveFocusActivateEditor.new(this))
+				cbBone.getEditor().addActionListener(UpdateOnAction.new(this))
+				
+			else
+				cbBone.addFocusListener(ReceiveFocusActivateEditor.new(this))
+			end
+			cbBone.getModel().addListener(UpdateOnListChanged.new(this))
+		end
+	end
+	
 	
 	
 	/** Combo box bone. */

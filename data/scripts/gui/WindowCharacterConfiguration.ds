@@ -586,6 +586,8 @@ class WindowCharacterConfiguration extends WindowDialog
 	/** Create window content. */
 	protected func void createContent()
 		var String uioptPrefix = prefixUIOptions(pInVR)
+		var LabelledComboBox lcb, lcbtip, lcbbase
+		var LabelledTextField ltf
 		var TextField textField
 		var ComboBox comboBox
 		var Button button
@@ -607,14 +609,16 @@ class WindowCharacterConfiguration extends WindowDialog
 			p.addWidget(CollapsibleGroup.new("Character Configuration", "",\
 			CollapsibleGroup.persistModel(uioptPrefix + "/GroupCharacter"),\
 			FormLayout.new(true, 10, 2), block Panel p2
-				uiBuilder.formTextField(p2, "Configuration Name:", pModelConfigName, "Unique configuration name")
+				ltf = LabelledTextField.new(p2, "Configuration Name:", pModelConfigName)
+				ltf.setToolTip("Unique configuration name")
 				
-				uiBuilder.formComboBox(p2, "Scale Mode:", pModelScaleMode, "Scale actor or character to match the other.")
+				lcb = LabelledComboBox.new(p2, "Scale Mode:", pModelScaleMode)
+				lcb.setToolTip("Scale actor or character to match the other.")
 				
-				uiBuilder.formComboBox(p2, "Move Calibrate:", pModelListMoveCalibrate,\
-					pModelTextMoveCalibrate, "Animation move to use for calibration. " \
-						+ "This move is also applied before the first motion transfer is applied.",\
-					MoveCalibrateChanged.new(this))
+				lcb = LabelledComboBox.new(p2, "Move Calibrate:", pModelListMoveCalibrate,\
+					pModelTextMoveCalibrate, MoveCalibrateChanged.new(this))
+				lcb.setToolTip("Animation move to use for calibration. "\
+					+ "This move is also applied before the first motion transfer is applied.")
 			end))
 			
 			// camera
@@ -637,27 +641,33 @@ class WindowCharacterConfiguration extends WindowDialog
 			p.addWidget(CollapsibleGroup.new("Grab Parameters", "",\
 			CollapsibleGroup.persistModel(uioptPrefix + "/GroupGrab"),\
 			FormLayout.new(true, 10, 2), block Panel p2
-				uiBuilder.formBone(p2, pCharacterPreview, "Bone Right:",\
-					pModelListGrabBoneRight, pModelTextGrabBoneRight,\
-					"Right hand bone to attach grabbed objects to.", null)
+				// right hand
+				lcb = LabelledComboBox.new(p2, "Bone Right:", pModelListGrabBoneRight, pModelTextGrabBoneRight)
+				lcb.setToolTip("Right hand bone to attach grabbed objects to.")
+				CPEBone.new(pCharacterPreview, lcb)
 				
-				uiBuilder.formBoneChain(p2, pCharacterPreview, "Tip Bone Right:", "Base Bone Right:",\
-					pModelListGrabTipBoneRight, pModelListGrabBaseBoneRight,\
-					pModelTextGrabTipBoneRight, pModelTextGrabBaseBoneRight,\
-					"Right hand tip bone in temporary inverse kinematic chain for grabbing objects with the right hand.",\
-					"Right hand base bone in temporary inverse kinematic chain for grabbing objects with the right hand.",\
-					null, null)
+				lcbtip = LabelledComboBox.new(p2, "Tip Bone Right:", pModelListGrabTipBoneRight, pModelTextGrabTipBoneRight)
+				lcbtip.setToolTip("Right hand tip bone in temporary inverse kinematic chain for grabbing objects with the right hand.")
 				
-				uiBuilder.formBone(p2, pCharacterPreview, "Bone Left:",\
-					pModelListGrabBoneLeft, pModelTextGrabBoneLeft,\
-					"Left hand bone to attach grabbed objects to.", null)
+				lcbbase = LabelledComboBox.new(p2, "Base Bone Right:", pModelListGrabBaseBoneRight, pModelTextGrabBaseBoneRight)
+				lcbbase.setToolTip("Right hand base bone in temporary inverse kinematic chain for grabbing objects with the right hand.")
 				
-				uiBuilder.formBoneChain(p2, pCharacterPreview, "Tip Bone Left:", "Base Bone Left:",\
-					pModelListGrabTipBoneLeft, pModelListGrabBaseBoneLeft,\
-					pModelTextGrabTipBoneLeft, pModelTextGrabBaseBoneLeft,\
-					"Left hand tip bone in temporary inverse kinematic chain for grabbing objects with the left hand.",\
-					"Left hand base bone in temporary inverse kinematic chain for grabbing objects with the left hand.",\
-					null, null)
+				CPEBoneChain.new(pCharacterPreview, lcbtip, lcbbase, false)
+				CPEBoneChain.new(pCharacterPreview, lcbtip, lcbbase, true)
+				
+				// left hand
+				lcb = LabelledComboBox.new(p2, "Bone Left:", pModelListGrabBoneLeft, pModelTextGrabBoneLeft)
+				lcb.setToolTip("Left hand bone to attach grabbed objects to.")
+				CPEBone.new(pCharacterPreview, lcb)
+				
+				lcbtip = LabelledComboBox.new(p2, "Tip Bone Left:", pModelListGrabTipBoneLeft, pModelTextGrabTipBoneLeft)
+				lcbtip.setToolTip("Left hand tip bone in temporary inverse kinematic chain for grabbing objects with the left hand.")
+				
+				lcbbase = LabelledComboBox.new(p2, "Base Bone Left:", pModelListGrabBaseBoneLeft, pModelTextGrabBaseBoneLeft)
+				lcbbase.setToolTip("Left hand base bone in temporary inverse kinematic chain for grabbing objects with the left hand.")
+				
+				CPEBoneChain.new(pCharacterPreview, lcbtip, lcbbase, false)
+				CPEBoneChain.new(pCharacterPreview, lcbtip, lcbbase, true)
 			end))
 			
 			// tracker slots

@@ -1,0 +1,97 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+
+
+/**
+ * Labelled TextField
+ */
+class LabelledTextField extends TextField
+	class LabelClicked extends ClickedActionListener
+		private var LabelledTextField pTextField
+		
+		public func new(LabelledTextField textField)
+			pTextField = textField
+		end
+		
+		public func void onAction()
+			pTextField.grabFocus()
+		end
+	end
+	
+	
+	
+	private var Label pLabel
+	
+	
+	
+	/** Create widget. */
+	public func new(Container container, String label, TextModel model) super(model)
+		sharedInit(container, label)
+	end
+	
+	public func new(Container container, String label, TextModel model,\
+	bool readOnly) super(model, readOnly)
+		sharedInit(container, label)
+	end
+	
+	public func new(Container container, String label, TextModel model,\
+	int displayCharCount) super(model, displayCharCount)
+		sharedInit(container, label)
+	end
+	
+	public func new(Container container, String label, TextModel model,\
+	int displayCharCount, bool readOnly) super(model, displayCharCount, readOnly)
+		sharedInit(container, label)
+	end
+	
+	private func void sharedInit(Container container, String label)
+		pLabel = Label.new(label, "Label.FormCaption")
+		pLabel.addMouseListener(LabelClicked.new(this))
+		pLabel.addMouseListener(ParentWheelActionListener.new(container))
+		
+		container.addWidget(pLabel)
+		container.addWidget(this)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		pLabel = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Label. */
+	public func Label getLabel()
+		return pLabel
+	end
+	
+	/** Set tooltip. */
+	public func void setToolTip(Object toolTip)
+		super.setToolTip(toolTip)
+		pLabel.setToolTip(toolTip)
+	end
+end

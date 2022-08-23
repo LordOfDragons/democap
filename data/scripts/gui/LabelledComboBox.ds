@@ -1,0 +1,117 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+
+
+/**
+ * Labelled ComboBox
+ */
+class LabelledComboBox extends ComboBox
+	class LabelClicked extends ClickedActionListener
+		private var LabelledComboBox pComboBox
+		
+		public func new(LabelledComboBox comboBox)
+			pComboBox = comboBox
+		end
+		
+		public func void onAction()
+			pComboBox.grabFocus()
+			pComboBox.rollUp()
+		end
+	end
+	
+	
+	
+	private var Label pLabel
+	
+	
+	
+	/** Create widget. */
+	public func new(Container container, String label, ListModel listModel) super(listModel)
+		sharedInit(container, label, null, null)
+	end
+	
+	public func new(Container container, String label, ListModel listModel,\
+	ListElementRenderer renderer) super(listModel, renderer)
+		sharedInit(container, label, null, null)
+	end
+	
+	public func new(Container container, String label, ListModel listModel,\
+	TextModel textModel) super(listModel)
+		sharedInit(container, label, textModel, null)
+	end
+	
+	public func new(Container container, String label, ListModel listModel,\
+	TextModel textModel, ActionListener action) super(listModel)
+		sharedInit(container, label, textModel, action)
+	end
+	
+	public func new(Container container, String label, ListModel listModel,\
+	ListElementRenderer renderer, TextModel textModel) super(listModel, renderer)
+		sharedInit(container, label, textModel, null)
+	end
+	
+	public func new(Container container, String label, ListModel listModel,\
+	ListElementRenderer renderer, TextModel textModel, ActionListener action) super(listModel, renderer)
+		sharedInit(container, label, textModel, action)
+	end
+	
+	private func void sharedInit(Container container, String label, TextModel textModel, ActionListener action)
+		pLabel = Label.new(label, "Label.FormCaption")
+		pLabel.addMouseListener(LabelClicked.new(this))
+		pLabel.addMouseListener(ParentWheelActionListener.new(container))
+		
+		if textModel != null
+			var ComboBoxEditor editor = DefaultComboBoxEditor.new(textModel)
+			setEditor(editor)
+			
+			if action != null
+				editor.addActionListener(action)
+			end
+		end
+		
+		container.addWidget(pLabel)
+		container.addWidget(this)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		pLabel = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Label. */
+	public func Label getLabel()
+		return pLabel
+	end
+	
+	/** Set tooltip. */
+	public func void setToolTip(Object toolTip)
+		super.setToolTip(toolTip)
+		pLabel.setToolTip(toolTip)
+	end
+end
