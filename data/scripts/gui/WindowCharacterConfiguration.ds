@@ -346,8 +346,16 @@ class WindowCharacterConfiguration extends WindowDialog
 	private var DefaultTextModel pModelTextCameraBone
 	private var DefaultListModel pModelListGrabBoneRight
 	private var DefaultTextModel pModelTextGrabBoneRight
+	private var DefaultListModel pModelListGrabTipBoneRight
+	private var DefaultTextModel pModelTextGrabTipBoneRight
+	private var DefaultListModel pModelListGrabBaseBoneRight
+	private var DefaultTextModel pModelTextGrabBaseBoneRight
 	private var DefaultListModel pModelListGrabBoneLeft
 	private var DefaultTextModel pModelTextGrabBoneLeft
+	private var DefaultListModel pModelListGrabTipBoneLeft
+	private var DefaultTextModel pModelTextGrabTipBoneLeft
+	private var DefaultListModel pModelListGrabBaseBoneLeft
+	private var DefaultTextModel pModelTextGrabBaseBoneLeft
 	private var EditVector pEditCameraPosition
 	private var EditVector pEditCameraRotation
 	private var DefaultListModel pModelTrackerSlots
@@ -387,9 +395,25 @@ class WindowCharacterConfiguration extends WindowDialog
 		pModelListGrabBoneRight.setAutoSelect(false)
 		pModelTextGrabBoneRight = DefaultTextModel.new(config.getGrabBoneRight())
 		
+		pModelListGrabTipBoneRight = DefaultListModel.new()
+		pModelListGrabTipBoneRight.setAutoSelect(false)
+		pModelTextGrabTipBoneRight = DefaultTextModel.new(config.getGrabTipBoneRight())
+		
+		pModelListGrabBaseBoneRight = DefaultListModel.new()
+		pModelListGrabBaseBoneRight.setAutoSelect(false)
+		pModelTextGrabBaseBoneRight = DefaultTextModel.new(config.getGrabBaseBoneRight())
+		
 		pModelListGrabBoneLeft = DefaultListModel.new()
 		pModelListGrabBoneLeft.setAutoSelect(false)
 		pModelTextGrabBoneLeft = DefaultTextModel.new(config.getGrabBoneLeft())
+		
+		pModelListGrabTipBoneLeft = DefaultListModel.new()
+		pModelListGrabTipBoneLeft.setAutoSelect(false)
+		pModelTextGrabTipBoneLeft = DefaultTextModel.new(config.getGrabTipBoneLeft())
+		
+		pModelListGrabBaseBoneLeft = DefaultListModel.new()
+		pModelListGrabBaseBoneLeft.setAutoSelect(false)
+		pModelTextGrabBaseBoneLeft = DefaultTextModel.new(config.getGrabBaseBoneLeft())
 		
 		pModelTrackerSlots = DefaultListModel.new(config.getTrackerSlots().toArray().map(\
 			block CharacterTrackerSlot each
@@ -461,8 +485,16 @@ class WindowCharacterConfiguration extends WindowDialog
 		pModelTextCameraBone = null
 		pModelListGrabBoneRight = null
 		pModelTextGrabBoneRight = null
+		pModelListGrabTipBoneRight = null
+		pModelTextGrabTipBoneRight = null
+		pModelListGrabBaseBoneRight = null
+		pModelTextGrabBaseBoneRight = null
 		pModelListGrabBoneLeft = null
 		pModelTextGrabBoneLeft = null
+		pModelListGrabTipBoneLeft = null
+		pModelTextGrabTipBoneLeft = null
+		pModelListGrabBaseBoneLeft = null
+		pModelTextGrabBaseBoneLeft = null
 		pEditCameraPosition = null
 		pEditCameraRotation = null
 		pModelTrackerSlots = null
@@ -521,7 +553,11 @@ class WindowCharacterConfiguration extends WindowDialog
 		pCharacterConfiguration.setCameraPosition(pEditCameraPosition.getVector())
 		pCharacterConfiguration.setCameraRotation(pEditCameraRotation.getVector())
 		pCharacterConfiguration.setGrabBoneRight(pModelTextGrabBoneRight.getText())
+		pCharacterConfiguration.setGrabTipBoneRight(pModelTextGrabTipBoneRight.getText())
+		pCharacterConfiguration.setGrabBaseBoneRight(pModelTextGrabBaseBoneRight.getText())
 		pCharacterConfiguration.setGrabBoneLeft(pModelTextGrabBoneLeft.getText())
+		pCharacterConfiguration.setGrabTipBoneLeft(pModelTextGrabTipBoneLeft.getText())
+		pCharacterConfiguration.setGrabBaseBoneLeft(pModelTextGrabBaseBoneLeft.getText())
 		
 		pCharacterConfiguration.getTrackerSlots().removeAll()
 		pModelTrackerSlots.forEach(block CharacterTrackerSlot each
@@ -553,6 +589,10 @@ class WindowCharacterConfiguration extends WindowDialog
 		var TextField textField
 		var ComboBox comboBox
 		var Button button
+		var Array result
+		
+		var UIBuilder uiBuilder = UIBuilder.new()
+		uiBuilder.updateDesignerSelectors(".WindowCharacterConfiguration")
 		
 		setLayout(BorderLayout.new(20))
 		
@@ -567,94 +607,57 @@ class WindowCharacterConfiguration extends WindowDialog
 			p.addWidget(CollapsibleGroup.new("Character Configuration", "",\
 			CollapsibleGroup.persistModel(uioptPrefix + "/GroupCharacter"),\
 			FormLayout.new(true, 10, 2), block Panel p2
-				// config name
-				p2.addWidget(Label.new("Configuration Name:", "Label.FormCaption"))
+				uiBuilder.formTextField(p2, "Configuration Name:", pModelConfigName, "Unique configuration name")
 				
-				textField = TextField.new(pModelConfigName, 15)
-				textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-				textField.setToolTip("Unique configuration name")
-				p2.addWidget(textField)
+				uiBuilder.formComboBox(p2, "Scale Mode:", pModelScaleMode, "Scale actor or character to match the other.")
 				
-				// scale mode
-				p2.addWidget(Label.new("Scale Mode:", "Label.FormCaption"))
-				
-				comboBox = ComboBox.new(pModelScaleMode)
-				comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-				comboBox.setToolTip("Scale actor or character to match the other.")
-				p2.addWidget(comboBox)
-				
-				// move calibrate
-				p2.addWidget(Label.new("Move Calibrate:", "Label.FormCaption"))
-				
-				comboBox = ComboBox.new(pModelListMoveCalibrate, DefaultComboBoxEditor.new(pModelTextMoveCalibrate))
-				comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-				comboBox.setToolTip("Animation move to use for calibration. " \
-					+ "This move is also applied before the first motion transfer is applied.")
-				comboBox.getEditor().addActionListener(MoveCalibrateChanged.new(this))
-				p2.addWidget(comboBox)
+				uiBuilder.formComboBox(p2, "Move Calibrate:", pModelListMoveCalibrate,\
+					pModelTextMoveCalibrate, "Animation move to use for calibration. " \
+						+ "This move is also applied before the first motion transfer is applied.",\
+					MoveCalibrateChanged.new(this))
 			end))
 			
 			// camera
 			p.addWidget(CollapsibleGroup.new("Camera Parameters", "",\
 			CollapsibleGroup.persistModel(uioptPrefix + "/GroupCamera"),\
 			FormLayout.new(true, 10, 2), block Panel p2
-				// camera bone
-				var Label labelBone = Label.new("Bone:", "Label.FormCaption")
-				p2.addWidget(labelBone)
+				result = uiBuilder.formBonePositionRotation(p2, pCharacterPreview,\
+					"Bone:", "Position:", "Rotation:",\
+					"Bone to attach VR Camera to. If empty string use HMD.",\
+					"Attach position of camera relative to bone. Not used if bone is empty string.",\
+					"Attach rotation in degrees of camera relative to bone. Not used if bone is empty string.",\
+					pModelListCameraBone, pModelTextCameraBone,\
+					pCharacterConfiguration.getCameraPosition(), pCharacterConfiguration.getCameraRotation())
 				
-				var ComboBox cbCameraBone = ComboBox.new(pModelListCameraBone, DefaultComboBoxEditor.new(pModelTextCameraBone))
-				cbCameraBone.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-				cbCameraBone.setToolTip("Bone to attach VR Camera to. If empty string use HMD.")
-				p2.addWidget(cbCameraBone)
-				
-				CPEBone.new(pCharacterPreview, labelBone, cbCameraBone)
-				
-				// camera position
-				var Label labelPosition = Label.new("Position:", "Label.FormCaption")
-				p2.addWidget(labelPosition)
-				
-				pEditCameraPosition = EditVector.new(pCharacterConfiguration.getCameraPosition())
-				pEditCameraPosition.setToolTip("Attach position of camera relative to bone. Not used if bone is empty string.")
-				p2.addWidget(pEditCameraPosition)
-				
-				// camera rotation
-				var Label labelRotation = Label.new("Rotation:", "Label.FormCaption")
-				p2.addWidget(labelRotation)
-				
-				pEditCameraRotation = EditVector.new(pCharacterConfiguration.getCameraRotation())
-				pEditCameraRotation.setToolTip("Attach rotation in degrees of camera relative to bone. Not used if bone is empty string.")
-				p2.addWidget(pEditCameraRotation)
-				
-				// camera coordinate system
-				CPECoordinateSystem.new(pCharacterPreview, labelPosition, pEditCameraPosition,\
-					labelRotation, pEditCameraRotation, cbCameraBone, null)
+				pEditCameraPosition = result.getAt(0) cast EditVector
+				pEditCameraRotation = result.getAt(1) cast EditVector
 			end))
 			
 			// grab
 			p.addWidget(CollapsibleGroup.new("Grab Parameters", "",\
 			CollapsibleGroup.persistModel(uioptPrefix + "/GroupGrab"),\
 			FormLayout.new(true, 10, 2), block Panel p2
-				// right grab bone
-				var Label labelBone = Label.new("Bone Right:", "Label.FormCaption")
-				p2.addWidget(labelBone)
+				uiBuilder.formBone(p2, pCharacterPreview, "Bone Right:",\
+					pModelListGrabBoneRight, pModelTextGrabBoneRight,\
+					"Right hand bone to attach grabbed objects to.", null)
 				
-				comboBox = ComboBox.new(pModelListGrabBoneRight, DefaultComboBoxEditor.new(pModelTextGrabBoneRight))
-				comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-				comboBox.setToolTip("Right hand bone to attach grabbed objects to.")
-				p2.addWidget(comboBox)
+				uiBuilder.formBoneChain(p2, pCharacterPreview, "Tip Bone Right:", "Base Bone Right:",\
+					pModelListGrabTipBoneRight, pModelListGrabBaseBoneRight,\
+					pModelTextGrabTipBoneRight, pModelTextGrabBaseBoneRight,\
+					"Right hand tip bone in temporary inverse kinematic chain for grabbing objects with the right hand.",\
+					"Right hand base bone in temporary inverse kinematic chain for grabbing objects with the right hand.",\
+					null, null)
 				
-				CPEBone.new(pCharacterPreview, labelBone, comboBox)
+				uiBuilder.formBone(p2, pCharacterPreview, "Bone Left:",\
+					pModelListGrabBoneLeft, pModelTextGrabBoneLeft,\
+					"Left hand bone to attach grabbed objects to.", null)
 				
-				// left grab bone
-				labelBone = Label.new("Bone Left:", "Label.FormCaption")
-				p2.addWidget(labelBone)
-				
-				comboBox = ComboBox.new(pModelListGrabBoneLeft, DefaultComboBoxEditor.new(pModelTextGrabBoneLeft))
-				comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-				comboBox.setToolTip("Left hand bone to attach grabbed objects to.")
-				p2.addWidget(comboBox)
-				
-				CPEBone.new(pCharacterPreview, labelBone, comboBox)
+				uiBuilder.formBoneChain(p2, pCharacterPreview, "Tip Bone Left:", "Base Bone Left:",\
+					pModelListGrabTipBoneLeft, pModelListGrabBaseBoneLeft,\
+					pModelTextGrabTipBoneLeft, pModelTextGrabBaseBoneLeft,\
+					"Left hand tip bone in temporary inverse kinematic chain for grabbing objects with the left hand.",\
+					"Left hand base bone in temporary inverse kinematic chain for grabbing objects with the left hand.",\
+					null, null)
 			end))
 			
 			// tracker slots
@@ -743,6 +746,13 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 		
 		pModelListCameraBone.setContent(bones)
+		
+		pModelListGrabBoneRight.setContent(bones)
+		pModelListGrabTipBoneRight.setContent(bones)
+		pModelListGrabBaseBoneRight.setContent(bones)
+		pModelListGrabBoneLeft.setContent(bones)
+		pModelListGrabTipBoneLeft.setContent(bones)
+		pModelListGrabBaseBoneLeft.setContent(bones)
 		
 		pPanelsMotionTransfer.forEach(block WCCPanelMotionTransfer each
 			each.updateBoneLists(bones)

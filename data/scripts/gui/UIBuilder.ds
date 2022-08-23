@@ -1,0 +1,246 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Helper class to build common UI constructs to avoid code duplication.
+ */
+class UIBuilder
+	public var String designerSelectorLabel
+	public var String designerSelectorTextField
+	public var String designerSelectorComboBox
+	public var int textFieldColumns
+	
+	
+	public func new()
+		designerSelectorLabel = "Label.FormCaption"
+		designerSelectorTextField = "TextField"
+		designerSelectorComboBox = "ComboBox"
+		textFieldColumns = 15
+	end
+	
+	
+	
+	public func void updateDesignerSelectors(String suffix)
+		designerSelectorTextField = "TextField" + suffix
+		designerSelectorComboBox = "ComboBox" + suffix
+	end
+	
+	
+	
+	/** Add form text field with label. */
+	public func void formTextField(Container container, String label, TextModel textModel, String toolTip)
+		var Label l = Label.new(label, designerSelectorLabel)
+		l.setToolTip(toolTip)
+		container.addWidget(l)
+		
+		var TextField tf = TextField.new(textModel, textFieldColumns)
+		tf.setDesignerSelector(designerSelectorTextField)
+		tf.setToolTip(toolTip)
+		container.addWidget(tf)
+	end
+	
+	/** Add form combo box with label. */
+	public func void formComboBox(Container container, String label, ListModel listModel, String toolTip)
+		var Label l = Label.new(label, designerSelectorLabel)
+		l.setToolTip(toolTip)
+		container.addWidget(l)
+		
+		var ComboBox cb = ComboBox.new(listModel)
+		cb.setDesignerSelector(designerSelectorComboBox)
+		cb.setToolTip(toolTip)
+		container.addWidget(cb)
+	end
+	
+	
+	
+	/** Add form editable combo box with label. */
+	public func void formComboBox(Container container, String label, ListModel listModel,\
+	TextModel textModel, String toolTip)
+		formComboBox(container, label, listModel, textModel, toolTip, null)
+	end
+	
+	/** Add form editable combo box with label. */
+	public func void formComboBox(Container container, String label, ListModel listModel,\
+	TextModel textModel, String toolTip, ActionListener actionEdit)
+		var Label l = Label.new(label, designerSelectorLabel)
+		l.setToolTip(toolTip)
+		container.addWidget(l)
+		
+		var ComboBoxEditor editor = DefaultComboBoxEditor.new(textModel)
+		var ComboBox cb = ComboBox.new(listModel, editor)
+		cb.setDesignerSelector(designerSelectorComboBox)
+		cb.setToolTip(toolTip)
+		if actionEdit != null
+			editor.addActionListener(actionEdit)
+		end
+		container.addWidget(cb)
+	end
+	
+	
+	
+	/** Add form position with label. */
+	public func EditVector formPosition(Container container, String label, String toolTip, Vector position)
+		var Label l = Label.new(label, designerSelectorLabel)
+		l.setToolTip(toolTip)
+		container.addWidget(l)
+		
+		var EditVector ev = EditVector.new(position)
+		ev.setToolTip(toolTip)
+		container.addWidget(ev)
+		
+		return ev
+	end
+	
+	
+	
+	/**
+	 * Add form position and orientation with label and preview support.
+	 * Returns Array with [EditVector position, EditVector rotation].
+	 */
+	public func Array formPositionRotation(Container container, WidgetCharacterPreview preview,\
+	String labelPosition, String labelRotation, String toolTipPosition, String toolTipRotation,\
+	Vector position, Vector rotation)
+		var Label lp = Label.new(labelPosition, designerSelectorLabel)
+		lp.setToolTip(toolTipPosition)
+		container.addWidget(lp)
+		
+		var EditVector evp = EditVector.new(position)
+		evp.setToolTip(toolTipPosition)
+		container.addWidget(evp)
+		
+		var Label lr = Label.new(labelRotation, designerSelectorLabel)
+		lr.setToolTip(toolTipRotation)
+		container.addWidget(lr)
+		
+		var EditVector evr = EditVector.new(rotation)
+		evr.setToolTip(toolTipRotation)
+		container.addWidget(evr)
+		
+		CPECoordinateSystem.new(preview, lp, evp, lr, evr, null, null)
+		
+		return Array.newWith(evp, evr)
+	end
+	
+	
+	
+	/**
+	 * Add form position and orientation with label and preview support.
+	 * Returns Array with [EditVector position, EditVector rotation].
+	 */
+	public func Array formBonePositionRotation(Container container, WidgetCharacterPreview preview,\
+	String labelBone, String labelPosition, String labelRotation,\
+	String toolTipBone, String toolTipPosition, String toolTipRotation,\
+	ListModel listModelBone, TextModel textModelBone, Vector position, Vector rotation)
+		var Label lb = Label.new(labelBone, designerSelectorLabel)
+		lb.setToolTip(toolTipBone)
+		container.addWidget(lb)
+		
+		var ComboBoxEditor editor = DefaultComboBoxEditor.new(textModelBone)
+		var ComboBox cb = ComboBox.new(listModelBone, editor)
+		cb.setDesignerSelector(designerSelectorComboBox)
+		cb.setToolTip(toolTipBone)
+		container.addWidget(cb)
+		
+		CPEBone.new(preview, lb, cb)
+		
+		var Label lp = Label.new(labelPosition, designerSelectorLabel)
+		lp.setToolTip(toolTipPosition)
+		container.addWidget(lp)
+		
+		var EditVector evp = EditVector.new(position)
+		evp.setToolTip(toolTipPosition)
+		container.addWidget(evp)
+		
+		var Label lr = Label.new(labelRotation, designerSelectorLabel)
+		lr.setToolTip(toolTipRotation)
+		container.addWidget(lr)
+		
+		var EditVector evr = EditVector.new(rotation)
+		evr.setToolTip(toolTipRotation)
+		container.addWidget(evr)
+		
+		CPECoordinateSystem.new(preview, lp, evp, lr, evr, cb, null)
+		
+		return Array.newWith(evp, evr)
+	end
+	
+	
+	
+	/** Add form editable bone combo box with label and preview support. */
+	public func void formBone(Container container, WidgetCharacterPreview preview,\
+	String label, ListModel listModel, TextModel textModel, String toolTip, ActionListener actionEdit)
+		var Label l = Label.new(label, designerSelectorLabel)
+		l.setToolTip(toolTip)
+		container.addWidget(l)
+		
+		var ComboBoxEditor editor = DefaultComboBoxEditor.new(textModel)
+		var ComboBox cb = ComboBox.new(listModel, editor)
+		cb.setDesignerSelector(designerSelectorComboBox)
+		cb.setToolTip(toolTip)
+		if actionEdit != null
+			editor.addActionListener(actionEdit)
+		end
+		container.addWidget(cb)
+		
+		CPEBone.new(preview, l, cb)
+	end
+	
+	/** Add form editable bone chain combo boxes with label and preview support. */
+	public func void formBoneChain(Container container, WidgetCharacterPreview preview,\
+	String labelTip, String labelBase, ListModel listModelTip, ListModel listModelBase,\
+	TextModel textModelTip, TextModel textModelBase, String toolTipTip, String toolTipBase,\
+	ActionListener actionEditTip, ActionListener actionEditBase)
+		var Label lt = Label.new(labelTip, designerSelectorLabel)
+		lt.setToolTip(toolTipTip)
+		container.addWidget(lt)
+		
+		var ComboBoxEditor et = DefaultComboBoxEditor.new(textModelTip)
+		var ComboBox cbt = ComboBox.new(listModelTip, et)
+		cbt.setDesignerSelector(designerSelectorComboBox)
+		cbt.setToolTip(toolTipTip)
+		if actionEditTip != null
+			et.addActionListener(actionEditTip)
+		end
+		container.addWidget(cbt)
+		
+		var Label lb = Label.new(labelBase, designerSelectorLabel)
+		lb.setToolTip(toolTipBase)
+		container.addWidget(lb)
+		
+		var ComboBoxEditor eb = DefaultComboBoxEditor.new(textModelBase)
+		var ComboBox cbb = ComboBox.new(listModelBase, eb)
+		cbb.setDesignerSelector(designerSelectorComboBox)
+		cbb.setToolTip(toolTipBase)
+		if actionEditBase != null
+			eb.addActionListener(actionEditBase)
+		end
+		container.addWidget(cbb)
+		
+		CPEBoneChain.new(preview, lt, cbt, null, cbb, false)
+		CPEBoneChain.new(preview, null, cbt, lb, cbb, true)
+	end
+end
