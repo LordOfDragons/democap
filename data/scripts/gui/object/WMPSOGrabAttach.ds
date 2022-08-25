@@ -36,9 +36,37 @@ pin Dragengine.Utils
  * ECBGrabAttach panel.
  */
 class WMPSOGrabAttach extends WMPPanelSceneObject
+	class ImmobileChanged extends DefaultToggleModelListener
+		protected var WMPSOGrabAttach pPanel
+		
+		public func new(WMPSOGrabAttach panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorGrabAttach().setImmobile(model.getToggled())
+		end
+	end
+	
+	class IKLockRotationChanged extends DefaultToggleModelListener
+		protected var WMPSOGrabAttach pPanel
+		
+		public func new(WMPSOGrabAttach panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorGrabAttach().setIKLockRotation(model.getToggled())
+		end
+	end
+	
+	
+	
 	protected var ECBGrabAttach.Instance pBehaviorGrabAttach
 	protected var DefaultListModel pModelBoneList
 	protected var DefaultTextModel pModelBoneText
+	protected var DefaultToggleModel pModelImmobile
+	protected var DefaultToggleModel pModelIKLockRotation
 	
 	
 	
@@ -51,18 +79,24 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 		
 		pModelBoneList = DefaultListModel.new()
 		pModelBoneList.setAutoSelect(false)
-		
+		pModelImmobile = DefaultToggleModel.new(false)
+		pModelIKLockRotation = DefaultToggleModel.new(false)
 		pModelBoneText = DefaultTextModel.new()
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
 		end)
+		
+		pModelImmobile.addListener(ImmobileChanged.new(this))
+		pModelIKLockRotation.addListener(IKLockRotationChanged.new(this))
 	end
 	
 	/** Dispose of widget. */
 	public func void dispose()
 		pModelBoneText = null
 		pModelBoneList = null
+		pModelImmobile = null
+		pModelIKLockRotation = null
 		super.dispose()
 	end
 	
@@ -75,6 +109,8 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 	
 	/** Update behavior. */
 	public func void updateBehavior()
+		pModelImmobile.setToggled(pBehaviorGrabAttach.getImmobile())
+		pModelIKLockRotation.setToggled(pBehaviorGrabAttach.getIKLockRotation())
 		pModelBoneText.setText(pBehaviorGrabAttach.getBone())
 		updateModelBone()
 	end
@@ -140,6 +176,18 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 				end))
 				button.setToolTip("Update list of bones to grab to.")
 				p2.addWidget(button)
+			end))
+			
+			// grabbing
+			p.addWidget(Label.new("Grab:", "Label.FormCaption"))
+			p.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p2
+				checkBox = CheckBox.new(pModelImmobile, "Immobile")
+				checkBox.setToolTip("Object stays immobile while grabbed. Check this for locked objects or hand rails.")
+				p2.addWidget(checkBox)
+				
+				checkBox = CheckBox.new(pModelIKLockRotation, "Lock IK Rotation")
+				checkBox.setToolTip("Lock rotation of actor hand while grabbing.")
+				p2.addWidget(checkBox)
 			end))
 		end))
 	end

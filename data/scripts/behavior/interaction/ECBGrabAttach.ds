@@ -63,6 +63,8 @@ class ECBGrabAttach extends DefaultECBehavior
 		protected var ECBehaviorAttachable.Instance pAttachable
 		protected var ECBehaviorCollider.Instance pParentCollider
 		protected var String pBone
+		protected var bool pImmobile
+		protected var bool pIKLockRotation
 		protected var bool pTemporaryDetached
 		
 		
@@ -87,6 +89,8 @@ class ECBGrabAttach extends DefaultECBehavior
 			end
 			
 			pBone = pECBehavior.bone.getValue(stub)
+			pImmobile = pECBehavior.immobile.getValue(stub)
+			pIKLockRotation = pECBehavior.ikLockRotation.getValue(stub)
 		end
 		
 		/** Dispose of behavior instance. */
@@ -124,6 +128,28 @@ class ECBGrabAttach extends DefaultECBehavior
 		public func void setBone(String bone)
 			pBone = bone
 		end
+		
+		/** Object does not move while grabbed. */
+		public func bool getImmobile()
+			return pImmobile
+		end
+		
+		/** Set if object does not move while grabbed. */
+		public func void setImmobile(bool immobile)
+			pImmobile = immobile
+		end
+		
+		/** Lock IK rotation. */
+		public func bool getIKLockRotation()
+			return pIKLockRotation
+		end
+		
+		/** Set if IK rotation is locked. */
+		public func void setIKLockRotation(bool lock)
+			pIKLockRotation = lock
+		end
+		
+		
 		
 		public func ECBehaviorCollider.Instance getParentCollider()
 			return pParentCollider
@@ -216,7 +242,9 @@ class ECBGrabAttach extends DefaultECBehavior
 				// nothing
 				
 			case 1
-				var PersistencyFlags flags = PersistencyFlags.new(1, reader)
+				var PersistencyFlags flags = PersistencyFlags.new(2, reader)
+				pImmobile = flags.getAt(0)
+				pIKLockRotation = flags.getAt(1)
 				
 				pBone = reader.readString8()
 				
@@ -229,7 +257,9 @@ class ECBGrabAttach extends DefaultECBehavior
 		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
 			writer.writeByte(1) // version
 			
-			var PersistencyFlags flags = PersistencyFlags.new(1)
+			var PersistencyFlags flags = PersistencyFlags.new(2)
+			flags.setAt(0, pImmobile)
+			flags.setAt(1, pIKLockRotation)
 			flags.writeToFile(writer)
 			
 			writer.writeString8(pBone)
@@ -243,6 +273,8 @@ class ECBGrabAttach extends DefaultECBehavior
 	public var ECBehaviorAttachable attachable
 	public var ECBShowInteractHandles showInteractHandles
 	public var ECPString bone
+	public var ECPBoolean immobile
+	public var ECPBoolean ikLockRotation
 	
 	// TODO hand model to show. this though should be the job of ECBehaviorComponent present
 	//      in the owner class which has for example the hand model set with a modified skin.
@@ -269,6 +301,12 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		bone = ECPString.new(prefix + "bone", "")
 		eclass.addProperty(bone)
+		
+		immobile = ECPBoolean.new(prefix + "immobile", false)
+		eclass.addProperty(immobile)
+		
+		ikLockRotation = ECPBoolean.new(prefix + "ikLockRotation", false)
+		eclass.addProperty(ikLockRotation)
 		
 		eclass.addBehavior(this)
 	end

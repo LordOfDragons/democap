@@ -57,6 +57,7 @@ class ECBAGrab extends DefaultECBehavior
 		private var AnimatorController pControllerGrabIKGoalRotation
 		private var AnimatorController pControllerGrabIKLocalPosition
 		private var AnimatorController pControllerGrabIKLocalRotation
+		private var AnimatorController pControllerGrabIKApplyRotation
 		private var SmoothFloat pSmoothGrabIKBlend
 		
 		
@@ -176,16 +177,23 @@ class ECBAGrab extends DefaultECBehavior
 				animator.addBone(each)
 			end)
 			
-			animator.setControllerCount(4)
+			animator.setControllerCount(5)
 			animator.getControllerAt(0).setName("goal.position")
 			animator.getControllerAt(1).setName("goal.rotation")
 			animator.getControllerAt(2).setName("local.position")
 			animator.getControllerAt(3).setName("local.rotation")
 			
+			animator.getControllerAt(4).setName("applyrotation")
+			animator.getControllerAt(4).setRange(0, 1)
+			animator.getControllerAt(4).setClamp(true)
+			
 			animator.addLink(0)
 			animator.addLink(1)
 			animator.addLink(2)
 			animator.addLink(3)
+			
+			animator.addLink(4)
+			animator.setLinkCurve(4, CurveBezier.newDefaultLinear())
 			
 			var ARStateSnapshot ruleCurState = ARStateSnapshot.new()
 			ruleCurState.setUseLastState(true)
@@ -200,6 +208,20 @@ class ECBAGrab extends DefaultECBehavior
 			ruleIK.targetAddLink(ARInverseKinematicTarget.goalOrientation, 1)
 			ruleIK.targetAddLink(ARInverseKinematicTarget.localPosition, 2)
 			ruleIK.targetAddLink(ARInverseKinematicTarget.localOrientation, 3)
+			ruleIK.targetAddLink(ARInverseKinematicTarget.blendFactor, 4)
+			ruleIK.setInvertBlendFactor(true)
+			animator.addRule(ruleIK)
+			
+			ruleIK = ARInverseKinematic.new()
+			ruleIK.setAdjustPosition(true)
+			ruleIK.setAdjustOrientation(true)
+			ruleIK.addBone(tipBone)
+			ruleIK.addBone(baseBone)
+			ruleIK.targetAddLink(ARInverseKinematicTarget.goalPosition, 0)
+			ruleIK.targetAddLink(ARInverseKinematicTarget.goalOrientation, 1)
+			ruleIK.targetAddLink(ARInverseKinematicTarget.localPosition, 2)
+			ruleIK.targetAddLink(ARInverseKinematicTarget.localOrientation, 3)
+			ruleIK.targetAddLink(ARInverseKinematicTarget.blendFactor, 4)
 			animator.addRule(ruleIK)
 			
 			pAnimatorGrabIK = AnimatorInstance.new()
@@ -210,6 +232,7 @@ class ECBAGrab extends DefaultECBehavior
 			pControllerGrabIKGoalRotation = pAnimatorGrabIK.getControllerAt(1)
 			pControllerGrabIKLocalPosition = pAnimatorGrabIK.getControllerAt(2)
 			pControllerGrabIKLocalRotation = pAnimatorGrabIK.getControllerAt(3)
+			pControllerGrabIKApplyRotation = pAnimatorGrabIK.getControllerAt(4)
 		end
 		
 		
@@ -430,7 +453,9 @@ class ECBAGrab extends DefaultECBehavior
 			
 			// physics constraint is set to lockAll(). modify the dof-limits
 			pPhysicsGrabConstraint.constraint.setToBallJoint()
-			// TODO
+			
+			pPhysicsGrabConstraint.immobile = grabAttach.getImmobile()
+			pPhysicsGrabConstraint.lockGrabRotation = grabAttach.getIKLockRotation()
 			
 			var DVector anchor = anchorMatrix.getPosition()
 			
@@ -451,17 +476,20 @@ class ECBAGrab extends DefaultECBehavior
 				end
 			end
 			
-			if grabbedBone != -1
-				pPhysicsGrabConstraint.grabbedColliderRig.boneSetLinearVelocity(grabbedBone, Vector.new())
-				pPhysicsGrabConstraint.grabbedColliderRig.boneSetAngularVelocity(grabbedBone, Vector.new())
+			if not pPhysicsGrabConstraint.immobile
+				if grabbedBone != -1
+					pPhysicsGrabConstraint.grabbedColliderRig.boneSetLinearVelocity(grabbedBone, Vector.new())
+					pPhysicsGrabConstraint.grabbedColliderRig.boneSetAngularVelocity(grabbedBone, Vector.new())
+					
+				else
+					pPhysicsGrabConstraint.grabbedCollider.setLinearVelocity(Vector.new())
+					pPhysicsGrabConstraint.grabbedCollider.setAngularVelocity(Vector.new())
+				end
 				
-			else
-				pPhysicsGrabConstraint.grabbedCollider.setLinearVelocity(Vector.new())
-				pPhysicsGrabConstraint.grabbedCollider.setAngularVelocity(Vector.new())
+				pPhysicsGrabConstraint.grabbedCollider.addConstraint(pPhysicsGrabConstraint.constraint)
+				breakPlayback(attachingElement)
 			end
 			
-			pPhysicsGrabConstraint.grabbedCollider.addConstraint(pPhysicsGrabConstraint.constraint)
-			breakPlayback(attachingElement)
 			initGrabIK()
 			return true
 		end
@@ -560,6 +588,8 @@ class ECBAGrab extends DefaultECBehavior
 				* pComponent.boneGetMatrix(bone) * pComponent.boneGetInverseMatrix(pGrabIKBoneIndex)
 			pControllerGrabIKLocalPosition.setVector(matrix.getPosition())
 			pControllerGrabIKLocalRotation.setRotation(matrix.getEulerAngles())
+			
+			pControllerGrabIKApplyRotation.setValue(pPhysicsGrabConstraint.lockGrabRotation if 1 else 0)
 			
 			pSmoothGrabIKBlend.setGoal(1)
 			pSmoothGrabIKBlend.setValue(1)
