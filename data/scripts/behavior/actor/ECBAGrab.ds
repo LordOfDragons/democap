@@ -267,9 +267,7 @@ class ECBAGrab extends DefaultECBehavior
 			
 			var ECBehaviorGrabSpot.Instance grabSpot = pGrabber.closestTouchingGrabSpot()
 			if grabSpot != null
-				var BehaviorElement element = grabSpot.getElement()
-				
-				pGrabAttach = element.findInstance(block ECBGrabAttach.Instance each
+				pGrabAttach = grabSpot.getElement().findInstance(block ECBGrabAttach.Instance each
 					return tryGrabAttach(each)
 				end) cast ECBGrabAttach.Instance
 				if pGrabAttach != null
@@ -371,6 +369,10 @@ class ECBAGrab extends DefaultECBehavior
 			var ECBehaviorCollider.Instance parentCollider = grabAttach.getParentCollider()
 			
 			if attachable != null
+				if not ECBColliderPhysics.actorCanGrab(grabAttach.getElement())
+					return false
+				end
+				
 				// grab using predefined position
 				/*
 				var ECBehaviorGrabSpot.Instance grabSpot = grabAttach.getGrabSpot()
@@ -396,6 +398,10 @@ class ECBAGrab extends DefaultECBehavior
 				breakPlayback(attachable.getElement())
 				
 			elif parentCollider != null
+				if not ECBColliderPhysics.actorCanGrab(parentCollider.getElement())
+					return false
+				end
+				
 				var Collider attachingCollider = parentCollider.getCollider()
 				
 				// physics simulated objects have to be physically attached
@@ -533,6 +539,8 @@ class ECBAGrab extends DefaultECBehavior
 				anchorMatrix = targetMatrix
 			end
 			
+			pGhostCollider.setPosition(anchorMatrix.getPosition()) // avoid wrong initial position
+			
 			var ColliderRig touchColliderRig
 			var Matrix refCoordSystem
 			
@@ -575,19 +583,17 @@ class ECBAGrab extends DefaultECBehavior
 		end
 		
 		protected func void initGrabIK()
-			if pPhysicsGrabConstraint == null or pGrabIKBoneIndex == -1
-				return
-			end
-			
-			var int bone = pPhysicsGrabConstraint.handBoneIndex
-			if bone == -1
+			if pPhysicsGrabConstraint == null or pGrabIKBoneIndex == -1 or pPhysicsGrabConstraint.handBoneIndex == -1
 				return
 			end
 			
 			var Matrix matrix = pPhysicsGrabConstraint.targetCoordSystem.toMatrix()\
-				* pComponent.boneGetMatrix(bone) * pComponent.boneGetInverseMatrix(pGrabIKBoneIndex)
+				* pComponent.boneGetMatrix(pPhysicsGrabConstraint.handBoneIndex)\
+				* pComponent.boneGetInverseMatrix(pGrabIKBoneIndex)
+			
 			pControllerGrabIKLocalPosition.setVector(matrix.getPosition())
 			pControllerGrabIKLocalRotation.setRotation(-matrix.getEulerAngles())
+			
 			pControllerGrabIKApplyRotation.setValue(pPhysicsGrabConstraint.lockGrabRotation if 1 else 0)
 			
 			pSmoothGrabIKBlend.setGoal(1)
