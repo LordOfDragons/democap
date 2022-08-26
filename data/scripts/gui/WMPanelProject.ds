@@ -1748,6 +1748,21 @@ class WMPanelProject extends Panel
 			stub.setPosition(element.getPosition())
 			stub.setRotation(element.getOrientation().getEulerAngles())
 			
+			var Array attachments
+			
+			var ECBehaviorAttachments.Instance behaviorAttachments = ECBehaviorAttachments.getInstanceIn(element)
+			if behaviorAttachments != null
+				attachments = Array.new()
+				behaviorAttachments.forEachAttachment(block BehaviorElement each
+					attachments.add(each)
+				end)
+				behaviorAttachments = null
+				
+				attachments.forEach(block BehaviorElement each
+					gameWorld.removeElement(each)
+				end)
+			end
+			
 			var MemoryFile objectState = MemoryFile.new("objectState")
 			var PersistencyEnvironment env = PersistencyEnvironment.new(GameApp.getGameApp().getLoaders().getPersistency())
 			element.writeToFile(env, objectState.getWriter(false))
@@ -1759,6 +1774,22 @@ class WMPanelProject extends Panel
 			element.readFromFile(env, objectState.getReader())
 			
 			gameWorld.addElement(element)
+			
+			if attachments != null
+				behaviorAttachments = ECBehaviorAttachments.getInstanceIn(element)
+				if behaviorAttachments != null
+					attachments.forEach(block BehaviorElement each
+						gameWorld.addElement(each)
+					end)
+					behaviorAttachments = null
+					
+				else
+					attachments.forEach(block BehaviorElement each
+						each.safeDispose()
+					end)
+				end
+			end
+			
 			ECBSelectable.getInstanceIn(element).selectElement()
 			
 			if focusPosition != null

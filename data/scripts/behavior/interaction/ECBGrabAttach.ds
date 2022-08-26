@@ -158,6 +158,7 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		/** Remove from game world. */
 		public func void removeFromGameWorld()
+			removeFromAttachments()
 			pParentCollider = null
 		end
 		
@@ -207,6 +208,22 @@ class ECBGrabAttach extends DefaultECBehavior
 			var ECBehaviorAttachments.Instance behavior = ECBehaviorAttachments.getInstanceIn(parent)
 			if behavior != null
 				behavior.addAttachment(getElement())
+			end
+		end
+		
+		/** Remove attachment from ECBehaviorAttachments if parent has this behavior. */
+		public func void removeFromAttachments()
+			if pParentCollider == null
+				return
+			end
+			
+			var ECBehaviorAttachments.Instance behavior = ECBehaviorAttachments.getInstanceIn(pParentCollider.getElement())
+			if behavior == null
+				return
+			end
+			
+			if behavior.hasAttachment(getElement())
+				behavior.removeAttachment(getElement())
 			end
 		end
 		
