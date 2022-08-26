@@ -370,6 +370,11 @@ class CharacterConfiguration
 	
 	
 	
+	/** Element class is present. */
+	public func bool hasElementClass()
+		return pElementClass != null
+	end
+	
 	/**
 	 * Element class creating and preloading it if required. Returned element class can be
 	 * still preloading so check isElementClassPreloading() to check if it is ready to be used.
@@ -468,6 +473,8 @@ class CharacterConfiguration
 	
 	/** Reset calibration. */
 	public func void resetCalibration()
+		dropElementClass()
+		
 		pIsCalibrated = false
 		pCalibrateScale = 1
 		pMatrixScale = Matrix.new()
@@ -482,6 +489,8 @@ class CharacterConfiguration
 		pMotionTransfers.forEach(block MotionTransfer each
 			each.resetCalibration()
 		end)
+		
+		pProfile.notifyReset(this)
 	end
 	
 	/** Mark character is calibrated. */

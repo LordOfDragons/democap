@@ -75,19 +75,6 @@ class WorldSpawnCharacter
 		end
 	end
 	
-	/** Frame updater. */
-	protected class UpdateCheck extends FrameUpdateListener
-		private var WorldSpawnCharacter pOwner
-		
-		public func new(WorldSpawnCharacter owner)
-			pOwner = owner
-		end
-		
-		public func void frameUpdate(float elapsed)
-			pOwner.updateCheck()
-		end
-	end
-	
 	/** Character listener. */
 	protected class UpdateCharacter extends DefaultCharacterListener
 		private var WorldSpawnCharacter pOwner
@@ -99,6 +86,18 @@ class WorldSpawnCharacter
 		public func void calibrated(CharacterProfile profile, CharacterConfiguration config)
 			pOwner.recreateActor()
 		end
+		
+		public func void reset(CharacterProfile profile, CharacterConfiguration config)
+			pOwner.recreateActor()
+		end
+	end
+	
+	enum State
+		prepareElementClass
+		createActor
+		actorReady
+		actorBroken
+		recreateActor
 	end
 	
 	
@@ -107,7 +106,6 @@ class WorldSpawnCharacter
 	private var SpawnPoint pSpawnPoint
 	private var CharacterConfiguration pCharacter
 	private var MoCapActor pActor
-	private var UpdateCheck pUpdateCheck
 	private var UpdateCharacter pUpdateCharacter
 	private var DVector pLastActorPosition
 	private var Quaternion pLastActorOrientation
@@ -117,13 +115,14 @@ class WorldSpawnCharacter
 	private var BehaviorElement pWristMenuLeft
 	private var BehaviorElement pMirrorLarge
 	private var ElementClass pMoCapActorClass
-	private var bool pRequiresRecreateCharacter
+	private var State pState
 	private var Array pListeners
 	
 	
 	
 	/** Create. */
 	public func new()
+		pState = State.prepareElementClass
 		pUpdateCharacter = UpdateCharacter.new(this)
 		pMoCapActorClass = GameApp.getGameApp().getElementClassList().getNamed("MoCapActor")
 		pListeners = Array.new()
@@ -150,7 +149,6 @@ class WorldSpawnCharacter
 		
 		pListeners.removeAll()
 		
-		stopUpdateCheck()
 		disposeActor()
 		pUpdateCharacter = null
 	end
@@ -187,6 +185,8 @@ class WorldSpawnCharacter
 		// dispose of the actor. we could move the actor to the new game world but better
 		// start with a fresh copy
 		disposeActor()
+		pState = State.actorBroken
+		
 		pSpawnPoint = null
 		pLastActorPosition = null
 		pLastActorOrientation = null
@@ -239,13 +239,13 @@ class WorldSpawnCharacter
 				director.setAzimuth(angles.getY())
 				director.setElevation(-angles.getX())
 			end
+			
+			pState = State.prepareElementClass
 		end
 		
 		pListeners.forEach(block Listener each
 			each.gameWorldChanged(this)
 		end)
-		
-		startUpdateCheck()
 	end
 	
 	/** Spawn point or null. */
@@ -267,7 +267,7 @@ class WorldSpawnCharacter
 		if pCharacter != null
 			pCharacter.getProfile().removeListener(pUpdateCharacter)
 		end
-		disposeActor()
+		recreateActor()
 		
 		pCharacter = character
 		
@@ -278,8 +278,6 @@ class WorldSpawnCharacter
 		pListeners.forEach(block Listener each
 			each.characterChanged(this)
 		end)
-		
-		startUpdateCheck()
 	end
 	
 	/** Recreate actor. */
@@ -287,8 +285,7 @@ class WorldSpawnCharacter
 		// disposing of the character is delayed since this call can potentially happen while
 		// the mocap actor processes user input during thinking or post thinking. disposing
 		// elements during that time can have hard to debug exceptions
-		pRequiresRecreateCharacter = true
-		startUpdateCheck()
+		pState = State.recreateActor
 	end
 	
 	/** Actor or null. */
@@ -335,45 +332,59 @@ class WorldSpawnCharacter
 	
 	
 	
-	/** Start update check if not running. */
-	protected func void startUpdateCheck()
-		if pUpdateCheck == null
-			pUpdateCheck = UpdateCheck.new(this)
+	/** Frame update. */
+	public func void update()
+		if pState == State.actorReady
+			if pGameWorld == null or pCharacter == null
+				disposeActor()
+				pState = State.actorBroken
+			end
 		end
-	end
-	
-	/** Stop update check if running. */
-	protected func void stopUpdateCheck()
-		if pUpdateCheck != null
-			pUpdateCheck.giveUp()
-			pUpdateCheck = null
-		end
-	end
-	
-	/** Update check. */
-	public func void updateCheck()
-		if pRequiresRecreateCharacter
-			pRequiresRecreateCharacter = false
+		
+		if pState == State.recreateActor
 			disposeActor()
-		end
-		
-		if pGameWorld == null or pActor != null
-			stopUpdateCheck()
-			return
-		end
-		
-		if pCharacter != null and (pCharacter.getElementClass() == null or pCharacter.isElementClassPreloading())
-			return
-		end
-		
-		stopUpdateCheck()
-		
-		try
-			createActor()
 			
-		catch Exception e
-			GameApp.getGameApp().getConsole().addError("creating actor failed", e)
-			disposeActor()
+			if pGameWorld == null or pCharacter == null
+				pState = State.actorBroken
+				
+			else
+				pState = State.prepareElementClass
+			end
+		end
+		
+		if pState == State.prepareElementClass
+			if pGameWorld == null or pCharacter == null
+				pState = State.actorBroken
+				return
+			end
+			
+			try
+				pCharacter.getElementClass() // starts preloading if required 
+				if not pCharacter.isElementClassPreloading()
+					pState = State.createActor
+				end
+				
+			catch Exception e
+				GameApp.getGameApp().getConsole().addError("prepare actor element class failed", e)
+				pState = State.actorBroken
+			end
+		end
+		
+		if pState == State.createActor
+			if pGameWorld == null or pCharacter == null
+				pState = State.actorBroken
+				return
+			end
+			
+			try
+				createActor()
+				pState = State.actorReady
+				
+			catch Exception e
+				GameApp.getGameApp().getConsole().addError("creating actor failed", e)
+				pState = State.actorBroken
+				disposeActor()
+			end
 		end
 	end
 	
@@ -383,11 +394,17 @@ class WorldSpawnCharacter
 			return
 		end
 		
+		GameApp.getGameApp().getConsole().addMessage("WorldSpawnCharacter: dispose actor")
 		pLastActorPosition = pActor.getPosition()
 		pLastActorOrientation = pActor.getOrientation()
 		pLastActorSelected = pActor.selectable.isSelected()
 		
-		pActor.safeDispose()
+		try
+			pActor.safeDispose()
+			
+		catch Exception e
+			GameApp.getGameApp().getConsole().addError("dispose actor failed", e)
+		end
 		pActor = null
 		
 		pListeners.forEach(block Listener each
@@ -397,6 +414,7 @@ class WorldSpawnCharacter
 	
 	/** Create actor. */
 	protected func void createActor()
+		GameApp.getGameApp().getConsole().addMessage("WorldSpawnCharacter: create actor")
 		// ensure spawn point is present
 		if pSpawnPoint == null
 			throw EInvalidParam.new("Spawn point 'player' not found in game world")
@@ -433,6 +451,8 @@ class WorldSpawnCharacter
 		
 		// select actor if required
 		if pLastActorSelected
+			pLastActorSelected = false
+			
 			pActor.selectable.selectElement()
 		end
 		
