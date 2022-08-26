@@ -24,6 +24,8 @@ namespace Democap.Behaviors
 pin Democap.Characters
 
 pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.LoadSave
 
 
 /**
@@ -130,7 +132,10 @@ class ECBHideCondition extends DefaultECBehavior
 			if hide == pLive
 				return
 			end
+			
 			pLive = hide
+			getElement().getStub().setPropertyBoolFor(pECBehavior.getLive().getName(), hide)
+			
 			updateVisibility()
 		end
 		
@@ -146,6 +151,7 @@ class ECBHideCondition extends DefaultECBehavior
 			end
 			
 			pPlayback = hide
+			getElement().getStub().setPropertyBoolFor(pECBehavior.getPlayback().getName(), hide)
 			
 			updateVisibility()
 		end
@@ -162,6 +168,7 @@ class ECBHideCondition extends DefaultECBehavior
 			end
 			
 			pRecord = hide
+			getElement().getStub().setPropertyBoolFor(pECBehavior.getRecord().getName(), hide)
 			
 			updateVisibility()
 		end
@@ -262,6 +269,40 @@ class ECBHideCondition extends DefaultECBehavior
 				GameApp.getGameApp().getRecordScene().removeListener(pRecordingStateChanged)
 				pRecordingStateChanged = null
 			end
+		end
+		
+		
+		
+		/** Read from file. */
+		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+			select reader.readByte()
+			case 0
+			case 1
+				var PersistencyFlags flags = PersistencyFlags.new(3, reader)
+				pLive = flags.getAt(0)
+				pPlayback = flags.getAt(1)
+				pRecord = flags.getAt(2)
+				
+			else
+				throw EInvalidParam.new("unsupported version")
+			end
+			
+			// update stub to properly support copy
+			var StubElement stub = getElement().getStub()
+			stub.setPropertyBoolFor(pECBehavior.getLive().getName(), pLive)
+			stub.setPropertyBoolFor(pECBehavior.getPlayback().getName(), pPlayback)
+			stub.setPropertyBoolFor(pECBehavior.getRecord().getName(), pRecord)
+		end
+		
+		/** Write to file. */
+		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+			writer.writeByte(1) // version
+			
+			var PersistencyFlags flags = PersistencyFlags.new(3)
+			flags.setAt(0, pLive)
+			flags.setAt(1, pPlayback)
+			flags.setAt(2, pRecord)
+			flags.writeToFile(writer)
 		end
 	end
 	

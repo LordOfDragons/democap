@@ -176,7 +176,13 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		
 		/** Set handle size in meters. */
 		public func void setHandleSize(float size)
-			pHandleSize = DEMath.max(size, 0.0)
+			size = DEMath.max(size, 0.0)
+			if DEMath.fabs(size - pHandleSize) < 0.001
+				return
+			end
+			
+			pHandleSize = size
+			getElement().getStub().setPropertyFloatFor(pECBehavior.getHandleSize().getName(), size)
 		end
 		
 		
@@ -349,6 +355,10 @@ class ECBShowInteractHandles extends DefaultECBehavior
 			else
 				throw EInvalidParam.new("unsupported version")
 			end
+			
+			// update stub to properly support copy
+			var StubElement stub = getElement().getStub()
+			stub.setPropertyFloatFor(pECBehavior.getHandleSize().getName(), pHandleSize)
 		end
 		
 		/** Write behavior to file. */

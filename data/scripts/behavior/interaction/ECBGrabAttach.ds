@@ -126,7 +126,12 @@ class ECBGrabAttach extends DefaultECBehavior
 		end
 		
 		public func void setBone(String bone)
+			if bone.equals(pBone)
+				return
+			end
+			
 			pBone = bone
+			getElement().getStub().setPropertyValueFor(pECBehavior.bone.getName(), bone)
 		end
 		
 		/** Object does not move while grabbed. */
@@ -136,7 +141,12 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		/** Set if object does not move while grabbed. */
 		public func void setImmobile(bool immobile)
+			if immobile == pImmobile
+				return
+			end
+			
 			pImmobile = immobile
+			getElement().getStub().setPropertyBoolFor(pECBehavior.immobile.getName(), immobile)
 		end
 		
 		/** Lock IK rotation. */
@@ -146,7 +156,12 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		/** Set if IK rotation is locked. */
 		public func void setIKLockRotation(bool lock)
+			if lock == pIKLockRotation
+				return
+			end
+			
 			pIKLockRotation = lock
+			getElement().getStub().setPropertyBoolFor(pECBehavior.ikLockRotation.getName(), lock)
 		end
 		
 		
@@ -256,8 +271,6 @@ class ECBGrabAttach extends DefaultECBehavior
 		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
 			select reader.readByte() // version
 			case 0
-				// nothing
-				
 			case 1
 				var PersistencyFlags flags = PersistencyFlags.new(2, reader)
 				pImmobile = flags.getAt(0)
@@ -268,6 +281,12 @@ class ECBGrabAttach extends DefaultECBehavior
 			else
 				throw EInvalidParam.new("unsupported version")
 			end
+			
+			// update stub to properly support copy
+			var StubElement stub = getElement().getStub()
+			stub.setPropertyValueFor(pECBehavior.bone.getName(), pBone)
+			stub.setPropertyBoolFor(pECBehavior.immobile.getName(), pImmobile)
+			stub.setPropertyBoolFor(pECBehavior.ikLockRotation.getName(), pIKLockRotation)
 		end
 		
 		/** Write behavior to file. */

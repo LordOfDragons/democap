@@ -1,0 +1,201 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior adding support to copy object.
+ */
+class ECBCopyObject extends DefaultECBehavior
+	/**
+	 * Stores copy data of an object including attachments for use with duplicating or as
+	 * clipboard clip. For each object the StubElement is copied as well as.
+	 */
+	public class ObjectCopyData
+		private var Array pStubs
+		
+		
+		/** Create object copy. */
+		public func new()
+			pStubs = Array.new()
+		end
+		
+		
+		/** Add stub. */
+		public func void addStub(StubElement stub)
+			if stub == null
+				throw ENullPointer.new("stub")
+			end
+			pStubs.add(stub)
+		end
+		
+		/** Count of stubs. */
+		public func int getStubCount()
+			return pStubs.getCount()
+		end
+		
+		/** Stub at index. */
+		public func StubElement getStubAt(int index)
+			return pStubs.getAt(index) cast StubElement
+		end
+		
+		/** Visit stubs with block with signature (StubElement) or (int,StubElement). */
+		public func void forEachStub(Block ablock)
+			pStubs.forEach(ablock)
+		end
+		
+		
+		/**
+		 * Create copy of stored objects adding them to game world. Returns list of
+		 * created objects (Array of BehaviorElement).
+		 */
+		public func Array createCopy(GameWorld gameWorld, Window window, DVector offset)
+			var Array objects = Array.new()
+			var Dictionary idRemap = Dictionary.new()
+			
+			pStubs.forEach(block StubElement each
+				pCreateCopy(gameWorld, window, offset, each, objects, idRemap)
+			end)
+			
+			return objects
+		end
+		
+		protected func void pCreateCopy(GameWorld gameWorld, Window window,\
+		DVector offset, StubElement sourceStub, Array objects, Dictionary idRemap)
+			var StubElement stub = StubElement.new(sourceStub)
+			var BehaviorElementClass eclass = stub.getClass() cast BehaviorElementClass
+			var ECBSceneObject sceneObject = ECBSceneObject.getBehaviorIn(eclass)
+			
+			if eclass.getPersistable()
+				var UniqueID newId = GameApp.getGameApp().getIDGenerator().nextID()
+				idRemap.setAt(stub.getID(), newId)
+				stub.setID(newId)
+			end
+			
+			stub.setPosition(stub.getPosition() + offset)
+			
+			if not sceneObject.runSceneObjectStubInitializers(stub, window)
+				return
+			end
+			
+			var UniqueID attachTo = stub.getAttachTo()
+			if attachTo != null
+				stub.setAttachTo(idRemap.getAt(attachTo, attachTo) cast UniqueID)
+			end
+			
+			var BehaviorElement element = stub.createElement() cast BehaviorElement
+			
+			var ECBSceneObject.Instance so = sceneObject.instance(element)
+			if not so.getName().empty()
+				uniqueName(gameWorld, so)
+			end
+			
+			gameWorld.addElement(element)
+			objects.add(element)
+		end
+		
+		protected func void uniqueName(GameWorld gameWorld, ECBSceneObject.Instance sceneObject)
+			var String name = sceneObject.getName()
+			var String newName = name
+			var int number = 2
+			
+			while gameWorld.findElement(block Element each
+				if each castable BehaviorElement
+					var ECBSceneObject.Instance so = ECBSceneObject.getInstanceIn(each cast BehaviorElement)
+					if so != null and so != sceneObject
+						return newName.equals(so.getName())
+					end
+				end
+				return false
+			end) != null
+				newName = "{} #{}".format(Array.newWith(name, number++))
+			end
+			
+			sceneObject.setName(newName)
+		end
+	end
+	
+	
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Create behavior instance. */
+		public func new(BehaviorElement element) super(element)
+		end
+		
+		
+		/** Create copy data of object. */
+		public func ObjectCopyData createCopyData()
+			var ObjectCopyData data = ObjectCopyData.new()
+			pCopyObject(data, getElement())
+			return data
+		end
+		
+		
+		protected func void pCopyObject(ObjectCopyData data, BehaviorElement element)
+			var StubElement stub = StubElement.new(element.getStub())
+			stub.setPosition(element.getPosition())
+			stub.setRotation(element.getOrientation().getEulerAngles())
+			
+			data.addStub(stub)
+			
+			var ECBehaviorAttachments.Instance attachments = ECBehaviorAttachments.getInstanceIn(element)
+			if attachments != null
+				attachments.forEachAttachment(block BehaviorElement each
+					pCopyObject(data, each)
+				end)
+			end
+		end
+	end
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass) super(eclass)
+		eclass.addBehavior(this)
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(this.getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(element)
+	end
+end

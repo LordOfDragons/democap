@@ -58,28 +58,13 @@ class IBDuplicate extends InteractionBubbleButton
 			return
 		end
 		
-		var GameWorld gameWorld = element.getGameWorld()
-		var StubElement stub = StubElement.new(element.getStub())
-		var BehaviorElementClass eclass = stub.getClass() cast BehaviorElementClass
-		var ECBSceneObject sceneObject = ECBSceneObject.getBehaviorIn(eclass)
+		var Array objects = ECBCopyObject.getInstanceIn(element).createCopyData()\
+			.createCopy(element.getGameWorld(), null, DVector.new(0.2, 0, 0.2))
 		
-		if eclass.getPersistable()
-			stub.setID(GameApp.getGameApp().getIDGenerator().nextID())
+		if objects.getCount() > 0
+			TimerBlock.new(0, false, block
+				ECBSelectable.getInstanceIn(objects.getAt(0) cast BehaviorElement).selectElement()
+			end)
 		end
-		
-		var DMatrix matrix = element.getElementMatrix() * DMatrix.newTranslation(1, 0, 1)
-		stub.setPosition(matrix.getPosition())
-		stub.setRotation(matrix.getEulerAngles().toVector())
-		
-		if not sceneObject.runSceneObjectStubInitializers(stub, null)
-			return
-		end
-		
-		element = stub.createElement() cast BehaviorElement
-		gameWorld.addElement(element)
-		
-		TimerBlock.new(0, false, block
-			ECBSelectable.getInstanceIn(element).selectElement()
-		end)
 	end
 end

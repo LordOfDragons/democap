@@ -184,6 +184,8 @@ class ECBColliderPhysics extends DefaultECBehavior
 			end
 			
 			pUsePhysics = usePhysics
+			getElement().getStub().setPropertyBoolFor(pECBehavior.usePhysics.getName(), usePhysics)
+			
 			updatePhysicsState(false)
 		end
 		
@@ -199,6 +201,8 @@ class ECBColliderPhysics extends DefaultECBehavior
 			end
 			
 			pLivePhysics = livePhysics
+			getElement().getStub().setPropertyBoolFor(pECBehavior.livePhysics.getName(), livePhysics)
+			
 			updatePhysicsState(false)
 		end
 		
@@ -215,6 +219,8 @@ class ECBColliderPhysics extends DefaultECBehavior
 			end
 			
 			pWeight = weight
+			getElement().getStub().setPropertyFloatFor(pECBehavior.weight.getName(), weight)
+			
 			updateMass()
 		end
 		
@@ -230,6 +236,8 @@ class ECBColliderPhysics extends DefaultECBehavior
 			end
 			
 			pTouchActor = touchActor
+			getElement().getStub().setPropertyBoolFor(pECBehavior.touchActor.getName(), touchActor)
+			
 			updateCollisionFilter()
 		end
 		
@@ -245,6 +253,8 @@ class ECBColliderPhysics extends DefaultECBehavior
 			end
 			
 			pUseLocalGravity = useGravity
+			getElement().getStub().setPropertyBoolFor(pECBehavior.useLocalGravity.getName(), useGravity)
+			
 			updatePhysicsState(true)
 		end
 		
@@ -260,6 +270,9 @@ class ECBColliderPhysics extends DefaultECBehavior
 			end
 			
 			pGravity = gravity
+			getElement().getStub().setPropertyValueFor(pECBehavior.gravity.getName(),\
+				getElement().getClass().getCodecPropertyString().encodeVector(gravity))
+			
 			updatePhysicsState(true)
 		end
 		
@@ -270,7 +283,12 @@ class ECBColliderPhysics extends DefaultECBehavior
 		
 		/** Set can physics grab. */
 		public func void setCanGrabActor(bool canGrabActor)
+			if canGrabActor == pCanGrabActor
+				return
+			end
+			
 			pCanGrabActor = canGrabActor
+			getElement().getStub().setPropertyBoolFor(pECBehavior.canGrabActor.getName(), canGrabActor)
 		end
 		
 		
@@ -496,6 +514,17 @@ class ECBColliderPhysics extends DefaultECBehavior
 			updateMass()
 			updatePhysicsState(true)
 			updateCollisionFilter()
+			
+			// update stub to properly support copy
+			var StubElement stub = getElement().getStub()
+			stub.setPropertyBoolFor(pECBehavior.usePhysics.getName(), pUsePhysics)
+			stub.setPropertyBoolFor(pECBehavior.livePhysics.getName(), pLivePhysics)
+			stub.setPropertyFloatFor(pECBehavior.weight.getName(), pWeight)
+			stub.setPropertyBoolFor(pECBehavior.touchActor.getName(), pTouchActor)
+			stub.setPropertyBoolFor(pECBehavior.useLocalGravity.getName(), pUseLocalGravity)
+			stub.setPropertyValueFor(pECBehavior.gravity.getName(),\
+				getElement().getClass().getCodecPropertyString().encodeVector(pGravity))
+			stub.setPropertyBoolFor(pECBehavior.canGrabActor.getName(), pCanGrabActor)
 		end
 		
 		/** Write to file. */

@@ -1476,25 +1476,18 @@ class WMPanelProject extends Panel
 			return
 		end
 		
-		var StubElement stub = StubElement.new(pObject.getElement().getStub())
-		var BehaviorElementClass eclass = stub.getClass() cast BehaviorElementClass
-		var ECBSceneObject sceneObject = ECBSceneObject.getBehaviorIn(eclass)
-		
-		if eclass.getPersistable()
-			stub.setID(GameApp.getGameApp().getIDGenerator().nextID())
-		end
-		
-		var DMatrix matrix = pObject.getElement().getElementMatrix() * DMatrix.newTranslation(1, 0, 1)
-		stub.setPosition(matrix.getPosition())
-		stub.setRotation(matrix.getEulerAngles().toVector())
-		
-		if not sceneObject.runSceneObjectStubInitializers(stub, getWindow())
+		var ECBCopyObject.Instance behavior = ECBCopyObject.getInstanceIn(pObject.getElement())
+		if behavior == null
+			WindowDialog.message(getWindow(), "Duplicate Scene Object",\
+				"Scene objects of type " + pObject.getElement().getClass().getClassname()\
+					+ " can not be duplicated.", null, null, null)
 			return
 		end
 		
-		var BehaviorElement element = stub.createElement() cast BehaviorElement
-		gameWorld.addElement(element)
-		ECBSelectable.getInstanceIn(element).selectElement()
+		var Array objects = behavior.createCopyData().createCopy(gameWorld, getWindow(), DVector.new(0.2, 0, 0.2))
+		if objects.getCount() > 0
+			ECBSelectable.getInstanceIn(objects.getAt(0) cast BehaviorElement).selectElement()
+		end
 	end
 	
 	/** Copy object. */
@@ -1504,18 +1497,15 @@ class WMPanelProject extends Panel
 			return
 		end
 		
-		if not pObject.getECBehavior().canRemove.getValue()
+		var ECBCopyObject.Instance behavior = ECBCopyObject.getInstanceIn(pObject.getElement())
+		if behavior == null
 			WindowDialog.message(getWindow(), "Copy Scene Object",\
 				"Scene objects of type " + pObject.getElement().getClass().getClassname()\
 					+ " can not be copied.", null, null, null)
-			return
+			
+		else
+			getClipboard().setClipWith(behavior.createCopyData())
 		end
-		
-		var StubElement stub = StubElement.new(pObject.getElement().getStub())
-		stub.setPosition(pObject.getElement().getPosition())
-		stub.setRotation(pObject.getElement().getOrientation().getEulerAngles())
-		
-		getClipboard().setClipWith(stub)
 	end
 	
 	/** Cut object. */
@@ -1524,7 +1514,8 @@ class WMPanelProject extends Panel
 			return
 		end
 		
-		if not pObject.getECBehavior().canRemove.getValue()
+		var ECBCopyObject.Instance behavior = ECBCopyObject.getInstanceIn(pObject.getElement())
+		if behavior == null or not pObject.getECBehavior().canRemove.getValue()
 			WindowDialog.message(getWindow(), "Cut Scene Object",\
 				"Scene objects of type " + pObject.getElement().getClass().getClassname()\
 					+ " can not be cut.", null, null, null)
@@ -1537,7 +1528,7 @@ class WMPanelProject extends Panel
 				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
 			WindowDialog.BlockResultListener.new(block bool result
 				if result
-					copyObject()
+					getClipboard().setClipWith(behavior.createCopyData())
 					pObject.getElement().safeDispose()
 				end
 		end))
@@ -1550,27 +1541,10 @@ class WMPanelProject extends Panel
 			return
 		end
 		
-		getClipboard().getClip().findCastable(block StubElement stub
-			stub = StubElement.new(stub)
-			var BehaviorElementClass eclass = stub.getClass() cast BehaviorElementClass
-			var ECBSceneObject sceneObject = ECBSceneObject.getBehaviorIn(eclass)
-			
-			if eclass.getPersistable()
-				stub.setID(GameApp.getGameApp().getIDGenerator().nextID())
-			end
-			
-			var Camera camera = GameApp.getGameApp().getWindowGameWorld().getCamera()
-			var DVector position = DVector.new()
-			if camera != null
-				position = camera.getMatrix() * DVector.new(0, 0, 1)
-			end
-			
-			stub.setPosition(position)
-			
-			if sceneObject.runSceneObjectStubInitializers(stub, getWindow())
-				var BehaviorElement element = stub.createElement() cast BehaviorElement
-				gameWorld.addElement(element)
-				ECBSelectable.getInstanceIn(element).selectElement()
+		getClipboard().getClip().findCastable(block ECBCopyObject.ObjectCopyData data
+			var Array objects = data.createCopy(gameWorld, getWindow(), DVector.new(0.2, 0, 0.2))
+			if objects.getCount() > 0
+				ECBSelectable.getInstanceIn(objects.getAt(0) cast BehaviorElement).selectElement()
 			end
 			return true
 		end)
