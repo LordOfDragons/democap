@@ -381,7 +381,7 @@ class CharacterConfiguration
 	 */
 	public func MoCapActorClass getElementClass()
 		if pElementClass == null
-			pElementClass = createElementClass()
+			prepareElementClass()
 			pPreloadCounter = PreloadCounter.new()
 			pElementClass.preloadResources(pPreloadCounter)
 		end
@@ -390,7 +390,11 @@ class CharacterConfiguration
 	
 	/** Element class is preloading. Always false until getElementClass() is called. */
 	public func bool isElementClassPreloading()
-		if pPreloadCounter != null and pPreloadCounter.isNotZero()
+		if pPreloadCounter == null
+			return false
+		end
+		
+		if pPreloadCounter.isNotZero()
 			return true
 		end
 		pPreloadCounter = null
@@ -400,6 +404,10 @@ class CharacterConfiguration
 		// is still missing them. since they are loaded now calling synchronous loading finished
 		// immediately and CharacterAppearance is valid
 		pProfile.loadResourcesSync()
+		
+		// finish the element class. can be done only after the resources have been preloaded.
+		// this adds all the motion capture behaviors
+		finishElementClass()
 		
 		return false
 	end
@@ -708,155 +716,153 @@ class CharacterConfiguration
 	
 	
 	
-	/** Create element class. Caller has to start preloading to use it. */
-	public func MoCapActorClass createElementClass()
-		var MoCapActorClass eclass = MoCapActorClass.new(\
-			"Character" + GameApp.getGameApp().getNextElementClassID().nextID())
+	/** Prepare element class. */
+	protected func void prepareElementClass()
+		pElementClass = MoCapActorClass.new("Character" + GameApp.getGameApp().getNextElementClassID().nextID())
 		
-		try
-			var ECBCharacterConfiguration character = ECBCharacterConfiguration.new(eclass, this)
-			
-			var ECBMoCapAnimator mocapAnimator = ECBMoCapAnimator.new(eclass)
-			mocapAnimator.getAnimation().setPath(pProfile.getAppearance().getPathAnimation())
-			mocapAnimator.getAnimation().setAnimation(pProfile.getAppearance().getAnimation())
-			
-			var ECBRecordAnimation recordAnimation = ECBRecordAnimation.new(eclass, eclass.getComponent(), character)
-			
-			pAnimatorDefinition = AnimatorDefinition.new("")
-			
-			var ADRuleStateManipulator ruleInit = ADRuleStateManipulator.new()
-			ruleInit.setName("Init")
-			ruleInit.setEnablePosition(true)
-			ruleInit.setEnableSize(true)
-			pAnimatorDefinition.addRule(ruleInit)
-			
-			if not pMoveCalibrate.empty()
-				var ADRuleAnimation rule = ADRuleAnimation.new()
-				rule.setName("Init Move Calibrate")
-				rule.setMoveName(pMoveCalibrate)
-				pAnimatorDefinition.addRule(rule)
-			end
-			
-			// apply appearance
-			pProfile.getAppearance().initElementClass(eclass)
-			
-			// add tracker slots. each slot adds two controllers (position, rotation)
-			pTrackerSlots.forEach(block CharacterTrackerSlot each
-				each.initElementClass(eclass, pAnimatorDefinition)
-			end)
-			
-			// add motion capture behaviors. should this fail reset calibration and try again
-			var ECComposeComponent ecccomponent = eclass.getComponent().getComponent()
-			
-			if ecccomponent.getRig().getRig() != null
-				try
-					var ModifiedRig modifiedRig = ModifiedRig.new(ecccomponent.getRig().getRig())
-					
-					pMotionTransfers.forEach(block MotionTransfer each
-						each.initElementClass(this, eclass, modifiedRig)
-					end)
-					
-					modifiedRig.buildModifiedRig()
-					ecccomponent.getRig().setPath("")
-					ecccomponent.getRig().setRig(modifiedRig.getModifiedRig())
-					
-					modifiedRig.getModifiedRig().save("_debug_modified.derig")
-					
-				catch Exception e
-					GameApp.getGameApp().getConsole().addError("Init ElementClass failed. Reset clalibration", e)
-					
-					pMotionTransfers.forEach(block MotionTransfer each
-						each.resetCalibration()
-					end)
-				end
-			end
-			
-			// add behaviors to adjust VR Hand position to match tracker slot component.
-			// this is used to make place the VR Hand where the character hands are after
-			// applying motion transfers. this makes it less confusing for actors
-			var CharacterTrackerSlot slot = pTrackerSlots.find(block CharacterTrackerSlot each
-				return each.getInputDeviceType() == InputDeviceType.vrRightHand
-			end)
-			if slot != null and slot.getBehavior() != null
-				ECBAdjustVRHandCollider.new(eclass, eclass.getVRRightHand(), slot.getBehavior(), "right")
-			end
-			
-			slot = pTrackerSlots.find(block CharacterTrackerSlot each
-				return each.getInputDeviceType() == InputDeviceType.vrLeftHand
-			end)
-			if slot != null and slot.getBehavior() != null
-				ECBAdjustVRHandCollider.new(eclass, eclass.getVRLeftHand(), slot.getBehavior(), "left")
-			end
-			
-			// add behavior moving from calibrate space to playspace. for this find the unique
-			// root bones of all captured bones excluding the origin bone if present
-			var Rig rig = pProfile.getAppearance().getRig()
-			
-			if rig != null and recordAnimation != null
-				var Set rootBones = recordAnimation.getRootBones()
-				if rootBones.getCount() > 0
-					var Animator animator = Animator.new()
-					var Vector translation = pMatrixCalibrateInv.getPosition()
-					var Vector rotation = pMatrixCalibrateInv.getEulerAngles()
-					
-					var ARStateSnapshot ruleCurState = ARStateSnapshot.new()
-					ruleCurState.setUseLastState(true)
-					ruleCurState.setEnableSize(true)
-					animator.addRule(ruleCurState)
-					
-					var ARBoneTransformator ruleMove = ARBoneTransformator.new()
-					ruleMove.setEnablePosition(true)
-					ruleMove.setEnableOrientation(true)
-					ruleMove.setCoordinateFrame(ARBoneTransformatorCFrame.component)
-					ruleMove.setMinimumTranslation(translation)
-					ruleMove.setMaximumTranslation(translation)
-					ruleMove.setMinimumRotation(rotation)
-					ruleMove.setMaximumRotation(rotation)
-					
-					rootBones.forEach(block String bone
-						ruleMove.addBone(bone)
-					end)
-					animator.addRule(ruleMove)
-					
-					rootBones.forEach(block String bone
-						animator.addBone(bone)
-					end)
-					
-					ECBMoveToPlayspace.new(eclass, animator)
-				end
-			end
-			
-			// add physical bones
-			if rig != null
-				var int i, count = rig.getBoneCount()
-				for i = 0 to count
-					if rig.boneGetDynamic(i)
-						recordAnimation.addBone(rig.boneGetName(i))
-					end
-				end
-			end
-			
-			// finalize motion capture animator
-			var Animator animator = Animator.new()
-			pAnimatorDefinition.buildAnimator(animator)
-			mocapAnimator.setAnimator(animator)
-			
-			if debugAnimatorDefinition
-				pAnimatorDefinition.debug(GameApp.getGameApp().getConsole())
-			end
-			
-			// calibration space marker
-			ECBACalibrationSpaceMarker.new(eclass, recordAnimation, eclass.getCollider())
-			
-			// hide while playing back but not recording
-			ECBHideWhilePlaybackNotRecording.new(eclass, recordAnimation)
-			
-		catch Exception e
-			eclass.dispose()
-			throw
+		// apply appearance. requires for preloading
+		pProfile.getAppearance().initElementClass(pElementClass)
+	end
+	
+	/** Finish element class. */
+	protected func void finishElementClass()
+		if pElementClass == null
+			return
 		end
 		
-		return eclass
+		var ECBCharacterConfiguration character = ECBCharacterConfiguration.new(pElementClass, this)
+		
+		var ECBMoCapAnimator mocapAnimator = ECBMoCapAnimator.new(pElementClass)
+		mocapAnimator.getAnimation().setPath(pProfile.getAppearance().getPathAnimation())
+		mocapAnimator.getAnimation().setAnimation(pProfile.getAppearance().getAnimation())
+		
+		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.new(pElementClass, pElementClass.getComponent(), character)
+		
+		pAnimatorDefinition = AnimatorDefinition.new("")
+		
+		var ADRuleStateManipulator ruleInit = ADRuleStateManipulator.new()
+		ruleInit.setName("Init")
+		ruleInit.setEnablePosition(true)
+		ruleInit.setEnableSize(true)
+		pAnimatorDefinition.addRule(ruleInit)
+		
+		if not pMoveCalibrate.empty()
+			var ADRuleAnimation rule = ADRuleAnimation.new()
+			rule.setName("Init Move Calibrate")
+			rule.setMoveName(pMoveCalibrate)
+			pAnimatorDefinition.addRule(rule)
+		end
+		
+		// add tracker slots. each slot adds two controllers (position, rotation)
+		pTrackerSlots.forEach(block CharacterTrackerSlot each
+			each.initElementClass(pElementClass, pAnimatorDefinition)
+		end)
+		
+		// add motion capture behaviors. should this fail reset calibration and try again
+		var ECComposeComponent ecccomponent = pElementClass.getComponent().getComponent()
+		
+		if ecccomponent.getRig().getRig() != null
+			try
+				var ModifiedRig modifiedRig = ModifiedRig.new(ecccomponent.getRig().getRig())
+				
+				pMotionTransfers.forEach(block MotionTransfer each
+					each.initElementClass(this, pElementClass, modifiedRig)
+				end)
+				
+				modifiedRig.buildModifiedRig()
+				ecccomponent.getRig().setPath("")
+				ecccomponent.getRig().setRig(modifiedRig.getModifiedRig())
+				
+				modifiedRig.getModifiedRig().save("_debug_modified.derig")
+				
+			catch Exception e
+				GameApp.getGameApp().getConsole().addError("Init ElementClass failed. Reset clalibration", e)
+				
+				pMotionTransfers.forEach(block MotionTransfer each
+					each.resetCalibration()
+				end)
+			end
+		end
+		
+		// add behaviors to adjust VR Hand position to match tracker slot component.
+		// this is used to make place the VR Hand where the character hands are after
+		// applying motion transfers. this makes it less confusing for actors
+		var CharacterTrackerSlot slot = pTrackerSlots.find(block CharacterTrackerSlot each
+			return each.getInputDeviceType() == InputDeviceType.vrRightHand
+		end)
+		if slot != null and slot.getBehavior() != null
+			ECBAdjustVRHandCollider.new(pElementClass, pElementClass.getVRRightHand(), slot.getBehavior(), "right")
+		end
+		
+		slot = pTrackerSlots.find(block CharacterTrackerSlot each
+			return each.getInputDeviceType() == InputDeviceType.vrLeftHand
+		end)
+		if slot != null and slot.getBehavior() != null
+			ECBAdjustVRHandCollider.new(pElementClass, pElementClass.getVRLeftHand(), slot.getBehavior(), "left")
+		end
+		
+		// add behavior moving from calibrate space to playspace. for this find the unique
+		// root bones of all captured bones excluding the origin bone if present
+		var Rig rig = pProfile.getAppearance().getRig()
+		
+		if rig != null and recordAnimation != null
+			var Set rootBones = recordAnimation.getRootBones()
+			if rootBones.getCount() > 0
+				var Animator animator = Animator.new()
+				var Vector translation = pMatrixCalibrateInv.getPosition()
+				var Vector rotation = pMatrixCalibrateInv.getEulerAngles()
+				
+				var ARStateSnapshot ruleCurState = ARStateSnapshot.new()
+				ruleCurState.setUseLastState(true)
+				ruleCurState.setEnableSize(true)
+				animator.addRule(ruleCurState)
+				
+				var ARBoneTransformator ruleMove = ARBoneTransformator.new()
+				ruleMove.setEnablePosition(true)
+				ruleMove.setEnableOrientation(true)
+				ruleMove.setCoordinateFrame(ARBoneTransformatorCFrame.component)
+				ruleMove.setMinimumTranslation(translation)
+				ruleMove.setMaximumTranslation(translation)
+				ruleMove.setMinimumRotation(rotation)
+				ruleMove.setMaximumRotation(rotation)
+				
+				rootBones.forEach(block String bone
+					ruleMove.addBone(bone)
+				end)
+				animator.addRule(ruleMove)
+				
+				rootBones.forEach(block String bone
+					animator.addBone(bone)
+				end)
+				
+				ECBMoveToPlayspace.new(pElementClass, animator)
+			end
+		end
+		
+		// add physical bones
+		if rig != null
+			var int i, count = rig.getBoneCount()
+			for i = 0 to count
+				if rig.boneGetDynamic(i)
+					recordAnimation.addBone(rig.boneGetName(i))
+				end
+			end
+		end
+		
+		// finalize motion capture animator
+		var Animator animator = Animator.new()
+		pAnimatorDefinition.buildAnimator(animator)
+		mocapAnimator.setAnimator(animator)
+		
+		if debugAnimatorDefinition
+			pAnimatorDefinition.debug(GameApp.getGameApp().getConsole())
+		end
+		
+		// calibration space marker
+		ECBACalibrationSpaceMarker.new(pElementClass, recordAnimation, pElementClass.getCollider())
+		
+		// hide while playing back but not recording
+		ECBHideWhilePlaybackNotRecording.new(pElementClass, recordAnimation)
 	end
 	
 	/**
