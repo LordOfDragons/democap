@@ -207,6 +207,7 @@ class WidgetCharacterPreview extends Panel
 	private var PreviewPreloader pPreviewPreloader
 	private var BehaviorElementClass pCharacterPreviewClass
 	private var BehaviorElement pCharacterPreview
+	private var BehaviorElement pLoadingCharacter
 	private var Array pListeners
 	private var ECBPreviewDataQuery.DataQuery pDataQuery
 	
@@ -233,6 +234,7 @@ class WidgetCharacterPreview extends Panel
 			createContent()
 		end)
 		
+		createLoadingCharacter()
 		reloadCharacterPreview()
 		startFrameUpdater()
 	end
@@ -247,6 +249,10 @@ class WidgetCharacterPreview extends Panel
 		if pCharacterPreview != null
 			pCharacterPreview.safeDispose()
 			pCharacterPreview = null
+		end
+		if pLoadingCharacter != null
+			pLoadingCharacter.safeDispose()
+			pLoadingCharacter = null
 		end
 		
 		pWorldRenderer = null
@@ -291,6 +297,12 @@ class WidgetCharacterPreview extends Panel
 	
 	/** Reload character preview. */
 	public func void reloadCharacterPreview()
+		if pCharacterPreview != null
+			pCharacterPreview.safeDispose()
+			pCharacterPreview = null
+		end
+		pLoadingCharacter.setVisible(true)
+		
 		pPreviewPreloader = PreviewPreloader.new()
 		pPreviewPreloader.pathModel = pPathModel
 		pPreviewPreloader.pathSkin = pPathSkin
@@ -400,7 +412,7 @@ class WidgetCharacterPreview extends Panel
 	
 	/** Frame update. */
 	public func void onFrameUpdate(float elapsed)
-		// if preloading create preview character if finished
+		// if preloading create preview character is finished
 		if pPreviewPreloader != null and pPreviewPreloader.finished()
 			createPreviewCharacter()
 			pPreviewPreloader = null
@@ -540,6 +552,7 @@ class WidgetCharacterPreview extends Panel
 	
 	/** Create preview character. */
 	protected func void createPreviewCharacter()
+		pLoadingCharacter.setVisible(false)
 		if pCharacterPreview != null
 			pCharacterPreview.safeDispose()
 			pCharacterPreview = null
@@ -587,5 +600,14 @@ class WidgetCharacterPreview extends Panel
 		end
 		
 		setToolTip(null)
+	end
+	
+	/** Create loading character. */
+	protected func void createLoadingCharacter()
+		var ElementClass eclass = GameApp.getGameApp().getElementClassList().getNamed("LoadingCharacter")
+		var StubElement stub = StubElement.new(eclass)
+		stub.setScaling(Vector.new(0.75, 0.75, 0.75))
+		pLoadingCharacter = stub.createElement() cast BehaviorElement
+		pGameWorld.addElement(pLoadingCharacter)
 	end
 end

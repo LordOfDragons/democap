@@ -115,6 +115,7 @@ class WorldSpawnCharacter
 	private var BehaviorElement pWristMenuLeft
 	private var BehaviorElement pMirrorLarge
 	private var ElementClass pMoCapActorClass
+	private var BehaviorElement pLoadingCharacter
 	private var State pState
 	private var Array pListeners
 	
@@ -151,6 +152,11 @@ class WorldSpawnCharacter
 		
 		disposeActor()
 		pUpdateCharacter = null
+		
+		if pLoadingCharacter != null
+			pLoadingCharacter.safeDispose()
+			pLoadingCharacter = null
+		end
 	end
 	
 	
@@ -182,6 +188,11 @@ class WorldSpawnCharacter
 			pMirrorLarge.removeFromGameWorldIfPresent()
 		end
 		
+		// remove loading character from game world
+		if pLoadingCharacter != null
+			pLoadingCharacter.removeFromGameWorldIfPresent()
+		end
+		
 		// dispose of the actor. we could move the actor to the new game world but better
 		// start with a fresh copy
 		disposeActor()
@@ -198,6 +209,10 @@ class WorldSpawnCharacter
 		if gameWorld != null
 			// find spawn point
 			pSpawnPoint = gameWorld.getSpawnPoints().getNamed("player")
+			if pSpawnPoint != null
+				pLastActorPosition = pSpawnPoint.getPosition()
+				pLastActorOrientation = pSpawnPoint.getOrientation()
+			end
 			
 			// add VR menus creating them if required
 			if pVRMenu == null
@@ -225,6 +240,13 @@ class WorldSpawnCharacter
 			pMirrorLarge.setTouchable(false)
 			gameWorld.addElement(pMirrorLarge)
 			
+			// add loading character
+			if pLoadingCharacter == null
+				pLoadingCharacter = createLoadingCharacter()
+			end
+			pLoadingCharacter.setVisible(false)
+			gameWorld.addElement(pLoadingCharacter)
+			
 			// move the camera to a good starting position showing the character
 			var VRCameraDirector director = GameApp.getGameApp().getVRCameraDirector()
 			
@@ -241,6 +263,7 @@ class WorldSpawnCharacter
 			end
 			
 			pState = State.prepareElementClass
+			showLoadingCharacter(true)
 		end
 		
 		pListeners.forEach(block Listener each
@@ -346,15 +369,18 @@ class WorldSpawnCharacter
 			
 			if pGameWorld == null or pCharacter == null
 				pState = State.actorBroken
+				showLoadingCharacter(false)
 				
 			else
 				pState = State.prepareElementClass
+				showLoadingCharacter(true)
 			end
 		end
 		
 		if pState == State.prepareElementClass
 			if pGameWorld == null or pCharacter == null
 				pState = State.actorBroken
+				showLoadingCharacter(false)
 				return
 			end
 			
@@ -369,23 +395,27 @@ class WorldSpawnCharacter
 			catch Exception e
 				GameApp.getGameApp().getConsole().addError("prepare actor element class failed", e)
 				pState = State.actorBroken
+				showLoadingCharacter(false)
 			end
 		end
 		
 		if pState == State.createActor
 			if pGameWorld == null or pCharacter == null
 				pState = State.actorBroken
+				showLoadingCharacter(false)
 				return
 			end
 			
 			try
 				createActor()
 				pState = State.actorReady
+				showLoadingCharacter(false)
 				
 			catch Exception e
 				GameApp.getGameApp().getConsole().addError("creating actor failed", e)
 				pState = State.actorBroken
 				disposeActor()
+				showLoadingCharacter(false)
 			end
 		end
 	end
@@ -495,5 +525,20 @@ class WorldSpawnCharacter
 		// add properties if required
 		
 		return stub.createElement() cast BehaviorElement
+	end
+	
+	/** Create loading character model. */
+	protected func BehaviorElement createLoadingCharacter()
+		var ElementClass eclass = GameApp.getGameApp().getElementClassList().getNamed("LoadingCharacter")
+		var StubElement stub = StubElement.new(eclass) // no generated ID on purpose
+		return stub.createElement() cast BehaviorElement
+	end
+	
+	/** Show or hide loading character. */
+	protected func void showLoadingCharacter(bool show)
+		pLoadingCharacter.setVisible(show)
+		if show and pLastActorPosition != null
+			pLoadingCharacter.setGeometry(pLastActorPosition, pLastActorOrientation)
+		end
 	end
 end
