@@ -30,6 +30,7 @@ pin Democap.Worlds
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Scenery
+pin Dragengine.Utils
 
 
 
@@ -61,25 +62,62 @@ class WMPanelSession extends Panel
 	/** Scene changed listener. */
 	class SceneChangedListener extends DefaultSceneListener
 		protected var WMPanelSession pPanel
+		protected var TimerBlock pTimer
+		protected var bool pUpdateModelCapturables
+		protected var ECBSceneObject.Instance pUpdateModelCapturableName
 		
 		public func new(WMPanelSession panel)
 			pPanel = panel
 		end
 		
 		public func void objectAdded(Scene scene, ECBSceneObject.Instance object)
-			pPanel.updateModelCapturables()
+			pUpdateModelCapturables = true
+			pUpdateModelCapturableName = null
+			pStartTimer()
 		end
 		
 		public func void objectRemoved(Scene scene, ECBSceneObject.Instance object)
-			pPanel.updateModelCapturables()
+			pUpdateModelCapturables = true
+			pUpdateModelCapturableName = null
+			pStartTimer()
 		end
 		
 		public func void allObjectsRemoved(Scene scene)
-			pPanel.updateModelCapturables()
+			pUpdateModelCapturables = true
+			pUpdateModelCapturableName = null
+			pStartTimer()
 		end
 		
 		public func void objectNameChanged(Scene scene, ECBSceneObject.Instance object)
-			pPanel.updateModelCapturables()
+			if pUpdateModelCapturableName == null
+				pUpdateModelCapturableName = object
+			else
+				pUpdateModelCapturableName = null
+				pUpdateModelCapturables = true
+			end
+			pStartTimer()
+		end
+		
+		protected func void pStartTimer()
+			if pTimer != null
+				return
+			end
+			
+			pTimer = TimerBlock.new(0, false, block
+				pRunTimer()
+			end)
+		end
+		
+		protected func void pRunTimer()
+			pTimer = null
+			if pUpdateModelCapturables
+				pUpdateModelCapturables = false
+				pPanel.updateModelCapturables()
+			end
+			if pUpdateModelCapturableName != null
+				pPanel.updateModelCapturableName(pUpdateModelCapturableName)
+				pUpdateModelCapturableName = null
+			end
 		end
 	end
 	
@@ -203,18 +241,16 @@ class WMPanelSession extends Panel
 		end
 		
 		public func void selectionChanged(ListModel model)
+			if pPanel.preventUpdateObjects
+				return
+			end
+			
 			var int index = model.getSelected()
 			if index != -1
-				var ECBSceneObject.Instance capturable = model.getAt(index) cast ECBSceneObject.Instance
-				if capturable != null
-					GameApp.getGameApp().getCapturableTracker().setElement(ECBCapturable.getInstanceIn(capturable.getElement()))
-					
-				else
-					GameApp.getGameApp().getCapturableTracker().setElement(null)
-				end
+				pPanel.setCapturable(model.getAt(index) cast ECBSceneObject.Instance)
 				
 			else
-				GameApp.getGameApp().getCapturableTracker().setElement(null)
+				pPanel.setCapturable(null)
 			end
 		end
 	end
@@ -251,6 +287,8 @@ class WMPanelSession extends Panel
 	protected var GameChangedListener pGameChangedListener
 	protected var SceneChangedListener pSceneChangedListener
 	protected var Scene pScene
+	
+	public var bool preventUpdateObjects
 	
 	
 	
@@ -415,11 +453,31 @@ class WMPanelSession extends Panel
 		
 		content.insert(0, null)
 		
+		preventUpdateObjects = true
 		pModelCapturables.setContent(content)
 		
 		pModelCapturables.setSelectedElement(selection)
-		if pModelCapturables.getSelected() != -1
-			pModelCapturables.notifyElementChanged(pModelCapturables.getSelected())
+		preventUpdateObjects = false
+		setCapturable(selection)
+	end
+	
+	public func void updateModelCapturableName(ECBSceneObject.Instance object)
+		if pModelCapturables == null
+			return // dispose protection
+		end
+		
+		var int index = pModelCapturables.indexOf(object)
+		if index != -1
+			pModelCapturables.notifyElementChanged(index)
+		end
+	end
+	
+	public func void setCapturable(ECBSceneObject.Instance capturable)
+		if capturable != null
+			GameApp.getGameApp().getCapturableTracker().setElement(ECBCapturable.getInstanceIn(capturable.getElement()))
+			
+		else
+			GameApp.getGameApp().getCapturableTracker().setElement(null)
 		end
 	end
 	

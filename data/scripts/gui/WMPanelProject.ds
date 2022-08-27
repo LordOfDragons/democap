@@ -168,39 +168,90 @@ class WMPanelProject extends Panel
 	/** Scene changed listener. */
 	class SceneChangedListener extends DefaultSceneListener
 		protected var WMPanelProject pPanel
+		protected var TimerBlock pTimer
+		protected var bool pUpdateModelScenes
+		protected var bool pUpdateModelObjects
+		protected var ECBSceneObject.Instance pUpdateModelObjectName
+		protected var bool pUpdateObject
 		
 		public func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
 		public func void sceneNameChanged(Scene scene)
-			pPanel.updateModelScenes()
+			pUpdateModelScenes = true
+			pStartTimer()
 		end
 		
 		public func void objectAdded(Scene scene, ECBSceneObject.Instance object)
-			pPanel.updateModelObjects()
+			pUpdateModelObjects = true
+			pUpdateModelObjectName = null
+			pStartTimer()
 		end
 		
 		public func void objectRemoved(Scene scene, ECBSceneObject.Instance object)
-			pPanel.updateModelObjects()
+			pUpdateModelObjects = true
+			pUpdateModelObjectName = null
+			pStartTimer()
 		end
 		
 		public func void allObjectsRemoved(Scene scene)
-			pPanel.updateModelObjects()
+			pUpdateModelObjects = true
+			pUpdateModelObjectName = null
+			pUpdateObject = false
+			pStartTimer()
 		end
 		
 		public func void objectNameChanged(Scene scene, ECBSceneObject.Instance object)
-			pPanel.updateModelObjects()
+			if pUpdateModelObjectName == null
+				pUpdateModelObjectName = object
+			else
+				pUpdateModelObjectName = null
+				pUpdateModelObjects = true
+			end
+			pStartTimer()
 		end
 		
 		public func void objectGeometryChanged(Scene scene, ECBSceneObject.Instance object)
 			if object == pPanel.getObject()
-				pPanel.updateObject()
+				pUpdateObject = true
+				pStartTimer()
 			end
 		end
 		
 		public func void objectParameterChanged(Scene scene, ECBSceneObject.Instance object)
 			if object == pPanel.getObject()
+				pUpdateObject = true
+				pStartTimer()
+			end
+		end
+		
+		protected func void pStartTimer()
+			if pTimer != null
+				return
+			end
+			
+			pTimer = TimerBlock.new(0, false, block
+				pRunTimer()
+			end)
+		end
+		
+		protected func void pRunTimer()
+			pTimer = null
+			if pUpdateModelScenes
+				pUpdateModelScenes = false
+				pPanel.updateModelObjects()
+			end
+			if pUpdateModelObjects
+				pUpdateModelObjects = false
+				pPanel.updateModelObjects()
+			end
+			if pUpdateModelObjectName != null
+				pPanel.updateModelObjectName(pUpdateModelObjectName)
+				pUpdateModelObjectName = null
+			end
+			if pUpdateObject
+				pUpdateObject = false
 				pPanel.updateObject()
 			end
 		end
@@ -405,10 +456,10 @@ class WMPanelProject extends Panel
 	
 	/** Select object listener. */
 	class SelectObject extends DefaultListModelListener
-		protected var WMPanelProject pWindow
+		protected var WMPanelProject pPanel
 		
-		public func new(WMPanelProject window)
-			pWindow = window
+		public func new(WMPanelProject panel)
+			pPanel = panel
 		end
 		
 		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
@@ -416,12 +467,16 @@ class WMPanelProject extends Panel
 		end
 		
 		public func void selectionChanged(ListModel model)
+			if pPanel.preventUpdateObjects
+				return
+			end
+			
 			var int index = model.getSelected()
 			if index != -1
-				pWindow.setObject(model.getAt(index) cast ECBSceneObject.Instance)
+				pPanel.setObject(model.getAt(index) cast ECBSceneObject.Instance)
 				
 			else
-				pWindow.setObject(null)
+				pPanel.setObject(null)
 			end
 		end
 	end
@@ -520,6 +575,10 @@ class WMPanelProject extends Panel
 		end
 		
 		public func void selectionChanged(ListModel model)
+			if pPanel.preventUpdateObjects
+				return
+			end
+			
 			var ECBSceneObject.Instance object = pPanel.getObject()
 			if object == null
 				return
@@ -662,6 +721,8 @@ class WMPanelProject extends Panel
 	protected var SelectedSelectableObjectChanged pSelectedSelectableObjectChanged
 	protected var CollapsibleGroup pPanelParenting
 	protected var Panel pPanelBehaviors
+	
+	public var bool preventUpdateObjects
 	
 	
 	
@@ -1367,6 +1428,7 @@ class WMPanelProject extends Panel
 		end)
 		
 		content.insert(0, null)
+		preventUpdateObjects = true
 		pModelObjects.setContent(content)
 		
 		pModelParent.setContent(content.collect(block ECBSceneObject.Instance each
@@ -1374,46 +1436,61 @@ class WMPanelProject extends Panel
 		end))
 		
 		pModelObjects.setSelectedElement(selection)
-		if pModelObjects.getSelected() != -1
-			pModelObjects.notifyElementChanged(pModelObjects.getSelected())
-		end
 		
 		pModelParent.setSelectedElement(selectionParent)
-		if pModelParent.getSelected() != -1
-			pModelParent.notifyElementChanged(pModelParent.getSelected())
+		preventUpdateObjects = false
+		setObject(selectionParent)
+	end
+	
+	public func void updateModelObjectName(ECBSceneObject.Instance object)
+		if pModelObjects == null or pModelParent == null
+			return // dispose protection
+		end
+		
+		var int index = pModelObjects.indexOf(object)
+		if index != -1
+			pModelObjects.notifyElementChanged(index)
+		end
+		
+		index = pModelParent.indexOf(object)
+		if index != -1
+			pModelParent.notifyElementChanged(index)
 		end
 	end
 	
 	/** Update object. */
 	public func void updateObject()
-		if pObject != null
-			var BehaviorElement element = pObject.getElement()
-			pModelObjectClass.setText(element.getClass().getClassname())
-			pEditObjectPosition.setVector(element.getPosition().toVector())
-			pEditObjectRotation.setVector(element.getOrientation().getEulerAngles())
-			
-			var UniqueID parentId = element.getStub().getAttachTo()
-			var Element parent
-			if parentId != null
-				parent = element.getGameWorld().getElementWithID(parentId)
-			end
-			if parent != null
-				pModelParent.setSelectedElement(ECBSceneObject.getInstanceIn(parent cast BehaviorElement))
+		runWhileBlockingLayout(block
+			if pObject != null
+				var BehaviorElement element = pObject.getElement()
+				pModelObjectClass.setText(element.getClass().getClassname())
+				pEditObjectPosition.setVector(element.getPosition().toVector())
+				pEditObjectRotation.setVector(element.getOrientation().getEulerAngles())
+				
+				var UniqueID parentId = element.getStub().getAttachTo()
+				var Element parent
+				if parentId != null
+					parent = element.getGameWorld().getElementWithID(parentId)
+				end
+				if parent != null
+					pModelParent.setSelectedElement(ECBSceneObject.getInstanceIn(parent cast BehaviorElement))
+					
+				else
+					pModelParent.setSelectedElement(null)
+				end
+				
+				pPanelBehaviors.forEachWidget(block WMPPanelSceneObject each
+					each.updateBehavior()
+				end)
 				
 			else
+				pModelObjectClass.setText("")
 				pModelParent.setSelectedElement(null)
+				pEditObjectPosition.setVector(Vector.new())
+				pEditObjectRotation.setVector(Vector.new())
 			end
-			
-			pPanelBehaviors.forEachWidget(block WMPPanelSceneObject each
-				each.updateBehavior()
-			end)
-			
-		else
-			pModelObjectClass.setText("")
-			pModelParent.setSelectedElement(null)
-			pEditObjectPosition.setVector(Vector.new())
-			pEditObjectRotation.setVector(Vector.new())
-		end
+		end)
+		doLayoutIfBlocked()
 	end
 	
 	/** Add object. */
