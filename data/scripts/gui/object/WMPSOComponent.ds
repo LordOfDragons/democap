@@ -35,10 +35,10 @@ pin Dragengine.Scenery
 
 
 /**
- * ECBehaviorComponent panel.
+ * ECBComponent panel.
  */
 class WMPSOComponent extends WMPPanelSceneObject
-	protected var ECBehaviorComponent.Instance pBehaviorComponent
+	protected var ECBComponent.Instance pBehaviorComponent
 	protected var DefaultTextModel pModelPathModel
 	protected var DefaultTextModel pModelPathSkin
 	protected var DefaultTextModel pModelPathRig
@@ -48,17 +48,13 @@ class WMPSOComponent extends WMPPanelSceneObject
 	
 	
 	/** Create panel. */
-	public func new(WMPanelProject panelProject, ECBehaviorComponent.Instance behavior)\
-		super(panelProject, /*behavior, */behavior.getECBehavior().getID(),\
-			"Component", "WMPSOComponent", "ppob_component")
-		
-		pBehaviorComponent = behavior
-		
-		pModelPathModel = DefaultTextModel.new("")
-		pModelPathSkin = DefaultTextModel.new("")
-		pModelPathRig = DefaultTextModel.new("")
-		pModelPathOcclusionMesh = DefaultTextModel.new("")
-		pModelPathAudioModel = DefaultTextModel.new("")
+	public func new(WMPanelProject panelProject, String bgpTypeId, String behaviorId)\
+	super(panelProject, bgpTypeId, behaviorId, "Component", "WMPSOComponent", "ppob_component")
+		pModelPathModel = DefaultTextModel.new()
+		pModelPathSkin = DefaultTextModel.new()
+		pModelPathRig = DefaultTextModel.new()
+		pModelPathOcclusionMesh = DefaultTextModel.new()
+		pModelPathAudioModel = DefaultTextModel.new()
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
@@ -67,6 +63,8 @@ class WMPSOComponent extends WMPPanelSceneObject
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		setBehavior(null)
+		
 		pModelPathModel = null
 		pModelPathSkin = null
 		pModelPathRig = null
@@ -77,24 +75,23 @@ class WMPSOComponent extends WMPPanelSceneObject
 	
 	/** Update behavior. */
 	public func void updateBehavior()
-		var ECBehaviorComponent behavior = pBehaviorComponent.getECBehavior()
-		var StubElement stub = pBehaviorComponent.getElement().getStub()
-		var ECComposeComponent component = behavior.getComponent()
+		if pBehaviorComponent == null
+			return
+		end
 		
-		pModelPathModel.setText(stubParamPath(stub, component.getModel()))
-		pModelPathSkin.setText(stubParamPath(stub, component.getSkin()))
-		pModelPathRig.setText(stubParamPath(stub, component.getRig()))
-		pModelPathOcclusionMesh.setText(stubParamPath(stub, component.getOcclusionMesh()))
-		pModelPathAudioModel.setText(stubParamPath(stub, component.getAudioModel()))
+		runWhileBlockingLayout(block
+			pModelPathModel.setText(pBehaviorComponent.getPathModel())
+			pModelPathSkin.setText(pBehaviorComponent.getPathSkin())
+			pModelPathRig.setText(pBehaviorComponent.getPathRig())
+			pModelPathOcclusionMesh.setText(pBehaviorComponent.getPathOcclusionMesh())
+			pModelPathAudioModel.setText(pBehaviorComponent.getPathAudioModel())
+		end)
 	end
 	
 	
 	
 	/** Create panel content. */
 	protected func void createContent(Panel content)
-		var ECBehaviorComponent behavior = pBehaviorComponent.getECBehavior()
-		var StubElement stub = pBehaviorComponent.getElement().getStub()
-		var ECComposeComponent component = behavior.getComponent()
 		var String startDirectory = GameApp.getGameApp().getPathObjects()
 		var EditPath editPath
 		
@@ -108,7 +105,9 @@ class WMPSOComponent extends WMPPanelSceneObject
 			editPath.setToolTip("Model resource to use")
 			p.addWidget(editPath)
 			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
-				setStubParamValue(stub, component.getModel().getName(), pModelPathModel.getText())
+				if pBehaviorComponent.setPathModel(pModelPathModel.getText())
+					notifyStubChanged()
+				end
 			end))
 			
 			// path skin resource
@@ -118,7 +117,9 @@ class WMPSOComponent extends WMPPanelSceneObject
 			editPath.setToolTip("Skin resource to use")
 			p.addWidget(editPath)
 			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
-				setStubParamValue(stub, component.getSkin().getName(), pModelPathSkin.getText())
+				if pBehaviorComponent.setPathSkin(pModelPathSkin.getText())
+					notifyStubChanged()
+				end
 			end))
 			
 			// path rig resource
@@ -128,7 +129,9 @@ class WMPSOComponent extends WMPPanelSceneObject
 			editPath.setToolTip("Rig resource to use")
 			p.addWidget(editPath)
 			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
-				setStubParamValue(stub, component.getRig().getName(), pModelPathRig.getText())
+				if pBehaviorComponent.setPathRig(pModelPathRig.getText())
+					notifyStubChanged()
+				end
 			end))
 			
 			// path occlusion mesh resource
@@ -138,7 +141,9 @@ class WMPSOComponent extends WMPPanelSceneObject
 			editPath.setToolTip("Occlusion mesh resource to use")
 			p.addWidget(editPath)
 			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
-				setStubParamValue(stub, component.getOcclusionMesh().getName(), pModelPathOcclusionMesh.getText())
+				if pBehaviorComponent.setPathOcclusionMesh(pModelPathOcclusionMesh.getText())
+					notifyStubChanged()
+				end
 			end))
 			
 			// path audio model resource
@@ -148,8 +153,14 @@ class WMPSOComponent extends WMPPanelSceneObject
 			editPath.setToolTip("Audio model resource to use")
 			p.addWidget(editPath)
 			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
-				setStubParamValue(stub, component.getAudioModel().getName(), pModelPathAudioModel.getText())
+				if pBehaviorComponent.setPathAudioModel(pModelPathAudioModel.getText())
+					notifyStubChanged()
+				end
 			end))
 		end))
+	end
+	
+	protected func void onBehaviorChanged()
+		pBehaviorComponent = pBehavior cast ECBComponent.Instance
 	end
 end

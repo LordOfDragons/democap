@@ -25,6 +25,7 @@ pin Democap.Characters
 
 pin Dragengine.Scenery
 pin Dragengine.LoadSave
+pin Dragengine.Preloading
 
 
 /**
@@ -67,6 +68,15 @@ class ECBHideWhileRecording extends DefaultECBehavior
 			end
 		end
 		
+		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
+			public func new(Instance instance) super(instance, "ECBHideWhileRecording")
+			end
+			
+			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+				return Gui.WMPSOHideWhileRecording.new(panelProject, getId())
+			end
+		end
+		
 		
 		
 		private var ECBHideWhileRecording pECBehavior
@@ -90,6 +100,13 @@ class ECBHideWhileRecording extends DefaultECBehavior
 		public func void dispose()
 			pRecordingStateChanged = null
 			super.dispose()
+		end
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			if pECBehavior.behaviorGuiPanels != null
+				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
 		end
 		
 		
@@ -228,9 +245,21 @@ class ECBHideWhileRecording extends DefaultECBehavior
 	
 	
 	
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
+	
+	
+	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass) super(eclass)
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels) super(eclass)
+		this.behaviorGuiPanels = behaviorGuiPanels
+		
 		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		behaviorGuiPanels = null
+		super.dispose()
 	end
 	
 	

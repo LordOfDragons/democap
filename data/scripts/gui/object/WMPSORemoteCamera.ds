@@ -43,12 +43,8 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 	
 	
 	/** Create panel. */
-	public func new(WMPanelProject panelProject, ECBRemoteCamera.Instance behavior)\
-		super(panelProject, /*behavior, */behavior.getECBehavior().getID(),\
-			"Remote Camera", "WMPSORemoteCamera", "ppob_remotecamera")
-		
-		pBehaviorRemoteCamera = behavior
-		
+	public func new(WMPanelProject panelProject, String bgpTypeId, String behaviorId)\
+	super(panelProject, bgpTypeId, behaviorId, "Remote Camera", "WMPSORemoteCamera", "ppob_remotecamera")
 		pModelName = DefaultTextModel.new()
 		
 		getPanelContent().runWhileBlockingLayout(block
@@ -58,6 +54,8 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		setBehavior(null)
+		
 		pModelName = null
 		pWorldRenderer = null
 		super.dispose()
@@ -72,7 +70,13 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 	
 	/** Update behavior. */
 	public func void updateBehavior()
-		pModelName.setText(pBehaviorRemoteCamera.getName())
+		if pBehaviorRemoteCamera == null
+			return
+		end
+		
+		runWhileBlockingLayout(block
+			pModelName.setText(pBehaviorRemoteCamera.getName())
+		end)
 	end
 	
 	
@@ -102,7 +106,6 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 		
 		content.addWidget(Panel.new(StackLayout.new(StackLayout.AspectRatio.fit), block Panel p
 			pWorldRenderer = WorldRenderer.new()
-			pWorldRenderer.setCamera(pBehaviorRemoteCamera.getCamera().getCamera())
 			pWorldRenderer.setDesignerSelector("WorldRenderer.WMPSORemoteCamera.View")
 			p.addWidget(pWorldRenderer)
 			
@@ -111,5 +114,19 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 			//pImageReticle.setTransparency(0.5)
 			p.addWidget(pImageReticle)
 		end))
+	end
+	
+	protected func void onBehaviorChanged()
+		if pBehaviorRemoteCamera != null
+			pWorldRenderer.setCamera(null)
+		end
+		
+		pBehaviorRemoteCamera = pBehavior cast ECBRemoteCamera.Instance
+		
+		if pBehaviorRemoteCamera != null
+			pWorldRenderer.setCamera(pBehaviorRemoteCamera.getCamera().getCamera())
+		end
+		
+		// TODO for performance do not assign camera unless panel is visible/unfolded
 	end
 end

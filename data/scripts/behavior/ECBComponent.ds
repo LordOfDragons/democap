@@ -1,0 +1,188 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.LoadSave
+
+
+/**
+ * Behavior extending ECBehaviorComponent.
+ */
+class ECBComponent extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
+			public func new(Instance instance) super(instance, "ECBComponent", instance.getECBehavior().getID())
+			end
+			
+			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+				return Gui.WMPSOComponent.new(panelProject, getId(), getBehaviorId())
+			end
+		end
+		
+		
+		protected var ECBComponent pECBehavior
+		protected var ECBehaviorComponent.Instance pComponent
+		
+		protected var String pPathModel
+		protected var String pPathSkin
+		protected var String pPathRig
+		protected var String pPathOcclusionMesh
+		protected var String pPathAudioModel
+		
+		
+		public func new(ECBComponent ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pComponent = ecbehavior.component.instance(element)
+		end
+		
+		public func void dispose()
+			pComponent = null
+			super.dispose()
+		end
+		
+		public func void init(StubElement stub)
+			var ECComposeComponent eccomponent = pComponent.getECBehavior().getComponent()
+			
+			pPathModel = BehaviorStubHelper.stubParamPath(stub, eccomponent.getModel())
+			pPathSkin = BehaviorStubHelper.stubParamPath(stub, eccomponent.getSkin())
+			pPathRig = BehaviorStubHelper.stubParamPath(stub, eccomponent.getRig())
+			pPathOcclusionMesh = BehaviorStubHelper.stubParamPath(stub, eccomponent.getOcclusionMesh())
+			pPathAudioModel = BehaviorStubHelper.stubParamPath(stub, eccomponent.getAudioModel())
+			
+			if pECBehavior.behaviorGuiPanels != null
+				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
+		end
+		
+		
+		public func ECBComponent getECBehavior()
+			return pECBehavior
+		end
+		
+		
+		public func String getPathModel()
+			return pPathModel
+		end
+		
+		public func bool setPathModel(String path)
+			if path.equals(pPathModel)
+				return false
+			end
+			pPathModel = path
+			BehaviorStubHelper.setStubParamValue(getElement().getStub(),\
+				pComponent.getECBehavior().getComponent().getModel().getName(), path)
+			return true
+		end
+		
+		public func String getPathSkin()
+			return pPathSkin
+		end
+		
+		public func bool setPathSkin(String path)
+			if path.equals(pPathSkin)
+				return false
+			end
+			pPathSkin = path
+			BehaviorStubHelper.setStubParamValue(getElement().getStub(),\
+				pComponent.getECBehavior().getComponent().getSkin().getName(), path)
+			return true
+		end
+		
+		public func String getPathRig()
+			return pPathRig
+		end
+		
+		public func bool setPathRig(String path)
+			if path.equals(pPathRig)
+				return false
+			end
+			pPathRig = path
+			BehaviorStubHelper.setStubParamValue(getElement().getStub(),\
+				pComponent.getECBehavior().getComponent().getRig().getName(), path)
+			return true
+		end
+		
+		public func String getPathOcclusionMesh()
+			return pPathOcclusionMesh
+		end
+		
+		public func bool setPathOcclusionMesh(String path)
+			if path.equals(pPathOcclusionMesh)
+				return false
+			end
+			pPathOcclusionMesh = path
+			BehaviorStubHelper.setStubParamValue(getElement().getStub(),\
+				pComponent.getECBehavior().getComponent().getOcclusionMesh().getName(), path)
+			return true
+		end
+		
+		public func String getPathAudioModel()
+			return pPathAudioModel
+		end
+		
+		public func bool setPathAudioModel(String path)
+			if path.equals(pPathAudioModel)
+				return false
+			end
+			pPathAudioModel = path
+			BehaviorStubHelper.setStubParamValue(getElement().getStub(),\
+				pComponent.getECBehavior().getComponent().getAudioModel().getName(), path)
+			return true
+		end
+	end
+	
+	
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
+	public var ECBehaviorComponent component
+	
+	
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBehaviorComponent component) this(eclass, behaviorGuiPanels, component, "")
+	end
+	
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBehaviorComponent component, String id) super(eclass, id)
+		this.behaviorGuiPanels = behaviorGuiPanels
+		this.component = component
+		
+		eclass.addBehavior(this)
+	end
+	
+	public func void dispose()
+		behaviorGuiPanels = null
+		component = null
+		super.dispose()
+	end
+	
+	
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

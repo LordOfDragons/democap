@@ -36,8 +36,10 @@ pin Dragengine.Scenery
 class GrabObjectClass extends BehaviorElementClass
 	public var ECBBehaviorGuiPanels behaviorGuiPanels
 	public var ECBehaviorComponent component
+	public var ECBComponent component2
 	public var ECBehaviorCollider collider
 	public var ECBehaviorAnimated animated
+	public var ECBAnimated animated2
 	public var ECBehaviorVRHandPointedAt vrHandPointedAt
 	public var ECBHighlightPointedAt highlightPointedAt
 	public var ECBSceneObject sceneObject
@@ -62,6 +64,8 @@ class GrabObjectClass extends BehaviorElementClass
 		component.setCommonPath("/content/models/hands", "right.demodel", "hand.deskin", "right.derig")
 		component.getComponent().setLayerMask(LayerMask.newWith(GameApp.WorldLayerBit.remoteView))
 		
+		component2 = ECBComponent.new(this, behaviorGuiPanels, component)
+		
 		collider = ECBehaviorCollider.new(this, component)
 		collider.getCollider().getPhysicsType().setEnumeration(CollisionResponse.kinematic)
 		collider.getCollider().getLocalGravity().setVector(Vector.new())
@@ -73,6 +77,8 @@ class GrabObjectClass extends BehaviorElementClass
 		animated.getAnimator().getAnimator().setPath("/content/models/hands/animator/grab_grip_right.deanimator")
 		animated.getAnimator().getPlaying().setValue(true)
 		
+		animated2 = ECBAnimated.new(this, behaviorGuiPanels, animated)
+		
 		vrHandPointedAt = ECBehaviorVRHandPointedAt.new(this)
 		highlightPointedAt = ECBHighlightPointedAt.new(this, component, collider, vrHandPointedAt)
 		
@@ -82,7 +88,7 @@ class GrabObjectClass extends BehaviorElementClass
 		
 		selectable = ECBSelectable.new(this)
 		
-		showInteractHandles = ECBShowInteractHandles.new(this, selectable)
+		showInteractHandles = ECBShowInteractHandles.new(this, behaviorGuiPanels, selectable)
 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveX")
 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveY")
 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveZ")
@@ -101,7 +107,7 @@ class GrabObjectClass extends BehaviorElementClass
 		helpTopic = ECBHelpTopic.new(this)
 		helpTopic.getHelpTopic().setValue("ocls_grabobject")
 		
-		hideCondition = ECBHideCondition.new(this)
+		hideCondition = ECBHideCondition.new(this, behaviorGuiPanels)
 		
 		grabSpot = ECBehaviorGrabSpot.new(this, collider)
 		
@@ -109,7 +115,7 @@ class GrabObjectClass extends BehaviorElementClass
 		shape.addSphere(Vector.new(), 0.05)
 		grabSpot.getTouchCollider().getShape().setShapeList(shape)
 		
-		grabAttach = ECBGrabAttach.new(this, grabSpot, collider, null, showInteractHandles, "")
+		grabAttach = ECBGrabAttach.new(this, behaviorGuiPanels, grabSpot, collider, null, showInteractHandles, "")
 		
 		copyObject = ECBCopyObject.new(this)
 	end

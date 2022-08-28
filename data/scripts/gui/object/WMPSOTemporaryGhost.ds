@@ -40,14 +40,14 @@ pin Dragengine.Utils
  */
 class WMPSOTemporaryGhost extends WMPPanelSceneObject
 	class EnabledChanged extends DefaultToggleModelListener
-		protected var ECBTemporaryGhost.Instance pBehavior
+		protected var WMPSOTemporaryGhost pPanel
 		
-		public func new(ECBTemporaryGhost.Instance behavior)
-			pBehavior = behavior
+		public func new(WMPSOTemporaryGhost panel)
+			pPanel = panel
 		end
 		
 		public func void toggledChanged(ToggleModel model)
-			pBehavior.setEnabled(model.getToggled())
+			pPanel.getBehaviorTemporaryGhost().setEnabled(model.getToggled())
 		end
 	end
 	
@@ -72,29 +72,24 @@ class WMPSOTemporaryGhost extends WMPPanelSceneObject
 	
 	
 	/** Create panel. */
-	public func new(WMPanelProject panelProject, ECBTemporaryGhost.Instance behavior)\
-	super(panelProject, /*behavior, */"", "Temporary Ghost", "WMPSOTemporaryGhost", "ppob_temporaryghost")
-		pBehaviorTemporaryGhost = behavior
-		
+	public func new(WMPanelProject panelProject, String bgpTypeId) super(panelProject, bgpTypeId,\
+	"", "Temporary Ghost", "WMPSOTemporaryGhost", "ppob_temporaryghost")
 		pModelEnabled = DefaultToggleModel.new(false)
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
 		end)
 		
-		pModelEnabled.addListener(EnabledChanged.new(behavior))
+		pModelEnabled.addListener(EnabledChanged.new(this))
 		
 		pEnabledChanged = BehaviorEnabledChanged.new(pModelEnabled)
-		behavior.addListener(pEnabledChanged)
 	end
 	
 	/** Dispose of widget. */
 	public func void dispose()
-		if pEnabledChanged != null
-			pBehaviorTemporaryGhost.removeListener(pEnabledChanged)
-			pEnabledChanged = null
-		end
+		setBehavior(null)
 		
+		pEnabledChanged = null
 		pModelEnabled = null
 		
 		super.dispose()
@@ -109,6 +104,10 @@ class WMPSOTemporaryGhost extends WMPPanelSceneObject
 	
 	/** Update behavior. */
 	public func void updateBehavior()
+		if pBehaviorTemporaryGhost == null
+			return
+		end
+		
 		pModelEnabled.setToggled(pBehaviorTemporaryGhost.getEnabled())
 	end
 	
@@ -128,5 +127,19 @@ class WMPSOTemporaryGhost extends WMPPanelSceneObject
 			checkBox.setToolTip("Replaces component textures with ghost textures")
 			p.addWidget(checkBox)
 		end))
+	end
+	
+	protected func void onBehaviorChanged()
+		if pBehaviorTemporaryGhost != null
+			if pBehaviorTemporaryGhost.getElement() != null // dispose protection
+				pBehaviorTemporaryGhost.removeListener(pEnabledChanged)
+			end
+		end
+		
+		pBehaviorTemporaryGhost = pBehavior cast ECBTemporaryGhost.Instance
+		
+		if pBehaviorTemporaryGhost != null
+			pBehaviorTemporaryGhost.addListener(pEnabledChanged)
+		end
 	end
 end

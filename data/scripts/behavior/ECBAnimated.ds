@@ -1,0 +1,144 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.LoadSave
+
+
+/**
+ * Behavior extending ECBehaviorAnimated.
+ */
+class ECBAnimated extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
+			public func new(Instance instance) super(instance, "ECBAnimated", instance.getECBehavior().getID())
+			end
+			
+			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+				return Gui.WMPSOAnimated.new(panelProject, getId(), getBehaviorId())
+			end
+		end
+		
+		
+		protected var ECBAnimated pECBehavior
+		protected var ECBehaviorAnimated.Instance pAnimated
+		
+		protected var String pPathAnimator
+		protected var String pPlaybackController
+		
+		
+		public func new(ECBAnimated ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pAnimated = ecbehavior.animated.instance(element)
+		end
+		
+		public func void dispose()
+			pAnimated = null
+			super.dispose()
+		end
+		
+		public func void init(StubElement stub)
+			var ECComposeAnimator ecanimator = pAnimated.getECBehavior().getAnimator()
+			
+			pPathAnimator = BehaviorStubHelper.stubParamPath(stub, ecanimator.getAnimator())
+			pPlaybackController = BehaviorStubHelper.stubParamValue(stub, ecanimator.getPlaybackController())
+			
+			if pECBehavior.behaviorGuiPanels != null
+				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
+		end
+		
+		
+		public func ECBAnimated getECBehavior()
+			return pECBehavior
+		end
+		
+		public func ECBehaviorAnimated.Instance getAnimated()
+			return pAnimated
+		end
+		
+		
+		public func String getPathAnimator()
+			return pPathAnimator
+		end
+		
+		public func bool setPathAnimator(String path)
+			if path.equals(pPathAnimator)
+				return false
+			end
+			pPathAnimator = path
+			BehaviorStubHelper.setStubParamValue(getElement().getStub(),\
+				pAnimated.getECBehavior().getAnimator().getAnimator().getName(), path)
+			return true
+		end
+		
+		public func String getPlaybackController()
+			return pPlaybackController
+		end
+		
+		public func bool setPlaybackController(String name)
+			if name.equals(pPlaybackController)
+				return false
+			end
+			pPlaybackController = name
+			BehaviorStubHelper.setStubParamValue(getElement().getStub(),\
+				pAnimated.getECBehavior().getAnimator().getPlaybackController().getName(), name)
+			return true
+		end
+	end
+	
+	
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
+	public var ECBehaviorAnimated animated
+	
+	
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBehaviorAnimated animated) this(eclass, behaviorGuiPanels, animated, "")
+	end
+	
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBehaviorAnimated animated, String id) super(eclass, id)
+		this.behaviorGuiPanels = behaviorGuiPanels
+		this.animated = animated
+		
+		eclass.addBehavior(this)
+	end
+	
+	public func void dispose()
+		behaviorGuiPanels = null
+		animated = null
+		super.dispose()
+	end
+	
+	
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

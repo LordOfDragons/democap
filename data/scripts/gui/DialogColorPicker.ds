@@ -121,8 +121,10 @@ class DialogColorPicker extends WindowDialog
 			if pDraging
 				var Point size = (event.getSource() cast Widget).getSize()
 				if not (size <= Point.new(1, 1))
-					var int x = pModelX.getMaximum() * event.getPosition().getX() / (size.getX() - 1)
-					var int y = pModelY.getMaximum() * event.getPosition().getY() / (size.getY() - 1)
+					var int right = size.getX() - 1
+					var int bottom = size.getY() - 1
+					var int x = pModelX.getMaximum() * event.getPosition().getX() / right
+					var int y = pModelY.getMaximum() * (bottom - event.getPosition().getY()) / bottom
 					pModelX.setValue(x)
 					pModelY.setValue(y)
 				end
@@ -139,11 +141,12 @@ class DialogColorPicker extends WindowDialog
 			setMinimumSize(Point.new(1, 1))
 			setProtectMinimumSize(true)
 			
+			pModel = model
+			
 			pMarker = Widget.new()
 			pMarker.setDesignerSelector("ColorPicker.BarMarker")
 			addWidget(pMarker)
 			
-			pModel = model
 			model.addListener(this)
 		end
 		
@@ -189,12 +192,13 @@ class DialogColorPicker extends WindowDialog
 			setMinimumSize(Point.new(1, 1))
 			setProtectMinimumSize(true)
 			
+			pModelX = modelX
+			pModelY = modelY
+			
 			pMarker = Widget.new()
 			pMarker.setDesignerSelector("ColorPicker.SquareMarker")
 			addWidget(pMarker)
 			
-			pModelX = modelX
-			pModelY = modelY
 			modelX.addListener(this)
 			modelY.addListener(this)
 		end

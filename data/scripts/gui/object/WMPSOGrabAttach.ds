@@ -71,12 +71,8 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 	
 	
 	/** Create panel. */
-	public func new(WMPanelProject panelProject, ECBGrabAttach.Instance behavior)\
-		super(panelProject, /*behavior, */behavior.getECBehavior().getID(),\
-			"GrabAttach", "WMPSOGrabAttach", "ppob_grabattach")
-		
-		pBehaviorGrabAttach = behavior
-		
+	public func new(WMPanelProject panelProject, String bgpTypeId, String behaviorId)\
+	super(panelProject, bgpTypeId, behaviorId, "GrabAttach", "WMPSOGrabAttach", "ppob_grabattach")
 		pModelBoneList = DefaultListModel.new()
 		pModelBoneList.setAutoSelect(false)
 		pModelImmobile = DefaultToggleModel.new(false)
@@ -93,6 +89,8 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		setBehavior(null)
+		
 		pModelBoneText = null
 		pModelBoneList = null
 		pModelImmobile = null
@@ -109,10 +107,16 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 	
 	/** Update behavior. */
 	public func void updateBehavior()
-		pModelImmobile.setToggled(pBehaviorGrabAttach.getImmobile())
-		pModelIKLockRotation.setToggled(pBehaviorGrabAttach.getIKLockRotation())
-		pModelBoneText.setText(pBehaviorGrabAttach.getBone())
-		updateModelBone()
+		if pBehaviorGrabAttach == null
+			return
+		end
+		
+		runWhileBlockingLayout(block
+			pModelImmobile.setToggled(pBehaviorGrabAttach.getImmobile())
+			pModelIKLockRotation.setToggled(pBehaviorGrabAttach.getIKLockRotation())
+			pModelBoneText.setText(pBehaviorGrabAttach.getBone())
+			updateModelBone()
+		end)
 	end
 	
 	
@@ -190,5 +194,11 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 				p2.addWidget(checkBox)
 			end))
 		end))
+	end
+	
+	protected func void onBehaviorChanged()
+		pModelBoneList.removeAll()
+		
+		pBehaviorGrabAttach = pBehavior cast ECBGrabAttach.Instance
 	end
 end

@@ -35,6 +35,16 @@ pin Dragengine.Scenery
 class ECBRemoteCamera extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
+		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
+			public func new(Instance instance) super(instance, "ECBRemoteCamera", instance.getECBehavior().getID())
+			end
+			
+			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+				return Gui.WMPSORemoteCamera.new(panelProject, getId(), getBehaviorId())
+			end
+		end
+		
+		
 		private var ECBRemoteCamera pECBehavior
 		private var ECBehaviorCamera.Instance pCamera
 		private var String pName
@@ -55,6 +65,10 @@ class ECBRemoteCamera extends DefaultECBehavior
 		/** Init behavior. */
 		public func void init(StubElement stub)
 			pName = pECBehavior.name.getValue(stub)
+			
+			if pECBehavior.behaviorGuiPanels != null
+				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
 		end
 		
 		
@@ -141,18 +155,21 @@ class ECBRemoteCamera extends DefaultECBehavior
 	end
 	
 	
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
 	public var ECBehaviorCamera camera
 	public var ECPString name
 	
 	
 	/** Create behavior element class. */
-	public func new(BehaviorElementClass eclass, ECBehaviorCamera camera, String id) super(eclass, id)
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBehaviorCamera camera, String id) super(eclass, id)
 		if camera == null
 			throw ENullPointer.new("camera")
 		end
 		
 		var String prefix = id.empty() if "remoteCamera." else "remoteCamera(" + id + ")."
 		
+		this.behaviorGuiPanels = behaviorGuiPanels
 		this.camera = camera
 		
 		name = ECPString.new(prefix + "name", "Camera")
@@ -163,6 +180,7 @@ class ECBRemoteCamera extends DefaultECBehavior
 	
 	/** Dispose of behavior. */
 	public func void dispose()
+		behaviorGuiPanels = null
 		camera = null
 		super.dispose()
 	end

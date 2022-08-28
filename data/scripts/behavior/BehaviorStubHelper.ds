@@ -1,0 +1,94 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+
+
+class BehaviorStubHelper
+	private func new()
+	end
+	
+	
+	/** Get string stub parameter converting null to empty string. */
+	static public func String stubParamValue(StubElement stub, String name, String defaultValue)
+		var String value = stub.getPropertyValueFor(name, defaultValue)
+		if value == null or value.empty()
+			value = defaultValue
+		end
+		return value != null if value else ""
+	end
+	
+	/** Get path stub parameter converting null to empty string. */
+	static public func String stubParamPath(StubElement stub, String basePath, String name, String defaultValue)
+		var String value = stub.getPropertyValueFor(name, "")
+		if value.empty()
+			if defaultValue == null or defaultValue.empty()
+				return ""
+			end
+			return File.absolutePath(defaultValue, basePath).getPath()
+		end
+		return value
+	end
+	
+	static public func String stubParamValue(StubElement stub, ECPString param)
+		return stubParamValue(stub, param.getName(), param.getValue())
+	end
+	
+	static public func String stubParamPath(StubElement stub, ECPString param)
+		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getValue())
+	end
+	
+	static public func String stubParamPath(StubElement stub, ECPModel param)
+		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
+	end
+	
+	static public func String stubParamPath(StubElement stub, ECPSkin param)
+		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
+	end
+	
+	static public func String stubParamPath(StubElement stub, ECPRig param)
+		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
+	end
+	
+	static public func String stubParamPath(StubElement stub, ECPOcclusionMesh param)
+		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
+	end
+	
+	static public func String stubParamPath(StubElement stub, ECPAnimator param)
+		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
+	end
+	
+	/**
+	 * Set string stub parameter if value is different than the stored value.
+	 * Returns true if value changed or false otherwise.
+	 */
+	static public func bool setStubParamValue(StubElement stub, String name, String value)
+		if value.equals(stub.getPropertyValueFor(name, null))
+			return false
+		end
+		
+		stub.setPropertyValueFor(name, value)
+		return true
+	end
+end

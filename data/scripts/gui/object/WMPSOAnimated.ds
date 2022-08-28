@@ -36,10 +36,10 @@ pin Dragengine.Utils
 
 
 /**
- * ECBehaviorAnimated panel.
+ * ECBAnimated panel.
  */
 class WMPSOAnimated extends WMPPanelSceneObject
-	protected var ECBehaviorAnimated.Instance pBehaviorAnimated
+	protected var ECBAnimated.Instance pBehaviorAnimated
 	protected var DefaultTextModel pModelPathAnimator
 	protected var DefaultListModel pModelPlaybackControllerList
 	protected var DefaultTextModel pModelPlaybackControllerText
@@ -47,18 +47,14 @@ class WMPSOAnimated extends WMPPanelSceneObject
 	
 	
 	/** Create panel. */
-	public func new(WMPanelProject panelProject, ECBehaviorAnimated.Instance behavior)\
-		super(panelProject, /*behavior,*/ behavior.getECBehavior().getID(),\
-			"Animated", "WMPSOAnimated", "ppob_animated")
-		
-		pBehaviorAnimated = behavior
-		
-		pModelPathAnimator = DefaultTextModel.new("")
+	public func new(WMPanelProject panelProject, String bgpTypeId, String behaviorId)\
+	super(panelProject, bgpTypeId, behaviorId, "Animated", "WMPSOAnimated", "ppob_animated")
+		pModelPathAnimator = DefaultTextModel.new()
 		
 		pModelPlaybackControllerList = DefaultListModel.new()
 		pModelPlaybackControllerList.setAutoSelect(false)
 		
-		pModelPlaybackControllerText = DefaultTextModel.new("")
+		pModelPlaybackControllerText = DefaultTextModel.new()
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
@@ -67,6 +63,8 @@ class WMPSOAnimated extends WMPPanelSceneObject
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		setBehavior(null)
+		
 		pModelPathAnimator = null
 		pModelPlaybackControllerList = null
 		pModelPlaybackControllerText = null
@@ -75,14 +73,16 @@ class WMPSOAnimated extends WMPPanelSceneObject
 	
 	/** Update behavior. */
 	public func void updateBehavior()
-		var ECBehaviorAnimated behavior = pBehaviorAnimated.getECBehavior()
-		var StubElement stub = pBehaviorAnimated.getElement().getStub()
-		var ECComposeAnimator animator = behavior.getAnimator()
+		if pBehaviorAnimated == null
+			return
+		end
 		
-		pModelPathAnimator.setText(stubParamPath(stub, animator.getAnimator()))
-		
-		updatePlaybackControllerList()
-		pModelPlaybackControllerText.setText(stubParamValue(stub, animator.getPlaybackController()))
+		runWhileBlockingLayout(block
+			pModelPathAnimator.setText(pBehaviorAnimated.getPathAnimator())
+			
+			updatePlaybackControllerList()
+			pModelPlaybackControllerText.setText(pBehaviorAnimated.getPlaybackController())
+		end)
 	end
 	
 	
@@ -91,8 +91,8 @@ class WMPSOAnimated extends WMPPanelSceneObject
 	protected func void updatePlaybackControllerList()
 		var Array names = Array.new()
 		
-		if pBehaviorAnimated.getAnimatorInstance() != null
-			var Animator animator = pBehaviorAnimated.getAnimatorInstance().getAnimator()
+		if pBehaviorAnimated != null and pBehaviorAnimated.getAnimated().getAnimatorInstance() != null
+			var Animator animator = pBehaviorAnimated.getAnimated().getAnimatorInstance().getAnimator()
 			if animator != null
 				var int i, count = animator.getControllerCount()
 				for i = 0 to count
@@ -106,9 +106,6 @@ class WMPSOAnimated extends WMPPanelSceneObject
 	
 	/** Create panel content. */
 	protected func void createContent(Panel content)
-		var ECBehaviorAnimated behavior = pBehaviorAnimated.getECBehavior()
-		var StubElement stub = pBehaviorAnimated.getElement().getStub()
-		var ECComposeAnimator animator = behavior.getAnimator()
 		var String startDirectory = GameApp.getGameApp().getPathObjects()
 		var DefaultComboBoxEditor editor
 		var EditPath editPath
@@ -124,7 +121,9 @@ class WMPSOAnimated extends WMPPanelSceneObject
 			editPath.setToolTip("Animator to use")
 			p.addWidget(editPath)
 			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
-				setStubParamValue(stub, animator.getAnimator().getName(), pModelPathAnimator.getText())
+				if pBehaviorAnimated.setPathAnimator(pModelPathAnimator.getText())
+					notifyStubChanged()
+				end
 			end))
 			
 			// playback controller name
@@ -135,8 +134,14 @@ class WMPSOAnimated extends WMPPanelSceneObject
 			comboBox.setToolTip("Controller to use as playback controller increment with elapsed time")
 			p.addWidget(comboBox)
 			editor.addTextActionListener(BlockActionListener.new(block ActionEvent event
-				setStubParamValue(stub, animator.getPlaybackController().getName(), pModelPlaybackControllerText.getText())
+				if pBehaviorAnimated.setPlaybackController(pModelPlaybackControllerText.getText())
+					notifyStubChanged()
+				end
 			end))
 		end))
+	end
+	
+	protected func void onBehaviorChanged()
+		pBehaviorAnimated = pBehavior cast ECBAnimated.Instance
 	end
 end

@@ -82,11 +82,8 @@ class WMPSOHideCondition extends WMPPanelSceneObject
 	
 	
 	/** Create panel. */
-	public func new(WMPanelProject panelProject, ECBHideCondition.Instance behavior)\
-		super(panelProject, /*behavior, */"", "Hide Condition", "WMPSOHideCondition", "ppob_hidecondition")
-		
-		pBehaviorHideCondition = behavior
-		
+	public func new(WMPanelProject panelProject, String bgpTypeId) super(panelProject, bgpTypeId,\
+	"", "Hide Condition", "WMPSOHideCondition", "ppob_hidecondition")
 		pModelLive = DefaultToggleModel.new(false)
 		pModelPlayback = DefaultToggleModel.new(true)
 		pModelRecord = DefaultToggleModel.new(true)
@@ -102,6 +99,8 @@ class WMPSOHideCondition extends WMPPanelSceneObject
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		setBehavior(null)
+		
 		pModelLive = null
 		pModelPlayback = null
 		pModelRecord = null
@@ -117,9 +116,15 @@ class WMPSOHideCondition extends WMPPanelSceneObject
 	
 	/** Update behavior. */
 	public func void updateBehavior()
-		pModelLive.setToggled(pBehaviorHideCondition.getLive())
-		pModelPlayback.setToggled(pBehaviorHideCondition.getPlayback())
-		pModelRecord.setToggled(pBehaviorHideCondition.getRecord())
+		if pBehaviorHideCondition == null
+			return
+		end
+		
+		runWhileBlockingLayout(block
+			pModelLive.setToggled(pBehaviorHideCondition.getLive())
+			pModelPlayback.setToggled(pBehaviorHideCondition.getPlayback())
+			pModelRecord.setToggled(pBehaviorHideCondition.getRecord())
+		end)
 	end
 	
 	
@@ -143,5 +148,9 @@ class WMPSOHideCondition extends WMPPanelSceneObject
 			checkBox.setToolTip("Hide during live editing (not recording nor playing back).")
 			p.addWidget(checkBox)
 		end))
+	end
+	
+	protected func void onBehaviorChanged()
+		pBehaviorHideCondition = pBehavior cast ECBHideCondition.Instance
 	end
 end

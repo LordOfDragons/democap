@@ -471,26 +471,37 @@ class WMPanelProject extends Panel
 				return
 			end
 			
+			var ECBSelectable.Instance selectable
 			var int index = model.getSelected()
 			if index != -1
-				pPanel.setObject(model.getAt(index) cast ECBSceneObject.Instance)
-				
-			else
-				pPanel.setObject(null)
+				selectable = ECBSelectable.getInstanceIn((model.getAt(index) cast ECBSceneObject.Instance).getElement())
 			end
+			GameApp.getGameApp().getSelectionTracker().setElement(selectable)
 		end
 	end
 	
 	/** Selected selectable object changed. */
 	class SelectedSelectableObjectChanged extends ECBSelectable.Tracker.DefaultListener
 		protected var WMPanelProject pPanel
+		protected var TimerBlock pTimer
 		
 		public func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
 		public func void selectedElementChanged(ECBSelectable.Tracker tracker)
-			pPanel.selectObjectFromTracker()
+			pStartTimer()
+		end
+		
+		protected func void pStartTimer()
+			if pTimer != null
+				return
+			end
+			
+			pTimer = TimerBlock.new(0, false, block
+				pTimer = null
+				pPanel.selectObjectFromTracker()
+			end)
 		end
 	end
 	
@@ -1313,76 +1324,19 @@ class WMPanelProject extends Panel
 			return
 		end
 		
-		while pPanelBehaviors.getWidgetCount() > 0
-			var WMPPanelSceneObject panel = pPanelBehaviors.getWidget(pPanelBehaviors.getWidgetCount() - 1) cast WMPPanelSceneObject
-			pBGPManager.returnPanel(panel)
-			pPanelBehaviors.removeWidget(panel)
-		end
+		pPanelBehaviors.runWhileBlockingLayout(block
+			while pPanelBehaviors.getWidgetCount() > 0
+				var WMPPanelSceneObject panel = pPanelBehaviors.getWidget(pPanelBehaviors.getWidgetCount() - 1) cast WMPPanelSceneObject
+				pBGPManager.returnPanel(panel)
+				pPanelBehaviors.removeWidget(panel)
+			end
+		end)
 		
 		pObject = object
-		
-		var ECBSelectable.Instance selectable
-		if object != null
-			selectable = ECBSelectable.getInstanceIn(object.getElement())
-		end
-		
-		if not pDisposing
-			GameApp.getGameApp().getSelectionTracker().setElement(selectable)
-		end
 		
 		var bool showParenting = true
 		
 		if object != null
-			/*
-			var bool noBehaviors = object.getECBehavior().editPanelNoBehaviors.getValue()
-			var bool noPhysics = object.getECBehavior().editPanelNoPhysics.getValue()
-			
-			showParenting &= not noBehaviors
-			
-			if not noBehaviors
-				pPanelBehaviors.runWhileBlockingLayout(block
-					(object.getElement() cast BehaviorElement).forEachInstance(block ECBehaviorInstance each
-						if each castable ECBehaviorComponent.Instance
-							pPanelBehaviors.addWidget(WMPSOComponent.new(this,\
-								each cast ECBehaviorComponent.Instance))
-							
-						elif each castable ECBehaviorAnimated.Instance
-							pPanelBehaviors.addWidget(WMPSOAnimated.new(this,\
-								each cast ECBehaviorAnimated.Instance))
-							
-						elif each castable ECBShowInteractHandles.Instance
-							pPanelBehaviors.addWidget(WMPSOShowInteractHandles.new(this,\
-								each cast ECBShowInteractHandles.Instance))
-							
-						elif each castable ECBehaviorCustomColor.Instance
-							pPanelBehaviors.addWidget(WMPSOCustomColor.new(this,\
-								each cast ECBehaviorCustomColor.Instance))
-							
-						elif each castable ECBHideWhileRecording.Instance
-							pPanelBehaviors.addWidget(WMPSOHideWhileRecording.new(this,\
-								each cast ECBHideWhileRecording.Instance))
-							
-						elif each castable ECBRemoteCamera.Instance
-							pPanelBehaviors.addWidget(WMPSORemoteCamera.new(this,\
-								each cast ECBRemoteCamera.Instance))
-							
-						elif each castable ECBTemporaryGhost.Instance
-							pPanelBehaviors.addWidget(WMPSOTemporaryGhost.new(this,\
-								each cast ECBTemporaryGhost.Instance))
-							
-						elif each castable ECBHideCondition.Instance
-							pPanelBehaviors.addWidget(WMPSOHideCondition.new(this,\
-								each cast ECBHideCondition.Instance))
-							
-						elif each castable ECBGrabAttach.Instance
-							pPanelBehaviors.addWidget(WMPSOGrabAttach.new(this,\
-								each cast ECBGrabAttach.Instance))
-						end
-					end)
-				end)
-			end
-			*/
-			
 			var ECBBehaviorGuiPanels.Instance behaviorGuiPanels = \
 				ECBBehaviorGuiPanels.getInstanceIn(object.getElement() cast BehaviorElement)
 			if behaviorGuiPanels != null
@@ -1411,7 +1365,11 @@ class WMPanelProject extends Panel
 	
 	/** Select object from tracker. */
 	public func void selectObjectFromTracker()
-		pModelObjects.setSelectedElement(getTrackerSelectedObject())
+		var ECBSceneObject.Instance selection = getTrackerSelectedObject()
+		preventUpdateObjects = true
+		pModelObjects.setSelectedElement(selection)
+		preventUpdateObjects = false
+		setObject(selection)
 	end
 	
 	/** Update objects model. */
@@ -1451,7 +1409,7 @@ class WMPanelProject extends Panel
 		
 		pModelParent.setSelectedElement(selectionParent)
 		preventUpdateObjects = false
-		setObject(selectionParent)
+		setObject(selection)
 	end
 	
 	public func void updateModelObjectName(ECBSceneObject.Instance object)

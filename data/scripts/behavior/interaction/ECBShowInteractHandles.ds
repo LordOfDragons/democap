@@ -107,6 +107,15 @@ class ECBShowInteractHandles extends DefaultECBehavior
 			end
 		end
 		
+		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
+			public func new(Instance instance) super(instance, "ECBShowInteractHandles")
+			end
+			
+			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+				return Gui.WMPSOShowInteractHandles.new(panelProject, getId())
+			end
+		end
+		
 		
 		
 		private var ECBShowInteractHandles pECBehavior
@@ -153,6 +162,10 @@ class ECBShowInteractHandles extends DefaultECBehavior
 				stub, getElement().getClass().getCodecPropertyString())
 			
 			pSelectable.addListener(ShowHandlesListener.new(this))
+			
+			if pECBehavior.behaviorGuiPanels != null
+				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
 		end
 		
 		
@@ -370,6 +383,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 	
 	
 	
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
 	private var ECBSelectable pSelectable
 	private var ECPElementClassList pHandleClasses
 	private var ECPFloat pHandleSize
@@ -377,13 +391,15 @@ class ECBShowInteractHandles extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBSelectable selectable) super(eclass)
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBSelectable selectable) super(eclass)
 		if selectable == null
 			throw ENullPointer.new("selectable")
 		end
 		
 		var String prefix = "showInteractHandles."
 		
+		this.behaviorGuiPanels = behaviorGuiPanels
 		pSelectable = selectable
 		
 		pHandleClasses = ECPElementClassList.new(prefix + "handles", GameApp.getGameApp().getECListHandles())
@@ -397,6 +413,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 	
 	/** Dispose of behavior. */
 	public func void dispose()
+		behaviorGuiPanels = null
 		pHandleClasses = null
 		pSelectable = null
 		super.dispose()

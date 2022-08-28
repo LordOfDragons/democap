@@ -51,13 +51,6 @@ class WMPPanelSceneObject extends CollapsibleGroup
 		pPrefixUIOptions = prefixUIOptions(panelProject, behaviorId, settingsName)
 	end
 	
-		public func new(WMPanelProject panelProject, String behaviorId, String label, String settingsName, String helpUrl)\
-			super(behaviorId.empty() if label else label + ": " + behaviorId,\
-				helpUrl, CollapsibleGroup.persistModel(prefixUIOptions(panelProject, behaviorId, settingsName)))
-			pPanelProject = panelProject
-			pPrefixUIOptions = prefixUIOptions(panelProject, behaviorId, settingsName)
-		end
-	
 	/** Dispose of widget. */
 	public func void dispose()
 		pBehavior = null
@@ -111,71 +104,8 @@ class WMPPanelSceneObject extends CollapsibleGroup
 	public func void updateBehavior()
 	end
 	
-	/** Get string stub parameter converting null to empty string. */
-	protected func String stubParamValue(StubElement stub, String name, String defaultValue)
-		var String value = stub.getPropertyValueFor(name, defaultValue)
-		if value == null or value.empty()
-			value = defaultValue
-		end
-		return value != null if value else ""
-	end
-	
-	/** Get path stub parameter converting null to empty string. */
-	protected func String stubParamPath(StubElement stub, String basePath, String name, String defaultValue)
-		var String value = stub.getPropertyValueFor(name, "")
-		if value.empty()
-			if defaultValue == null or defaultValue.empty()
-				return ""
-			end
-			return File.absolutePath(defaultValue, basePath).getPath()
-		end
-		return value
-	end
-	
-	protected func String stubParamValue(StubElement stub, ECPString param)
-		return stubParamValue(stub, param.getName(), param.getValue())
-	end
-	
-	protected func String stubParamPath(StubElement stub, ECPString param)
-		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getValue())
-	end
-	
-	protected func String stubParamPath(StubElement stub, ECPModel param)
-		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
-	end
-	
-	protected func String stubParamPath(StubElement stub, ECPSkin param)
-		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
-	end
-	
-	protected func String stubParamPath(StubElement stub, ECPRig param)
-		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
-	end
-	
-	protected func String stubParamPath(StubElement stub, ECPOcclusionMesh param)
-		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
-	end
-	
-	protected func String stubParamPath(StubElement stub, ECPAnimator param)
-		return stubParamPath(stub, stub.getClass().getBasePath(), param.getName(), param.getPath())
-	end
-	
-	/**
-	 * Set string stub parameter and call notifyStubChanged if value is different than
-	 * the stored value. Returns true if value changed or false otherwise.
-	 */
-	protected func bool setStubParamValue(StubElement stub, String name, String value)
-		if value.equals(stub.getPropertyValueFor(name, null))
-			return false
-		end
-		
-		stub.setPropertyValueFor(name, value)
-		notifyStubChanged()
-		return true
-	end
-	
 	/** Notify element stub changed. */
-	protected func void notifyStubChanged()
+	public func void notifyStubChanged()
 		pPanelProject.elementStubChanged()
 	end
 	

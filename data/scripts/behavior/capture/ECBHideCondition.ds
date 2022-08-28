@@ -88,6 +88,15 @@ class ECBHideCondition extends DefaultECBehavior
 			end
 		end
 		
+		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
+			public func new(Instance instance) super(instance, "ECBHideCondition")
+			end
+			
+			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+				return Gui.WMPSOHideCondition.new(panelProject, getId())
+			end
+		end
+		
 		
 		
 		private var ECBHideCondition pECBehavior
@@ -118,6 +127,10 @@ class ECBHideCondition extends DefaultECBehavior
 			pLive = pECBehavior.getLive().getValue(stub)
 			pPlayback = pECBehavior.getPlayback().getValue(stub)
 			pRecord = pECBehavior.getRecord().getValue(stub)
+			
+			if pECBehavior.behaviorGuiPanels != null
+				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
 		end
 		
 		
@@ -308,6 +321,7 @@ class ECBHideCondition extends DefaultECBehavior
 	
 	
 	
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
 	protected var ECPBoolean pLive
 	protected var ECPBoolean pPlayback
 	protected var ECPBoolean pRecord
@@ -315,8 +329,10 @@ class ECBHideCondition extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass) super(eclass)
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels) super(eclass)
 		var String prefix = "hideCondition."
+		
+		this.behaviorGuiPanels = behaviorGuiPanels
 		
 		pLive = ECPBoolean.new(prefix + "live", false)
 		eclass.addProperty(pLive)
@@ -328,6 +344,12 @@ class ECBHideCondition extends DefaultECBehavior
 		eclass.addProperty(pRecord)
 		
 		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		behaviorGuiPanels = null
+		super.dispose()
 	end
 	
 	

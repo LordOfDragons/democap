@@ -33,6 +33,7 @@ pin Dragengine.Scenery
  * Large mirror element class.
  */
 class MirrorLargeClass extends BehaviorElementClass
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
 	public var ECBehaviorComponent component
 	public var ECBehaviorCollider collider
 	public var ECBehaviorVRHandPointedAt vrHandPointedAt
@@ -53,6 +54,8 @@ class MirrorLargeClass extends BehaviorElementClass
 	public func new(String name) super(name)
 		setPersistable(false)
 		
+		behaviorGuiPanels = ECBBehaviorGuiPanels.new(this)
+		
 		component = ECBehaviorComponent.new(this, null)
 		component.setCommonPath("/content/models/mirror", "large.demodel", "mirror.deskin", "large.derig")
 		component.getComponent().setLayerMask(LayerMask.newWith(GameApp.WorldLayerBit.remoteView))
@@ -72,7 +75,7 @@ class MirrorLargeClass extends BehaviorElementClass
 		toggleVisibility.getLockUpAxis().setVector(Vector.new(0, 1, 0))
 		toggleVisibility.getPivot().setVector(Vector.new(0, 1.25, 0))
 		
-		hideWhileRecording = ECBHideWhileRecording.new(this)
+		hideWhileRecording = ECBHideWhileRecording.new(this, behaviorGuiPanels)
 		
 		sceneObject = ECBSceneObject.new(this)
 		sceneObject.canHide.setValue(true)
@@ -80,7 +83,7 @@ class MirrorLargeClass extends BehaviorElementClass
 		
 		selectable = ECBSelectable.new(this)
 		
-		showInteractHandles = ECBShowInteractHandles.new(this, selectable)
+		showInteractHandles = ECBShowInteractHandles.new(this, behaviorGuiPanels, selectable)
 // 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveX")
 // 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveY")
 // 		showInteractHandles.getHandleClasses().addElementClassName("InteractHandleMoveZ")

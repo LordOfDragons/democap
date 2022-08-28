@@ -1,0 +1,123 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Gui
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.LoadSave
+pin Dragengine.Utils
+
+
+/**
+ * Behavior extending ECBehaviorCustomColor.
+ */
+class ECBCustomColor extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
+			public func new(Instance instance) super(instance, "ECBCustomColor", instance.getECBehavior().getID())
+			end
+			
+			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+				return Gui.WMPSOCustomColor.new(panelProject, getId(), getBehaviorId())
+			end
+		end
+		
+		
+		protected var ECBCustomColor pECBehavior
+		protected var ECBehaviorCustomColor.Instance pCustomColor
+		
+		
+		public func new(ECBCustomColor ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pCustomColor = ecbehavior.customColor.instance(element)
+		end
+		
+		public func void dispose()
+			pCustomColor = null
+			super.dispose()
+		end
+		
+		public func void init(StubElement stub)
+			if pECBehavior.behaviorGuiPanels != null
+				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
+		end
+		
+		
+		public func ECBCustomColor getECBehavior()
+			return pECBehavior
+		end
+		
+		
+		public func Color getColor()
+			return pCustomColor.getColor()
+		end
+		
+		public func bool setColor(Color color)
+			if color.equals(pCustomColor.getColor())
+				return false
+			end
+			
+			pCustomColor.setColor(color)
+			
+			getElement().getStub().setPropertyValueFor(\
+				pCustomColor.getECBehavior().getColor().getName(),\
+				getElement().getClass().getCodecPropertyString().encodeColor3(color))
+			return true
+		end
+	end
+	
+	
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
+	public var ECBehaviorCustomColor customColor
+	
+	
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBehaviorCustomColor customColor) this(eclass, behaviorGuiPanels, customColor, "")
+	end
+	
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBehaviorCustomColor customColor, String id) super(eclass, id)
+		this.behaviorGuiPanels = behaviorGuiPanels
+		this.customColor = customColor
+		
+		eclass.addBehavior(this)
+	end
+	
+	public func void dispose()
+		behaviorGuiPanels = null
+		customColor = null
+		super.dispose()
+	end
+	
+	
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

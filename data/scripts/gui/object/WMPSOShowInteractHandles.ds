@@ -50,12 +50,8 @@ class WMPSOShowInteractHandles extends WMPPanelSceneObject
 		
 		public func void onAction(ActionEvent event)
 			var ECBShowInteractHandles.Instance behavior = pPanel.getBehaviorShowInteractHandles()
-			var float size = pModel.getText().toFloat()
 			
-			behavior.getElement().getStub().setPropertyFloatFor(\
-				behavior.getECBehavior().getHandleSize().getName(), size)
-			
-			behavior.setHandleSize(size)
+			behavior.setHandleSize(pModel.getText().toFloat())
 			
 			if behavior.getVisible()
 				behavior.hide()
@@ -72,12 +68,8 @@ class WMPSOShowInteractHandles extends WMPPanelSceneObject
 	
 	
 	/** Create panel. */
-	public func new(WMPanelProject panelProject, ECBShowInteractHandles.Instance behavior)\
-		super(panelProject, /*behavior, */behavior.getECBehavior().getID(),\
-			"Interact Handles", "WMPSOShowInteractHandles", "ppob_interacthandles")
-		
-		pBehaviorShowInteractHandles = behavior
-		
+	public func new(WMPanelProject panelProject, String bgpTypeId) super(panelProject, bgpTypeId,\
+	"", "Interact Handles", "WMPSOShowInteractHandles", "ppob_interacthandles")
 		pModelHandleSize = DefaultTextModel.new("0.2")
 		
 		getPanelContent().runWhileBlockingLayout(block
@@ -87,6 +79,8 @@ class WMPSOShowInteractHandles extends WMPPanelSceneObject
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		setBehavior(null)
+		
 		pModelHandleSize = null
 		super.dispose()
 	end
@@ -100,10 +94,11 @@ class WMPSOShowInteractHandles extends WMPPanelSceneObject
 	
 	/** Update behavior. */
 	public func void updateBehavior()
-		var ECBShowInteractHandles behavior = pBehaviorShowInteractHandles.getECBehavior()
-		var StubElement stub = pBehaviorShowInteractHandles.getElement().getStub()
+		if pBehaviorShowInteractHandles == null
+			return
+		end
 		
-		pModelHandleSize.setText(behavior.getHandleSize().getValue(stub).toString())
+		pModelHandleSize.setText(pBehaviorShowInteractHandles.getHandleSize().toString())
 	end
 	
 	
@@ -124,5 +119,9 @@ class WMPSOShowInteractHandles extends WMPPanelSceneObject
 			p.addWidget(textField)
 			textField.addActionListener(HandleSizeChanged.new(this, pModelHandleSize))
 		end))
+	end
+	
+	protected func void onBehaviorChanged()
+		pBehaviorShowInteractHandles = pBehavior cast ECBShowInteractHandles.Instance
 	end
 end

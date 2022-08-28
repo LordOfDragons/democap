@@ -56,6 +56,15 @@ class ECBGrabAttach extends DefaultECBehavior
 			end
 		end
 		
+		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
+			public func new(Instance instance) super(instance, "ECBGrabAttach", instance.getECBehavior().getID())
+			end
+			
+			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+				return Gui.WMPSOGrabAttach.new(panelProject, getId(), getBehaviorId())
+			end
+		end
+		
 		
 		protected var ECBGrabAttach pECBehavior
 		protected var ECBehaviorGrabSpot.Instance pGrabSpot
@@ -91,6 +100,10 @@ class ECBGrabAttach extends DefaultECBehavior
 			pBone = pECBehavior.bone.getValue(stub)
 			pImmobile = pECBehavior.immobile.getValue(stub)
 			pIKLockRotation = pECBehavior.ikLockRotation.getValue(stub)
+			
+			if pECBehavior.behaviorGuiPanels != null
+				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
 		end
 		
 		/** Dispose of behavior instance. */
@@ -304,6 +317,7 @@ class ECBGrabAttach extends DefaultECBehavior
 	
 	
 	
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
 	public var ECBehaviorGrabSpot grabSpot
 	public var ECBehaviorCollider collider
 	public var ECBehaviorAttachable attachable
@@ -321,13 +335,14 @@ class ECBGrabAttach extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBehaviorGrabSpot grabSpot,\
-	ECBehaviorCollider collider, ECBehaviorAttachable attachable,\
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBehaviorGrabSpot grabSpot, ECBehaviorCollider collider, ECBehaviorAttachable attachable,\
 	ECBShowInteractHandles showInteractHandles, String id) super(eclass, id)
 		if grabSpot == null
 			throw ENullPointer.new("grabSpot")
 		end
 		
+		this.behaviorGuiPanels = behaviorGuiPanels
 		this.grabSpot = grabSpot
 		this.collider = collider
 		this.attachable = attachable
@@ -349,6 +364,7 @@ class ECBGrabAttach extends DefaultECBehavior
 	
 	/** Dispose of behavior. */
 	public func void dispose()
+		behaviorGuiPanels = null
 		grabSpot = null
 		collider = null
 		attachable = null

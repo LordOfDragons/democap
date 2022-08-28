@@ -33,9 +33,13 @@ class ECBBehaviorGuiPanels extends DefaultECBehavior
 	abstract class BehaviorGuiPanel
 		protected var DefaultECBehaviorInstance pInstance
 		protected var String pId
+		protected var String pBehaviorId
 		
 		/** Create behavior gui panel. */
-		public func new(DefaultECBehaviorInstance instance, String id)
+		public func new(DefaultECBehaviorInstance instance, String id) this(instance, id, "")
+		end
+		
+		public func new(DefaultECBehaviorInstance instance, String id, String behaviorId)
 			if instance == null
 				throw ENullPointer.new("instance")
 			end
@@ -45,9 +49,17 @@ class ECBBehaviorGuiPanels extends DefaultECBehavior
 			if id.empty()
 				throw EInvalidParam.new("id is empty string")
 			end
+			if behaviorId == null
+				throw ENullPointer.new("behaviorId")
+			end
 			
 			pInstance = instance
 			pId = id
+			pBehaviorId = behaviorId
+			
+			if not behaviorId.empty()
+				pId = pId + ":" + behaviorId
+			end
 		end
 		
 		/** Instance to edit. */
@@ -58,6 +70,11 @@ class ECBBehaviorGuiPanels extends DefaultECBehavior
 		/** Panel identifier. */
 		public func String getId()
 			return pId
+		end
+		
+		/** Behavior ID. */
+		public func String getBehaviorId()
+			return pBehaviorId
 		end
 		
 		/** Create behavior gui panel. */

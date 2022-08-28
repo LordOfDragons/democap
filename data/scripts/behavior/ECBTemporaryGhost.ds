@@ -92,6 +92,15 @@ class ECBTemporaryGhost extends DefaultECBehavior
 			end
 		end
 		
+		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
+			public func new(Instance instance) super(instance, "ECBTemporaryGhost")
+			end
+			
+			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+				return Gui.WMPSOTemporaryGhost.new(panelProject, getId())
+			end
+		end
+		
 		
 		
 		private var ECBTemporaryGhost pECBehavior
@@ -124,6 +133,10 @@ class ECBTemporaryGhost extends DefaultECBehavior
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
 			pSkin = pECBehavior.getSkin().getSkin(stub, getElement().getClass())
+			
+			if pECBehavior.behaviorGuiPanels != null
+				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
 		end
 		
 		
@@ -207,15 +220,18 @@ class ECBTemporaryGhost extends DefaultECBehavior
 	
 	
 	
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
 	private var Array pComponents
 	private var ECPSkin pSkin
 	
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBehaviorComponent component) super(eclass)
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBehaviorComponent component) super(eclass)
 		var String prefix = "temporaryGhost."
 		
+		this.behaviorGuiPanels = behaviorGuiPanels
 		pComponents = Array.new()
 		if component != null
 			pComponents.add(component)
@@ -229,6 +245,7 @@ class ECBTemporaryGhost extends DefaultECBehavior
 	
 	/** Dispose of behavior. */
 	public func void dispose()
+		behaviorGuiPanels = null
 		pComponents = null
 		super.dispose()
 	end

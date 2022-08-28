@@ -59,12 +59,8 @@ class WMPSOHideWhileRecording extends WMPPanelSceneObject
 	
 	
 	/** Create panel. */
-	public func new(WMPanelProject panelProject, ECBHideWhileRecording.Instance behavior)\
-		super(panelProject, /*behavior, */behavior.getECBehavior().getID(),\
-			"Hide While Recording", "WMPSOHideWhileRecording", "ppob_hidewhilerecording")
-		
-		pBehaviorHideWhileRecording = behavior
-		
+	public func new(WMPanelProject panelProject, String bgpTypeId) super(panelProject, bgpTypeId,\
+	"", "Hide While Recording", "WMPSOHideWhileRecording", "ppob_hidewhilerecording")
 		pModelEnabled = DefaultToggleModel.new(true)
 		
 		getPanelContent().runWhileBlockingLayout(block
@@ -76,6 +72,8 @@ class WMPSOHideWhileRecording extends WMPPanelSceneObject
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		setBehavior(null)
+		
 		pModelEnabled = null
 		super.dispose()
 	end
@@ -89,6 +87,10 @@ class WMPSOHideWhileRecording extends WMPPanelSceneObject
 	
 	/** Update behavior. */
 	public func void updateBehavior()
+		if pBehaviorHideWhileRecording == null
+			return
+		end
+		
 		pModelEnabled.setToggled(pBehaviorHideWhileRecording.getEnabled())
 	end
 	
@@ -109,5 +111,9 @@ class WMPSOHideWhileRecording extends WMPPanelSceneObject
 			checkBox.setToolTip("Enable hiding while recording.")
 			p.addWidget(checkBox)
 		end))
+	end
+	
+	protected func void onBehaviorChanged()
+		pBehaviorHideWhileRecording = pBehavior cast ECBHideWhileRecording.Instance
 	end
 end

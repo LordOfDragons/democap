@@ -36,7 +36,7 @@ pin Dragengine.Utils
 
 
 /**
- * ECBehaviorCustomColor panel.
+ * ECBCustomColor panel.
  */
 class WMPSOCustomColor extends WMPPanelSceneObject
 	class ColorChanged implements ActionListener
@@ -49,31 +49,22 @@ class WMPSOCustomColor extends WMPPanelSceneObject
 		end
 		
 		public func void onAction(ActionEvent event)
-			var ECBehaviorCustomColor.Instance behavior = pPanel.getBehaviorCustomColor()
-			var CodecPropertyString codec = behavior.getElement().getClass().getCodecPropertyString()
-			var Color color = pEditColor.getColor()
-			
-			behavior.getElement().getStub().setPropertyValueFor(\
-				behavior.getECBehavior().getColor().getName(), codec.encodeColor3(color))
-			
-			behavior.setColor(color)
+			if pPanel.getBehaviorCustomColor().setColor(pEditColor.getColor())
+				pPanel.notifyStubChanged()
+			end
 		end
 	end
 	
 	
 	
-	protected var ECBehaviorCustomColor.Instance pBehaviorCustomColor
+	protected var ECBCustomColor.Instance pBehaviorCustomColor
 	protected var EditColor pEditColor
 	
 	
 	
 	/** Create panel. */
-	public func new(WMPanelProject panelProject, ECBehaviorCustomColor.Instance behavior)\
-		super(panelProject, /*behavior, */behavior.getECBehavior().getID(),\
-			"Custom Color", "WMPSOCustomColor", "ppob_customcolor")
-		
-		pBehaviorCustomColor = behavior
-		
+	public func new(WMPanelProject panelProject, String bgpTypeId, String behaviorId)\
+	super(panelProject, bgpTypeId, behaviorId, "Custom Color", "WMPSOCustomColor", "ppob_customcolor")
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
 		end)
@@ -81,6 +72,8 @@ class WMPSOCustomColor extends WMPPanelSceneObject
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		setBehavior(null)
+		
 		pEditColor = null
 		super.dispose()
 	end
@@ -88,17 +81,17 @@ class WMPSOCustomColor extends WMPPanelSceneObject
 	
 	
 	/** CustomColor behavior. */
-	public func ECBehaviorCustomColor.Instance getBehaviorCustomColor()
+	public func ECBCustomColor.Instance getBehaviorCustomColor()
 		return pBehaviorCustomColor
 	end
 	
 	/** Update behavior. */
 	public func void updateBehavior()
-		var CodecPropertyString codec = pBehaviorCustomColor.getElement().getClass().getCodecPropertyString()
-		var ECBehaviorCustomColor behavior = pBehaviorCustomColor.getECBehavior()
-		var StubElement stub = pBehaviorCustomColor.getElement().getStub()
+		if pBehaviorCustomColor == null
+			return
+		end
 		
-		pEditColor.setColor(behavior.getColor().getColor(stub, codec))
+		pEditColor.setColor(pBehaviorCustomColor.getColor())
 	end
 	
 	
@@ -115,5 +108,9 @@ class WMPSOCustomColor extends WMPPanelSceneObject
 			p.addWidget(pEditColor)
 			pEditColor.addActionListener(ColorChanged.new(this, pEditColor))
 		end))
+	end
+	
+	protected func void onBehaviorChanged()
+		pBehaviorCustomColor = pBehavior cast ECBCustomColor.Instance
 	end
 end
