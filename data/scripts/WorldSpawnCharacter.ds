@@ -87,8 +87,10 @@ class WorldSpawnCharacter
 			pOwner.recreateActor()
 		end
 		
-		public func void reset(CharacterProfile profile, CharacterConfiguration config)
-			pOwner.recreateActor()
+		public func void reset(CharacterProfile profile, CharacterConfiguration config, bool calibrating)
+			if not calibrating
+				pOwner.recreateActor()
+			end
 		end
 	end
 	
@@ -263,6 +265,7 @@ class WorldSpawnCharacter
 			end
 			
 			pState = State.prepareElementClass
+			createActorPlaceholder()
 			showLoadingCharacter(true)
 		end
 		
@@ -357,19 +360,14 @@ class WorldSpawnCharacter
 	
 	/** Frame update. */
 	public func void update()
-		if pState == State.actorReady
-			if pGameWorld == null or pCharacter == null
-				disposeActor()
-				pState = State.actorBroken
-			end
-		end
-		
 		if pState == State.recreateActor
 			disposeActor()
+			createActorPlaceholder()
 			
-			if pGameWorld == null or pCharacter == null
+			if pGameWorld == null
 				pState = State.actorBroken
 				showLoadingCharacter(false)
+				setCharacter(null)
 				
 			else
 				pState = State.prepareElementClass
@@ -378,31 +376,39 @@ class WorldSpawnCharacter
 		end
 		
 		if pState == State.prepareElementClass
-			if pGameWorld == null or pCharacter == null
+			if pGameWorld == null
 				pState = State.actorBroken
 				showLoadingCharacter(false)
+				setCharacter(null)
 				return
 			end
 			
-			// TODO show an "actor loading" mesh or billboard. mesh is better though
-			
-			try
-				pCharacter.getElementClass() // starts preloading if required 
-				if not pCharacter.isElementClassPreloading()
-					pState = State.createActor
+			if pCharacter != null
+				try
+					pCharacter.getElementClass() // starts preloading if required 
+					if not pCharacter.isElementClassPreloading()
+						pState = State.createActor
+					end
+					
+				catch Exception e
+					GameApp.getGameApp().getConsole().addError("prepare actor element class failed", e)
+					pState = State.actorBroken
+					disposeActor()
+					createActorPlaceholder()
+					showLoadingCharacter(false)
+					setCharacter(null)
 				end
 				
-			catch Exception e
-				GameApp.getGameApp().getConsole().addError("prepare actor element class failed", e)
-				pState = State.actorBroken
-				showLoadingCharacter(false)
+			else
+				pState = State.createActor
 			end
 		end
 		
 		if pState == State.createActor
-			if pGameWorld == null or pCharacter == null
+			if pGameWorld == null
 				pState = State.actorBroken
 				showLoadingCharacter(false)
+				setCharacter(null)
 				return
 			end
 			
@@ -415,7 +421,9 @@ class WorldSpawnCharacter
 				GameApp.getGameApp().getConsole().addError("creating actor failed", e)
 				pState = State.actorBroken
 				disposeActor()
+				createActorPlaceholder()
 				showLoadingCharacter(false)
+				setCharacter(null)
 			end
 		end
 	end
@@ -447,15 +455,21 @@ class WorldSpawnCharacter
 	/** Create actor. */
 	protected func void createActor()
 		GameApp.getGameApp().getConsole().addMessage("WorldSpawnCharacter: create actor")
-		// ensure spawn point is present
-		if pSpawnPoint == null
-			throw EInvalidParam.new("Spawn point 'player' not found in game world")
-		end
+		createActor(false)
+	end
+	
+	protected func void createActorPlaceholder()
+		GameApp.getGameApp().getConsole().addMessage("WorldSpawnCharacter: create actor placeholder")
+		createActor(true)
+	end
+	
+	protected func void createActor(bool placeholder)
+		disposeActor()
 		
 		// spawn player actor
 		var StubElement stub
 		
-		if pCharacter != null
+		if pCharacter != null and not placeholder
 			stub = pCharacter.createStubElement()
 			
 		else
@@ -463,7 +477,12 @@ class WorldSpawnCharacter
 		end
 		
 		pActor = stub.createElement() cast MoCapActor
-		pSpawnPoint.spawn(pGameWorld, pActor)
+		if pSpawnPoint != null
+			pSpawnPoint.spawn(pGameWorld, pActor)
+			
+		else
+			pGameWorld.addElement(pActor)
+		end
 		
 		if pLastActorPosition != null
 			pActor.setGeometry(pLastActorPosition, pLastActorOrientation)
@@ -490,10 +509,6 @@ class WorldSpawnCharacter
 		
 		// take control of actor
 		pActor.getPlayerControllable().takeControl()
-		
-		pListeners.forEach(block Listener each
-			each.actorReady(this)
-		end)
 	end
 	
 	/** Create VR menu. */
