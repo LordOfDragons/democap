@@ -721,6 +721,7 @@ class WMPanelProject extends Panel
 	protected var SelectedSelectableObjectChanged pSelectedSelectableObjectChanged
 	protected var CollapsibleGroup pPanelParenting
 	protected var Panel pPanelBehaviors
+	protected var ECBBehaviorGuiPanels.Manager pBGPManager
 	
 	public var bool preventUpdateObjects
 	
@@ -730,6 +731,7 @@ class WMPanelProject extends Panel
 	public func new(bool inVR, String prefixUIOptions)
 		pInVR = inVR
 		pPrefixUIOptions = prefixUIOptions + "/WMPanelProject"
+		pBGPManager = ECBBehaviorGuiPanels.Manager.new(this)
 		
 		pModelProjectFilename = DefaultTextModel.new("")
 		pModelScenes = DefaultListModel.new()
@@ -805,6 +807,11 @@ class WMPanelProject extends Panel
 		pEditObjectPosition = null
 		pEditObjectRotation = null
 		pPanelBehaviors = null
+		
+		if pBGPManager != null
+			pBGPManager.dispose()
+			pBGPManager = null
+		end
 		
 		super.dispose()
 	end
@@ -1306,7 +1313,11 @@ class WMPanelProject extends Panel
 			return
 		end
 		
-		pPanelBehaviors.removeAllWidgets()
+		while pPanelBehaviors.getWidgetCount() > 0
+			var WMPPanelSceneObject panel = pPanelBehaviors.getWidget(pPanelBehaviors.getWidgetCount() - 1) cast WMPPanelSceneObject
+			pBGPManager.returnPanel(panel)
+			pPanelBehaviors.removeWidget(panel)
+		end
 		
 		pObject = object
 		
@@ -1322,6 +1333,7 @@ class WMPanelProject extends Panel
 		var bool showParenting = true
 		
 		if object != null
+			/*
 			var bool noBehaviors = object.getECBehavior().editPanelNoBehaviors.getValue()
 			var bool noPhysics = object.getECBehavior().editPanelNoPhysics.getValue()
 			
@@ -1338,12 +1350,6 @@ class WMPanelProject extends Panel
 							pPanelBehaviors.addWidget(WMPSOAnimated.new(this,\
 								each cast ECBehaviorAnimated.Instance))
 							
-						elif each castable ECBColliderPhysics.Instance
-							if not noPhysics
-								pPanelBehaviors.addWidget(WMPSOColliderPhysics.new(this,\
-									each cast ECBColliderPhysics.Instance))
-							end
-							
 						elif each castable ECBShowInteractHandles.Instance
 							pPanelBehaviors.addWidget(WMPSOShowInteractHandles.new(this,\
 								each cast ECBShowInteractHandles.Instance))
@@ -1351,10 +1357,6 @@ class WMPanelProject extends Panel
 						elif each castable ECBehaviorCustomColor.Instance
 							pPanelBehaviors.addWidget(WMPSOCustomColor.new(this,\
 								each cast ECBehaviorCustomColor.Instance))
-							
-						elif each castable ECBCapturedAnimations.Instance
-							pPanelBehaviors.addWidget(WMPSOCapturedAnimations.new(this,\
-								each cast ECBCapturedAnimations.Instance))
 							
 						elif each castable ECBHideWhileRecording.Instance
 							pPanelBehaviors.addWidget(WMPSOHideWhileRecording.new(this,\
@@ -1379,7 +1381,17 @@ class WMPanelProject extends Panel
 					end)
 				end)
 			end
+			*/
 			
+			var ECBBehaviorGuiPanels.Instance behaviorGuiPanels = \
+				ECBBehaviorGuiPanels.getInstanceIn(object.getElement() cast BehaviorElement)
+			if behaviorGuiPanels != null
+				behaviorGuiPanels.forEachBehaviorGuiPanel(block ECBBehaviorGuiPanels.BehaviorGuiPanel each
+					var WMPPanelSceneObject panel = pBGPManager.getPanel(each)
+					panel.setBehavior(each.getInstance())
+					pPanelBehaviors.addWidget(panel)
+				end)
+			end
 			pPanelBehaviors.doLayoutIfBlocked()
 		end
 		

@@ -147,6 +147,15 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			end
 		end
 		
+		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
+			public func new(Instance instance) super(instance, "ECBCapturedAnimations")
+			end
+			
+			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+				return Gui.WMPSOCapturedAnimations.new(panelProject, getId())
+			end
+		end
+		
 		
 		
 		protected var ECBCapturedAnimations pECBehavior
@@ -196,6 +205,10 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			pAnimationName = pECBehavior.animationName.getValue(stub)
 			
 			pAnimations.add(CharacterAnimation.new(pAnimationName))
+			
+			if pECBehavior.behaviorGuiPanels != null
+				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
 		end
 		
 		/** Dispose of behavior instance. */
@@ -581,6 +594,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	
 	
 	
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
 	protected var ECBehaviorComponent pComponent
 	protected var ECBehaviorCollider pCollider
 	
@@ -593,9 +607,11 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBehaviorComponent component, ECBehaviorCollider collider) super(eclass)
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBehaviorComponent component, ECBehaviorCollider collider) super(eclass)
 		var String prefix = "capturedAnimations."
 		
+		this.behaviorGuiPanels = behaviorGuiPanels
 		pComponent = component
 		pCollider = collider
 		
@@ -619,6 +635,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	
 	/** Dispose of behavior. */
 	public func void dispose()
+		behaviorGuiPanels = null
 		pComponent = null
 		pCollider = null
 		super.dispose()

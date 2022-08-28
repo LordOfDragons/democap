@@ -138,12 +138,8 @@ class WMPSOColliderPhysics extends WMPPanelSceneObject
 	
 	
 	/** Create panel. */
-	public func new(WMPanelProject panelProject, ECBColliderPhysics.Instance behavior)\
-		super(panelProject, behavior, behavior.getECBehavior().getID(),\
-			"ColliderPhysics", "WMPSOColliderPhysics", "ppob_colliderphysics")
-		
-		pBehaviorColliderPhysics = behavior
-		
+	public func new(WMPanelProject panelProject, String bgpTypeId) super(panelProject, bgpTypeId,\
+	"", "ColliderPhysics", "WMPSOColliderPhysics", "ppob_colliderphysics")
 		pModelUsePhysics = DefaultToggleModel.new(false)
 		pModelLivePhysics = DefaultToggleModel.new(false)
 		pModelTouchActor = DefaultToggleModel.new(true)
@@ -164,6 +160,8 @@ class WMPSOColliderPhysics extends WMPPanelSceneObject
 	
 	/** Dispose of widget. */
 	public func void dispose()
+		setBehavior(null)
+		
 		pModelTouchActor = null
 		pModelLivePhysics = null
 		pModelUsePhysics = null
@@ -171,6 +169,7 @@ class WMPSOColliderPhysics extends WMPPanelSceneObject
 		pModelUseLocalGravity = null
 		pEditGravity = null
 		pModelCanGrabActor = null
+		
 		super.dispose()
 	end
 	
@@ -183,13 +182,19 @@ class WMPSOColliderPhysics extends WMPPanelSceneObject
 	
 	/** Update behavior. */
 	public func void updateBehavior()
-		pModelUsePhysics.setToggled(pBehaviorColliderPhysics.getUsePhysics())
-		pModelLivePhysics.setToggled(pBehaviorColliderPhysics.getLivePhysics())
-		pModelTouchActor.setToggled(pBehaviorColliderPhysics.getTouchActor())
-		pModelWeight.setText(pBehaviorColliderPhysics.getWeight().toString())
-		pModelUseLocalGravity.setToggled(pBehaviorColliderPhysics.getUseLocalGravity())
-		pEditGravity.setVector(pBehaviorColliderPhysics.getGravity())
-		pModelCanGrabActor.setToggled(pBehaviorColliderPhysics.getCanGrabActor())
+		if pBehaviorColliderPhysics == null
+			return
+		end
+		
+		runWhileBlockingLayout(block
+			pModelUsePhysics.setToggled(pBehaviorColliderPhysics.getUsePhysics())
+			pModelLivePhysics.setToggled(pBehaviorColliderPhysics.getLivePhysics())
+			pModelTouchActor.setToggled(pBehaviorColliderPhysics.getTouchActor())
+			pModelWeight.setText(pBehaviorColliderPhysics.getWeight().toString())
+			pModelUseLocalGravity.setToggled(pBehaviorColliderPhysics.getUseLocalGravity())
+			pEditGravity.setVector(pBehaviorColliderPhysics.getGravity())
+			pModelCanGrabActor.setToggled(pBehaviorColliderPhysics.getCanGrabActor())
+		end)
 	end
 	
 	
@@ -266,5 +271,9 @@ class WMPSOColliderPhysics extends WMPPanelSceneObject
 				p2.addWidget(button)
 			end))
 		end))
+	end
+	
+	protected func void onBehaviorChanged()
+		pBehaviorColliderPhysics = pBehavior cast ECBColliderPhysics.Instance
 	end
 end

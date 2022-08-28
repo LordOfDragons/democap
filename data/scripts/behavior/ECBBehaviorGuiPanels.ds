@@ -1,0 +1,192 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Gui
+pin Dragengine.Scenery
+
+
+/**
+ * Behavior adding support to create behavior gui panels for editing.
+ */
+class ECBBehaviorGuiPanels extends DefaultECBehavior
+	/** Behavior gui panel. */
+	abstract class BehaviorGuiPanel
+		protected var DefaultECBehaviorInstance pInstance
+		protected var String pId
+		
+		/** Create behavior gui panel. */
+		public func new(DefaultECBehaviorInstance instance, String id)
+			if instance == null
+				throw ENullPointer.new("instance")
+			end
+			if id == null
+				throw ENullPointer.new("id")
+			end
+			if id.empty()
+				throw EInvalidParam.new("id is empty string")
+			end
+			
+			pInstance = instance
+			pId = id
+		end
+		
+		/** Instance to edit. */
+		public func DefaultECBehaviorInstance getInstance()
+			return pInstance
+		end
+		
+		/** Panel identifier. */
+		public func String getId()
+			return pId
+		end
+		
+		/** Create behavior gui panel. */
+		public abstract func WMPPanelSceneObject createPanel(WMPanelProject panelProject)
+	end
+	
+	/** Behavior Gui Panel Manager. */
+	class Manager
+		protected var WMPanelProject pPanelProject
+		protected var Dictionary pPanels
+		
+		/** Create manager. */
+		public func new(WMPanelProject panelProject)
+			if panelProject == null
+				throw ENullPointer.new("panelProject")
+			end
+			pPanelProject = panelProject
+			pPanels = Dictionary.new()
+		end
+		
+		/** Dispose of manager. */
+		public func void dispose()
+			if pPanels != null
+				pPanels.forEachValue(block Array panels
+					panels.forEach(block WMPPanelSceneObject each
+						each.dispose()
+					end)
+				end)
+				pPanels.removeAll()
+			end
+			pPanelProject = null
+		end
+		
+		/** Get panel. */
+		public func WMPPanelSceneObject getPanel(BehaviorGuiPanel behaviorGuiPanel)
+			var Array panels = pPanels.getAt(behaviorGuiPanel.getId(), null) cast Array
+			if panels == null
+				panels = Array.new()
+				pPanels.setAt(behaviorGuiPanel.getId(), panels)
+			end
+			
+			if panels.getCount() == 0
+				panels.add(behaviorGuiPanel.createPanel(pPanelProject))
+			end
+			
+			var int index = panels.getCount() - 1
+			var WMPPanelSceneObject panel = panels.getAt(index) cast WMPPanelSceneObject
+			panels.removeFrom(index)
+			return panel
+		end
+		
+		/** Return panel. */
+		public func void returnPanel(WMPPanelSceneObject panel)
+			if panel == null
+				throw ENullPointer.new("panel")
+			end
+			panel.setBehavior(null)
+			(pPanels.getAt(panel.getBGPTypeId()) cast Array).add(panel)
+		end
+	end
+	
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		protected var Array pBehaviorGuiPanels
+		
+		
+		/** Create behavior instance. */
+		public func new(BehaviorElement element) super(element)
+			pBehaviorGuiPanels = Array.new()
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pBehaviorGuiPanels = null
+			super.dispose()
+		end
+		
+		
+		/** Count of behavior gui panels. */
+		public func int getBehaviorGuiPanelCount()
+			return pBehaviorGuiPanels.getCount()
+		end
+		
+		/** Add behavior gui panel. */
+		public func void addBehaviorGuiPanel(BehaviorGuiPanel behaviorGuiPanel)
+			if behaviorGuiPanel == null
+				throw ENullPointer.new("behaviorGuiPanel")
+			end
+			pBehaviorGuiPanels.add(behaviorGuiPanel)
+		end
+		
+		/** Remove behavior gui panel. */
+		public func void removeBehaviorGuiPanel(BehaviorGuiPanel behaviorGuiPanel)
+			pBehaviorGuiPanels.remove(behaviorGuiPanel)
+		end
+		
+		/** Behavior gui panel at index. */
+		public func BehaviorGuiPanel getBehaviorGuiPanelAt(int index)
+			return pBehaviorGuiPanels.getAt(index) cast BehaviorGuiPanel
+		end
+		
+		/** Visit behavior gui panels with block with signature (BehaviorGuiPanel) or (int,BehaviorGuiPanel). */
+		public func void forEachBehaviorGuiPanel(Block ablock)
+			pBehaviorGuiPanels.forEach(ablock)
+		end
+	end
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass) super(eclass)
+		eclass.addBehavior(this)
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(element)
+	end
+end

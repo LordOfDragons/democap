@@ -72,7 +72,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		end
 		
 		public func void animationNameChanged(CharacterAnimations animations, CharacterAnimation animation)
-			pPanel.updateModelAnimations()
+			pPanel.updateModelAnimationName(animation)
 		end
 		
 		public func void animationChanged(CharacterAnimations animations, CharacterAnimation animation)
@@ -103,6 +103,10 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		end
 		
 		public func void selectionChanged(ListModel model)
+			if pPanel.preventSelectAnimation
+				return
+			end
+			
 			var int index = model.getSelected()
 			if index != -1
 				pPanel.getBehaviorCapturedAnimations().getAnimations().setActive(\
@@ -209,14 +213,12 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	protected var CharacterAnimation pAnimation
 	protected var CapturedAnimationsChanged pCapturedAnimationsChanged
 	
+	public var bool preventSelectAnimation
 	
 	
 	/** Create panel. */
-	public func new(WMPanelProject panelProject, ECBCapturedAnimations.Instance behavior)\
-	super(panelProject, behavior, behavior.getECBehavior().getID(),\
-	"Captured Animations", "WMPSOCapturedAnimations", "ppob_capturedanimations")
-		pBehaviorCapturedAnimations = behavior
-		
+	public func new(WMPanelProject panelProject, String bgpTypeId) super(panelProject, bgpTypeId,\
+	"", "Captured Animations", "WMPSOCapturedAnimations", "ppob_capturedanimations")
 		pModelAnimations = DefaultListModel.new()
 		pModelAnimationInfo = DefaultTextModel.new("")
 		pModelRecord = DefaultToggleModel.new()
@@ -225,32 +227,19 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			createContent(getPanelContent())
 		end)
 		
-		updateModelAnimations()
-		setAnimation(behavior.getAnimations().getActive())
-		
 		pModelAnimations.addListener(SelectedAnimationChanged.new(this))
 		pModelRecord.addListener(ToggleRecord.new(this))
 		
 		pAnimationsChangedListener = AnimationsChangedListener.new(this)
-		behavior.getAnimations().addListener(pAnimationsChangedListener)
-		
 		pCapturedAnimationsChanged = CapturedAnimationsChanged.new(pModelRecord)
-		behavior.addListener(pCapturedAnimationsChanged)
 	end
 	
 	/** Dispose of widget. */
 	public func void dispose()
-		if pCapturedAnimationsChanged != null
-			pBehaviorCapturedAnimations.removeListener(pCapturedAnimationsChanged)
-			pCapturedAnimationsChanged = null
-		end
+		setBehavior(null)
 		
-		setAnimation(null)
-		
-		if pAnimationsChangedListener != null
-			pBehaviorCapturedAnimations.getAnimations().removeListener(pAnimationsChangedListener)
-			pAnimationsChangedListener = null
-		end
+		pAnimationsChangedListener = null
+		pCapturedAnimationsChanged = null
 		
 		pModelAnimations = null
 		pModelAnimationInfo = null
@@ -268,24 +257,34 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	
 	/** Update behavior. */
 	public func void updateBehavior()
-		pModelRecord.setToggled(pBehaviorCapturedAnimations.getRecord())
+		if pBehaviorCapturedAnimations == null
+			return
+		end
 		
-		pAnimation = pBehaviorCapturedAnimations.getAnimations().getActive()
-		pModelAnimations.setSelectedElement(pAnimation)
+		runWhileBlockingLayout(block
+			pModelRecord.setToggled(pBehaviorCapturedAnimations.getRecord())
+			
+			pAnimation = pBehaviorCapturedAnimations.getAnimations().getActive()
+			pModelAnimations.setSelectedElement(pAnimation)
+		end)
 	end
 	
 	
 	
 	/** Update animations model. */
 	public func void updateModelAnimations()
-		var CharacterAnimation selection = pAnimation
-		
+		preventSelectAnimation = true
 		pModelAnimations.setContent(pBehaviorCapturedAnimations.getAnimations().toArray())
 		
-		var int index = pModelAnimations.indexOf(selection)
+		pModelAnimations.setSelectedElement(pAnimation)
+		preventSelectAnimation = false
+		pBehaviorCapturedAnimations.getAnimations().setActive(pAnimation)
+	end
+	
+	public func void updateModelAnimationName(CharacterAnimation animation)
+		var int index = pModelAnimations.indexOf(animation)
 		if index != -1
-			pModelAnimations.setSelected(index)
-			pModelAnimations.notifyContentChanged(index, index)
+			pModelAnimations.notifyElementChanged(index)
 		end
 	end
 	
@@ -306,28 +305,30 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	
 	/** Update animation. */
 	public func void updateAnimation()
-		var Animation animation
-		var Animation animationObject
-		if pAnimation != null
-			animation = pAnimation.getAnimation()
-			animationObject = pAnimation.getAnimationObject()
-		end
-		
-		if animation != null and animation.getMoveCount() > 0
-			pModelAnimationInfo.setText("{}: {:.1f}s, {} bones".format(Array.newWith(\
-				File.new(pAnimation.getPath()).getName(),\
-				animation.getMovePlaytime(animation.getMoveName(0)),\
-				animation.getBoneCount())))
+		runWhileBlockingLayout(block
+			var Animation animation
+			var Animation animationObject
+			if pAnimation != null
+				animation = pAnimation.getAnimation()
+				animationObject = pAnimation.getAnimationObject()
+			end
 			
-		elif animationObject != null and animationObject.getMoveCount() > 0
-			pModelAnimationInfo.setText("{}: {:.1f}s, {} bones".format(Array.newWith(\
-				File.new(pAnimation.getPathObject()).getName(),\
-				animationObject.getMovePlaytime(animationObject.getMoveName(0)),\
-				animationObject.getBoneCount())))
-			
-		else
-			pModelAnimationInfo.setText("")
-		end
+			if animation != null and animation.getMoveCount() > 0
+				pModelAnimationInfo.setText("{}: {:.1f}s, {} bones".format(Array.newWith(\
+					File.new(pAnimation.getPath()).getName(),\
+					animation.getMovePlaytime(animation.getMoveName(0)),\
+					animation.getBoneCount())))
+				
+			elif animationObject != null and animationObject.getMoveCount() > 0
+				pModelAnimationInfo.setText("{}: {:.1f}s, {} bones".format(Array.newWith(\
+					File.new(pAnimation.getPathObject()).getName(),\
+					animationObject.getMovePlaytime(animationObject.getMoveName(0)),\
+					animationObject.getBoneCount())))
+				
+			else
+				pModelAnimationInfo.setText("")
+			end
+		end)
 	end
 	
 	/** Add animation. */
@@ -474,5 +475,28 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			checkBox.setToolTip("Enable recording.")
 			p.addWidget(checkBox)
 		end))
+	end
+	
+	protected func void onBehaviorChanged()
+		runWhileBlockingLayout(block
+			if pBehaviorCapturedAnimations != null
+				pBehaviorCapturedAnimations.removeListener(pCapturedAnimationsChanged)
+				pBehaviorCapturedAnimations.getAnimations().removeListener(pAnimationsChangedListener)
+				
+				setAnimation(null)
+				preventSelectAnimation = true
+				pModelAnimations.removeAll()
+				preventSelectAnimation = false
+			end
+			
+			pBehaviorCapturedAnimations = pBehavior cast ECBCapturedAnimations.Instance
+			
+			if pBehaviorCapturedAnimations != null
+				setAnimation(pBehaviorCapturedAnimations.getAnimations().getActive())
+				updateModelAnimations()
+				pBehaviorCapturedAnimations.getAnimations().addListener(pAnimationsChangedListener)
+				pBehaviorCapturedAnimations.addListener(pCapturedAnimationsChanged)
+			end
+		end)
 	end
 end

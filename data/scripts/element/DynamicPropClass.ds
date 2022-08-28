@@ -33,6 +33,7 @@ pin Dragengine.Scenery
  * Dynamic prop element class.
  */
 class DynamicPropClass extends BehaviorElementClass
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
 	public var ECBehaviorComponent component
 	public var ECBehaviorCollider collider
 	public var ECBTemporaryGhost temporaryGhost
@@ -56,6 +57,8 @@ class DynamicPropClass extends BehaviorElementClass
 	end
 	
 	public func new(String name) super(name)
+		behaviorGuiPanels = ECBBehaviorGuiPanels.new(this)
+		
 		component = ECBehaviorComponent.new(this, null)
 		component.setCommonPath("/content/models/unknownObject",\
 			"object.demodel", "object.deskin", "object.derig")
@@ -107,9 +110,9 @@ class DynamicPropClass extends BehaviorElementClass
 		helpTopic = ECBHelpTopic.new(this)
 		helpTopic.getHelpTopic().setValue("ocls_dynamicprop")
 		
-		colliderPhysics = ECBColliderPhysics.new(this, collider)
+		colliderPhysics = ECBColliderPhysics.new(this, behaviorGuiPanels, collider)
 		
-		capturedAnimations = ECBCapturedAnimations.new(this, component, collider)
+		capturedAnimations = ECBCapturedAnimations.new(this, behaviorGuiPanels, component, collider)
 		colliderPhysics.capturedAnimations = capturedAnimations
 		
 		recordAnimation = ECBRecordAnimation.new(this, component, capturedAnimations)

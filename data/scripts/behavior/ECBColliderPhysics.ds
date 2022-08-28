@@ -89,6 +89,15 @@ class ECBColliderPhysics extends DefaultECBehavior
 			end
 		end
 		
+		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
+			public func new(Instance instance) super(instance, "ECBColliderPhysics")
+			end
+			
+			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+				return Gui.WMPSOColliderPhysics.new(panelProject, getId())
+			end
+		end
+		
 		
 		private var ECBColliderPhysics pECBehavior
 		private var Array pColliders // ECBehaviorCollider.Instance
@@ -156,6 +165,10 @@ class ECBColliderPhysics extends DefaultECBehavior
 			updateMass()
 			updatePhysicsState(true)
 			updateCollisionFilter()
+			
+			if pECBehavior.behaviorGuiPanels != null
+				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
 		end
 		
 		
@@ -547,6 +560,7 @@ class ECBColliderPhysics extends DefaultECBehavior
 	
 	
 	
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
 	public var ECBCapturedAnimations capturedAnimations
 	
 	public var Array colliders
@@ -561,8 +575,11 @@ class ECBColliderPhysics extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBehaviorCollider collider) super(eclass)
+	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBehaviorCollider collider) super(eclass)
 		var String prefix = "colliderPhysics."
+		
+		this.behaviorGuiPanels = behaviorGuiPanels
 		
 		colliders = Array.new()
 		if collider != null
@@ -595,6 +612,7 @@ class ECBColliderPhysics extends DefaultECBehavior
 	
 	/** Dispose of behavior. */
 	public func void dispose()
+		behaviorGuiPanels = null
 		colliders = null
 		capturedAnimations = null
 		super.dispose()
