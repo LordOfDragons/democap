@@ -40,6 +40,26 @@ pin Dragengine.Utils
  * Main window project panel.
  */
 class WMPanelProject extends Panel
+	class EnableUpdateObjectsListener extends DefaultWidgetListener
+		protected var WMPanelProject pPanel
+		protected var Array pWidgets
+		
+		public func new(WMPanelProject panel, Array widgets)
+			pPanel = panel
+			pWidgets = widgets
+		end
+		
+		public func void onWidgetShown(WidgetEvent event)
+			pPanel.setEnableObjectUpdates(pWidgets.find(block Widget each
+				return not each.getVisible()
+			end) == null)
+		end
+		
+		public func void onWidgetHidden(WidgetEvent event)
+			pPanel.setEnableObjectUpdates(false)
+		end
+	end
+	
 	/** Game changes listener. */
 	class GameChangedListener extends DefaultGameListener
 		protected var WMPanelProject pPanel
@@ -733,6 +753,7 @@ class WMPanelProject extends Panel
 	protected var CollapsibleGroup pPanelParenting
 	protected var Panel pPanelBehaviors
 	protected var ECBBehaviorGuiPanels.Manager pBGPManager
+	protected var bool pEnableObjectUpdates
 	
 	public var bool preventUpdateObjects
 	
@@ -742,6 +763,7 @@ class WMPanelProject extends Panel
 	public func new(bool inVR, String prefixUIOptions)
 		pInVR = inVR
 		pPrefixUIOptions = prefixUIOptions + "/WMPanelProject"
+		pEnableObjectUpdates = true
 		pBGPManager = ECBBehaviorGuiPanels.Manager.new(this)
 		
 		pModelProjectFilename = DefaultTextModel.new("")
@@ -842,6 +864,25 @@ class WMPanelProject extends Panel
 	/** Scene objects model. */
 	public func DefaultListModel getModelObjects()
 		return pModelObjects
+	end
+	
+	public func bool getEnableObjectUpdates()
+		return pEnableObjectUpdates
+	end
+	
+	public func void setEnableObjectUpdates(bool enable)
+		if enable == pEnableObjectUpdates
+			return
+		end
+		
+		pEnableObjectUpdates = enable
+		
+		if enable
+			selectObjectFromTracker()
+			
+		else
+			setObject(null)
+		end
 	end
 	
 	
@@ -1365,11 +1406,20 @@ class WMPanelProject extends Panel
 	
 	/** Select object from tracker. */
 	public func void selectObjectFromTracker()
+		if not pEnableObjectUpdates
+			return
+		end
+		
+			var RuntimeMeter rm = RuntimeMeter.new()
+			rm.counterReset(0)
+			rm.reset(0)
 		var ECBSceneObject.Instance selection = getTrackerSelectedObject()
 		preventUpdateObjects = true
 		pModelObjects.setSelectedElement(selection)
 		preventUpdateObjects = false
 		setObject(selection)
+			rm.counterAdd(0, 0)
+			GameApp.getGameApp().getConsole().addMessage("WMPanelProject(" + pInVR + ").selectObjectFromTracker: " + pObject + " => " + rm.counterTime(0))
 	end
 	
 	/** Update objects model. */
@@ -1824,7 +1874,6 @@ class WMPanelProject extends Panel
 			end
 		end)
 	end
-	
 	
 	
 	/** Create panel content. */

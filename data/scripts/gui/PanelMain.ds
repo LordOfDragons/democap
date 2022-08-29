@@ -114,22 +114,34 @@ class PanelMain extends Panel
 		var String prefixUIOptions = pInVR if "UI/VR/PanelMain" else "UI/PanelMain"
 		
 		addWidget(SwitchPanel.new(block SwitchPanel p
+			// settings panel
 			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
 				p2.addWidget(WMPanelSettings.new(pInVR, prefixUIOptions))
 			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
 			
+			// character panel
 			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
 				p2.addWidget(WMPanelCharacter.new(pInVR, prefixUIOptions))
 			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
 			
-			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
-				p2.addWidget(WMPanelProject.new(pInVR, prefixUIOptions))
-			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
+			// project panel
+			var WMPanelProject panelProject = WMPanelProject.new(pInVR, prefixUIOptions)
+			var ScrollPanel scrollPanel = ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
+				p2.addWidget(panelProject)
+			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed)
+			p.addWidget(scrollPanel)
 			
+			var WMPanelProject.EnableUpdateObjectsListener enableUpdateObjects = \
+				WMPanelProject.EnableUpdateObjectsListener.new(panelProject, Array.newWith(scrollPanel, this))
+			scrollPanel.addWidgetListener(enableUpdateObjects)
+			addWidgetListener(enableUpdateObjects)
+			
+			// actor control panel
 			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
 				p2.addWidget(WMPanelActorControl.new(pInVR, prefixUIOptions))
 			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
 			
+			// session panel
 			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
 				p2.addWidget(WMPanelSession.new(pInVR, prefixUIOptions))
 			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
