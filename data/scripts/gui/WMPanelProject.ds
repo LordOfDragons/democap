@@ -556,6 +556,12 @@ class WMPanelProject extends Panel
 			item.setToolTip("Remove scene object")
 			menu.addWidget(item)
 			
+			item = MenuItemCommand.new("Change Class...", BlockActionListener.new(block ActionEvent event
+				pPanel.changeObjectClass()
+			end))
+			item.setToolTip("Rename scene object")
+			menu.addWidget(item)
+			
 			item = MenuItemCommand.new("Rename...", BlockActionListener.new(block ActionEvent event
 				pPanel.renameObject()
 			end))
@@ -1683,6 +1689,103 @@ class WMPanelProject extends Panel
 				pObject.getElement().getStub().setPropertyValueFor(pObject.getECBehavior().name.getName(), result)
 				pObject.setName(result)
 			end
+		end))
+	end
+	
+	/** Change object class. */
+	public func void changeObjectClass()
+		if pScene == null
+			return
+		end
+		
+		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+		if gameWorld == null
+			return
+		end
+		
+		var ElementClassList eclist = GameApp.getGameApp().getECListSceneObjects()
+		var DefaultListModel model = DefaultListModel.new()
+		eclist.forEach(block ElementClass each
+			model.add(each.getClassname())
+		end)
+		model.sort()
+		
+		var String curCName = pObject.getElement().getClass().getClassname()
+		model.setSelectedElement(curCName)
+		
+		WindowDialog.chooseList(getWindow(), "Change Object Class", "Object Class:", null, model,\
+			DefaultListElementRenderer.new(String.new('X', 30)),\
+			WindowDialog.ButtonConfiguration.new("Change Class"),\
+			WindowDialog.ButtonConfiguration.new("Cancel"),\
+			WindowDialog.BlockResultListener.new(block int result
+				if result == -1
+					return null
+				end
+				
+				var String newCName = model.getAt(result) cast String
+				if newCName.equals(curCName)
+					return null
+				end
+				
+				var BehaviorElement element = pObject.getElement()
+				var String soname = ECBSceneObject.getInstanceIn(element).getName()
+				
+				var BehaviorElementClass eclass = eclist.getNamed(newCName) cast BehaviorElementClass
+				var ECBSceneObject sceneObject = ECBSceneObject.getBehaviorIn(eclass)
+				var StubElement stub = StubElement.new(eclass)
+				
+				if not sceneObject.runSceneObjectStubInitializers(stub, getWindow())
+					return null
+				end
+				
+				stub.setPosition(element.getPosition())
+				stub.setRotation(element.getOrientation().getEulerAngles())
+				
+				if eclass.getPersistable()
+					stub.setID(element.getStub().getID())
+					
+				else
+					stub.setID(UniqueID.new())
+				end
+				
+				var Array attachments
+				
+				var ECBehaviorAttachments.Instance behaviorAttachments = ECBehaviorAttachments.getInstanceIn(element)
+				if behaviorAttachments != null
+					attachments = Array.new()
+					behaviorAttachments.forEachAttachment(block BehaviorElement each
+						attachments.add(each)
+					end)
+					behaviorAttachments = null
+					
+					attachments.forEach(block BehaviorElement each
+						gameWorld.removeElement(each)
+					end)
+				end
+				
+				element.safeDispose()
+				
+				element = stub.createElement() cast BehaviorElement
+				sceneObject.instance(element).setName(soname)
+				
+				gameWorld.addElement(element)
+				
+				if attachments != null
+					behaviorAttachments = ECBehaviorAttachments.getInstanceIn(element)
+					if behaviorAttachments != null
+						attachments.forEach(block BehaviorElement each
+							gameWorld.addElement(each)
+						end)
+						behaviorAttachments = null
+						
+					else
+						attachments.forEach(block BehaviorElement each
+							each.getStub().setAttachTo(null)
+						end)
+					end
+				end
+				
+				ECBSelectable.getInstanceIn(element).selectElement()
 		end))
 	end
 	
