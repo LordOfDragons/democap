@@ -43,11 +43,13 @@ import os
 from .configuration import Configuration
 from .panel_demca_browser import panelDemcaBrowserRegister
 from .panel_correctionbones import panelCorrectionBonesRegister
+from .panel_live import panelLiveRegister
 
 def register():
 	Configuration.get()
 	panelDemcaBrowserRegister()
 	panelCorrectionBonesRegister()
+	panelLiveRegister()
 	
 def unregister():
 	pass
