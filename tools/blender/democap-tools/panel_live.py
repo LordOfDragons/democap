@@ -33,6 +33,10 @@ from .utils import registerClass, flatten
 from . import denetwork as dnl
 
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+
 class DemocapLiveConnection(dnl.Connection):
 	def __init__(self):
 		dnl.Connection.__init__(self)
@@ -41,6 +45,8 @@ class DemocapLiveConnection(dnl.Connection):
 		params = context.window_manager.democaptools_liveparams
 		print("DemocapLiveConnection.connect: host='{}' port={}".format(
 			params.connect_host, params.connect_port))
+		logger.info("DemocapLiveConnection.connect: host='%s' port=%d",
+			params.connect_host, params.connect_port)
 		self.connect_to("{0}:{1}".format(params.connect_host, params.connect_port))
 
 liveConnection = None
@@ -91,9 +97,10 @@ class WM_OT_DemocapLiveDisconnect(bpy.types.Operator):
 class VIEW3D_PT_DemocapToolsLiveConnect(bpy.types.Panel):
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
-	bl_category = "DEMoCap Live"
-	bl_label = "Connect"
+	bl_category = "DEMoCap"
+	bl_label = "Lice Connect"
 	bl_description = "DEMoCap Tools Live Connect"
+	bl_options = {'DEFAULT_CLOSED'}
 	
 	def draw(self, context):
 		global liveConnection
@@ -121,3 +128,4 @@ def panelLiveRegister():
 	registerClass(VIEW3D_PT_DemocapToolsLiveConnect)
 	
 	bpy.types.WindowManager.democaptools_liveparams = bpy.props.PointerProperty(type=LiveParameters)
+	logger.info("registered")

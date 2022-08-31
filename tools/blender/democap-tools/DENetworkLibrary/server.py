@@ -37,6 +37,9 @@ from collections import deque
 import logging
 
 
+logger = logging.getLogger(__name__)
+
+
 class Server(Endpoint.Listener):
 
     """Network server.
@@ -112,16 +115,18 @@ class Server(Endpoint.Listener):
         if use_address == "*":
             addrs = self.find_public_address()
             if addrs:
-                logging.info("Found public address: %s",  ", ".join(addrs))
+                logger.info("DNL.Server: Found public address: %s",
+                            ", ".join(addrs))
                 use_address = addrs[0]
             else:
-                logging.info("No public address found. Using localhost")
+                logger.info("DNL.Server: %s",
+                            "No public address found. Using localhost")
                 use_address = "127.0.0.1"
 
         self._endpoint = self.create_endpoint()
         self._endpoint.open(self.resolve_address(use_address), self)
 
-        logging.info("Server: Listening on %s", self._endpoint.address)
+        logger.info("DNL.Server: Listening on %s", self._endpoint.address)
         self._listening = True
 
     def stop_listening(self: 'Server') -> None:
@@ -163,7 +168,7 @@ class Server(Endpoint.Listener):
                     self._process_connection_request(address, reader)
                 """else: ignore invalid package"""
         except Exception:
-            logging.exception("failed processing received datagra")
+            logger.exception("DNL.Server: failed processing received datagram")
 
     def create_connection(self: 'Server') -> Connection:
         """Create connection for each connecting client.
@@ -271,5 +276,5 @@ class Server(Endpoint.Listener):
             w.write_ushort(protocol.value)
         self._endpoint.send_datagram(address, message)
 
-        logging.info("Server: Client connected from %s", address)
+        logger.info("DNL.Server: Client connected from %s", address)
         self.client_connected(connection)

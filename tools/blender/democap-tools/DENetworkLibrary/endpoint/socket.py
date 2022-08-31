@@ -69,8 +69,11 @@ class SocketEndpoint(Endpoint, asyncio.DatagramProtocol):
 
         if address.type == Address.Type.IPV6:
             protocol = socket.AF_INET6
+            """
             saddr = (address.host, address.port, 0,
                      self.scope_id_for(address))
+            """
+            saddr = (address.host, address.port)
         else:
             protocol = socket.AF_INET
             saddr = (address.host, address.port)
@@ -152,7 +155,7 @@ class SocketEndpoint(Endpoint, asyncio.DatagramProtocol):
         for _i in range(4):
             values.append(sa & 0xff)
             sa = sa >> 8
-        return Address.ipv4(reversed(values), address[1])
+        return Address.ipv4(list(reversed(values)), address[1])
 
     @classmethod
     def address_from_socket_ipv6(cls: 'SocketEndpoint',
@@ -168,10 +171,10 @@ class SocketEndpoint(Endpoint, asyncio.DatagramProtocol):
         """
         sa = int(ip_address(address[0]))
         values = []
-        for _i in range(32):
+        for _i in range(16):
             values.append(sa & 0xff)
             sa = sa >> 8
-        return Address.ipv6(reversed(values), address[1])
+        return Address.ipv6(list(reversed(values)), address[1])
 
     def datagram_received(self: 'SocketEndpoint',
                           data: str,

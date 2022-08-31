@@ -41,6 +41,9 @@ import asyncio
 from time import time_ns
 
 
+logger = logging.getLogger(__name__)
+
+
 class Connection(Endpoint.Listener):
 
     """Network connection.
@@ -152,7 +155,7 @@ class Connection(Endpoint.Listener):
         try:
             self._disconnect(False, False)
         except Exception:
-            logging.exception("Connection dispose")
+            logger.exception("DNL.Connection: Dispose")
 
         self._reliable_messages_send.clear()
         self._reliable_messages_recv.clear()
@@ -315,8 +318,8 @@ class Connection(Endpoint.Listener):
                 w.write_ushort(Protocols.DENETWORK_PROTOCOL.value)
             self._real_remote_address = resolved
             self._remote_address = address
-            logging.info("Connection: Connecting to %s",
-                         str(self._real_remote_address))
+            logger.info("DNL.Connection: Connect to %s",
+                        str(self._real_remote_address))
 
             self._endpoint.send_datagram(resolved, message)
 
@@ -349,7 +352,7 @@ class Connection(Endpoint.Listener):
 
     def disconnect(self: 'Connection') -> None:
         """Disconnect from remote connection if connected."""
-        logging.info("Connection: disconnect")
+        logger.info("DNL.Connection: Disconnect")
         self._disconnect(True, False)
 
     def send_message(self: 'Connection', message: Message) -> None:
@@ -520,7 +523,7 @@ class Connection(Endpoint.Listener):
         try:
             self.process_datagram(MessageReader(message))
         except Exception as e:
-            logging.error("received datagram", exc_info=e)
+            logger.error("DNL.Connection: Received datagram", exc_info=e)
 
     def create_endpoint(self: 'Connection') -> Endpoint:
         """Create endpoint.
@@ -538,12 +541,12 @@ class Connection(Endpoint.Listener):
 
     def connection_established(self: 'Connection') -> None:
         """Connection established. Callback for subclass."""
-        logging.info("Connection: connection established")
+        logger.info("DNL.Connection: Connection established")
 
     def connection_failed(self: 'Connection',
                           reason: 'Connection.ConnectionFailedReason') -> None:
         """Connection failed or timeout out. Callback for subclass."""
-        logging.info("Connection: connection failed")
+        logger.info("DNL.Connection: Connection failed")
 
     def connection_closed(self: 'Connection') -> None:
         """Connection closed.
@@ -552,7 +555,7 @@ class Connection(Endpoint.Listener):
         the connection. Callback for subclass.
 
         """
-        logging.info("Connection: connection closed")
+        logger.info("DNL.Connection: Connection closed")
 
     def message_received(self: 'Connection', message: Message) -> None:
         """Message received. Called asynchronously. Callback for subclass.
@@ -689,9 +692,9 @@ class Connection(Endpoint.Listener):
 
         if self._connection_state == Connection.ConnectionState.CONNECTED:
             if remote_closed:
-                logging.info("Remove closed connection")
+                logger.info("DNL.Connection: Remove closed connection")
             else:
-                logging.info("Disconnecting")
+                logger.info("DNL.Connection: Disconnecting")
 
                 self._update_states()
                 self._send_pending_reliables()
@@ -709,7 +712,7 @@ class Connection(Endpoint.Listener):
         self.reliable_number_recv = 0
 
         self._close_endpoint()
-        logging.info("Connection closed")
+        logger.info("DNL.Connection: Connection closed")
         if notify:
             self.connection_closed()
 
@@ -797,7 +800,7 @@ class Connection(Endpoint.Listener):
 
                 m.elapsed_timeout = m.elapsed_timeout + elapsed_time
                 if m.elapsed_timeout > self._reliable_timeout:
-                    logging.error("Reliable message timeout")
+                    logger.error("DNL.Connection: Reliable message timeout")
                     self.disconnect()
                     return
 
@@ -811,14 +814,14 @@ class Connection(Endpoint.Listener):
                 self._elapsed_connect_timeout + elapsed_time)
             if self._elapsed_connect_timeout > self._connect_timeout:
                 self._close_endpoint()
-                logging.info("Connection failed (timeout)")
+                logger.info("DNL.Connection: Connection failed (timeout)")
                 self.connection_failed(
                     Connection.ConnectionFailedReason.TIMEOUT)
 
             self._elapsed_connect_resend = (
                 self._elapsed_connect_resend + elapsed_time)
             if self._elapsed_connect_resend > self._connect_resend_interval:
-                logging.debug("Resent connection request")
+                logger.debug("DNL.Connection: Resent connection request")
                 self._elapsed_connect_resend = 0.0
 
                 message = Message()
@@ -869,19 +872,20 @@ class Connection(Endpoint.Listener):
             self._connection_state = Connection.ConnectionState.CONNECTED
             self._elapsed_connect_resend = 0.0
             self._elapsed_connect_timeout = 0.0
-            logging.info("Connection established")
+            logger.info("DNL.Connection: Connection established")
             self.connection_established()
         elif ack == ConnectionAck.REJECTED:
             self._close_endpoint()
-            logging.info("Connection failed (rejected)")
+            logger.info("DNL.Connection: Connection failed (rejected)")
             self.connection_failed(ConnectionFailedReason.REJECTED)
         elif ack == ConnectionAck.NO_COMMON_PROTOCOL:
             self._close_endpoint()
-            logging.info("Connection failed (no common protocol)")
+            logger.info("DNL.Connection: %s",
+                        "Connection failed (no common protocol)")
             self.connection_failed(ConnectionFailedReason.NO_COMMON_PROTOCOL)
         else:
             self._close_endpoint()
-            logging.info("Connection failed (invalid message)")
+            logger.info("DNL.Connection: Connection failed (invalid message)")
             self.connection_failed(ConnectionFailedReason.INVALID_MESSAGE)
 
     def _process_connection_close(self: 'Connection',
@@ -955,7 +959,7 @@ class Connection(Endpoint.Listener):
             message.state = RealMessage.State.DONE
             self._remove_send_reliables_done()
         elif ack == ReliableAck.FAILED:
-            logging.debug("Reliable ACK failed, resend")
+            logger.debug("DNL.Connection: Reliable ACK failed, resend")
             message.elapsed_resend = 0.0
             self._endpoint.send_datagram(
                 self._real_remote_address, message.message)
@@ -1132,7 +1136,7 @@ class Connection(Endpoint.Listener):
                 self._update_timeouts(elapsed)
                 self._update_states()
             except Exception:
-                logging.exception("Connection timer update")
+                logger.exception("DNL.Connection: Connection timer update")
 
     def _start_update_task(self: 'Connection') -> None:
         """Start update task."""

@@ -34,6 +34,9 @@ from collections import deque
 import logging
 
 
+logger = logging.getLogger(__name__)
+
+
 class State:
 
     """Network state."""
@@ -181,8 +184,9 @@ class State:
             data_type = ValueTypes(reader.read_byte())
             value = self._values[i]
             if data_type != value.data_type:
-                logging.debug("data type mismatch: expected %s found %s",
-                    data_type,  value.data_type)
+                logger.debug("DNL.State: data type mismatch: %s",
+                             "expected {0} found {1}".format(
+                                data_type, value.data_type))
                 raise Exception("data type mismatch")
             value.read(reader)
             self.invalidate_value(i)
