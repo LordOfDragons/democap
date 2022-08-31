@@ -158,6 +158,7 @@ class VIEW3D_PT_DemocapToolsCorrectionBones(bpy.types.Panel):
 	bl_category = 'DEMoCap'
 	bl_label = "Correction Bones"
 	bl_description = "DEMoCap Tools"
+	bl_options = {'DEFAULT_CLOSED'}
 	
 	def draw(self, context):
 		config = Configuration.get()

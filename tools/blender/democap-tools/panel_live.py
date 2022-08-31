@@ -78,7 +78,7 @@ class WM_OT_DemocapLiveDisconnect(bpy.types.Operator):
 		if liveConnection is None:
 			return {'CANCELLED'}
 		
-		params = context.window_manager.democaptools_liveparams
+		params = context.window_manager.democaptoolslive_params
 		
 		liveConnection.dispose()
 		liveConnection = None
@@ -89,15 +89,14 @@ class VIEW3D_PT_DemocapToolsLiveConnect(bpy.types.Panel):
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
 	bl_category = "DEMoCap"
-	bl_label = "Lice Connect"
+	bl_label = "Live Connect"
 	bl_description = "DEMoCap Tools Live Connect"
 	bl_options = {'DEFAULT_CLOSED'}
 	
 	def draw(self, context):
 		global liveConnection
 		
-		config = Configuration.get()
-		params = context.window_manager.democaptools_liveparams
+		params = context.window_manager.democaptoolslive_params
 		layout = self.layout
 		
 		if liveConnection is not None and liveConnection.connection_state == dnl.Connection.ConnectionState.DISCONNECTED:
@@ -116,6 +115,20 @@ class VIEW3D_PT_DemocapToolsLiveConnect(bpy.types.Panel):
 		row.enabled = False
 		row.prop(params, "connection_status", expand=True)
 
+class VIEW3D_PT_DemocapToolsLiveActor(bpy.types.Panel):
+	bl_space_type = 'VIEW_3D'
+	bl_region_type = 'UI'
+	bl_category = "DEMoCap"
+	bl_label = "Live Actor"
+	bl_description = "DEMoCap Tools Live Connect"
+	bl_options = {'DEFAULT_CLOSED'}
+	
+	def draw(self, context):
+		layout = self.layout
+		
+		block = layout.column(align=True)
+		block.row(align=True).prop(context.scene, "democaptoolslive_actor", expand=True)
+
 def updateConnectionStatus(self, context):
 	bpy.context.view_layer.update()
 
@@ -133,6 +146,17 @@ class DemocapLiveParameters(bpy.types.PropertyGroup):
 		default="Disconnected",
 		update=updateConnectionStatus)
 
+def filterOnlyArmatures(self, object):
+	return object.type == 'ARMATURE'
+
+def actorChanged(self, context):
+	logger.info("Actor changed to {}".format(context.scene.democaptoolslive_actor))
+
+bpy.types.Scene.democaptoolslive_actor = bpy.props.PointerProperty(type=bpy.types.Object,
+	name="Actor",
+	description="Armature to link MoCap actor to",
+	poll=filterOnlyArmatures,
+	update=actorChanged)
 
 def panelLiveRegister():
 	registerAsyncioOperator()
@@ -140,6 +164,7 @@ def panelLiveRegister():
 	registerClass(WM_OT_DemocapLiveConnect)
 	registerClass(WM_OT_DemocapLiveDisconnect)
 	registerClass(VIEW3D_PT_DemocapToolsLiveConnect)
+	registerClass(VIEW3D_PT_DemocapToolsLiveActor)
 	
-	bpy.types.WindowManager.democaptools_liveparams = bpy.props.PointerProperty(type=DemocapLiveParameters)
+	bpy.types.WindowManager.democaptoolslive_params = bpy.props.PointerProperty(type=DemocapLiveParameters)
 	logger.info("registered")
