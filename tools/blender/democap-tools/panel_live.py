@@ -30,13 +30,14 @@ from fnmatch import fnmatch
 
 from .configuration import Configuration
 from .utils import registerClass, flatten
-from .live_connection import DemocapLiveConnection, registerAsyncioOperator
+from .asyncio_helper import registerAsyncioOperator
+from .live_connection import DemocapLiveConnection
 from . import DENetworkLibrary as dnl
 
 logger = logging.getLogger(__name__)
 
 
-live_connection = None
+liveConnection = None
 
 
 class WM_OT_DemocapLiveConnect(bpy.types.Operator):
@@ -48,16 +49,16 @@ class WM_OT_DemocapLiveConnect(bpy.types.Operator):
 	
 	@classmethod
 	def poll(cls, context):
-		global live_connection
-		return live_connection is None
+		global liveConnection
+		return liveConnection is None
 	
 	def execute(self, context):
-		global live_connection
-		if live_connection is not None:
+		global liveConnection
+		if liveConnection is not None:
 			return {'CANCELLED'}
 		
-		live_connection = DemocapLiveConnection()
-		live_connection.connect_to_host(context)
+		liveConnection = DemocapLiveConnection()
+		liveConnection.connect_to_host(context)
 		return {'FINISHED'}
 
 class WM_OT_DemocapLiveDisconnect(bpy.types.Operator):
@@ -69,18 +70,18 @@ class WM_OT_DemocapLiveDisconnect(bpy.types.Operator):
 	
 	@classmethod
 	def poll(cls, context):
-		global live_connection
-		return live_connection is not None
+		global liveConnection
+		return liveConnection is not None
 	
 	def execute(self, context):
-		global live_connection
-		if live_connection is None:
+		global liveConnection
+		if liveConnection is None:
 			return {'CANCELLED'}
 		
 		params = context.window_manager.democaptools_liveparams
 		
-		live_connection.dispose()
-		live_connection = None
+		liveConnection.dispose()
+		liveConnection = None
 		params.connection_status = "Disconnected"
 		return {'FINISHED'}
 
@@ -93,15 +94,15 @@ class VIEW3D_PT_DemocapToolsLiveConnect(bpy.types.Panel):
 	bl_options = {'DEFAULT_CLOSED'}
 	
 	def draw(self, context):
-		global live_connection
+		global liveConnection
 		
 		config = Configuration.get()
 		params = context.window_manager.democaptools_liveparams
 		layout = self.layout
 		
-		if live_connection is not None and live_connection.connection_state == dnl.Connection.ConnectionState.DISCONNECTED:
-			live_connection.dispose()
-			live_connection = None
+		if liveConnection is not None and liveConnection.connection_state == dnl.Connection.ConnectionState.DISCONNECTED:
+			liveConnection.dispose()
+			liveConnection = None
 			params.connection_status = "Disconnected"
 		
 		block = layout.column(align=True)

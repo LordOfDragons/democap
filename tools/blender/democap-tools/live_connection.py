@@ -25,83 +25,23 @@
 import logging
 import mathutils
 import bpy
-import os
-import sys
-import asyncio
-import concurrent.futures
 
 from .configuration import Configuration
-from .utils import registerClass
+from .asyncio_helper import startAsyncioLoop, stopAsyncioLoop
 from . import DENetworkLibrary as dnl
 
 
 logger = logging.getLogger(__name__)
 
 
-def setup_asyncio_executor():
-	"""See https://github.com/lampysprites/blender-asyncio/blob/master/async_loop.py"""
-	if sys.platform == 'win32':
-		asyncio.get_event_loop().close()
-		loop = asyncio.ProactorEventLoop()
-		asyncio.set_event_loop(loop)
-	else:
-		loop = asyncio.get_event_loop()
-	executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
-	loop.set_default_executor(executor)
-
-class AsyncLoopModalOperator(bpy.types.Operator):
-	bl_idname = 'asyncio.loop'
-	bl_label = 'Runs the asyncio main loop'
-	
-	_timer = None
-	exit_loop = False
-	
-	def execute(self, context):
-		return self.invoke(context, None)
-	
-	def invoke(self, context, event):
-		logger.info("AsyncLoopModalOperator: Invoke")
-		wm = context.window_manager
-		wm.modal_handler_add(self)
-		self.exit_loop = False
-		self._timer = wm.event_timer_add(0.00001, window=context.window)
-		return {'RUNNING_MODAL'}
-	
-	def modal(self, context, event):
-		if self.exit_loop:
-			logger.info("AsyncLoopModalOperator: Exit loop")
-			context.window_manager.event_timer_remove(self._timer)
-			self.exit_loop = False
-			return {'FINISHED'}
-		
-		if event.type != 'TIMER':
-			return {'PASS_THROUGH'}
-		
-		self.async_loop_once()
-		return {'RUNNING_MODAL'}
-	
-	def async_loop_once(self):
-		loop = asyncio.get_event_loop()
-		if loop.is_closed():
-			logger.warning('Async loop closed')
-		else:
-			loop.stop()
-			loop.run_forever()
-
-def registerAsyncioOperator():
-	setup_asyncio_executor()
-	registerClass(AsyncLoopModalOperator)
-
-
-
 class DemocapLiveConnection(dnl.Connection):
 	def __init__(self):
 		dnl.Connection.__init__(self)
 		self._params = None
-		self._start_async_loop()
+		startAsyncioLoop()
 	
 	def dispose(self) -> None:
-		self._stop_async_loop()
+		stopAsyncioLoop()
 		dnl.Connection.dispose(self)
 	
 	def connect_to_host(self, context):
@@ -136,14 +76,3 @@ class DemocapLiveConnection(dnl.Connection):
 		dnl.Connection.connection_closed(self)
 		if self._params is not None:
 			self._params.connection_status = "Disconnected"
-	
-	def _start_async_loop(self):
-		logger.debug('Start async loop')
-		return bpy.ops.asyncio.loop()
-
-	def _stop_async_loop(self):
-		logger.debug('Stop async loop')
-		AsyncLoopModalOperator.exit_loop = True
-		loop = asyncio.get_event_loop()
-		loop.stop()
-		loop.run_forever()
