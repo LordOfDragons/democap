@@ -30,26 +30,13 @@ from fnmatch import fnmatch
 
 from .configuration import Configuration
 from .utils import registerClass, flatten
-from . import denetwork as dnl
-
+from .live_connection import DemocapLiveConnection, registerAsyncioOperator
+from . import DENetworkLibrary as dnl
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
-class DemocapLiveConnection(dnl.Connection):
-	def __init__(self):
-		dnl.Connection.__init__(self)
-	
-	def connect_to_host(self, context):
-		params = context.window_manager.democaptools_liveparams
-		print("DemocapLiveConnection.connect: host='{}' port={}".format(
-			params.connect_host, params.connect_port))
-		logger.info("DemocapLiveConnection.connect: host='%s' port=%d",
-			params.connect_host, params.connect_port)
-		self.connect_to("{0}:{1}".format(params.connect_host, params.connect_port))
-
-liveConnection = None
+live_connection = None
 
 
 class WM_OT_DemocapLiveConnect(bpy.types.Operator):
@@ -61,16 +48,16 @@ class WM_OT_DemocapLiveConnect(bpy.types.Operator):
 	
 	@classmethod
 	def poll(cls, context):
-		global liveConnection
-		return liveConnection is None
+		global live_connection
+		return live_connection is None
 	
 	def execute(self, context):
-		global liveConnection
-		if liveConnection is not None:
+		global live_connection
+		if live_connection is not None:
 			return {'CANCELLED'}
 		
-		liveConnection = DemocapLiveConnection()
-		liveConnection.connect_to_host(context)
+		live_connection = DemocapLiveConnection()
+		live_connection.connect_to_host(context)
 		return {'FINISHED'}
 
 class WM_OT_DemocapLiveDisconnect(bpy.types.Operator):
@@ -82,16 +69,19 @@ class WM_OT_DemocapLiveDisconnect(bpy.types.Operator):
 	
 	@classmethod
 	def poll(cls, context):
-		global liveConnection
-		return liveConnection is not None
+		global live_connection
+		return live_connection is not None
 	
 	def execute(self, context):
-		global liveConnection
-		if liveConnection is None:
+		global live_connection
+		if live_connection is None:
 			return {'CANCELLED'}
 		
-		liveConnection.dispose()
-		liveConnection = None
+		params = context.window_manager.democaptools_liveparams
+		
+		live_connection.dispose()
+		live_connection = None
+		params.connection_status = "Disconnected"
 		return {'FINISHED'}
 
 class VIEW3D_PT_DemocapToolsLiveConnect(bpy.types.Panel):
@@ -103,11 +93,16 @@ class VIEW3D_PT_DemocapToolsLiveConnect(bpy.types.Panel):
 	bl_options = {'DEFAULT_CLOSED'}
 	
 	def draw(self, context):
-		global liveConnection
+		global live_connection
 		
 		config = Configuration.get()
 		params = context.window_manager.democaptools_liveparams
 		layout = self.layout
+		
+		if live_connection is not None and live_connection.connection_state == dnl.Connection.ConnectionState.DISCONNECTED:
+			live_connection.dispose()
+			live_connection = None
+			params.connection_status = "Disconnected"
 		
 		block = layout.column(align=True)
 		block.row(align=True).prop(params, "connect_host", expand=True)
@@ -115,17 +110,35 @@ class VIEW3D_PT_DemocapToolsLiveConnect(bpy.types.Panel):
 		row = block.row(align=True)
 		row.column(align=True).operator(operator="democaplive.connect")
 		row.column(align=True).operator(operator="democaplive.disconnect")
+		row = block.row(align=False)
+		row.emboss = 'NONE'
+		row.enabled = False
+		row.prop(params, "connection_status", expand=True)
 
-class LiveParameters(bpy.types.PropertyGroup):
-	connect_host: bpy.props.StringProperty(name="Host", description="Hostname or IP to connect to", default="localhost")
-	connect_port: bpy.props.IntProperty(name="Port", description="Port to connect to", default=3413)
+def updateConnectionStatus(self, context):
+	bpy.context.view_layer.update()
+
+class DemocapLiveParameters(bpy.types.PropertyGroup):
+	connect_host: bpy.props.StringProperty(name="Host",
+		description="Hostname or IP to connect to",
+		default="localhost")
+	
+	connect_port: bpy.props.IntProperty(name="Port",
+		description="Port to connect to",
+		default=3413)
+	
+	connection_status: bpy.props.StringProperty(name="",
+		description="Connection state",
+		default="Disconnected",
+		update=updateConnectionStatus)
 
 
 def panelLiveRegister():
-	registerClass(LiveParameters)
+	registerAsyncioOperator()
+	registerClass(DemocapLiveParameters)
 	registerClass(WM_OT_DemocapLiveConnect)
 	registerClass(WM_OT_DemocapLiveDisconnect)
 	registerClass(VIEW3D_PT_DemocapToolsLiveConnect)
 	
-	bpy.types.WindowManager.democaptools_liveparams = bpy.props.PointerProperty(type=LiveParameters)
+	bpy.types.WindowManager.democaptools_liveparams = bpy.props.PointerProperty(type=DemocapLiveParameters)
 	logger.info("registered")
