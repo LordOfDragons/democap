@@ -34,7 +34,7 @@ def convertPosition(position):
 	return Vector((-position.x, -position.z, position.y))
 
 def convertOrientation(orientation):
-	return Quaternion((orientation.z, orientation.x, orientation.y, orientation.w))
+	return Quaternion((orientation.w, -orientation.x, -orientation.z, orientation.y))
 
 def convertTransform(position, orientation):
 	return Matrix.LocRotScale(convertPosition(position), convertOrientation(orientation), Vector((1,1,1)))
@@ -43,7 +43,9 @@ def convertBonePosition(position):
 	return Vector((position.x, position.z, position.y))
 
 def convertBoneOrientation(orientation):
-	return Quaternion((orientation.z, orientation.x, orientation.y, orientation.w))
+	return Quaternion((-orientation.w, orientation.x, orientation.z, orientation.y))
 
 def convertBoneTransform(position, orientation):
-	return Matrix.LocRotScale(convertBonePosition(position), convertBoneOrientation(orientation), Vector((1,1,1)))
+	return convertBoneOrientation(orientation).to_matrix().to_4x4()\
+		@ Matrix.Translation(convertBonePosition(position))
+	"""return Matrix.LocRotScale(convertBonePosition(position), convertBoneOrientation(orientation), Vector((1,1,1)))"""

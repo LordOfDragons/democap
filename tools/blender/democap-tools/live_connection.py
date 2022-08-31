@@ -23,14 +23,16 @@
 #
 
 import logging
-import mathutils
 import bpy
 
+from mathutils import Vector, Quaternion
 from .configuration import Configuration
 from .asyncio_helper import startAsyncioLoop, stopAsyncioLoop
-from .live_protocol import MessageCodes
+from .live_protocol import MessageCodes, LinkStateCodes
 from .live_utils import convertBoneName, convertBoneTransform
 from .live_utils import convertPosition, convertOrientation
+from .live_utils import convertBonePosition, convertBoneOrientation
+from .live_captureactor import DemocapLiveCaptureActor
 from . import DENetworkLibrary as dnl
 
 
@@ -38,9 +40,28 @@ logger = logging.getLogger(__name__)
 
 
 class DemocapLiveCaptureFrame:
+	class Bone:
+		def __init__(self, position, orientation, matrix):
+			self._position = position
+			self._orientation = orientation
+			self._matrix = matrix
+		
+		@property
+		def position(self):
+			return self._position
+		
+		@property
+		def orientation(self):
+			return self._orientation
+		
+		@property
+		def matrix(self):
+			return self._matrix
+	
+	
 	def __init__(self):
-		self.position = mathutils.Vector()
-		self.orientation = mathutils.Quaternion()
+		self.position = Vector()
+		self.orientation = Quaternion()
 		self.scale = 1.0
 		self.bones = []
 
@@ -71,14 +92,6 @@ class DemocapLiveCaptureBoneLayout:
 		self.rootBones = []
 
 
-class DemocapLiveState:
-	def __init__(self):
-		self._captureBoneLayout = None
-		self._captureFrame = None
-		self._sourceFrameCaptureBoneLayout = 0
-		self._sourceFrameCaptureFrame = 0
-
-
 class DemocapLiveConnection(dnl.Connection):
 	def __init__(self):
 		dnl.Connection.__init__(self)
@@ -88,15 +101,29 @@ class DemocapLiveConnection(dnl.Connection):
 		self._enabledFeatures = 0
 		self._frameNumberWindowSize = 180
 		self._lastFrameNumber = -1
-		self._captureState = DemocapLiveState()
+		self._captureBoneLayout = None
+		self._captureFrame = None
+		self._captureActor = None
 		startAsyncioLoop()
 	
 	def dispose(self) -> None:
 		stopAsyncioLoop()
 		dnl.Connection.dispose(self)
 	
+	@property
+	def captureBoneLayout(self):
+		return self._captureBoneLayout
+	
+	@property
+	def captureFrame(self):
+		return self._captureFrame
+	
+	@property
+	def lastFrameNumber(self):
+		return self._lastFrameNumber
+	
 	def connect_to_host(self, context):
-		self._params = context.window_manager.democaptools_liveparams
+		self._params = context.window_manager.democaptoolslive_params
 		logger.info("DemocapLiveConnection: Connect to host='%s' port=%d",
 			self._params.connect_host, self._params.connect_port)
 		self._params.connection_status = "Connecting..."
@@ -109,7 +136,7 @@ class DemocapLiveConnection(dnl.Connection):
 		message = dnl.message.Message()
 		with dnl.message.MessageWriter(message) as w:
 			w.write_byte(MessageCodes.CONNECT_REQUEST.value)
-			w.write("DEMoCap-Client-0", 0, 16)
+			w.write(b"DEMoCap-Client-0", 0, 16)
 			w.write_uint(self._supportedFeatures)
 			w.write_string8("BlenderDEMoCapLiveAddon")
 		self.send_reliable_message(message)
@@ -165,9 +192,13 @@ class DemocapLiveConnection(dnl.Connection):
 	
 	def _resetState(self):
 		self._ready = False
-		self._enabledFeatures = 0
+		if self._captureActor is not None:
+			self._captureActor.dispose()
+			self._captureActor = None
+		self._captureBoneLayout = None
+		self._captureFrame = None
 		self._lastFrameNumber = -1
-		self._captureState = DemocapLiveState()
+		self._enabledFeatures = 0
 		
 	def _ignoreFrameNumber(self, frameNumber):
 		if self._lastFrameNumber == -1:
@@ -180,7 +211,7 @@ class DemocapLiveConnection(dnl.Connection):
 	def _processConnectAccepted(self, reader):
 		logger.info("DemocapLiveConnection: Received ConnectAccepted")
 		signature = reader.read(16)
-		if signature != "DEMoCap-Server-0":
+		if signature != b"DEMoCap-Server-0":
 			logger.info("DemocapLiveConnection: Signature mismatch")
 			self.disconnect()
 			return
@@ -193,6 +224,7 @@ class DemocapLiveConnection(dnl.Connection):
 		
 		logger.info("DemocapLiveConnection: Ready")
 		self._ready = True
+		self._captureActor = DemocapLiveCaptureActor(self)
 	
 	def _processCaptureBoneLayout(self, reader):
 		layout = DemocapLiveCaptureBoneLayout()
@@ -207,14 +239,13 @@ class DemocapLiveConnection(dnl.Connection):
 			bonePosition = reader.read_vector3()
 			boneOrientation = reader.read_quaternion()
 			boneMatrix = convertBoneTransform(bonePosition, boneOrientation)
-			layout.bones.append(DemocapLiveCaptureBoneLayout.Bone(bonePosition, boneOrientation, boneMatrix))
+			layout.bones[i] = DemocapLiveCaptureBoneLayout.Bone(boneName, boneParent, boneMatrix)
 			
 			if boneParent == -1:
 				layout.rootBones.append(i)
 		
 		"""finished reading message successfully so the bone layout can be stored"""
 		self._captureBoneLayout = layout
-		self._sourceFrameCaptureBoneLayout = pSource.GetFrameCounter();
 		logger.info("DemocapLiveConnection: Capture Bone Layout: revision %d, bones %d", layout.revision, boneCount)
 	
 	def _processCaptureFrame(self, reader):
@@ -249,11 +280,14 @@ class DemocapLiveConnection(dnl.Connection):
 			bonePosition = reader.read_vector3()
 			boneOrientation = reader.read_quaternion()
 			
-			localTransform = convertBoneTransform(bonePosition, boneOrientation)
-			originTransform = self._captureBoneLayout.bones[i].matrix
+			#localTransform = convertBoneTransform(bonePosition, boneOrientation)
+			#originTransform = self._captureBoneLayout.bones[i].matrix
 			
-			frame.bones[i] = localTransform @ originTransform
+			#frame.bones[i] = localTransform @ originTransform
+			frame.bones[i] = DemocapLiveCaptureFrame.Bone(
+				convertBonePosition(bonePosition),
+				convertBoneOrientation(boneOrientation),
+				None)  # localTransform)
 		
 		"""finished reading message successfully so the capture frame can be stored"""
 		self._captureFrame = frame
-		self._sourceFrameCaptureFrame = pSource.GetFrameCounter();

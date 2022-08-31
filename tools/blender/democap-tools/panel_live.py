@@ -26,12 +26,14 @@ import logging
 import mathutils
 import bpy
 import os
+import atexit
 from fnmatch import fnmatch
 
 from .configuration import Configuration
 from .utils import registerClass, flatten
 from .asyncio_helper import registerAsyncioOperator
 from .live_connection import DemocapLiveConnection
+from .live_frameupdater import registerFrameUpdaterHandlers
 from . import DENetworkLibrary as dnl
 
 logger = logging.getLogger(__name__)
@@ -144,13 +146,15 @@ class DemocapLiveParameters(bpy.types.PropertyGroup):
 	connection_status: bpy.props.StringProperty(name="",
 		description="Connection state",
 		default="Disconnected",
-		update=updateConnectionStatus)
+		update=updateConnectionStatus,
+		options=set(('HIDDEN', 'SKIP_SAVE')))
 
 def filterOnlyArmatures(self, object):
 	return object.type == 'ARMATURE'
 
 def actorChanged(self, context):
-	logger.info("Actor changed to {}".format(context.scene.democaptoolslive_actor))
+	#logger.info("Actor changed to {}".format(context.scene.democaptoolslive_actor))
+	pass
 
 bpy.types.Scene.democaptoolslive_actor = bpy.props.PointerProperty(type=bpy.types.Object,
 	name="Actor",
@@ -160,6 +164,7 @@ bpy.types.Scene.democaptoolslive_actor = bpy.props.PointerProperty(type=bpy.type
 
 def panelLiveRegister():
 	registerAsyncioOperator()
+	registerFrameUpdaterHandlers()
 	registerClass(DemocapLiveParameters)
 	registerClass(WM_OT_DemocapLiveConnect)
 	registerClass(WM_OT_DemocapLiveDisconnect)
@@ -168,3 +173,9 @@ def panelLiveRegister():
 	
 	bpy.types.WindowManager.democaptoolslive_params = bpy.props.PointerProperty(type=DemocapLiveParameters)
 	logger.info("registered")
+
+def onExitBlender():
+	if liveConnection is not None:
+		liveConnection.dispose()
+
+atexit.register(onExitBlender)

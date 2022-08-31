@@ -896,8 +896,6 @@ class Connection(Endpoint.Listener):
     def _process_message(self: 'Connection',
                          reader: MessageReader) -> None:
         """Process message."""
-        reader.read_byte()  # flags
-
         message = Message(bytearray(len(reader.data) - reader.position))
         reader.read_message(message)
         self.message_received(message)
