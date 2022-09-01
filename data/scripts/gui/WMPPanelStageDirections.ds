@@ -127,6 +127,16 @@ class WMPPanelStageDirections extends CollapsibleGroup
 			item.setEnabled(pPanel.getClipboard().hasClip())
 			menu.addWidget(item)
 			
+			item = MenuItemCommand.new("Import...", BlockActionListener.new(block ActionEvent event
+				pPanel.importStageDirections()
+			end))
+			menu.addWidget(item)
+			
+			item = MenuItemCommand.new("Export...", BlockActionListener.new(block ActionEvent event
+				pPanel.exportStageDirections()
+			end))
+			menu.addWidget(item)
+			
 			pPanel.getDesktop().addWindow(menu)
 			menu.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
 		end
@@ -190,6 +200,10 @@ class WMPPanelStageDirections extends CollapsibleGroup
 	protected var GameChangedListener pGameChangedListener
 	protected var StageDirectionModelChanged pStageDirectionModelChanged
 	protected var ReorderStageDirections pReorderStageDirections
+	
+	protected static var Array patternStageDirections = Array.newWith(\
+		FileExtension.new("Stage Directions", Array.newWith("*.stagedirs.xml"), ".stagedirs.xml"))
+	protected static var String lastPathStageDirections = null
 	
 	
 	
@@ -390,6 +404,42 @@ class WMPPanelStageDirections extends CollapsibleGroup
 				end
 			end
 		end))
+	end
+	
+	/** Import directions. */
+	public func void importStageDirections()
+		if pScene == null
+			return
+		end
+		
+		if lastPathStageDirections == null
+			lastPathStageDirections = (GameApp.getGameApp().getProject().getDataDirectory() + "New.stagedirs.xml").getPath()
+		end
+		DialogFileSelect.showOpenFile(getWindow(), "Import Stage Directions", patternStageDirections, lastPathStageDirections,\
+			WindowDialog.BlockResultListener.new(block Object result
+				if result != null
+					lastPathStageDirections = result cast String
+					GameApp.getGameApp().getLoadStageDirections().load(lastPathStageDirections, pScene.getStageDirections())
+				end
+			end))
+	end
+	
+	/** Export directions. */
+	public func void exportStageDirections()
+		if pScene == null
+			return
+		end
+		
+		if lastPathStageDirections == null
+			lastPathStageDirections = (GameApp.getGameApp().getProject().getDataDirectory() + "New.stagedirs.xml").getPath()
+		end
+		DialogFileSelect.showSaveFile(getWindow(), "Export Stage Directions", patternStageDirections, lastPathStageDirections,\
+			WindowDialog.BlockResultListener.new(block Object result
+				if result != null
+					lastPathStageDirections = result cast String
+					GameApp.getGameApp().getLoadStageDirections().save(lastPathStageDirections, pScene.getStageDirections())
+				end
+			end))
 	end
 	
 	

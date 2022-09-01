@@ -1,0 +1,165 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Democap.Actors
+
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+
+/**
+ * Load/Save stage directions from/to XML file.
+ */
+class LoadStageDirections extends BaseXmlLoader
+	/** Create loader. */
+	public func new(Console console) this(console, "LoadStageDirections")
+	end
+	
+	/** Create loader. */
+	public func new(Console console, String name) super(console, name)
+	end
+	
+	
+	
+	/** Load actor profile from file. */
+	public func void load(String filename, StageDirections directions)
+		logLoadingFromFile(filename)
+		
+		var EasyXML document = EasyXML.new(filename)
+		if document.hasParseFailed()
+			logParsingFailed(document.getParseLog())
+			throw EInvalidParam.new("parsing document failed")
+		end
+		
+		var EasyXMLElement root = document.getRootElement()
+		if not root.getTagName().equals("stageDirections")
+			logUnknownTag(root)
+			throw EInvalidParam.new("root tag name mismatch")
+		end
+		
+		readStageDirections(root, directions)
+	end
+	
+	/** Save stage directions to file. */
+	public func void save(String filename, StageDirections directions)
+		logSavingFromFile(filename)
+		
+		var EasyXML document = EasyXML.new()
+		var EasyXMLElement root = document.getRootElement()
+		
+		root.setTagName("stageDirections")
+		
+		writeStageDirections(root, directions)
+		
+		document.writeToFile(FileWriter.new(filename), false)
+	end
+	
+	
+	
+	/** Read stage directions tag. */
+	public func void readStageDirections(EasyXMLElement root, StageDirections directions)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("stageDirection")
+				directions.add(readStageDirection(element))
+			end
+		end)
+	end
+	
+	/** Read stage direction tag. */
+	public func StageDirection readStageDirection(EasyXMLElement root)
+		var StageDirection direction = StageDirection.new()
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("name")
+				direction.setName(element.getFirstCData())
+				
+			elif tagName.equals("content")
+				var String content = ""
+				var int i, count = element.getElementCount()
+				var EasyXMLElement child
+				
+				for i = 0 to count
+					child = element.getElementAt(i)
+					select child.getType()
+					case EasyXMLElementType.cdata
+						content = content + child.getCDataContent()
+						
+					case EasyXMLElementType.tag
+						if child.getTagName().toLower().equals("br")
+							content = content + "\n"
+						end
+					end
+				end
+				
+				direction.setContent(content)
+				
+			elif tagName.equals("image")
+				direction.setPathImage(element.getFirstCData())
+				
+			elif tagName.equals("video")
+				direction.setPathImage(element.getFirstCData())
+			end
+		end)
+		return direction
+	end
+	
+	
+	
+	/** Write stage directions. */
+	public func void writeStageDirections(EasyXMLElement root, StageDirections directions)
+		directions.forEach(block StageDirection each
+			writeStageDirection(root.addTag("stageDirection"), each)
+		end)
+	end
+	
+	/** Write stage direction. */
+	public func void writeStageDirection(EasyXMLElement root, StageDirection direction)
+		root.addDataTag("name", direction.getName())
+		if not direction.getContent().empty()
+			var EasyXMLElement tag = root.addTag("content")
+			
+			var String content = direction.getContent()
+			var int i, index, len = content.getLength()
+			while i < len
+				index = content.find('\n', i)
+				if index != -1
+					tag.addCData(content.substring(i, index))
+					tag.addTag("br")
+					i = index + 1
+					
+				else
+					tag.addCData(content.substring(i))
+					i = len
+				end
+			end
+		end
+		if not direction.getPathImage().empty()
+			root.addDataTag("image", direction.getPathImage())
+		end
+		if not direction.getPathVideo().empty()
+			root.addDataTag("video", direction.getPathVideo())
+		end
+	end
+end
