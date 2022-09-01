@@ -33,3 +33,11 @@ class MessageCodes(IntEnum):
 
 class LinkStateCodes(IntEnum):
 	RECORD_PLAYBACK = 1
+
+
+class RecordPlaybackState(IntEnum):
+	IDLE = 0
+	PREPARE_RECORDING = 1
+	RECORDING = 2
+	PLAYBACK = 3
+	PLAYBACK_PAUSED = 4

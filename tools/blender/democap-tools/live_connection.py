@@ -33,6 +33,7 @@ from .live_utils import convertBoneName, convertBoneTransform
 from .live_utils import convertPosition, convertOrientation
 from .live_utils import convertBonePosition, convertBoneOrientation
 from .live_captureactor import DemocapLiveCaptureActor
+from .live_protocol import RecordPlaybackState
 from . import DENetworkLibrary as dnl
 
 
@@ -92,6 +93,27 @@ class DemocapLiveCaptureBoneLayout:
 		self.rootBones = []
 
 
+class DemocapLiveStateRecordPlayback(dnl.state.State):
+	def __init__(self, readOnly):
+		dnl.state.State.__init__(self, readOnly)
+		self._valueStatus = dnl.value.ValueInt(dnl.value.ValueInt.Format.UINT8)
+		self.add_value(self._valueStatus)
+		self._valueFrameRate = dnl.value.ValueInt(dnl.value.ValueInt.Format.UINT8)
+		self.add_value(self._valueFrameRate)
+		self._valuePrepareTime = dnl.value.ValueFloat(dnl.value.ValueFloat.Format.FLOAT32)
+		self.add_value(self._valuePrepareTime)
+		self._valuePlaySpeed = dnl.value.ValueFloat(dnl.value.ValueFloat.Format.FLOAT32)
+		self.add_value(self._valuePlaySpeed)
+		self._valuePlayTime = dnl.value.ValueFloat(dnl.value.ValueFloat.Format.FLOAT32)
+		self.add_value(self._valuePlayTime)
+		self._valuePlayPosition = dnl.value.ValueFloat(dnl.value.ValueFloat.Format.FLOAT32)
+		self.add_value(self._valuePlayPosition)
+	
+	@property
+	def isRecording(self):
+		return self._valueStatus.value == RecordPlaybackState.RECORDING
+
+
 class DemocapLiveConnection(dnl.Connection):
 	def __init__(self):
 		dnl.Connection.__init__(self)
@@ -104,6 +126,7 @@ class DemocapLiveConnection(dnl.Connection):
 		self._captureBoneLayout = None
 		self._captureFrame = None
 		self._captureActor = None
+		self._statePlayback = None
 		startAsyncioLoop()
 	
 	def dispose(self) -> None:
@@ -131,12 +154,24 @@ class DemocapLiveConnection(dnl.Connection):
 		self._infoStatus = value
 		bpy.context.window_manager.democaptoolslive_params.connection_status = value
 	
+	@property
+	def statePlayback(self):
+		return self._statePlayback
+	
 	def connect_to_host(self, context):
 		params = context.window_manager.democaptoolslive_params
 		logger.info("DemocapLiveConnection: Connect to host='%s' port=%d",
 			params.connect_host, params.connect_port)
 		self.infoStatus = "Connecting..."
 		self.connect_to("{0}:{1}".format(params.connect_host, params.connect_port))
+	
+	def onUpdatePreview(self):
+		if self._captureActor is not None:
+			self._captureActor.onUpdatePreview()
+	
+	def captureSingleFrame(self):
+		if self._captureActor is not None:
+			self._captureActor.captureSingleFrame()
 	
 	def connection_established(self):
 		dnl.Connection.connection_established(self)
@@ -192,12 +227,14 @@ class DemocapLiveConnection(dnl.Connection):
 		with dnl.message.MessageReader(message) as r:
 			code = MessageCodes(r.read_byte())
 			if code == LinkStateCodes.RECORD_PLAYBACK.value:
-				return None
+				self._statePlayback = DemocapLiveStateRecordPlayback(read_only)
+				return self._statePlayback
 		
 		return None
 	
 	def _resetState(self):
 		self._ready = False
+		self._statePlayback = None
 		if self._captureActor is not None:
 			self._captureActor.dispose()
 			self._captureActor = None
