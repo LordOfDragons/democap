@@ -61,10 +61,8 @@ class ValueFloat(Value):
         format (ValueFloat.Format): Format of value.
 
         """
-        value_types = [ValueTypes.FLOAT16,
-                       ValueTypes.FLOAT32,
-                       ValueTypes.FLOAT64]
-        Value.__init__(self, Value.Type.FLOAT, value_types[value_format.value])
+        Value.__init__(self, Value.Type.FLOAT,
+                       ValueFloat._map_value_type[value_format])
 
         self._format = value_format
         self._value = 0.0

@@ -93,6 +93,19 @@ public class DNConnection implements ConnectionListener
 	end
 	
 	
+	/** Link server states to client. */
+	public func void linkServerStates()
+		var NetworkMessage message
+		var FileWriter writer
+		
+		// playback/record state
+		message = NetworkMessage.new()
+		writer = message.getWriter(false)
+		writer.writeByte(LinkStateCode.recordPlayback)
+		writer = null
+		pConnection.linkState(message, pServer.getStateRecordPlayback().getState(), true)
+	end
+	
 	/** Send capture bone layout message. */
 	public func void sendCaptureBoneLayout(DNCaptureBoneLayout layout)
 		if not pConnected
@@ -209,6 +222,8 @@ public class DNConnection implements ConnectionListener
 			pConnection.sendReliableMessage(response)
 			
 			pConnected = true
+			
+			linkServerStates()
 			
 		catch Exception e
 			GameApp.getGameApp().getConsole().addError("ConnectRequest failed", e)
