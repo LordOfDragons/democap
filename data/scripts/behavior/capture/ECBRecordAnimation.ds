@@ -776,7 +776,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 					captureBones()
 				end
 				
-				if pRecordAnimationObject != null
+				if pRecordAnimationObject != null and pCapturedAnimations != null
 					var BehaviorElement element = pCapturedAnimations.getElement()
 					pRecordAnimationObject.addKeyframe(pRecordTime,\
 						element.getPosition().toVector(), element.getOrientation())
@@ -958,23 +958,25 @@ class ECBRecordAnimation extends DefaultECBehavior
 			// object animation
 			if pRecordAnimationObject != null and not animObjectPath.empty()
 				animation = pRecordAnimationObject.getAnimation()
-				var String moveName = animation.getMoveName(0)
-				
-				var EasyXMLElement tagAnimation = root.addTag("capturedAnimationObject")
-				tagAnimation.addDataTag("pathAnimation", animObjectPath)
-				
-				if not animObjectRigPath.empty()
-					tagAnimation.addDataTag("pathRig", animObjectRigPath)
+				if animation != null
+					var String moveName = animation.getMoveName(0)
+					
+					var EasyXMLElement tagAnimation = root.addTag("capturedAnimationObject")
+					tagAnimation.addDataTag("pathAnimation", animObjectPath)
+					
+					if not animObjectRigPath.empty()
+						tagAnimation.addDataTag("pathRig", animObjectRigPath)
+					end
+					
+					tagAnimation.addDataTag("moveName", moveName)
+					tagAnimation.addDataTag("playtime", animation.getMovePlaytime(moveName))
+					tagAnimation.addDataTag("frameRate", pRecordAnimationObject.getFPS())
+					
+					var EasyXMLElement tagBones = tagAnimation.addTag("bones")
+					pRecordAnimationObject.forEachBone(block String each
+						tagBones.addDataTag("boneName", each)
+					end)
 				end
-				
-				tagAnimation.addDataTag("moveName", moveName)
-				tagAnimation.addDataTag("playtime", animation.getMovePlaytime(moveName))
-				tagAnimation.addDataTag("frameRate", pRecordAnimationObject.getFPS())
-				
-				var EasyXMLElement tagBones = tagAnimation.addTag("bones")
-				pRecordAnimationObject.forEachBone(block String each
-					tagBones.addDataTag("boneName", each)
-				end)
 			end
 			
 			// write to file
