@@ -95,7 +95,7 @@ class DemocapLiveCaptureBoneLayout:
 class DemocapLiveConnection(dnl.Connection):
 	def __init__(self):
 		dnl.Connection.__init__(self)
-		self._params = None
+		self._infoStatus = "Disconnected"
 		self._supportedFeatures = 0
 		self._ready = False
 		self._enabledFeatures = 0
@@ -122,17 +122,25 @@ class DemocapLiveConnection(dnl.Connection):
 	def lastFrameNumber(self):
 		return self._lastFrameNumber
 	
+	@property
+	def infoStatus(self):
+		return self._infoStatus
+	
+	@infoStatus.setter
+	def infoStatus(self, value):
+		self._infoStatus = value
+		bpy.context.window_manager.democaptoolslive_params.connection_status = value
+	
 	def connect_to_host(self, context):
-		self._params = context.window_manager.democaptoolslive_params
+		params = context.window_manager.democaptoolslive_params
 		logger.info("DemocapLiveConnection: Connect to host='%s' port=%d",
-			self._params.connect_host, self._params.connect_port)
-		self._params.connection_status = "Connecting..."
-		self.connect_to("{0}:{1}".format(self._params.connect_host, self._params.connect_port))
+			params.connect_host, params.connect_port)
+		self.infoStatus = "Connecting..."
+		self.connect_to("{0}:{1}".format(params.connect_host, params.connect_port))
 	
 	def connection_established(self):
 		dnl.Connection.connection_established(self)
-		if self._params is not None:
-			self._params.connection_status = "Connected: {0}".format(self.remote_address)
+		self.infoStatus = "Connected: {0}".format(self.remote_address)
 		message = dnl.message.Message()
 		with dnl.message.MessageWriter(message) as w:
 			w.write_byte(MessageCodes.CONNECT_REQUEST.value)
@@ -144,25 +152,23 @@ class DemocapLiveConnection(dnl.Connection):
 	def connection_failed(self, reason):
 		dnl.Connection.connection_failed(self, reason)
 		self._resetState()
-		if self._params is not None:
-			if reason == dnl.Connection.ConnectionFailedReason.GENERIC:
-				self._params.connection_status = "Failed: Generic"
-			elif reason == dnl.Connection.ConnectionFailedReason.TIMEOUT:
-				self._params.connection_status = "Failed: Timeout"
-			elif reason == dnl.Connection.ConnectionFailedReason.REJECTED:
-				self._params.connection_status = "Failed: Rejected"
-			elif reason == dnl.Connection.ConnectionFailedReason.NO_COMMON_PROTOCOL:
-				self._params.connection_status = "Failed: No Common Protocol"
-			elif reason == dnl.Connection.ConnectionFailedReason.INVALID_MESSAGE:
-				self._params.connection_status = "Failed: Invalid Message"
-			else:
-				self._params.connection_status = "Failed: ??"
+		if reason == dnl.Connection.ConnectionFailedReason.GENERIC:
+			self.infoStatus = "Failed: Generic"
+		elif reason == dnl.Connection.ConnectionFailedReason.TIMEOUT:
+			self.infoStatus = "Failed: Timeout"
+		elif reason == dnl.Connection.ConnectionFailedReason.REJECTED:
+			self.infoStatus = "Failed: Rejected"
+		elif reason == dnl.Connection.ConnectionFailedReason.NO_COMMON_PROTOCOL:
+			self.infoStatus = "Failed: No Common Protocol"
+		elif reason == dnl.Connection.ConnectionFailedReason.INVALID_MESSAGE:
+			self.infoStatus = "Failed: Invalid Message"
+		else:
+			self.infoStatus = "Failed: ??"
 	
 	def connection_closed(self):
 		dnl.Connection.connection_closed(self)
 		self._resetState()
-		if self._params is not None:
-			self._params.connection_status = "Disconnected"
+		self.infoStatus = "Disconnected"
 	
 	def message_received(self, message):
 		if not self._ready:

@@ -60,6 +60,8 @@ class DemocapLiveCaptureActor:
 			self._poseBone.location = frameBone.position
 			self._poseBone.rotation_quaternion = frameBone.orientation
 			#self._poseBone.matrix = frameBone.matrix
+			self._poseBone.keyframe_insert(data_path="location")
+			self._poseBone.keyframe_insert(data_path="rotation_quaternion")
 	
 	
 	def __init__(self, connection):
@@ -87,6 +89,10 @@ class DemocapLiveCaptureActor:
 		self._boneMapping = None
 	
 	def onFrameUpdate(self, scene):
+		screen = bpy.context.screen
+		if not screen.is_animation_playing or screen.is_scrubbing:
+			return
+		
 		self.object = scene.democaptoolslive_actor
 		if self._object is None:
 			return
@@ -98,6 +104,11 @@ class DemocapLiveCaptureActor:
 		self._captureFrame = self._connection.captureFrame
 		if self._captureFrame is None:
 			return
+		
+		self._object.location = self._captureFrame.position
+		self._object.rotation_quaternion = self._captureFrame.orientation
+		self._object.keyframe_insert(data_path="location")
+		self._object.keyframe_insert(data_path="rotation_quaternion")
 		
 		for b in self._boneMapping:
 			b.updatePose(self._captureFrame)

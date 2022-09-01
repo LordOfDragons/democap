@@ -28,6 +28,7 @@ import bpy
 import os
 import atexit
 from fnmatch import fnmatch
+from bpy.app.handlers import persistent
 
 from .configuration import Configuration
 from .utils import registerClass, flatten
@@ -162,6 +163,11 @@ bpy.types.Scene.democaptoolslive_actor = bpy.props.PointerProperty(type=bpy.type
 	poll=filterOnlyArmatures,
 	update=actorChanged)
 
+@persistent
+def onPostLoad(always_none):
+	if liveConnection is not None:
+		bpy.context.window_manager.democaptoolslive_params.connection_status = liveConnection.infoStatus
+
 def panelLiveRegister():
 	registerAsyncioOperator()
 	registerFrameUpdaterHandlers()
@@ -172,6 +178,7 @@ def panelLiveRegister():
 	registerClass(VIEW3D_PT_DemocapToolsLiveActor)
 	
 	bpy.types.WindowManager.democaptoolslive_params = bpy.props.PointerProperty(type=DemocapLiveParameters)
+	bpy.app.handlers.load_post.append(onPostLoad)
 	logger.info("registered")
 
 def onExitBlender():

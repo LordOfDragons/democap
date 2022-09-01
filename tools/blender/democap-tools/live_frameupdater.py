@@ -57,7 +57,7 @@ def onRenderComplete(scene):
 	isRendering = False
 
 @persistent
-def onFrameChangePre(scene):
+def onFrameChangePost(scene):
 	if not isRendering:
 		for x in updaters:
 			x.onFrameUpdate(scene)
@@ -66,12 +66,14 @@ def registerFrameUpdaterHandlers():
 	bpy.app.handlers.render_init.append(onRenderInit)
 	bpy.app.handlers.render_cancel.append(onRenderCancel)
 	bpy.app.handlers.render_complete.append(onRenderComplete)
-	bpy.app.handlers.frame_change_pre.append(onFrameChangePre)
+	#bpy.app.handlers.frame_change_pre.append(onFrameChangePre)
+	bpy.app.handlers.frame_change_post.append(onFrameChangePost)
 	logger.info("DEMoCapLive FrameUpdater: Registered handlers")
 
 def unregisterFrameUpdaterHandlers():
 	bpy.app.handlers.render_init.remove(onRenderInit)
 	bpy.app.handlers.render_cancel.remove(onRenderCancel)
 	bpy.app.handlers.render_complete.remove(onRenderComplete)
-	bpy.app.handlers.frame_change_pre.remove(onFrameChangePre)
+	#bpy.app.handlers.frame_change_pre.remove(onFrameChangePre)
+	bpy.app.handlers.frame_change_post.remove(onFrameChangePost)
 	logger.info("DEMoCapLive FrameUpdater: Unregistered handlers")
