@@ -101,16 +101,23 @@ class Demca:
 			else:
 				path = os.path.join(Configuration.get().pathDemocapOverlay, *components)
 		else:
-			# we have to find the project file to find the right path
+			# try first if the path is relative to the demca file
+			path = os.path.join(os.path.split(pathDemca)[0], relativePath)
+			print("**** test1 path '{}'".format(path))
+			if os.path.exists(path):
+				return path
+			
+			# otherwise the path is relative to the project file
 			basePath = os.path.split(pathDemca)[0]
-			while basePath:
+			while basePath and basePath != "/":
 				parentDir = os.path.split(basePath)[0]
+				print("**** test2 '{}'".format(parentDir))
 				if basePath.endswith("-data"):
 					if os.path.exists(os.path.join(parentDir, "{}.demcp".format(basePath[0:-5]))):
 						break
 				basePath = parentDir
 			
-			if basePath:
+			if basePath and basePath != "/":
 				path = os.path.join(basePath, path)
 			else:
 				raise Exception("Failed finding project file")
