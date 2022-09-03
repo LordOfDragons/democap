@@ -143,7 +143,9 @@ class DemocapLiveCaptureActor:
         names = pose.bones.keys()
         for i in range(len(self._boneLayout.bones)):
             layoutBone = self._boneLayout.bones[i]
-            indexPoseBone = names.index(layoutBone.name)
-            if indexPoseBone != -1:
-                self._boneMapping.append(DemocapLiveCaptureActor.BoneMapping(
-                    indexPoseBone, pose.bones[indexPoseBone], i, layoutBone))
+            try:
+                indexPoseBone = names.index(layoutBone.name)
+            except ValueError:
+                continue  # not in list
+            self._boneMapping.append(DemocapLiveCaptureActor.BoneMapping(
+                indexPoseBone, pose.bones[indexPoseBone], i, layoutBone))

@@ -207,7 +207,7 @@ class Connection(Endpoint.Listener):
         value (float): Interval in seconds.
 
         """
-        self._connect_resend_interval = max(interval, 0.01)
+        self._connect_resend_interval = max(value, 0.01)
 
     @property
     def connect_timeout(self: 'Connection') -> float:
@@ -227,7 +227,7 @@ class Connection(Endpoint.Listener):
         value (float): Interval in seconds.
 
         """
-        self._connect_timeout = max(timeout, 0.01)
+        self._connect_timeout = max(value, 0.01)
 
     @property
     def reliable_resend_interval(self: 'Connection') -> float:
@@ -267,7 +267,7 @@ class Connection(Endpoint.Listener):
         value (float): Timeout in seconds.
 
         """
-        self._reliable_timeout = max(timeout, 0.01)
+        self._reliable_timeout = max(value, 0.01)
 
     @property
     def connection_state(self: 'Connection') -> 'Connection.ConnectionState':
@@ -721,13 +721,16 @@ class Connection(Endpoint.Listener):
     def _clear_states(self: 'Connection') -> None:
         """Clear states."""
         self._modified_state_links.clear()
-        for l in self._modified_state_links:
-            state = l.state
-            if state is not None:
-                index = state.links.index(l)
-                if index != -1:
-                    l.drop_state()
-                    del state.links[index]
+        for lnk in self._modified_state_links:
+            state = lnk.state
+            if state is None:
+                continue
+            try:
+                index = state.links.index(lnk)
+            except ValueError:
+                continue  # not in list
+            lnk.drop_state()
+            del state.links[index]
         self._state_links.clear()
 
     def _close_endpoint(self: 'Connection') -> None:
@@ -745,9 +748,11 @@ class Connection(Endpoint.Listener):
         if self._parent_server is None:
             return
         self._close_endpoint()
-        index = self._parent_server.connections.index(self)
-        if index != -1:
+        try:
+            index = self._parent_server.connections.index(self)
             del self._parent_server.connections[index]
+        except ValueError:
+            pass  # not in list
         self._parent_server = None
 
     def _update_states(self: 'Connection') -> None:
@@ -877,16 +882,18 @@ class Connection(Endpoint.Listener):
         elif ack == ConnectionAck.REJECTED:
             self._close_endpoint()
             logger.info("DNL.Connection: Connection failed (rejected)")
-            self.connection_failed(ConnectionFailedReason.REJECTED)
+            self.connection_failed(Connection.ConnectionFailedReason.REJECTED)
         elif ack == ConnectionAck.NO_COMMON_PROTOCOL:
             self._close_endpoint()
             logger.info("DNL.Connection: %s",
                         "Connection failed (no common protocol)")
-            self.connection_failed(ConnectionFailedReason.NO_COMMON_PROTOCOL)
+            self.connection_failed(
+                Connection.ConnectionFailedReason.NO_COMMON_PROTOCOL)
         else:
             self._close_endpoint()
             logger.info("DNL.Connection: Connection failed (invalid message)")
-            self.connection_failed(ConnectionFailedReason.INVALID_MESSAGE)
+            self.connection_failed(
+                Connection.ConnectionFailedReason.INVALID_MESSAGE)
 
     def _process_connection_close(self: 'Connection',
                                   reader: MessageReader) -> None:
@@ -1001,8 +1008,8 @@ class Connection(Endpoint.Listener):
             return
 
         identifier = reader.read_ushort()
-        link = next((l for l in self._state_links
-                    if l.identifier == identifier), None)
+        link = next((lnk for lnk in self._state_links
+                    if lnk.identifier == identifier), None)
         if link is None or link.link_state != StateLink.LinkState.LISTENING:
             return
         link.link_state = StateLink.LinkState.UP
@@ -1014,8 +1021,8 @@ class Connection(Endpoint.Listener):
             return
 
         identifier = reader.read_ushort()
-        link = next((l for l in self._state_links
-                    if l.identifier == identifier), None)
+        link = next((lnk for lnk in self._state_links
+                    if lnk.identifier == identifier), None)
         if link is None or link.link_state != StateLink.LinkState.UP:
             return
         link.link_state = StateLink.LinkState.DOWN
@@ -1026,8 +1033,8 @@ class Connection(Endpoint.Listener):
         identifier = reader.read_ushort()
         read_only = reader.read_byte() == 1  # flags: 0x1=readOnly
 
-        link = next((l for l in self._state_links
-                    if l.identifier == identifier), None)
+        link = next((lnk for lnk in self._state_links
+                    if lnk.identifier == identifier), None)
         if link is None or link.link_state != StateLink.LinkState.DOWN:
             pass  # raise Exception("Link with identifier exists already")
 
@@ -1067,8 +1074,8 @@ class Connection(Endpoint.Listener):
         for _i in range(count):
             identifier = reader.read_ushort()
 
-            link = next((l for l in self._state_links
-                        if l.identifier == identifier), None)
+            link = next((lnk for lnk in self._state_links
+                        if lnk.identifier == identifier), None)
             if link is None or link.link_state != StateLink.LinkState.UP:
                 return
 
@@ -1117,7 +1124,7 @@ class Connection(Endpoint.Listener):
             m.elapsed_timeout = 0.0
 
             send_count = send_count + 1
-            if sendCount == self._reliable_window_size:
+            if send_count == self._reliable_window_size:
                 break
 
     async def _task_update(self: 'Connection') -> None:

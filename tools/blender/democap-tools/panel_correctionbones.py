@@ -109,8 +109,10 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
         else:
             colorSets = ['THEME{:02d}'.format(x) for x in range(1, 21)]
             for boneGroup in pose.bone_groups:
-                if boneGroup.color_set in colorSets:
+                try:
                     colorSets.remove(colorSets.index(boneGroup.color_set))
+                except ValueError:
+                    pass  # not in list
 
             if not colorSets:
                 colorSets.add('THEME01')
