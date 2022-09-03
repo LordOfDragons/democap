@@ -483,7 +483,6 @@ class CharacterAnimation
 	public func void export(Project project, String name)
 		var Project.AnimationPath path = project.exportAnimationPath(name, "deanim", "derig")
 		var File directory = project.getDataDirectory()
-		
 		if not pPath.empty()
 			FileWriter.new((directory + path.getPath()).getPath()).writeData(\
 				FileReader.new((directory + pPath).getPath()))
@@ -509,43 +508,63 @@ class CharacterAnimation
 				FileReader.new((directory + pPathObjectRig).getPath()))
 		end
 		
-		var EasyXML document = EasyXML.new((directory + pPathMeta).getPath())
-		if document.hasParseFailed()
-			GameApp.getGameApp().getConsole().addMessage(document.getParseLog())
+		var EasyXML documentSource = EasyXML.new((directory + pPathMeta).getPath())
+		if documentSource.hasParseFailed()
+			GameApp.getGameApp().getConsole().addMessage(documentSource.getParseLog())
 			throw EInvalidParam.new("parsing document failed")
 		end
 		
-		document.getRootElement().forEachTag(block EasyXMLElement tag, String tagName
+		var EasyXML document = EasyXML.new()
+		var EasyXMLElement root = document.getRootElement()
+		root.setTagName(documentSource.getRootElement().getTagName())
+		cleanXmlTag(root, documentSource.getRootElement())
+		
+		root.forEachTag(block EasyXMLElement tag, String tagName
 			if tagName.equals("capturedAnimation")
 				tag.forEachTag(block EasyXMLElement tag2, String tagName2
 					if tagName2.equals("pathAnimation")
-						tag2.getElementAt(0).setCDataContent(path.getPath())
+						//tag2.getElementAt(0).setCDataContent(path.getPath())
+						tag2.getElementAt(0).setCDataContent(File.new(path.getPath()).getComponentAt(-1))
 					end
 				end)
 				
 			elif tagName.equals("capturedAnimationDevices")
 				tag.forEachTag(block EasyXMLElement tag2, String tagName2
 					if tagName2.equals("pathAnimation")
-						tag2.getElementAt(0).setCDataContent(path.getPathDevices())
+						//tag2.getElementAt(0).setCDataContent(path.getPathDevices())
+						tag2.getElementAt(0).setCDataContent(File.new(path.getPathDevices()).getComponentAt(-1))
 						
 					elif tagName2.equals("pathRig")
-						tag2.getElementAt(0).setCDataContent(path.getPathDevicesRig())
+						//tag2.getElementAt(0).setCDataContent(path.getPathDevicesRig())
+						tag2.getElementAt(0).setCDataContent(File.new(path.getPathDevicesRig()).getComponentAt(-1))
 					end
 				end)
 				
 			elif tagName.equals("capturedAnimationObject")
 				tag.forEachTag(block EasyXMLElement tag2, String tagName2
 					if tagName2.equals("pathAnimation")
-						tag2.getElementAt(0).setCDataContent(path.getPathObject())
+						//tag2.getElementAt(0).setCDataContent(path.getPathObject())
+						tag2.getElementAt(0).setCDataContent(File.new(path.getPathObject()).getComponentAt(-1))
 						
 					elif tagName2.equals("pathRig")
-						tag2.getElementAt(0).setCDataContent(path.getPathObjectRig())
+						//tag2.getElementAt(0).setCDataContent(path.getPathObjectRig())
+						tag2.getElementAt(0).setCDataContent(File.new(path.getPathObjectRig()).getComponentAt(-1))
 					end
 				end)
 			end
 		end)
 		
 		document.writeToFile(FileWriter.new((directory + path.getPathMeta()).getPath()), false)
+	end
+	
+	protected func void cleanXmlTag(EasyXMLElement root, EasyXMLElement source)
+		source.forEachTag(block EasyXMLElement tag, String tagName
+			var EasyXMLElement cleaned = root.addTag(tagName)
+			cleanXmlTag(cleaned, tag)
+			if cleaned.getElementCount() == 0
+				cleaned.addCData(tag.getFirstCData())
+			end
+		end)
 	end
 	
 	
