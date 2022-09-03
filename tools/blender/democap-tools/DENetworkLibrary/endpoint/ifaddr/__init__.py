@@ -41,5 +41,5 @@ def interfaces() -> List[str]:
     List[str]: List of interfaces.
 
     """
-    adapters = ifaddr.get_adapters(include_unconfigured=True)
+    adapters = get_adapters(include_unconfigured=True)
     return [a.name for a in adapters]
