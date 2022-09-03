@@ -726,11 +726,10 @@ class Connection(Endpoint.Listener):
             if state is None:
                 continue
             try:
-                index = state.links.index(lnk)
+                state.links.remove(lnk)
             except ValueError:
                 continue  # not in list
             lnk.drop_state()
-            del state.links[index]
         self._state_links.clear()
 
     def _close_endpoint(self: 'Connection') -> None:
@@ -749,8 +748,7 @@ class Connection(Endpoint.Listener):
             return
         self._close_endpoint()
         try:
-            index = self._parent_server.connections.index(self)
-            del self._parent_server.connections[index]
+            self._parent_server.connections.remove(self)
         except ValueError:
             pass  # not in list
         self._parent_server = None
@@ -861,8 +859,7 @@ class Connection(Endpoint.Listener):
             elif message.type == CommandCodes.RELIABLE_LINK_STATE:
                 self._process_link_state(MessageReader(message.message))
 
-            del self._reliable_messages_recv[
-                self._reliable_messages_recv.index(message)]
+            self._reliable_messages_recv.remove(message)
             self._reliable_number_recv = (
                 self._reliable_number_recv + 1) % 65535
 

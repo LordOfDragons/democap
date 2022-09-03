@@ -114,9 +114,8 @@ class State:
         value (Value): Value to remove.
 
         """
-        index = self._values.index(value)  # raises exception if absent
+        self._values.remove(value)
         value.state = None
-        del self._values[index]
 
         index = 0
         for value in self._values:
