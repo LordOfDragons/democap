@@ -45,6 +45,7 @@ class ECBAttachHandle extends DefaultECBehavior
 		private var Vector pRotation
 		private var float pScale
 		private var bool pAbsolute
+		private var bool pFixScale
 		
 		
 		
@@ -57,11 +58,12 @@ class ECBAttachHandle extends DefaultECBehavior
 		public func void init(StubElement stub)
 			var CodecPropertyString codec = getElement().getClass().getCodecPropertyString()
 			
-			pPosition = pECBehavior.getPosition().getVector(stub, codec)
-			pOffset = pECBehavior.getOffset().getVector(stub, codec)
-			pRotation = pECBehavior.getRotation().getVector(stub, codec)
-			pScale = DEMath.max(pECBehavior.getScale().getValue(stub), 0.0)
-			pAbsolute = pECBehavior.getAbsolute().getValue(stub)
+			pPosition = pECBehavior.position.getVector(stub, codec)
+			pOffset = pECBehavior.offset.getVector(stub, codec)
+			pRotation = pECBehavior.rotation.getVector(stub, codec)
+			pScale = DEMath.max(pECBehavior.scale.getValue(stub), 0.0)
+			pAbsolute = pECBehavior.absolute.getValue(stub)
+			pFixScale = pECBehavior.fixScale.getValue(stub)
 		end
 		
 		
@@ -95,6 +97,11 @@ class ECBAttachHandle extends DefaultECBehavior
 		/** Attach absolute or relative. */
 		public func bool getAbsolute()
 			return pAbsolute
+		end
+		
+		/** Fix scale. */
+		public func bool getFixScale()
+			return pFixScale
 		end
 		
 		
@@ -132,7 +139,12 @@ class ECBAttachHandle extends DefaultECBehavior
 			var Vector parentSize = parentMaxExtend - parentMinExtend
 			var Vector parentCenter = (parentMinExtend + parentMaxExtend) / 2
 			var Vector parentHalfSize = (parentSize / 2).largest(Vector.new(0.01, 0.01, 0.01))
-			var float scaleValue = DEMath.max(parentSih.getHandleSize() * pScale, 0.01)
+			
+			var float scaleValue = pScale
+			if not pFixScale
+				scaleValue *= parentSih.getHandleSize()
+			end
+			scaleValue = DEMath.max(scaleValue, 0.01)
 			var Vector scale = Vector.new(scaleValue, scaleValue, scaleValue)
 			
 			// position and rotation
@@ -158,7 +170,7 @@ class ECBAttachHandle extends DefaultECBehavior
 			var BehaviorElement element = getElement()
 			element.setGeometry(position, orientation, scale)
 			
-			var Collider collider = pECBehavior.getAttachable().instance(element).getCollider().getCollider()
+			var Collider collider = pECBehavior.attachable.instance(element).getCollider().getCollider()
 			parentCollider.attachStatic(collider)
 			
 			element.setParent(parent)
@@ -167,12 +179,31 @@ class ECBAttachHandle extends DefaultECBehavior
 	
 	
 	
-	protected var ECBehaviorAttachable pAttachable
-	protected var ECPVector pPosition
-	protected var ECPVector pOffset
-	protected var ECPVector pRotation
-	protected var ECPFloat pScale
-	protected var ECPBoolean pAbsolute
+	public var ECBehaviorAttachable attachable
+	
+	/**
+	 * Position for each axis relative to parent element. Uses 0 for center, positive value
+	 * for positive axis and negative value for negative axis. Position vector is multiplied
+	 * by half-size of parent.
+	 */
+	public var ECPVector position
+	
+	/**
+	 * Offset relative to position affected by scaling but not parent element size.
+	 */
+	public var ECPVector offset
+	
+	/** Rotation relative to parent element. */
+	public var ECPVector rotation
+	
+	/** Resizes element relative to size of parent. */
+	public var ECPFloat scale
+	
+	/** Attach absolute or relative. */
+	public var ECPBoolean absolute
+	
+	/** Fixed scale. */
+	public var ECPBoolean fixScale
 	
 	
 	
@@ -183,68 +214,33 @@ class ECBAttachHandle extends DefaultECBehavior
 		end
 		
 		var String prefix = "attachHandle."
-		pAttachable = attachable
+		this.attachable = attachable
 		
-		pPosition = ECPVector.new(prefix + "position", Vector.new())
-		eclass.addProperty(pPosition)
+		position = ECPVector.new(prefix + "position", Vector.new())
+		eclass.addProperty(position)
 		
-		pOffset = ECPVector.new(prefix + "offset", Vector.new())
-		eclass.addProperty(pOffset)
+		offset = ECPVector.new(prefix + "offset", Vector.new())
+		eclass.addProperty(offset)
 		
-		pRotation = ECPVector.new(prefix + "rotation", Vector.new())
-		eclass.addProperty(pRotation)
+		rotation = ECPVector.new(prefix + "rotation", Vector.new())
+		eclass.addProperty(rotation)
 		
-		pScale = ECPFloat.new(prefix + "scale", 1, 0)
-		eclass.addProperty(pScale)
+		scale = ECPFloat.new(prefix + "scale", 1, 0)
+		eclass.addProperty(scale)
 		
-		pAbsolute = ECPBoolean.new(prefix + "absolute", false)
-		eclass.addProperty(pAbsolute)
+		absolute = ECPBoolean.new(prefix + "absolute", false)
+		eclass.addProperty(absolute)
+		
+		fixScale = ECPBoolean.new(prefix + "fixScale", false)
+		eclass.addProperty(fixScale)
 		
 		eclass.addBehavior(this)
 	end
 	
 	/** Dispose of behavior. */
 	public func void dispose()
-		pAttachable = null
+		attachable = null
 		super.dispose()
-	end
-	
-	
-	
-	/** Attachable behavior. */
-	public func ECBehaviorAttachable getAttachable()
-		return pAttachable
-	end
-	
-	/**
-	 * Position for each axis relative to parent element. Uses 0 for center, positive value
-	 * for positive axis and negative value for negative axis. Position vector is multiplied
-	 * by half-size of parent.
-	 */
-	public func ECPVector getPosition()
-		return pPosition
-	end
-	
-	/**
-	 * Offset relative to position affected by scaling but not parent element size.
-	 */
-	public func ECPVector getOffset()
-		return pOffset
-	end
-	
-	/** Rotation relative to parent element. */
-	public func ECPVector getRotation()
-		return pRotation
-	end
-	
-	/** Resizes element relative to size of parent. */
-	public func ECPFloat getScale()
-		return pScale
-	end
-	
-	/** Attach absolute or relative. */
-	public func ECPBoolean getAbsolute()
-		return pAbsolute
 	end
 	
 	
