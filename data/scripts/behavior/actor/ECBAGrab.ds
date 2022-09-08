@@ -369,10 +369,6 @@ class ECBAGrab extends DefaultECBehavior
 			var ECBehaviorCollider.Instance parentCollider = grabAttach.getParentCollider()
 			
 			if attachable != null
-				if not ECBColliderPhysics.actorCanGrab(grabAttach.getElement())
-					return false
-				end
-				
 				// grab using predefined position
 				/*
 				var ECBehaviorGrabSpot.Instance grabSpot = grabAttach.getGrabSpot()
@@ -389,7 +385,18 @@ class ECBAGrab extends DefaultECBehavior
 				// physics simulated objects have to be physically attached
 				var Collider attachingCollider = attachable.getCollider().getCollider()
 				if attachingCollider.getResponseType() == CollisionResponse.dynamic
-					return tryGrabAttachDynamic(grabAttach)
+					if tryGrabAttachDynamic(grabAttach)
+						pGrabber.regrab(grabAttach.getGrabSpot())
+						breakPlayback(attachable.getElement())
+						return true
+					end
+					return false
+				end
+				
+				// attach instead of collider constraint. has to check actorCanGrab
+				// to avoid accidently moving objects
+				if not ECBColliderPhysics.actorCanGrab(grabAttach.getElement())
+					return false
 				end
 				
 				pGrabber.regrab(grabAttach.getGrabSpot())
@@ -398,15 +405,22 @@ class ECBAGrab extends DefaultECBehavior
 				breakPlayback(attachable.getElement())
 				
 			elif parentCollider != null
-				if not ECBColliderPhysics.actorCanGrab(parentCollider.getElement())
-					return false
-				end
-				
 				var Collider attachingCollider = parentCollider.getCollider()
 				
 				// physics simulated objects have to be physically attached
 				if attachingCollider.getResponseType() == CollisionResponse.dynamic
-					return tryGrabAttachDynamic(grabAttach)
+					if tryGrabAttachDynamic(grabAttach)
+						pGrabber.regrab(grabAttach.getGrabSpot())
+						breakPlayback(parentCollider.getElement())
+						return true
+					end
+					return false
+				end
+				
+				// attach instead of collider constraint. has to check actorCanGrab
+				// to avoid accidently moving objects
+				if not ECBColliderPhysics.actorCanGrab(grabAttach.getElement())
+					return false
 				end
 				
 				pGrabber.regrab(grabAttach.getGrabSpot())
