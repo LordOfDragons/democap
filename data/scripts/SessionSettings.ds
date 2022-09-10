@@ -130,6 +130,18 @@ public class SessionSettings
 		end
 	end
 	
+	class ToggleFullBright extends DefaultToggleModelListener
+		public func new()
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+			if gameWorld != null
+				gameWorld.getWorld().setDisableLights(model.getToggled())
+			end
+		end
+	end
+	
 	class SaveRangeModelChanged extends DefaultRangeModelListener
 		private var String pSettingPath
 		private var float pScale
@@ -198,6 +210,7 @@ public class SessionSettings
 	private var DefaultToggleModel pModelAutoStopRecord
 	private var DefaultRangeModel pModelInteractionBubbleSize
 	private var DefaultToggleModel pModelCameraEnableGI
+	private var DefaultToggleModel pModelFullBright
 	
 	private var DefaultListModel pModelHudCamera
 	private var DefaultToggleModel pModelShowVRControllers
@@ -247,6 +260,10 @@ public class SessionSettings
 		pModelCameraEnableGI = DefaultToggleModel.new(s.getBoolAt("CameraEnableGI", false))
 		pModelCameraEnableGI.addListener(SaveToggleModelChanged.new("CameraEnableGI"))
 		pModelCameraEnableGI.addListener(ToggleCameraEnableGI.new())
+		
+		pModelFullBright = DefaultToggleModel.new(s.getBoolAt("FullBright", false))
+		pModelFullBright.addListener(SaveToggleModelChanged.new("FullBright"))
+		pModelFullBright.addListener(ToggleFullBright.new())
 		
 		pModelHudCamera = DefaultListModel.new()
 		pModelHudCamera.add(null)
@@ -350,6 +367,11 @@ public class SessionSettings
 	/** Camera enable GI model. */
 	public func DefaultToggleModel getModelCameraEnableGI()
 		return pModelCameraEnableGI
+	end
+	
+	/** Full bright model. */
+	public func DefaultToggleModel getModelFullBright()
+		return pModelFullBright
 	end
 	
 	
