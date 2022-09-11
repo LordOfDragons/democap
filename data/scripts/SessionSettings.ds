@@ -106,6 +106,28 @@ public class SessionSettings
 		end
 	end
 	
+	class ToggleEnableHMDListener extends DefaultToggleModelListener
+		public func new()
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			var GameApp app = GameApp.getGameApp()
+			var Camera camera = app.getVRCamera()
+			if camera == null or app.getHmdDisabledWorld() == null
+				return
+			end
+			
+			if model.getToggled()
+				app.getHmdDisabledWorld().getWorld().removeCamera(camera)
+				app.getWindowGameWorld().getGameWorld().getWorld().addCamera(camera)
+				
+			else
+				app.getWindowGameWorld().getGameWorld().getWorld().removeCamera(camera)
+				app.getHmdDisabledWorld().getWorld().addCamera(camera)
+			end
+		end
+	end
+	
 	class ToggleCameraEnableGI extends DefaultToggleModelListener
 		public func new()
 		end
@@ -233,6 +255,7 @@ public class SessionSettings
 		pModelEnableVR.addListener(ToggleEnableVRListener.new())
 		
 		pModelEnableHMD = DefaultToggleModel.new(true)
+		pModelEnableHMD.addListener(ToggleEnableHMDListener.new())
 		
 		pModelShowVRCamera = DefaultToggleModel.new(false)
 		pModelShowVRCamera.addListener(ToggleShowVRCameraListener.new())

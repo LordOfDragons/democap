@@ -1,0 +1,122 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+
+pin Dragengine.Gui
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * World shown to actor if HMD is disabled by the operator.
+ */
+class HmdDisabledWorld extends GameWorld
+	class LoadResources implements ResourceListener
+		private static var String pathModelGallery = "/content/models/vrgallery/vrgallery.demodel"
+		private static var String pathSkinGallery = "/content/models/vrgallery/vrgrallery.deskin"
+		private var int pCounter
+		private var HmdDisabledWorld pWorld
+		
+		public var Model modelGallery
+		public var Skin skinGallery
+		
+		public func new(HmdDisabledWorld world)
+			pWorld = world
+			Model.loadAsynchron(pathModelGallery, this)
+			Skin.loadAsynchron(pathSkinGallery, this)
+		end
+		
+		public func void finishedLoading(String filename, ResourceLoaderType resourceType, Object resource)
+			if filename.equals(pathModelGallery)
+				modelGallery = resource cast Model
+			elif filename.equals(pathSkinGallery)
+				skinGallery = resource cast Skin
+			end
+			pCounter++
+			checkFinished()
+		end
+		
+		public func void failedLoading(String filename, ResourceLoaderType resourceType)
+			pCounter++
+			checkFinished()
+		end
+		
+		private func void checkFinished()
+			if pCounter == 2
+				pWorld.createResources(this)
+			end
+		end
+	end
+	
+	private class FrameUpdater extends FrameUpdateListener
+		private var HmdDisabledWorld pWorld
+		
+		public func new(HmdDisabledWorld world)
+			pWorld = world
+		end
+		
+		public func void frameUpdate(float elapsed)
+			pWorld.update(elapsed)
+		end
+	end
+	
+	
+	private var FrameUpdater pUpdater
+	
+	
+	/** Create game world. */
+	public func new()
+		var World world = getWorld()
+		
+		world.setDisableLights(true)
+		
+		var Sky sky = Sky.new()
+		sky.setBgColor(Color.new(0, 0.5, 1))
+		sky.setLayerCount(1)
+		var SkyLayer skyLayer = sky.getLayerAt(0)
+		skyLayer.setAmbientIntensity(1)
+		skyLayer.setLightIntensity(0)
+		var SkyInstance skyInstance = SkyInstance.new()
+		skyInstance.setSky(sky)
+		world.addSky(skyInstance)
+		
+		LoadResources.new(this)
+		
+		pUpdater = FrameUpdater.new(this)
+	end
+	
+	/** Dispose of game world. */
+	public func void dispose()
+		if pUpdater != null
+			pUpdater.giveUp()
+			pUpdater = null
+		end
+		
+		super.dispose()
+	end
+	
+	public func void createResources(LoadResources loader)
+		if loader.modelGallery != null and loader.skinGallery != null
+			getWorld().addComponent(Component.new(loader.modelGallery, loader.skinGallery))
+		end
+	end
+end

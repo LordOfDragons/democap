@@ -100,7 +100,7 @@ class GameApp extends BaseGameApp
 	private var String pGameArgsLoadProject
 	
 	private var DNServer pServer
-	
+	private var HmdDisabledWorld pHmdDisabledWorld
 	
 	
 	/**
@@ -351,6 +351,9 @@ class GameApp extends BaseGameApp
 		return pPatternsProject
 	end
 	
+	public func HmdDisabledWorld getHmdDisabledWorld()
+		return pHmdDisabledWorld
+	end
 	
 	
 	/** Add listener. */
@@ -470,6 +473,9 @@ class GameApp extends BaseGameApp
 			getSettings().setAt("firstRun", version)
 			saveSettings()
 		end
+		
+		// create hmd disabled world. this starts loading the resources asynchronously
+		pHmdDisabledWorld = HmdDisabledWorld.new()
 		
 		// set input processor to forward mouse and keyboard input to the desktop widget
 		// while processing all other inputs using bindings. adding, removing and changing
@@ -751,6 +757,11 @@ class GameApp extends BaseGameApp
 		pPlaybackScene = null
 		pRecordScene = null
 		
+		if pHmdDisabledWorld != null
+			pHmdDisabledWorld.dispose()
+			pHmdDisabledWorld = null
+		end
+		
 		super.cleanUp()
 	end
 	
@@ -764,7 +775,12 @@ class GameApp extends BaseGameApp
 		
 		pWorldSpawnCharacter.setGameWorld(getWindowGameWorld().getGameWorld())
 		
-		getWindowGameWorld().getGameWorld().getWorld().addCamera(pVRCamera)
+		if pSessionSettings.getModelEnableHMD().getToggled()
+			getWindowGameWorld().getGameWorld().getWorld().addCamera(pVRCamera)
+			
+		else
+			pHmdDisabledWorld.getWorld().addCamera(pVRCamera)
+		end
 		
 		pListeners.forEach(block GameListener each
 			each.gameWorldChanged(this)
