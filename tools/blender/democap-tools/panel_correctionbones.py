@@ -26,6 +26,7 @@ import mathutils
 import bpy
 import os
 from fnmatch import fnmatch
+from math import pi
 
 from .configuration import Configuration
 from .utils import registerClass, flatten
@@ -102,6 +103,7 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
 
             if useWorldSpace:
                 bone.tail = bone.head + mathutils.Vector((0, bone.length, 0))
+                bone.roll = 0
                 bone.parent = None
 
             addedBones.append((orgPoseBone.name, newName))
@@ -135,32 +137,84 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
         for addedBone in addedBones:
             poseBone = pose.bones[addedBone[0]]
 
-            if adjustLocation:
-                constraint = poseBone.constraints.new('COPY_TRANSFORMS')
+            if useWorldSpace:
+                constraint = poseBone.constraints.new('TRANSFORM')
                 constraint.influence = 1
-                constraint.name = constraintNameAdjustTransform
+                constraint.name = constraintNameAdjustRotation
                 constraint.show_expanded = True
-                if useWorldSpace:
-                    constraint.owner_space = 'LOCAL'
-                    constraint.target_space = 'WORLD'
-                else:
-                    constraint.owner_space = 'LOCAL'
-                    constraint.target_space = 'LOCAL'
+                constraint.from_min_x_rot = -pi
+                constraint.from_min_y_rot = -pi
+                constraint.from_min_z_rot = -pi
+                constraint.from_max_x_rot = pi
+                constraint.from_max_y_rot = pi
+                constraint.from_max_z_rot = pi
+                constraint.to_min_x_rot = -pi
+                constraint.to_min_y_rot = -pi
+                constraint.to_min_z_rot = -pi
+                constraint.to_max_x_rot = pi
+                constraint.to_max_y_rot = pi
+                constraint.to_max_z_rot = pi
+                constraint.owner_space = 'WORLD'
+                constraint.target_space = 'WORLD'
                 constraint.target = object
                 constraint.subtarget = addedBone[1]
-                constraint.mix_mode = 'BEFORE'
-                constraint.head_tail = 0
-            else:
+                constraint.from_rotation_mode = 'AUTO'
+                constraint.to_euler_order = 'AUTO'
+                constraint.map_to_x_from = 'X'
+                constraint.map_to_y_from = 'Y'
+                constraint.map_to_z_from = 'Z'
+                constraint.map_from = 'ROTATION'
+                constraint.map_to = 'ROTATION'
+                constraint.use_motion_extrapolate = True
+                constraint.mix_mode_rot = 'BEFORE'
+
+            if adjustLocation:
+                if useWorldSpace:
+                    constraint = poseBone.constraints.new('TRANSFORM')
+                    constraint.influence = 1
+                    constraint.name = constraintNameAdjustRotation + ".loc"
+                    constraint.show_expanded = True
+                    constraint.from_min_x = 0
+                    constraint.from_min_y = 0
+                    constraint.from_min_z = 0
+                    constraint.from_max_x = 1
+                    constraint.from_max_y = 1
+                    constraint.from_max_z = 1
+                    constraint.to_min_x = 0
+                    constraint.to_min_y = 0
+                    constraint.to_min_z = 0
+                    constraint.to_max_x = 1
+                    constraint.to_max_y = 1
+                    constraint.to_max_z = 1
+                    constraint.owner_space = 'WORLD'
+                    constraint.target_space = 'LOCAL'
+                    constraint.target = object
+                    constraint.subtarget = addedBone[1]
+                    constraint.map_to_x_from = 'X'
+                    constraint.map_to_y_from = 'Y'
+                    constraint.map_to_z_from = 'Z'
+                    constraint.map_from = 'LOCATION'
+                    constraint.map_to = 'LOCATION'
+                    constraint.use_motion_extrapolate = True
+                    constraint.mix_mode_rot = 'ADD'
+                else:
+                    constraint = poseBone.constraints.new('COPY_TRANSFORMS')
+                    constraint.influence = 1
+                    constraint.name = constraintNameAdjustTransform
+                    constraint.show_expanded = True
+                    constraint.owner_space = 'LOCAL'
+                    constraint.target_space = 'LOCAL'
+                    constraint.target = object
+                    constraint.subtarget = addedBone[1]
+                    constraint.mix_mode = 'BEFORE'
+                    constraint.head_tail = 0
+            elif not useWorldSpace:
                 constraint = poseBone.constraints.new('COPY_ROTATION')
                 constraint.influence = 1
                 constraint.name = constraintNameAdjustRotation
                 constraint.show_expanded = True
-                if useWorldSpace:
-                    constraint.owner_space = 'LOCAL'
-                    constraint.target_space = 'WORLD'
-                else:
-                    constraint.owner_space = 'LOCAL'
-                    constraint.target_space = 'LOCAL'
+                constraint.owner_space = 'LOCAL'
+                constraint.target_space = 'LOCAL'
                 constraint.target = object
                 constraint.subtarget = addedBone[1]
                 constraint.euler_order = 'AUTO'
@@ -196,11 +250,11 @@ class VIEW3D_PT_DemocapToolsCorrectionBones(bpy.types.Panel):
                      text="Add Rot").adjustLocation = False
         row.operator("democaptools.addcorrectionbones",
                      text="Add Rot+Loc").adjustLocation = True
-        """
+
         row = layout.row(align=True)
         row.prop(windowManager, "democaptools_corrbones_worldspace",
                  expand=True)
-        """
+
         column = layout.row().column(align=True)
         column.operator("democaptools.copybonetransform",
                         text="Copy Bone Matrices", icon='COPYDOWN')
