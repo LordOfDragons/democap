@@ -71,11 +71,13 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
         constraintNameAdjustRotation = \
             ARMATURE_OT_AddCorrectionBones.constraintNameAdjustRotation
 
+        windowManager = context.window_manager
         object = context.active_object
         armature = object.data
         selectedBones = list(context.selected_pose_bones[:])
         adjustLocation = self.adjustLocation
         scaleLength = self.scaleLength
+        useWorldSpace = windowManager.democaptools_corrbones_worldspace
 
         # add edit bone
         bpy.ops.object.mode_set(mode='EDIT')
@@ -97,6 +99,11 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
             bone.layers = orgEditBone.layers
             bone.parent = orgEditBone.parent
             bone.select = True
+
+            if useWorldSpace:
+                bone.tail = bone.head + mathutils.Vector((0, bone.length, 0))
+                bone.parent = None
+
             addedBones.append((orgPoseBone.name, newName))
 
         # add pose bone to bone group
@@ -132,9 +139,13 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
                 constraint = poseBone.constraints.new('COPY_TRANSFORMS')
                 constraint.influence = 1
                 constraint.name = constraintNameAdjustTransform
-                constraint.owner_space = 'LOCAL'
                 constraint.show_expanded = True
-                constraint.target_space = 'LOCAL'
+                if useWorldSpace:
+                    constraint.owner_space = 'LOCAL'
+                    constraint.target_space = 'WORLD'
+                else:
+                    constraint.owner_space = 'LOCAL'
+                    constraint.target_space = 'LOCAL'
                 constraint.target = object
                 constraint.subtarget = addedBone[1]
                 constraint.mix_mode = 'BEFORE'
@@ -143,9 +154,13 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
                 constraint = poseBone.constraints.new('COPY_ROTATION')
                 constraint.influence = 1
                 constraint.name = constraintNameAdjustRotation
-                constraint.owner_space = 'LOCAL'
                 constraint.show_expanded = True
-                constraint.target_space = 'LOCAL'
+                if useWorldSpace:
+                    constraint.owner_space = 'LOCAL'
+                    constraint.target_space = 'WORLD'
+                else:
+                    constraint.owner_space = 'LOCAL'
+                    constraint.target_space = 'LOCAL'
                 constraint.target = object
                 constraint.subtarget = addedBone[1]
                 constraint.euler_order = 'AUTO'
@@ -181,7 +196,11 @@ class VIEW3D_PT_DemocapToolsCorrectionBones(bpy.types.Panel):
                      text="Add Rot").adjustLocation = False
         row.operator("democaptools.addcorrectionbones",
                      text="Add Rot+Loc").adjustLocation = True
-
+        """
+        row = layout.row(align=True)
+        row.prop(windowManager, "democaptools_corrbones_worldspace",
+                 expand=True)
+        """
         column = layout.row().column(align=True)
         column.operator("democaptools.copybonetransform",
                         text="Copy Bone Matrices", icon='COPYDOWN')
@@ -330,3 +349,8 @@ def panelCorrectionBonesRegister():
 
     bpy.types.WindowManager.democaptools_copybuffer_bonetransforms = \
         bpy.props.CollectionProperty(type=CopyBufferBoneTransform)
+    bpy.types.WindowManager.democaptools_corrbones_worldspace = \
+        bpy.props.BoolProperty(
+            name="Use World Space",
+            default=False,
+            description="Use World Space instead of Local Space")
