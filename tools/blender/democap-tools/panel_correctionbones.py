@@ -88,7 +88,10 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
 
         for orgPoseBone in selectedBones:
             orgEditBone = armature.edit_bones[orgPoseBone.name]
-            newName = boneNamePrefix + orgPoseBone.name
+            newName = boneNamePrefix
+            if useWorldSpace:
+                newName = newName + "w."
+            newName = newName + orgPoseBone.name
             if newName in armature.edit_bones:
                 continue
 
@@ -172,7 +175,7 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
                 if useWorldSpace:
                     constraint = poseBone.constraints.new('TRANSFORM')
                     constraint.influence = 1
-                    constraint.name = constraintNameAdjustRotation + ".loc"
+                    constraint.name = constraintNameAdjustTransform
                     constraint.show_expanded = True
                     constraint.from_min_x = 0
                     constraint.from_min_y = 0
@@ -300,10 +303,11 @@ class ARMATURE_OT_CopyBoneTransform(bpy.types.Operator):
             bone.name = selectedBone.name
             bone.matrix = flatten(selectedBone.matrix)
 
-            # if this is a correction bone also copy the original
-            # bone for convenience
+            # if this is correction bone also copy the original bone
             if selectedBone.name.startswith(boneNamePrefix):
                 stateName = selectedBone.name[len(boneNamePrefix):]
+                if stateName.startswith("w."):
+                    stateName = stateName[2:]
                 if stateName in pose.bones:
                     selectedBone = pose.bones[stateName]
                     bone = copybuffer.add()
@@ -319,11 +323,13 @@ class ARMATURE_OT_AlignCorrectionBones(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     class BoneState:
-        def __init__(self, orgBone, correctedBone, boneChain, matrix):
+        def __init__(self, orgBone, correctedBone, boneChain,
+                     matrix, useWorldSpace):
             self.orgBone = orgBone
             self.correctedBone = correctedBone
             self.boneChain = boneChain
             self.matrix = matrix
+            self.useWorldSpace = useWorldSpace
 
     @classmethod
     def poll(cls, context):
@@ -355,7 +361,8 @@ class ARMATURE_OT_AlignCorrectionBones(bpy.types.Operator):
         for cb in context.window_manager.democaptools_copybuffer_bonetransforms:
             copybuffer[cb.name] = cb.matrix
 
-        pose = context.active_object.pose
+        obj = context.active_object
+        pose = obj.pose
 
         boneStates = []
         for correctedBone in context.selected_pose_bones:
@@ -363,6 +370,9 @@ class ARMATURE_OT_AlignCorrectionBones(bpy.types.Operator):
                 continue
 
             stateName = correctedBone.name[len(boneNamePrefix):]
+            useWorldSpace = stateName.startswith("w.")
+            if useWorldSpace:
+                stateName = stateName[2:]
             if stateName not in pose.bones or stateName not in copybuffer:
                 continue
 
@@ -378,12 +388,19 @@ class ARMATURE_OT_AlignCorrectionBones(bpy.types.Operator):
             boneStates.insert(insertBefore,
                               ARMATURE_OT_AlignCorrectionBones.BoneState(
                                   orgBone, correctedBone, boneChain,
-                                  copybuffer[stateName]))
+                                  copybuffer[stateName], useWorldSpace))
+
+        matFlip = mathutils.Matrix.Rotation(pi, 4, 'Z')
 
         for boneState in boneStates:
-            boneState.correctedBone.matrix = (
-                boneState.matrix @ boneState.orgBone.matrix.inverted()
-                @ boneState.correctedBone.matrix)
+            orgmat = boneState.orgBone.matrix
+            invorgmat = orgmat.inverted()
+            pastemat = boneState.matrix
+            corrmat = boneState.correctedBone.matrix
+
+            corrmat = pastemat @ invorgmat @ corrmat
+
+            boneState.correctedBone.matrix = corrmat
 
             if not [x for x in boneState.orgBone.constraints
                     if x.name == constraintNameAdjustTransform]:
