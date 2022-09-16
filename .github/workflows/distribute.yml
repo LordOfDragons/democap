@@ -39,8 +39,9 @@ jobs:
       - name: Git LFS Pull
         if: ${{ inputs.lfscache }}
         run: |
-          git lfs pull 2>&1 | tee lfs.log
+          GIT_TRACE=1 GIT_CURL_VERBOSE=1 git lfs pull 2>&1 | tee lfs.log
           if grep -q "error:" "lfs.log" ; then
+            git lfs logs last
             exit 1
           fi
       
