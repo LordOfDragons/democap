@@ -43,6 +43,8 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
     boneNamePrefix = "ik.mocap."
     constraintNameAdjustRotation = "DEMoCap Correction Rotation"
     constraintNameAdjustTransform = "DEMoCap Correction Transform"
+    constraintNameAdjustRotationWorld = "DEMoCap Correction Rotation World"
+    constraintNameAdjustTransformWorld = "DEMoCap Correction Transform World"
 
     adjustLocation: bpy.props.BoolProperty(
         name="Adjust Location", default=False)
@@ -71,6 +73,10 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
             ARMATURE_OT_AddCorrectionBones.constraintNameAdjustTransform
         constraintNameAdjustRotation = \
             ARMATURE_OT_AddCorrectionBones.constraintNameAdjustRotation
+        constraintNameAdjustTransformWorld = \
+            ARMATURE_OT_AddCorrectionBones.constraintNameAdjustTransformWorld
+        constraintNameAdjustRotationWorld = \
+            ARMATURE_OT_AddCorrectionBones.constraintNameAdjustRotationWorld
 
         windowManager = context.window_manager
         object = context.active_object
@@ -143,7 +149,7 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
             if useWorldSpace:
                 constraint = poseBone.constraints.new('TRANSFORM')
                 constraint.influence = 1
-                constraint.name = constraintNameAdjustRotation
+                constraint.name = constraintNameAdjustRotationWorld
                 constraint.show_expanded = True
                 constraint.from_min_x_rot = -pi
                 constraint.from_min_y_rot = -pi
@@ -175,7 +181,7 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
                 if useWorldSpace:
                     constraint = poseBone.constraints.new('TRANSFORM')
                     constraint.influence = 1
-                    constraint.name = constraintNameAdjustTransform
+                    constraint.name = constraintNameAdjustTransformWorld
                     constraint.show_expanded = True
                     constraint.from_min_x = 0
                     constraint.from_min_y = 0
@@ -356,6 +362,13 @@ class ARMATURE_OT_AlignCorrectionBones(bpy.types.Operator):
             ARMATURE_OT_AddCorrectionBones.constraintNameAdjustTransform
         constraintNameAdjustRotation = \
             ARMATURE_OT_AddCorrectionBones.constraintNameAdjustRotation
+        constraintNameAdjustTransformWorld = \
+            ARMATURE_OT_AddCorrectionBones.constraintNameAdjustTransformWorld
+        constraintNameAdjustRotationWorld = \
+            ARMATURE_OT_AddCorrectionBones.constraintNameAdjustRotationWorld
+
+        constraintNamesTransform = [constraintNameAdjustTransform,
+                                    constraintNameAdjustTransformWorld]
 
         copybuffer = {}
         for cb in context.window_manager.democaptools_copybuffer_bonetransforms:
@@ -403,7 +416,7 @@ class ARMATURE_OT_AlignCorrectionBones(bpy.types.Operator):
             boneState.correctedBone.matrix = corrmat
 
             if not [x for x in boneState.orgBone.constraints
-                    if x.name == constraintNameAdjustTransform]:
+                    if x.name in constraintNamesTransform]:
                 boneState.correctedBone.location = mathutils.Vector()
 
             context.view_layer.update()
