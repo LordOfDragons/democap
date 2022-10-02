@@ -131,6 +131,7 @@ class DemocapLiveCaptureActor:
         if boneLayout != self._boneLayout:
             self._boneLayout = boneLayout
             if boneLayout is None:
+                self._boneMapping = []
                 return
             self._initBoneMapping()
 
