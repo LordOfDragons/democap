@@ -215,6 +215,8 @@ class WidgetCharacterPreview extends Panel
 	private var String pPathSkin
 	private var String pPathRig
 	private var String pPathAnimation
+	private var Vector pBoneAxisRotation
+	private var float pScale
 	
 	private var CharacterPreviewEditor pEditor
 	
@@ -226,6 +228,8 @@ class WidgetCharacterPreview extends Panel
 		pPathSkin = ""
 		pPathRig = ""
 		pPathAnimation = ""
+		pBoneAxisRotation = Vector.new()
+		pScale = 1
 		pListeners = Array.new()
 		pCharacterPreviewClass = GameApp.getGameApp().getElementClassList()\
 			.getNamed("CharacterPreview") cast BehaviorElementClass
@@ -293,6 +297,16 @@ class WidgetCharacterPreview extends Panel
 	/** Set path animation. */
 	public func void setPathAnimation(String path)
 		pPathAnimation = path
+	end
+	
+	/** Set bone orientation rotation. */
+	public func void setBoneAxisRotation(Vector rotation)
+		pBoneAxisRotation = rotation
+	end
+	
+	/** Set scale. */
+	public func void setScale(float scale)
+		pScale = scale
 	end
 	
 	/** Reload character preview. */
@@ -558,11 +572,14 @@ class WidgetCharacterPreview extends Panel
 			pCharacterPreview = null
 		end
 		
+		var CodecPropertyString codec = pCharacterPreviewClass.getCodecPropertyString()
 		var StubElement stub = StubElement.new(pCharacterPreviewClass)
+		stub.setScaling(Vector.new(pScale, pScale, pScale))
 		stub.setPropertyValueFor("component.model", pPreviewPreloader.pathModel)
 		stub.setPropertyValueFor("component.skin", pPreviewPreloader.pathSkin)
 		stub.setPropertyValueFor("component.rig", pPreviewPreloader.pathRig)
 		stub.setPropertyValueFor("previewAnimation.animation", pPreviewPreloader.pathAnimation)
+		stub.setPropertyValueFor("previewBones.axisRotation", codec.encodeVector(pBoneAxisRotation))
 		
 		try
 			pCharacterPreview = stub.createElement() cast BehaviorElement

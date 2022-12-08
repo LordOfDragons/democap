@@ -61,6 +61,30 @@ class WindowCharacterProfile extends WindowDialog
 		end
 	end
 	
+	class BoneAxisChanged extends DefaultListModelListener
+		private var WindowCharacterProfile pWindow
+		
+		public func new(WindowCharacterProfile window)
+			pWindow = window
+		end
+		
+		public func void selectionChanged(ListModel listModel)
+			pWindow.updateBoneAxis()
+		end
+	end
+	
+	class ScaleChanged implements ActionListener
+		private var WindowCharacterProfile pWindow
+		
+		public func new(WindowCharacterProfile window)
+			pWindow = window
+		end
+		
+		public func void onAction(ActionEvent event)
+			pWindow.updateScale()
+		end
+	end
+	
 	
 	
 	private var CharacterProfile pCharacterProfile
@@ -74,6 +98,8 @@ class WindowCharacterProfile extends WindowDialog
 	private var DefaultTextModel pModelPathAnimation
 	private var DefaultListModel pModelListPreviewMove
 	private var DefaultTextModel pModelTextPreviewMove
+	private var DefaultListModel pModelBoneAxis
+	private var DefaultTextModel pModelScale
 	private var WidgetCharacterPreview pCharacterPreview
 	private var bool pInVR
 	
@@ -96,6 +122,10 @@ class WindowCharacterProfile extends WindowDialog
 		pModelListPreviewMove = DefaultListModel.new()
 		pModelListPreviewMove.setAutoSelect(false)
 		pModelTextPreviewMove = DefaultTextModel.new(profile.getPreviewMove())
+		pModelBoneAxis = DefaultListModel.new(CharacterProfile.BoneAxis.all().toArray().sorted())
+		pModelBoneAxis.setSelectedElement(profile.getBoneAxis())
+		pModelBoneAxis.addListener(BoneAxisChanged.new(this))
+		pModelScale = DefaultTextModel.new(profile.getScale().toString())
 		
 		runWhileBlockingLayout(block
 			setGuiTheme(window.getGuiTheme())
@@ -136,6 +166,8 @@ class WindowCharacterProfile extends WindowDialog
 		pModelPathAnimation = null
 		pModelListPreviewMove = null
 		pModelTextPreviewMove = null
+		pModelBoneAxis = null
+		pModelScale = null
 		
 		super.dispose()
 	end
@@ -169,6 +201,8 @@ class WindowCharacterProfile extends WindowDialog
 		pCharacterProfile.setOriginBone(pModelTextOriginBone.getText())
 		pCharacterProfile.setShoulderLevel(pModelShoulderLevel.getText().toFloat())
 		pCharacterProfile.setPreviewMove(pModelTextPreviewMove.getText())
+		pCharacterProfile.setBoneAxis(pModelBoneAxis.getSelectedElement() cast CharacterProfile.BoneAxis)
+		pCharacterProfile.setScale(pModelScale.getText().toFloat())
 		
 		var CharacterAppearance appearance = pCharacterProfile.getAppearance()
 		appearance.setPathModel(pModelPathModel.getText())
@@ -201,6 +235,9 @@ class WindowCharacterProfile extends WindowDialog
 		pCharacterPreview.setPathSkin( pModelPathSkin.getText())
 		pCharacterPreview.setPathRig(pModelPathRig.getText())
 		pCharacterPreview.setPathAnimation(pModelPathAnimation.getText())
+		pCharacterPreview.setScale(pModelScale.getText().toFloat())
+		pCharacterPreview.setBoneAxisRotation(CharacterProfile.boneAxisRotation(\
+			pModelBoneAxis.getSelectedElement() cast CharacterProfile.BoneAxis))
 		pCharacterPreview.reloadCharacterPreview()
 	end
 	
@@ -290,11 +327,31 @@ class WindowCharacterProfile extends WindowDialog
 			
 			CPELevel.new(pCharacterPreview, label, textField)
 			
+			// bone axis
+			label = Label.new("Bone Axis:", "Label.FormCaption")
+			p.addWidget(label)
+			
+			comboBox = ComboBox.new(pModelBoneAxis)
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+			comboBox.setToolTip("Major bone axis. Used to adjust orientation to match Z-axis.")
+			p.addWidget(comboBox)
+			
+			// scale
+			label = Label.new("Scale:", "Label.FormCaption")
+			p.addWidget(label)
+			
+			textField = TextField.new(pModelScale, 8)
+			textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+			textField.setToolTip("Scale to apply if model does not use 1m as unit scale.")
+			textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
+			textField.addActionListener(ScaleChanged.new(this))
+			p.addWidget(textField)
+			
 			// preview move
 			p.addWidget(Label.new("Preview Move:", "Label.FormCaption"))
 			
 			comboBox = ComboBox.new(pModelListPreviewMove, DefaultComboBoxEditor.new(pModelTextPreviewMove))
-			comboBox.setDesignerSelector("ComboBox.WindowCharacterProfile")
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 			comboBox.setToolTip("Preview animation move to use.")
 			comboBox.getEditor().addActionListener(PreviewMoveChanged.new(this))
 			p.addWidget(comboBox)
@@ -380,6 +437,36 @@ class WindowCharacterProfile extends WindowDialog
 		var ECBPreviewBones.Instance previewBones = ECBPreviewBones.getInstanceIn(element)
 		if previewBones != null
 			previewBones.bonePositionChanged()
+		end
+	end
+	
+	/** Update bone axis. */
+	public func void updateBoneAxis()
+		var BehaviorElement element = pCharacterPreview.getCharacterPreview()
+		if element == null
+			return
+		end
+		
+		var ECBPreviewBones.Instance previewBones = ECBPreviewBones.getInstanceIn(element)
+		if previewBones != null
+			previewBones.setAxisRotation(CharacterProfile.boneAxisRotation(\
+				pModelBoneAxis.getSelectedElement() cast CharacterProfile.BoneAxis))
+		end
+	end
+	
+	/** Update scale. */
+	public func void updateScale()
+		var BehaviorElement element = pCharacterPreview.getCharacterPreview()
+		if element == null
+			return
+		end
+		
+		var float scale = pModelScale.getText().toFloat()
+		element.setScaling(Vector.new(scale, scale, scale))
+		
+		var ECBehaviorComponent.Instance component = ECBehaviorComponent.getInstanceIn(element)
+		if component != null
+			component.getComponent().setScaling(Vector.new(scale, scale, scale))
 		end
 	end
 end

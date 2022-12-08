@@ -35,12 +35,26 @@ pin Dragengine.Utils
  * as files of type "*.demccp" .
  */
 class CharacterProfile
+	/** Major bone axis. Used to adjust orientation to match Z-axis. */
+	enum BoneAxis
+		x
+		y
+		z
+		xneg
+		yneg
+		zneg
+	end
+	
+	
+	
 	private var String pName
 	private var CharacterAppearance pAppearance
 	private var CharacterConfigurations pConfigurations
 	private var String pOriginBone
 	private var float pShoulderLevel
 	private var String pPreviewMove
+	private var BoneAxis pBoneAxis
+	private var float pScale
 	
 	private var Array pListeners
 	
@@ -55,6 +69,8 @@ class CharacterProfile
 		pOriginBone = ""
 		pShoulderLevel = 1.6
 		pPreviewMove = ""
+		pBoneAxis = BoneAxis.z
+		pScale = 1
 		
 		pListeners = Array.new()
 	end
@@ -73,6 +89,8 @@ class CharacterProfile
 		pOriginBone = profile.pOriginBone
 		pShoulderLevel = profile.pShoulderLevel
 		pPreviewMove = profile.pPreviewMove
+		pBoneAxis = profile.pBoneAxis
+		pScale = profile.pScale
 		
 		pListeners = Array.new()
 	end
@@ -150,6 +168,26 @@ class CharacterProfile
 		pPreviewMove = move
 	end
 	
+	/** Major bone axis. Used to adjust orientation to match Z-axis. */
+	public func BoneAxis getBoneAxis()
+		return pBoneAxis
+	end
+	
+	/** Set major bone axis. Used to adjust orientation to match Z-axis. */
+	public func void setBoneAxis(BoneAxis boneAxis)
+		pBoneAxis = boneAxis
+	end
+	
+	/** Scale to apply to adjust for models not using 1m as unit scale. */
+	public func float getScale()
+		return pScale
+	end
+	
+	/** Set scale to apply to adjust for models not using 1m as unit scale. */
+	public func void setScale(float scale)
+		pScale = DEMath.max(scale, 0.001)
+	end
+	
 	
 	
 	/** Start loading resources. */
@@ -178,6 +216,34 @@ class CharacterProfile
 	public func void delete()
 		if FileSystem.existsFile(getPathProfile())
 			FileSystem.deleteFile(getPathProfile())
+		end
+	end
+	
+	
+	
+	/** Bone axis rotation. */
+	static public func Vector boneAxisRotation(BoneAxis axis)
+		select axis
+		case BoneAxis.x
+			return Vector.new(0, -90, -90)
+			
+		case BoneAxis.y
+			return Vector.new(90, 90, 0)
+			
+		case BoneAxis.z
+			return Vector.new()
+			
+		case BoneAxis.xneg
+			return Vector.new(0, 90, 0)
+			
+		case BoneAxis.yneg
+			return Vector.new(-90, 0, 0)
+			
+		case BoneAxis.zneg
+			return Vector.new(0, 180, 0)
+			
+		else
+			throw EInvalidParam.new()
 		end
 	end
 	

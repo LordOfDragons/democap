@@ -56,6 +56,8 @@ class ECBPreviewBones extends DefaultECBehavior
 		private var DebugDrawer pDebugDrawer
 		private var Array pBones
 		private var Dictionary pBonesMap
+		private var Vector pAxisRotation
+		private var Matrix pAxisMatrix
 		
 		
 		
@@ -64,6 +66,8 @@ class ECBPreviewBones extends DefaultECBehavior
 			pECBehavior = ecbehavior
 			pBones = Array.new()
 			pBonesMap = Dictionary.new()
+			pAxisRotation = Vector.new()
+			pAxisMatrix = Matrix.new()
 			
 			pComponent = ecbehavior.getComponent().instance(element)
 		end
@@ -79,6 +83,8 @@ class ECBPreviewBones extends DefaultECBehavior
 			var ElementClass eclass = getElement().getClass()
 			
 			pModel = pECBehavior.getModel().getModel(stub, eclass)
+			pAxisRotation = pECBehavior.getAxisRotation().getVector(stub, eclass.getCodecPropertyString())
+			pAxisMatrix = Matrix.newRotation(pAxisRotation)
 			
 			pDebugDrawer = DebugDrawer.new()
 			pDebugDrawer.setPosition(stub.getPosition())
@@ -139,6 +145,19 @@ class ECBPreviewBones extends DefaultECBehavior
 			end)
 		end
 		
+		/** Axis rotation. */
+		public func Vector getAxisRotation()
+			return pAxisRotation
+		end
+		
+		/** Set axis rotation. */
+		public func void setAxisRotation(Vector rotation)
+			pAxisRotation = rotation
+			pAxisMatrix = Matrix.newRotation(pAxisRotation)
+			updateBoneShapes()
+			updateBoneColliderGeometry()
+		end
+		
 		
 		
 		/** Element has been added to game world. */
@@ -175,6 +194,7 @@ class ECBPreviewBones extends DefaultECBehavior
 			pDebugDrawer.setPosition(element.getPosition())
 			pDebugDrawer.setOrientation(element.getOrientation())
 			
+			updateBoneShapes()
 			updateBoneColliderGeometry()
 		end
 		
@@ -248,7 +268,9 @@ class ECBPreviewBones extends DefaultECBehavior
 		
 		/** Update bone shape. */
 		protected func void updateBoneShape(Bone bone)
-			var Matrix matrix = pComponent.getComponent().boneGetMatrix(bone.bone).normalize()
+			var Matrix matrix = (pAxisMatrix\
+				* pComponent.getComponent().boneGetMatrix(bone.bone).normalize()\
+				* Matrix.newScaling(getElement().getScaling())).normalize()
 			matrix = Matrix.newScaling(0.1, 0.1, 0.1) * matrix
 			pDebugDrawer.shapeSetFacesFromModel(bone.shape, pModel, matrix)
 		end
@@ -290,9 +312,10 @@ class ECBPreviewBones extends DefaultECBehavior
 		
 		/** Update bone collider geometry. */
 		protected func void updateBoneColliderGeometry(Bone bone)
-			var DMatrix matrix = pComponent.getComponent().boneGetMatrix(bone.bone)\
-				.normalize().toDMatrix() * getElement().getElementMatrix()
-			bone.collider.setGeometry(matrix.getPosition(), matrix.toQuaternion())
+			var DMatrix matrix = pAxisMatrix.toDMatrix()\
+				* pComponent.getComponent().boneGetMatrix(bone.bone).normalize().toDMatrix()\
+				* getElement().getElementMatrix()
+			bone.collider.setGeometry(matrix.getPosition(), matrix.normalize().toQuaternion())
 		end
 	end
 	
@@ -300,7 +323,7 @@ class ECBPreviewBones extends DefaultECBehavior
 	
 	private var ECBehaviorComponent pComponent
 	private var ECPModel pModel
-	
+	private var ECPVector pAxisRotation
 	
 	
 	/** Create behavior and add it to element class. */
@@ -315,6 +338,9 @@ class ECBPreviewBones extends DefaultECBehavior
 		
 		pModel = ECPModel.new(prefix + "model", "/content/models/bone/bone.demodel")
 		eclass.addProperty(pModel)
+		
+		pAxisRotation = ECPVector.new(prefix + "axisRotation", Vector.new())
+		eclass.addProperty(pAxisRotation)
 		
 		eclass.addBehavior(this)
 	end
@@ -335,6 +361,11 @@ class ECBPreviewBones extends DefaultECBehavior
 	/** Model. */
 	public func ECPModel getModel()
 		return pModel
+	end
+	
+	/** Axis rotation. */
+	public func ECPVector getAxisRotation()
+		return pAxisRotation
 	end
 	
 	
