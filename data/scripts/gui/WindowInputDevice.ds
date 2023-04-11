@@ -103,7 +103,10 @@ class WindowInputDevice extends Window
 			setLayout(WeightLayout.new(LayoutAxis.x, 5))
 			
 			addWidget(Label.new(pModelName, Label.middleLeft), column1)
-			addWidget(ProgressBar.new(Orientation.horizontal, pModelValue), column2)
+			
+			var ProgressBar bar = ProgressBar.new(Orientation.horizontal, pModelValue)
+			bar.setDesignerSelector("ProgressBar.WindowInputDevice.Axis")
+			addWidget(bar, column2)
 			
 			startFrameUpdater()
 		end
@@ -245,6 +248,8 @@ class WindowInputDevice extends Window
 		private var Dictionary pExpressions //!< int -> RangeModel
 		
 		public func new()
+			pExpressions = Dictionary.new()
+			
 			runWhileBlockingLayout(block
 				setLayout(GridLayout.new(3, 0))
 				
@@ -337,12 +342,12 @@ class WindowInputDevice extends Window
 		
 		private func void addExpression(int index, String label)
 			addWidget(Panel.new(StackLayout.new(), block Panel p
-				p.addWidget(Label.new(label, "Label.WindowInputDevice.FaceExpression"))
 				var DefaultRangeModel model = DefaultRangeModel.new(0, 100, 10, 0, 1)
 				var ProgressBar bar = ProgressBar.new(Orientation.horizontal, model)
 				bar.setDesignerSelector("ProgressBar.WindowInputDevice.FaceExpression")
 				p.addWidget(bar)
 				pExpressions.setAt(index, model)
+				p.addWidget(Label.new(label, "Label.WindowInputDevice.FaceExpression"))
 			end))
 		end
 	end
@@ -507,6 +512,7 @@ class WindowInputDevice extends Window
 				end
 			end
 		end)
+		doLayout()
 	end
 	
 	protected func void addDeviceAxesAbsolute(InputDevice inputDevice)
