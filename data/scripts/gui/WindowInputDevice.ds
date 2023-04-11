@@ -197,6 +197,14 @@ class WindowInputDevice extends Window
 			startFrameUpdater()
 		end
 		
+		public func void dispose()
+			pModelPosition = null
+			pModelOrientation = null
+			pModelLinearVelocity = null
+			pModelAngularVelocity = null
+			super.dispose()
+		end
+		
 		public func void setDevice(InputDevice device)
 			pDevice = device
 		end
@@ -231,6 +239,114 @@ class WindowInputDevice extends Window
 		end
 	end
 	
+	/** Face panel. */
+	class FacePanel extends Panel
+		private var InputDevice pDevice
+		private var Dictionary pExpressions //!< int -> RangeModel
+		
+		public func new()
+			runWhileBlockingLayout(block
+				setLayout(GridLayout.new(3, 0))
+				
+				addExpression(InputDeviceFaceExpression.eyeLeftBlink, "Eye Left Blink")
+				addExpression(InputDeviceFaceExpression.eyeLeftWide, "Eye Left Wide")
+				addExpression(InputDeviceFaceExpression.eyeLeftSqueeze, "Eye Left Squeeze")
+				addExpression(InputDeviceFaceExpression.eyeLeftDown, "Eye Left Down")
+				addExpression(InputDeviceFaceExpression.eyeLeftUp, "Eye Left Up")
+				addExpression(InputDeviceFaceExpression.eyeLeftIn, "Eye Left In")
+				addExpression(InputDeviceFaceExpression.eyeLeftOut, "Eye Left Out")
+				
+				addExpression(InputDeviceFaceExpression.eyeRightBlink, "Eye Right Blink")
+				addExpression(InputDeviceFaceExpression.eyeRightWide, "Eye Right Wide")
+				addExpression(InputDeviceFaceExpression.eyeRightSqueeze, "Eye Right Squeeze")
+				addExpression(InputDeviceFaceExpression.eyeRightDown, "Eye Right Down")
+				addExpression(InputDeviceFaceExpression.eyeRightUp, "Eye Right Up")
+				addExpression(InputDeviceFaceExpression.eyeRightIn, "Eye Right In")
+				addExpression(InputDeviceFaceExpression.eyeRightOut, "Eye Right Out")
+				
+				addExpression(InputDeviceFaceExpression.jawRight, "Jaw Right")
+				addExpression(InputDeviceFaceExpression.jawLeft, "Jaw Left")
+				addExpression(InputDeviceFaceExpression.jawForward, "Jaw Forward")
+				addExpression(InputDeviceFaceExpression.jawOpen, "Jaw Open")
+				
+				addExpression(InputDeviceFaceExpression.cheekPuffRight, "Cheek Puff Right")
+				addExpression(InputDeviceFaceExpression.cheekPuffLeft, "Cheek Puff Left")
+				addExpression(InputDeviceFaceExpression.cheekSuck, "Cheek Suck")
+				
+				addExpression(InputDeviceFaceExpression.mouthApeShape, "Mouth Ape Shape")
+				addExpression(InputDeviceFaceExpression.mouthUpperRight, "Mouth Upper Right")
+				addExpression(InputDeviceFaceExpression.mouthUpperLeft, "Mouth Upper Left")
+				addExpression(InputDeviceFaceExpression.mouthUpperUpRight, "Mouth Upper Up-Right")
+				addExpression(InputDeviceFaceExpression.mouthUpperUpLeft, "Mouth Upper Up-Left")
+				addExpression(InputDeviceFaceExpression.mouthUpperOverturn, "Mouth Upper Overturn")
+				addExpression(InputDeviceFaceExpression.mouthUpperInside, "Mouth Upper Inside")
+				addExpression(InputDeviceFaceExpression.mouthLowerRight, "Mouth Lower Right")
+				addExpression(InputDeviceFaceExpression.mouthLowerLeft, "Mouth Lower Left")
+				addExpression(InputDeviceFaceExpression.mouthLowerDownRight, "Mouth Lower Down-Right")
+				addExpression(InputDeviceFaceExpression.mouthLowerDownLeft, "Mouth Lower Down-Left")
+				addExpression(InputDeviceFaceExpression.mouthLowerOverturn, "Mouth Lower Overturn")
+				addExpression(InputDeviceFaceExpression.mouthLowerInside, "Mouth Lower Inside")
+				addExpression(InputDeviceFaceExpression.mouthLowerOverlay, "Mouth Lower Overlay")
+				addExpression(InputDeviceFaceExpression.mouthPout, "Mouth Pout")
+				addExpression(InputDeviceFaceExpression.mouthSmileRight, "Mough Smile Right")
+				addExpression(InputDeviceFaceExpression.mouthSmileLeft, "Mouth Smile Left")
+				addExpression(InputDeviceFaceExpression.mouthSadRight, "Mouth Sad Right")
+				addExpression(InputDeviceFaceExpression.mouthSadLeft, "Mouth Sad Left")
+				
+				addExpression(InputDeviceFaceExpression.tongueLeft, "Tongue Left")
+				addExpression(InputDeviceFaceExpression.tongueRight, "Tongue Right")
+				addExpression(InputDeviceFaceExpression.tongueUp, "Tongue Up")
+				addExpression(InputDeviceFaceExpression.tongueDown, "Tongue Down")
+				addExpression(InputDeviceFaceExpression.tongueRoll, "Tongue Roll")
+				addExpression(InputDeviceFaceExpression.tongueLongStep1, "Tongue Long Step1")
+				addExpression(InputDeviceFaceExpression.tongueLongStep2, "Tongue Long Step2")
+			end)
+			
+			startFrameUpdater()
+		end
+		
+		public func void dispose()
+			pExpressions = null
+			super.dispose()
+		end
+		
+		public func void setDevice(InputDevice device)
+			if device != pDevice
+				pDevice = device
+				
+				if device == null
+					pExpressions.forEach(block int index, RangeModel each
+						each.setValue(0)
+					end)
+				end
+			end
+		end
+		
+		public func void onFrameUpdate(float elapsed)
+			if pDevice != null
+				var int count = pDevice.getDeviceFaceExpressionCount()
+				pExpressions.forEach(block int index, RangeModel each
+					if index < count
+						each.setValue((pDevice.getDeviceFaceExpressionAt(index) * 100) cast int)
+					else
+						each.setValue(0)
+					end
+				end)
+			end
+		end
+		
+		private func void addExpression(int index, String label)
+			addWidget(Panel.new(StackLayout.new(), block Panel p
+				p.addWidget(Label.new(label, "Label.WindowInputDevice.FaceExpression"))
+				var DefaultRangeModel model = DefaultRangeModel.new(0, 100, 10, 0, 1)
+				var ProgressBar bar = ProgressBar.new(Orientation.horizontal, model)
+				bar.setDesignerSelector("ProgressBar.WindowInputDevice.FaceExpression")
+				p.addWidget(bar)
+				pExpressions.setAt(index, model)
+			end))
+		end
+	end
+	
 	/** Device changes listener. */
 	class DeviceChangeListener extends DefaultBindingManagerListener
 		private var WindowInputDevice pWindow
@@ -252,7 +368,9 @@ class WindowInputDevice extends Window
 	private var InputDevice pInputDevice //<! Active input device
 	private var DefaultListModel pModelAxes
 	private var DefaultListModel pModelButtons
+	private var Panel pPanelAxes, pPanelButtons, pPanelFaceCont
 	private var PosePanel pPanelPose
+	private var FacePanel pPanelFace
 	
 	
 	
@@ -287,6 +405,10 @@ class WindowInputDevice extends Window
 		pModelInputDevices = null
 		pListInputDevices = null
 		pPanelPose = null
+		pPanelFace = null
+		pPanelAxes = null
+		pPanelFaceCont = null
+		pPanelButtons = null
 		
 		super.dispose()
 	end
@@ -308,19 +430,27 @@ class WindowInputDevice extends Window
 		
 		// content with list of axes and button states
 		content.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x, 10), block Panel panel
-			// left side list of axes
-			panel.addWidget(Panel.new(BorderLayout.new(3), block Panel subPanel
+			pPanelAxes = Panel.new(BorderLayout.new(3), block Panel subPanel
 				subPanel.addWidget(Label.new("Axes (absolute)", Label.center), BorderLayout.Area.top)
 				subPanel.addWidget(ScrollPanel.new(ListBox.new(\
 					pModelAxes, InputDeviceAxisRenderer.new())), BorderLayout.Area.content)
-			end))
+			end)
+			panel.addWidget(pPanelAxes)
 			
-			// right side list of buttons
-			panel.addWidget(Panel.new(BorderLayout.new(3), block Panel subPanel
+			pPanelButtons = Panel.new(BorderLayout.new(3), block Panel subPanel
 				subPanel.addWidget(Label.new("Buttons (no keys)", Label.center), BorderLayout.Area.top)
 				subPanel.addWidget(ScrollPanel.new(ListBox.new(\
 					pModelButtons, InputDeviceButtonRenderer.new())), BorderLayout.Area.content)
-			end))
+			end)
+			panel.addWidget(pPanelButtons)
+			
+			pPanelFaceCont = Panel.new(BorderLayout.new(3), block Panel subPanel
+				subPanel.addWidget(Label.new("Face Expressions", Label.center), BorderLayout.Area.top)
+				subPanel.addWidget(ScrollPanel.new(pPanelFace = FacePanel.new(),\
+					ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed), BorderLayout.Area.content)
+				subPanel.setVisible(false)
+			end)
+			panel.addWidget(pPanelFaceCont)
 		end), BorderLayout.Area.content)
 		
 		// poses
@@ -331,11 +461,10 @@ class WindowInputDevice extends Window
 	
 	/** Update input device list. */
 	public func void updateInputDeviceModel()
-		var BindingManager bindings = BaseGameApp.getApp().getBindingManager()
 		var InputDevice selection = pInputDevice
 		var Array content = Array.new()
 		
-		bindings.forEachDevice(block InputDevice each
+		BaseGameApp.getApp().getBindingManager().forEachDevice(block InputDevice each
 			content.add(each)
 		end)
 		
@@ -351,39 +480,61 @@ class WindowInputDevice extends Window
 		
 		pInputDevice = inputDevice
 		
-		if inputDevice == null or inputDevice.getType() == InputDeviceType.keyboard
-			// ignore keyboard because it has lots of keys (buttons)
+		runWhileBlockingLayout(block
+			pPanelAxes.setVisible(false)
+			pPanelButtons.setVisible(false)
+			pPanelFaceCont.setVisible(false)
+			pPanelPose.setDevice(null)
+			pPanelFace.setDevice(null)
 			pModelAxes.removeAll()
 			pModelButtons.removeAll()
-			pPanelPose.setDevice(null)
-			return
-		end
-		
-		runWhileBlockingLayout(block
-			var Array list = Array.new()
-			var InputDeviceAxis axis
-			var int i, count
 			
-			count = inputDevice.getAxisCount()
-			for i = 0 to count
-				axis = inputDevice.getAxisAt(i)
-				select axis.getType()
-				case InputDeviceAxisType.mouse, InputDeviceAxisType.mouseWheel
-					// not showing absolute axes
+			if inputDevice != null
+				select inputDevice.getType()
+				case InputDeviceType.vrHMD
+					pPanelFace.setDevice(inputDevice)
+					pPanelFaceCont.setVisible(true)
+					
+				case InputDeviceType.keyboard
+					// ignore keyboard because it has lots of keys (buttons)
+					
 				else
-					list.add(axis)
+					addDeviceAxesAbsolute(inputDevice)
+					addDeviceButtons(inputDevice)
+					pPanelPose.setDevice(inputDevice)
+					pPanelAxes.setVisible(true)
+					pPanelButtons.setVisible(true)
 				end
 			end
-			pModelAxes.setContent(list)
-			
-			list.removeAll()
-			count = inputDevice.getButtonCount()
-			for i = 0 to count
-				list.add(inputDevice.getButtonAt(i))
-			end
-			pModelButtons.setContent(list)
-			
-			pPanelPose.setDevice(inputDevice)
 		end)
+	end
+	
+	protected func void addDeviceAxesAbsolute(InputDevice inputDevice)
+		var int i, count = inputDevice.getAxisCount()
+		var Array list = Array.new()
+		
+		for i = 0 to count
+			var InputDeviceAxis axis = inputDevice.getAxisAt(i)
+			
+			select axis.getType()
+			case InputDeviceAxisType.mouse, InputDeviceAxisType.mouseWheel
+				// not showing absolute axes
+			else
+				list.add(axis)
+			end
+		end
+		
+		pModelAxes.setContent(list)
+	end
+	
+	protected func void addDeviceButtons(InputDevice inputDevice)
+		var Array list = Array.new()
+		var int i, count = inputDevice.getButtonCount()
+		
+		for i = 0 to count
+			list.add(inputDevice.getButtonAt(i))
+		end
+		
+		pModelButtons.setContent(list)
 	end
 end
