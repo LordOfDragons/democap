@@ -117,13 +117,15 @@ class Project
 	
 	/** Load project from file. */
 	static public func Project load(String path)
-		var PersistencyEnvironment env = PersistencyEnvironment.new(GameApp.getGameApp().getLoaders().getPersistency())
-		var FileReader reader = env.getPersistency().getDebugEnableCanaryValue() \
+		var Persistency persistency = GameApp.getGameApp().getLoaders().getPersistency()
+		
+		var FileReader reader = persistency.getDebugEnableCanaryValue() \
 			if FileReader.new(path) else FileReader.newZCompressed(path)
 		
+		var PersistencyEnvironment env = PersistencyEnvironment.new(persistency, reader.readByte())
 		var Project project = Project.new(path)
 		
-		select reader.readByte() // version
+		select env.getVersion()
 		case 0
 			project.readV0(env, reader)
 			
@@ -274,6 +276,7 @@ class Project
 	
 	/** Save to file. */
 	public func void save()
+		var Persistency persistency = GameApp.getGameApp().getLoaders().getPersistency()
 		var GameApp app = GameApp.getGameApp()
 		var Scene scene = app.getScene()
 		var GameWorld gameWorld = app.getWindowGameWorld().getGameWorld()
@@ -284,11 +287,11 @@ class Project
 		
 		var MemoryFile safe = MemoryFile.new("safe")
 		
-		var PersistencyEnvironment env = PersistencyEnvironment.new(app.getLoaders().getPersistency())
-		var FileWriter writer = env.getPersistency().getDebugEnableCanaryValue()\
+		var PersistencyEnvironment env = PersistencyEnvironment.new(persistency, 1)
+		var FileWriter writer = persistency.getDebugEnableCanaryValue()\
 			if safe.getWriter(false) else safe.getWriterZCompressed()
 		
-		writer.writeByte(1) // version
+		writer.writeByte(env.getVersion())
 		writer.writeByte(0) // flags
 		
 		writer.writeUShort(pScenes.getCount())

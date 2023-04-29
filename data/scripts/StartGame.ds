@@ -48,11 +48,13 @@ class StartGame extends WindowGameWorld.Loader
 		
 		// load initial data from save state
 		if scene.getSaveState() != null
-			setPersistency(PersistencyEnvironment.new(\
-				GameApp.getGameApp().getLoaders().getPersistency()),\
-				scene.getSaveState().getReader())
+			var Persistency persistency = GameApp.getGameApp().getLoaders().getPersistency()
+			var FileReader reader = scene.getSaveState().getReader()
+			var PersistencyEnvironment env = PersistencyEnvironment.new(persistency, reader.readByte())
 			
-			select getPersistencyReader().readByte() // version
+			setPersistency(env, reader)
+			
+			select env.getVersion()
 			case 0
 				getIDGenerator().readFromFile(getPersistencyReader())
 				

@@ -40,6 +40,7 @@ class Scene
 	private var MemoryFile pSaveState
 	private var FileUsageManager pFileUsage
 	private var SafeArray pListeners
+	private var bool pEnableWorldPersistency
 	
 	
 	
@@ -101,7 +102,8 @@ class Scene
 	end
 	
 	private func void readVersion0(PersistencyEnvironment env, FileReader reader)
-		reader.readByte() // flags
+		var PersistencyFlags flags = PersistencyFlags.new(1, reader)
+		pEnableWorldPersistency = flags.getAt(0)
 		
 		pName = reader.readString8()
 		pPathWorld = reader.readString8()
@@ -179,6 +181,11 @@ class Scene
 		return pFileUsage
 	end
 	
+	/** Enable game world persistency. */
+	public func bool getEnableWorldPersistency()
+		return pEnableWorldPersistency
+	end
+	
 	
 	
 	/** Stage directions. */
@@ -230,12 +237,12 @@ class Scene
 		
 		var MemoryFile saveState = MemoryFile.new("saveSate")
 		
-		var PersistencyEnvironment env = PersistencyEnvironment.new(GameApp.getGameApp().getLoaders().getPersistency())
+		var PersistencyEnvironment env = PersistencyEnvironment.new(GameApp.getGameApp().getLoaders().getPersistency(), 0)
 		var FileWriter writer = saveState.getWriter(false)
 		
 		var World world = gameWorld.getWorld()
 		
-		writer.writeByte(0) // version
+		writer.writeByte(env.getVersion())
 		
 		// write element id generator state. required to be known before loading stubs
 		GameApp.getGameApp().getIDGenerator().writeToFile(writer)
@@ -255,6 +262,7 @@ class Scene
 		
 		// store save state
 		pSaveState = saveState
+		pEnableWorldPersistency = true
 	end
 	
 	/** Drop save state. */
@@ -328,7 +336,10 @@ class Scene
 		end
 		
 		writer.writeByte(1) // version
-		writer.writeByte(0) // flags
+		
+		var PersistencyFlags flags = PersistencyFlags.new(1)
+		flags.setAt(0, pEnableWorldPersistency)
+		flags.writeToFile(writer)
 		
 		writer.writeString8(pName)
 		writer.writeString8(pPathWorld)
