@@ -35,25 +35,34 @@ class RecordAnimation
 	protected class CreateAnimation extends AnimationBuilder
 		private var String pOriginBone
 		private var Array pBones
+		private var Array pVPS
 		private var Array pKeyframes
+		private var Array pVPSKeyframes
 		private var float pFPS
 		private var String pMoveName
 		private var Array pStaticKeyframes
+		private var Array pVPSStaticKeyframes
 		
-		public func new(String originBone, Array bones, Array keyframes,\
-		Array staticKeyframes, float fps, String moveName)
+		public func new(String originBone, Array bones, Array keyframes, Array staticKeyframes,\
+		Array vps, Array vpsKeyframes, Array vpsStaticKeyframes, float fps, String moveName)
 			pOriginBone = originBone
 			pBones = bones
 			pKeyframes = keyframes
 			pStaticKeyframes = staticKeyframes
+			pVPS = vps
+			pVPSKeyframes = vpsKeyframes
+			pVPSStaticKeyframes = vpsStaticKeyframes
 			pFPS = fps
 			pMoveName = moveName
 		end
 		
 		protected func void buildAnimation()
 			var int boneCount = pBones.getCount()
+			var int vpsCount = pVPS.getCount()
 			
-			if boneCount == 0 or (pKeyframes.getCount() == 0 and pStaticKeyframes.getCount() == 0)
+			if (boneCount == 0 and vpsCount == 0) or (\
+			pKeyframes.getCount() == 0 and pStaticKeyframes.getCount() == 0\
+			and pVPSKeyframes.getCount() == 0 and pVPSStaticKeyframes.getCount() == 0)
 				addMove(pMoveName, 0, pFPS)
 				return
 			end
@@ -61,14 +70,20 @@ class RecordAnimation
 			pBones.forEach(block String each
 				addBone(each)
 			end)
-			
 			if pOriginBone != null
 				addBone(pOriginBone)
 			end
 			
+			pVPS.forEach(block String each
+				addVertexPositionSet(each)
+			end)
+			
 			var float playtime = 0
 			if pKeyframes.getCount() > 0
 				playtime = (pKeyframes.getAt(-1) cast RecordAnimationKeyframe).getTime()
+			end
+			if pVPSKeyframes.getCount() > 0
+				playtime = (pVPSKeyframes.getAt(-1) cast RecordAnimationVPSKeyframe).getTime()
 			end
 			
 			addMove(pMoveName, playtime, pFPS)
@@ -79,6 +94,8 @@ class RecordAnimation
 			else
 				setKeyframeListCount(0, boneCount)
 			end
+			
+			setVertexPositionSetKeyframeListCount(0, vpsCount)
 			
 			var int stride = boneCount - pStaticKeyframes.getCount()
 			
@@ -95,6 +112,16 @@ class RecordAnimation
 			if pOriginBone != null
 				addKeyframe(0, boneCount, 0, Vector.new(), Vector.new(), Vector.new(1, 1, 1))
 			end
+			
+			stride = vpsCount - pVPSStaticKeyframes.getCount()
+			
+			pVPSKeyframes.forEach(block int index, RecordAnimationVPSKeyframe keyframe
+				addVertexPositionSetKeyframe(0, index % stride, keyframe.getTime(), keyframe.getWeight())
+			end)
+			
+			pVPSStaticKeyframes.forEach(block int index, RecordAnimationVPSKeyframe keyframe
+				addVertexPositionSetKeyframe(0, stride + index, 0, keyframe.getWeight())
+			end)
 		end
 	end
 	
@@ -157,6 +184,9 @@ class RecordAnimation
 	private var Array pBones
 	private var Array pKeyframes
 	private var Array pStaticKeyframes
+	private var Array pVPS
+	private var Array pVPSKeyframes
+	private var Array pVPSStaticKeyframes
 	private var Animation pAnimation
 	private var Rig pRig
 	private var float pFPS
@@ -178,6 +208,9 @@ class RecordAnimation
 		pBones = Array.new()
 		pKeyframes = Array.new()
 		pStaticKeyframes = Array.new()
+		pVPS = Array.new()
+		pVPSKeyframes = Array.new()
+		pVPSStaticKeyframes = Array.new()
 		pFPS = 25
 		pTimestamp = TimeDate.new()
 		pMoveName = "MoCap"
@@ -305,6 +338,80 @@ class RecordAnimation
 	
 	
 	
+	/** Count of vertex position sets. */
+	public func int getVPSCount()
+		return pVPS.getCount()
+	end
+	
+	/** Vertex position set name at index. */
+	public func String getVPSAt(int index)
+		return pVPS.getAt(index) cast String
+	end
+	
+	/** Vertex position set name is present. */
+	public func bool hasVPS(String name)
+		return pVPS.has(name)
+	end
+	
+	/** Add vertex position set name. */
+	public func void addVPS(String name)
+		if name == null
+			throw ENullPointer.new("name")
+		end
+		pVPS.add(name)
+	end
+	
+	/** Visit vertex position sets with block receiving String as argument. */
+	public func void forEachVPS(Block ablock)
+		pVPS.forEach(ablock)
+	end
+	
+	
+	
+	/** Count of vertex position set keyframes. */
+	public func int getVPSKeyframeCount()
+		return pVPSKeyframes.getCount()
+	end
+	
+	/** Keyframe at index. */
+	public func RecordAnimationVPSKeyframe getVPSKeyframeAt(int index)
+		return pVPSKeyframes.getAt(index) cast RecordAnimationVPSKeyframe
+	end
+	
+	/** Add vertex position set keyframe. */
+	public func void addVPSKeyframe(float time, float weight)
+		pVPSKeyframes.add(RecordAnimationVPSKeyframe.new(time, weight))
+	end
+	
+	/** Direct access to vertex position set keyframes array for fast processing. */
+	public func Array getVPSKeyframes()
+		return pVPSKeyframes
+	end
+	
+	
+	
+	/** Count of static vertex position set keyframes. */
+	public func int getVPSStaticKeyframeCount()
+		return pVPSStaticKeyframes.getCount()
+	end
+	
+	/** Static vertex position set keyframe at index. */
+	public func RecordAnimationVPSKeyframe getVPSStaticKeyframeAt(int index)
+		return pVPSStaticKeyframes.getAt(index) cast RecordAnimationVPSKeyframe
+	end
+	
+	/** Add static keyframe. */
+	public func void addVPSStaticKeyframe(float weight)
+		pVPSStaticKeyframes.add(RecordAnimationVPSKeyframe.new(0, weight))
+	end
+	
+	/** Direct access to static vertex position set keyframes array for fast processing. */
+	public func Array getVPSStaticKeyframes()
+		return pVPSStaticKeyframes
+	end
+	
+	
+	
 	/** Playtime in seconds. */
 	public func float getPlaytime()
 		if pKeyframes.getCount() > 0
@@ -322,15 +429,19 @@ class RecordAnimation
 	
 	/** Create animation. */
 	public func void createAnimation()
-		if pBones.getCount() == 0 or (pKeyframes.getCount() == 0 and pStaticKeyframes.getCount() == 0)
+		if (pBones.getCount() == 0 and pVPS.getCount() == 0)\
+		or (pKeyframes.getCount() == 0 and pStaticKeyframes.getCount() == 0\
+		and pVPSKeyframes.getCount() == 0 and pVPSStaticKeyframes.getCount() == 0)
 			return
 		end
 		
 		if pOriginBone.empty() or pBones.has(pOriginBone)
-			pAnimation = CreateAnimation.new(null, pBones, pKeyframes, pStaticKeyframes, pFPS, pMoveName).build("")
+			pAnimation = CreateAnimation.new(null, pBones, pKeyframes, pStaticKeyframes,\
+				pVPS, pVPSKeyframes, pVPSStaticKeyframes, pFPS, pMoveName).build("")
 			
 		else
-			pAnimation = CreateAnimation.new(pOriginBone, pBones, pKeyframes, pStaticKeyframes, pFPS, pMoveName).build("")
+			pAnimation = CreateAnimation.new(pOriginBone, pBones, pKeyframes, pStaticKeyframes,\
+				pVPS, pVPSKeyframes, pVPSStaticKeyframes, pFPS, pMoveName).build("")
 		end
 	end
 	

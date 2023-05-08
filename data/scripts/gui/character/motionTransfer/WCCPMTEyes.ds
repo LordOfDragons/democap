@@ -1,0 +1,247 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer eyes panel.
+ */
+class WCCPMTEyes extends WCCPanelMotionTransfer
+	private var DefaultListModel pModelListRightBone
+	private var DefaultTextModel pModelTextRightBone
+	private var DefaultListModel pModelListLeftBone
+	private var DefaultTextModel pModelTextLeftBone
+	private var EditVector pEditRightRotation
+	private var EditVector pEditLeftRotation
+	private var DefaultTextModel pModelLimitIn
+	private var DefaultTextModel pModelLimitOut
+	private var DefaultTextModel pModelLimitUp
+	private var DefaultTextModel pModelLimitDown
+	
+	
+	
+	/** Create window. */
+	public func new(WindowCharacterConfiguration window) super(window)
+		pModelTypeName.setText("Eyes")
+		
+		pModelListRightBone = DefaultListModel.new()
+		pModelListRightBone.setAutoSelect(false)
+		pModelTextRightBone = DefaultTextModel.new()
+		
+		pModelListLeftBone = DefaultListModel.new()
+		pModelListLeftBone.setAutoSelect(false)
+		pModelTextLeftBone = DefaultTextModel.new()
+		
+		pModelLimitIn = DefaultTextModel.new()
+		pModelLimitOut = DefaultTextModel.new()
+		pModelLimitUp = DefaultTextModel.new()
+		pModelLimitDown = DefaultTextModel.new()
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		pModelListRightBone = null
+		pModelTextRightBone = null
+		
+		pModelListLeftBone = null
+		pModelTextLeftBone = null
+		
+		pEditRightRotation = null
+		pEditLeftRotation = null
+		
+		pModelLimitIn = null
+		pModelLimitOut = null
+		pModelLimitUp = null
+		pModelLimitDown = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	public func void loadValues()
+		runWhileBlockingLayout(block
+			super.loadValues()
+			
+			if pMotionTransfer != null
+				var MotionTransferEyes mt = pMotionTransfer cast MotionTransferEyes
+				pModelTextRightBone.setText(mt.getRightBone())
+				pModelTextLeftBone.setText(mt.getLeftBone())
+				pEditRightRotation.setVector(mt.getRightRotation())
+				pEditLeftRotation.setVector(mt.getLeftRotation())
+				pModelLimitIn.setText(mt.getLimitIn().toString())
+				pModelLimitOut.setText(mt.getLimitOut().toString())
+				pModelLimitUp.setText(mt.getLimitUp().toString())
+				pModelLimitDown.setText(mt.getLimitDown().toString())
+				
+			else
+				pModelTextRightBone.setText("")
+				pModelTextLeftBone.setText("")
+				pEditRightRotation.setVector(Vector.new())
+				pEditLeftRotation.setVector(Vector.new())
+				pModelLimitIn.setText("")
+				pModelLimitOut.setText("")
+				pModelLimitUp.setText("")
+				pModelLimitDown.setText("")
+			end
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	public func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		super.saveValues()
+		
+		var MotionTransferEyes mt = pMotionTransfer cast MotionTransferEyes
+		mt.setRightBone(pModelTextRightBone.getText())
+		mt.setLeftBone(pModelTextLeftBone.getText())
+		mt.setRightRotation(pEditRightRotation.getVector())
+		mt.setLeftRotation(pEditLeftRotation.getVector())
+		mt.setLimitIn(pModelLimitIn.getText().toFloat())
+		mt.setLimitOut(pModelLimitOut.getText().toFloat())
+		mt.setLimitUp(pModelLimitUp.getText().toFloat())
+		mt.setLimitDown(pModelLimitDown.getText().toFloat())
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferEyes
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var ComboBox comboBox
+		var Label label, labelBone
+		var TextField textField
+		var Button button
+		var ListBox listBox
+		
+		createBaseContent("motiontransfereyes")
+		
+		// right bone
+		labelBone = Label.new("Right Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelBone)
+		
+		comboBox = ComboBox.new(pModelListRightBone, DefaultComboBoxEditor.new(pModelTextRightBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Right eye bone.")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, labelBone, comboBox)
+		
+		// right rotation
+		var String toolTip = "Right eye coordinate system. Horizontal rotation along Y (green) axis,"\
+			+ " vertical along along X (red) axis and Z axis (blue) pointing through the iris."
+		label = Label.new("Right Axis:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditRightRotation = EditVector.new()
+		pEditRightRotation.setToolTip(toolTip)
+		pPanelForm.addWidget(pEditRightRotation)
+		
+		CPECoordinateSystem.new(preview, null, null, label, pEditRightRotation, comboBox, null)
+		
+		// left bone
+		labelBone = Label.new("Left Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelBone)
+		
+		comboBox = ComboBox.new(pModelListLeftBone, DefaultComboBoxEditor.new(pModelTextLeftBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Left eye bone.")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, labelBone, comboBox)
+		
+		// left rotation
+		toolTip = "Left eye coordinate system. Horizontal rotation along Y (green) axis, vertical along along X (red) axis and Z axis (blue) pointing through the iris."
+		label = Label.new("Left Axis:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditLeftRotation = EditVector.new()
+		pEditLeftRotation.setToolTip(toolTip)
+		pPanelForm.addWidget(pEditLeftRotation)
+		
+		CPECoordinateSystem.new(preview, null, null, label, pEditLeftRotation, comboBox, null)
+		
+		// limit in
+		pPanelForm.addWidget(Label.new("Limit In Angle:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelLimitIn, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("Limit angle in degrees of eyes rotation towards the nose.")
+		pPanelForm.addWidget(textField)
+		
+		// limit out
+		pPanelForm.addWidget(Label.new("Limit Out Angle:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelLimitOut, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("Limit angle in degrees of eyes rotation away from nose.")
+		pPanelForm.addWidget(textField)
+		
+		// limit up
+		pPanelForm.addWidget(Label.new("Limit Up Angle:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelLimitUp, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("Limit angle in degrees of eyes rotation up.")
+		pPanelForm.addWidget(textField)
+		
+		// limit down
+		pPanelForm.addWidget(Label.new("Limit Down Angle:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelLimitDown, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("Limit angle in degrees of eyes rotation down.")
+		pPanelForm.addWidget(textField)
+	end
+	
+	/** Update bone lists. */
+	public func void updateBoneLists(Array bones)
+		pModelListRightBone.setContent(bones)
+		pModelListLeftBone.setContent(bones)
+	end
+end

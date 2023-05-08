@@ -1,0 +1,391 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Commands
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior for MotionTransferEyes.
+ */
+class ECBMotionTransferEyes extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Controller attach/detach listener. */
+		class AttachDetachListener extends DefaultBindingManagerListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func void deviceAttached(BindingManager manager, InputDevice device)
+				if pInstance.getInputDevice() == null and device.getType() == InputDeviceType.vrEyeTracker
+					pInstance.setInputDevice(device)
+				end
+			end
+			
+			public func void deviceDetached(BindingManager manager, InputDevice device)
+				if pInstance.getInputDevice() == device
+					pInstance.setInputDevice(null)
+				end
+			end
+			
+			public func void devicesReloaded(BindingManager manager)
+				pInstance.findInputDevice()
+			end
+		end
+		
+		/** Update controllers. */
+		class UpdateControllers extends ECBMoCapAnimator.DefaultListener
+			private var Instance pInstance
+			
+			public func new(Instance instance)
+				pInstance = instance
+			end
+			
+			public func int requiredPhaseCount(ECBMoCapAnimator.Instance instance)
+				return 2
+			end
+			
+			public func void updateControllers(ECBMoCapAnimator.Instance instance, float elapsed, int phase)
+				if phase == 1
+					pInstance.updateControllers()
+				end
+			end
+		end
+		
+		
+		
+		private var ECBMotionTransferEyes pECBehavior
+		private var ECBehaviorVRPlayspace.Instance pVRPlayspace
+		private var ECBMoCapAnimator.Instance pMoCapAnimator
+		private var float pLimitEyeRightScaleH
+		private var float pLimitEyeRightScaleV
+		private var float pLimitEyeRightOffsetH
+		private var float pLimitEyeRightOffsetV
+		private var float pLimitEyeLeftScaleH
+		private var float pLimitEyeLeftScaleV
+		private var float pLimitEyeLeftOffsetH
+		private var float pLimitEyeLeftOffsetV
+		private var AnimatorController pControllerRightHorizontal
+		private var AnimatorController pControllerRightVertical
+		private var AnimatorController pControllerLeftHorizontal
+		private var AnimatorController pControllerLeftVertical
+		private var InputDevice pInputDevice
+		private var AttachDetachListener pAttachDetachListener
+		
+		
+		
+		/** Create instance. */
+		public func new(ECBMotionTransferEyes ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			
+			pAttachDetachListener = AttachDetachListener.new(this)
+			
+			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
+			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
+		end
+		
+		/** Dispose of instance. */
+		public func void dispose()
+			pAttachDetachListener = null
+			pVRPlayspace = null
+			pMoCapAnimator = null
+			super.dispose()
+		end
+		
+		
+		
+		/** Init behavior instance. */
+		public func void init(StubElement stub)
+			var ECBehaviorActorAnimated.Instance actorAnimated = pMoCapAnimator.getActorAnimated()
+			pControllerRightHorizontal = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRightHorizontal())
+			pControllerRightVertical = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRightVertical())
+			pControllerLeftHorizontal = actorAnimated.getControllerNamed(pECBehavior.getControllerNameLeftHorizontal())
+			pControllerLeftVertical = actorAnimated.getControllerNamed(pECBehavior.getControllerNameLeftVertical())
+			
+			// right eye limit factors
+			var float lower = pControllerRightHorizontal.getLower()
+			var float upper = pControllerRightHorizontal.getUpper()
+			pLimitEyeRightScaleH = DEMath.max((upper - lower) / 2, 0.01)
+			pLimitEyeRightOffsetH = (lower + upper) / 2
+			
+			lower = pControllerRightVertical.getLower()
+			upper = pControllerRightVertical.getUpper()
+			pLimitEyeRightScaleV = DEMath.max((upper - lower) / 2, 0.01)
+			pLimitEyeRightOffsetV = (lower + upper) / 2
+			
+			// left eye limit factors
+			lower = pControllerLeftHorizontal.getLower()
+			upper = pControllerLeftHorizontal.getUpper()
+			pLimitEyeLeftScaleH = DEMath.max((upper - lower) / 2, 0.01)
+			pLimitEyeLeftOffsetH = (lower + upper) / 2
+			
+			lower = pControllerLeftVertical.getLower()
+			upper = pControllerLeftVertical.getUpper()
+			pLimitEyeLeftScaleV = DEMath.max((upper - lower) / 2, 0.01)
+			pLimitEyeLeftOffsetV = (lower + upper) / 2
+			
+			// add listener
+			pMoCapAnimator.addListener(UpdateControllers.new(this))
+		end
+		
+		
+		/** Behavior. */
+		public func ECBMotionTransferEyes getECBehavior()
+			return pECBehavior
+		end
+		
+		/** VR Playspace. */
+		public func ECBehaviorVRPlayspace.Instance getVRPlayspace()
+			return pVRPlayspace
+		end
+		
+		/** Motion capture animator. */
+		public func ECBMoCapAnimator.Instance getMoCapAnimator()
+			return pMoCapAnimator
+		end
+		
+		/** Animator controller right horizontal. */
+		public func AnimatorController getControllerRightHorizontal()
+			return pControllerRightHorizontal
+		end
+		
+		/** Animator controller right vertical. */
+		public func AnimatorController getControllerRightVertical()
+			return pControllerRightVertical
+		end
+		
+		/** Animator controller left horizontal. */
+		public func AnimatorController getControllerLeftHorizontal()
+			return pControllerLeftHorizontal
+		end
+		
+		/** Animator controller left vertical. */
+		public func AnimatorController getControllerLeftVertical()
+			return pControllerLeftVertical
+		end
+		
+		/** Input device or null if detached. */
+		public func InputDevice getInputDevice()
+			return pInputDevice
+		end
+		
+		/** Set input device or null if detached. */
+		public func void setInputDevice(InputDevice device)
+			pInputDevice = device
+		end
+		
+		
+		
+		/** Element has been added to game world. Start tracking device. */
+		public func void addToGameWorld()
+			GameApp.getGameApp().getBindingManager().addListener(pAttachDetachListener)
+			findInputDevice()
+		end
+		
+		/** Element has been removed from game world. Stop tracking device. */
+		public func void removeFromGameWorld()
+			GameApp.getGameApp().getBindingManager().removeListener(pAttachDetachListener)
+			setInputDevice(null)
+		end
+		
+		
+		
+		/** Update controllers. */
+		public func void updateControllers()
+			if pInputDevice == null
+				return
+			end
+			
+			// there are two ways an eye tracker can return the data. it can return the eye
+			// orientation relative to the head or the position the eyes look at relative
+			// to the head. we use the eye orientation relative to the hed since only this
+			// data works properly with the HMD not lining up with the character head
+			var Vector rotation = pInputDevice.getDevicePoseOrientation().getEulerAngles()
+			
+			// limit right eye rotation
+			var float horizontal = (rotation.getY() - pLimitEyeRightOffsetH) / pLimitEyeRightScaleH
+			var float vertical = (rotation.getX() - pLimitEyeRightOffsetV) / pLimitEyeRightOffsetV
+			
+			var Vector2 direction = Vector2.new(horizontal, vertical)
+			if direction.getLength() > 1
+				direction = direction.normalize()
+				horizontal = direction.getX()
+				vertical = direction.getY()
+			end
+			
+			pControllerRightHorizontal.setValue(horizontal * pLimitEyeRightScaleH + pLimitEyeRightOffsetH)
+			pControllerRightVertical.setValue(vertical * pLimitEyeRightOffsetV + pLimitEyeRightOffsetV)
+			
+			// limit left eye rotation
+			horizontal = (rotation.getY() - pLimitEyeLeftOffsetH) / pLimitEyeLeftScaleH
+			vertical = (rotation.getX() - pLimitEyeLeftOffsetV) / pLimitEyeLeftOffsetV
+			
+			direction = Vector2.new(horizontal, vertical)
+			if direction.getLength() > 1
+				direction = direction.normalize()
+				horizontal = direction.getX()
+				vertical = direction.getY()
+			end
+			
+			pControllerLeftHorizontal.setValue(horizontal * pLimitEyeLeftScaleH + pLimitEyeLeftOffsetH)
+			pControllerLeftVertical.setValue(vertical * pLimitEyeLeftOffsetV + pLimitEyeLeftOffsetV)
+		end
+		
+		/** Find input device. */
+		public func void findInputDevice()
+			setInputDevice(GameApp.getApp().getBindingManager().findDevice(block InputDevice each
+				return each.getType() == InputDeviceType.vrEyeTracker
+			end))
+		end
+	end
+	
+	
+	
+	private var MotionTransferEyes pTransfer
+	private var ECBehaviorVRPlayspace pVRPlayspace
+	private var ECBMoCapAnimator pMoCapAnimator
+	private var String pControllerNameRightHorizontal
+	private var String pControllerNameRightVertical
+	private var String pControllerNameLeftHorizontal
+	private var String pControllerNameLeftVertical
+	
+	
+	
+	/** Create behavior element class. */
+	public func new(BaseVRActorClass eclass, MotionTransferEyes transfer) super(eclass, transfer.getName())
+		if transfer == null
+			throw ENullPointer.new("transfer")
+		end
+		
+		var String subId = "motionTransferEyes(" + transfer.getName() + ")"
+		var String prefix = subId + "."
+		
+		pTransfer = transfer
+		pVRPlayspace = eclass.getVRPlayspace()
+		pMoCapAnimator = ECBMoCapAnimator.getBehaviorIn(eclass)
+		
+		pControllerNameRightHorizontal = transfer.getName() + ".rightHorizontal"
+		pControllerNameRightVertical = transfer.getName() + ".rightVertical"
+		pControllerNameLeftHorizontal = transfer.getName() + ".leftHorizontal"
+		pControllerNameLeftVertical = transfer.getName() + ".leftVertical"
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		pVRPlayspace = null
+		pTransfer = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Motion transfer. */
+	public func MotionTransferEyes getTransfer()
+		return pTransfer
+	end
+	
+	/** VR Playspace behavior. */
+	public func ECBehaviorVRPlayspace getVRPlayspace()
+		return pVRPlayspace
+	end
+	
+	/** Motion capture animator behavior. */
+	public func ECBMoCapAnimator getMoCapAnimator()
+		return pMoCapAnimator
+	end
+	
+	/** Animator controller name right horizontal. */
+	public func String getControllerNameRightHorizontal()
+		return pControllerNameRightHorizontal
+	end
+	
+	/** Animator controller name right vertical. */
+	public func String getControllerNameRightVertical()
+		return pControllerNameRightVertical
+	end
+	
+	/** Animator controller name left horizontal. */
+	public func String getControllerNameLeftHorizontal()
+		return pControllerNameLeftHorizontal
+	end
+	
+	/** Animator controller name left vertical. */
+	public func String getControllerNameLeftVertical()
+		return pControllerNameLeftVertical
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance( BehaviorElement element )
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	
+	
+	/** Get behavior with slot name in element class or null if absent. */
+	static public func ECBMotionTransferEyes getBehaviorIn(BehaviorElementClass eclass, String slotName)
+		return eclass.findBehavior(block ECBMotionTransferEyes each
+			return each.getTransfer().getName().equals(slotName)
+		end) cast ECBMotionTransferEyes
+	end
+	
+	/** Get list of all behaviors in element. */
+	static public func Array getAllBehaviorsIn(BehaviorElementClass eclass)
+		return eclass.collectBehaviors(block ECBMotionTransferEyes each
+			return true
+		end)
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element, String slotName)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getTransfer().getName().equals(slotName)
+		end) cast Instance
+	end
+	
+	/** Get list of all instances in element. */
+	static public func Array getAllInstancesIn(BehaviorElement element)
+		return element.collectInstances(block Instance each
+			return true
+		end)
+	end
+	
+	
+	
+	/** Create Behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

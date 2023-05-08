@@ -117,6 +117,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var Matrix pTransformRootBones
 		private var int pOriginBoneIndex
 		private var Array pOriginChildrenIndices
+		private var Array pVPSIndices
+		private var Array pStaticVPSIndices
 		private var RecordAnimation pRecordAnimation
 		private var RecordAnimation pRecordAnimationDevices
 		private var RecordAnimation pRecordAnimationObject
@@ -147,6 +149,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pRecordDeviceSlots = Array.new()
 			pListeners = Array.new()
 			pTransformRootBones = Matrix.new()
+			pVPSIndices = Array.new()
+			pStaticVPSIndices = Array.new()
 			
 			pComponent = ecbehavior.getComponent().instance(element)
 			if ecbehavior.getCharacter() != null
@@ -318,9 +322,11 @@ class ECBRecordAnimation extends DefaultECBehavior
 			if pCharacter != null
 				if pFullRecording
 					prepareAllBoneIndices()
+					prepareAllVPSIndices()
 					
 				else
 					prepareBoneIndices()
+					prepareVPSIndices()
 				end
 				prepareOriginBone()
 				
@@ -446,6 +452,25 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end)
 		end
 		
+		/** Prepare vertex position set indices */
+		protected func void prepareVPSIndices()
+			var Set ignoreVPS = pECBehavior.getIgnoreVPS()
+			var Component component = pComponent.getComponent()
+			
+			pVPSIndices.removeAll()
+			pStaticVPSIndices.removeAll()
+			
+			pECBehavior.getVPS().forEach(block String vps
+				if not ignoreVPS.has(vps)
+					var int index = component.indexOfVertexPositionSetNamed(vps)
+					if index != -1
+						pVPSIndices.add(index)
+						pRecordAnimation.addVPS(vps)
+					end
+				end
+			end)
+		end
+		
 		/**
 		 * Prepare all bone indices. For each bone find also the root bone. Root bones are also
 		 * added as bones to be recorded. Also find the origin bone if defined. The origin
@@ -514,6 +539,36 @@ class ECBRecordAnimation extends DefaultECBehavior
 				if rig.boneGetParent(i) != -1 and not allRootBones.has(i) and not pBoneIndices.has(i)
 					pStaticBoneIndices.add(i)
 					pRecordAnimation.addBone(rig.boneGetName(i))
+				end
+			end
+		end
+		
+		/** Prepare all vertex position set indices */
+		protected func void prepareAllVPSIndices()
+			var Set ignoreVPS = pECBehavior.getIgnoreVPS()
+			var Component component = pComponent.getComponent()
+			
+			pVPSIndices.removeAll()
+			pStaticVPSIndices.removeAll()
+			
+			// add vertex position sets as in the not all mode
+			pECBehavior.getVPS().forEach(block String vps
+				if not ignoreVPS.has(vps)
+					var int index = component.indexOfVertexPositionSetNamed(vps)
+					if index != -1
+						pVPSIndices.add(index)
+						pRecordAnimation.addVPS(vps)
+					end
+				end
+			end)
+			
+			// add static vertex position sets
+			var int i, count = component.getVertexPositionSetCount()
+			
+			for i = 0 to count
+				if not pVPSIndices.has(i)
+					pStaticVPSIndices.add(i)
+					pRecordAnimation.addVPS(component.vertexPositionSetGetNameAt(i))
 				end
 			end
 		end
@@ -773,7 +828,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pIncrementTime = true
 				
 				if pRecordAnimation != null
-					captureBones()
+					captureFrame()
 				end
 				
 				if pRecordAnimationObject != null and pCapturedAnimations != null
@@ -785,8 +840,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end
 		end
 		
-		/** Capture bones. */
-		protected func void captureBones()
+		/** Capture frame. */
+		protected func void captureFrame()
 			var Component component = pComponent.getComponent()
 			
 			// bones
@@ -817,9 +872,16 @@ class ECBRecordAnimation extends DefaultECBehavior
 				end
 			end)
 			
+			// vertex position sets
+			pVPSIndices.forEach(block int index
+				pRecordAnimation.addVPSKeyframe(pRecordTime, component.vertexPositionSetGetWeightAt(index))
+			end)
+			
+			// static
 			if pFirstFrame
 				pFirstFrame = false
 				
+				// static bones
 				pStaticRootBoneIndices.forEach(block int index
 					if index == pOriginBoneIndex
 						matrix = Matrix.new()
@@ -839,6 +901,11 @@ class ECBRecordAnimation extends DefaultECBehavior
 						pRecordAnimation.addStaticKeyframe(\
 							component.boneGetPosition(index), component.boneGetRotation(index))
 					end
+				end)
+				
+				// static vertex position sets
+				pStaticVPSIndices.forEach(block int index
+					pRecordAnimation.addVPSStaticKeyframe(component.vertexPositionSetGetWeightAt(index))
 				end)
 			end
 			
@@ -947,6 +1014,13 @@ class ECBRecordAnimation extends DefaultECBehavior
 				if hasOriginBone
 					tagBones.addDataTag("boneName", originBone)
 				end
+				
+				tagAnimation.addDataTag("vertexPositionSetCount", pRecordAnimation.getVPSCount())
+				
+				var EasyXMLElement tagVPS = tagAnimation.addTag("vertexPositionSets")
+				pRecordAnimation.forEachVPS(block String each
+					tagVPS.addDataTag("vertexPositionSetName", each)
+				end)
 			end
 			
 			// devices animation
@@ -1041,6 +1115,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 	private var Set pBones
 	private var Set pRootBones
 	private var Set pIgnoreBones
+	private var Set pVPS
+	private var Set pIgnoreVPS
 	
 	
 	
@@ -1053,6 +1129,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 		pBones = Set.new()
 		pRootBones = Set.new()
 		pIgnoreBones = Set.new()
+		pVPS = Set.new()
+		pIgnoreVPS = Set.new()
 		
 		eclass.addBehavior(this)
 	end
@@ -1066,6 +1144,8 @@ class ECBRecordAnimation extends DefaultECBehavior
 		pBones = Set.new()
 		pRootBones = Set.new()
 		pIgnoreBones = Set.new()
+		pVPS = Set.new()
+		pIgnoreVPS = Set.new()
 		
 		eclass.addBehavior(this)
 	end
@@ -1144,6 +1224,40 @@ class ECBRecordAnimation extends DefaultECBehavior
 	/** Add bones to ignore if not present. Expects Array of String. */
 	public func void addIgnoreBones(Array bones)
 		pIgnoreBones.addAll(Set.newFrom(bones))
+	end
+	
+	
+	
+	/** Vertex position sets to record. Set of String. */
+	public func Set getVPS()
+		return pVPS
+	end
+	
+	/** Add vertex position set to record if not present. */
+	public func void addVPS(String name)
+		pVPS.add(name)
+	end
+	
+	/** Add vertex position sets to record if not present. Expects Array of String. */
+	public func void addVPS(Array names)
+		pVPS.addAll(Set.newFrom(names))
+	end
+	
+	
+	
+	/** Vertex position sets to ignore. Set of String. */
+	public func Set getIgnoreVPS()
+		return pIgnoreVPS
+	end
+	
+	/** Add vertex position set to ignore if not present. */
+	public func void addIgnoreVPS(String name)
+		pIgnoreVPS.add(name)
+	end
+	
+	/** Add vertex position sets to ignore if not present. Expects Array of String. */
+	public func void addIgnoreVPS(Array list)
+		pIgnoreVPS.addAll(Set.newFrom(list))
 	end
 	
 	

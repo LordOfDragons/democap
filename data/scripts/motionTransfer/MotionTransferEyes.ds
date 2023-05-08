@@ -1,0 +1,392 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Democap.Actors
+pin Democap.Behaviors
+pin Democap.Characters
+
+pin Dragengine.Animators
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+/**
+ * Motion transfer affecting eye looking direction.
+ * 
+ * Supports input from eye trackers to adjust the character eyes looking direction.
+ */
+class MotionTransferEyes extends DefaultMotionTransfer
+	/** Factory. */
+	class Factory implements MotionTransferFactory
+		public func new()
+		end
+		
+		public func String factoryID()
+			return "eyes"
+		end
+		
+		public func MotionTransfer createMotionTransfer()
+			return MotionTransferEyes.new(factoryID())
+		end
+		
+		public func String displayName()
+			return "Eyes"
+		end
+	end
+	
+	
+	
+	private var String pRightBone
+	private var String pLeftBone
+	private var Vector pRightRotation
+	private var Vector pLeftRotation
+	private var float pLimitIn
+	private var float pLimitOut
+	private var float pLimitUp
+	private var float pLimitDown
+	
+	private var ADController pADControllerRightHorizontal
+	private var ADController pADControllerRightVertical
+	private var ADController pADControllerLeftHorizontal
+	private var ADController pADControllerLeftVertical
+	
+	private var ADRule pADRuleReset
+	private var ADRule pADRuleRightHorizontal
+	private var ADRule pADRuleRightVertical
+	private var ADRule pADRuleLeftHorizontal
+	private var ADRule pADRuleLeftVertical
+	
+	
+	
+	/** Create motion transfer. */
+	public func new(String factoryID) super(factoryID)
+		pRightBone = ""
+		pLeftBone = ""
+		pRightRotation = Vector.new()
+		pLeftRotation = Vector.new()
+		pLimitIn = 45
+		pLimitOut = 45
+		pLimitUp = 45
+		pLimitDown = 45
+	end
+	
+	/** Create copy of motion transfer. */
+	public func new(MotionTransferEyes transfer) super(transfer)
+		pRightBone = transfer.pRightBone
+		pLeftBone = transfer.pLeftBone
+		pRightRotation = transfer.pRightRotation
+		pLeftRotation = transfer.pLeftRotation
+		pLimitIn = transfer.pLimitIn
+		pLimitOut = transfer.pLimitOut
+		pLimitUp = transfer.pLimitUp
+		pLimitDown = transfer.pLimitDown
+	end
+	
+	
+	
+	/** Right eye bone name. */
+	public func String getRightBone()
+		return pRightBone
+	end
+	
+	/** Set right eye bone name. */
+	public func void setRightBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pRightBone = bone
+	end
+	
+	/** Left eye bone name. */
+	public func String getLeftBone()
+		return pLeftBone
+	end
+	
+	/** Set left eye bone name. */
+	public func void setLeftBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pLeftBone = bone
+	end
+	
+	/** Rotation of right eye component space. */
+	public func Vector getRightRotation()
+		return pRightRotation
+	end
+	
+	/** Set rotation of right eye in component space. */
+	public func void setRightRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pRightRotation = rotation
+	end
+	
+	/** Rotation of left eye component space. */
+	public func Vector getLeftRotation()
+		return pLeftRotation
+	end
+	
+	/** Set rotation of left eye in component space. */
+	public func void setLeftRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pLeftRotation = rotation
+	end
+	
+	/** Horizontal eye rotation limit towards the nose in degrees. */
+	public func float getLimitIn()
+		return pLimitIn
+	end
+	
+	/** Set horizontal eye rotation limit towards the nose in degrees. */
+	public func void setLimitIn(float angle)
+		pLimitIn = angle
+	end
+	
+	/** Horizontal eye rotation limit away from the nose in degrees. */
+	public func float getLimitOut()
+		return pLimitOut
+	end
+	
+	/** Set horizontal eye rotation limit away from the nose in degrees. */
+	public func void setLimitOut(float angle)
+		pLimitOut = angle
+	end
+	
+	/** Vertical eye rotation limit pu in degrees. */
+	public func float getLimitUp()
+		return pLimitUp
+	end
+	
+	/** Set vertical eye rotation limit up in degrees. */
+	public func void setLimitUp(float angle)
+		pLimitUp = angle
+	end
+	
+	/** Vertical eye rotation limit down in degrees. */
+	public func float getLimitDown()
+		return pLimitDown
+	end
+	
+	/** Set vertical eye rotation limit down in degrees. */
+	public func void setLimitDown(float angle)
+		pLimitDown = angle
+	end
+	
+	
+	
+	/** Reset eyes animator definition rule or null. */
+	public func ADRule getADRuleReset()
+		return pADRuleReset
+	end
+	
+	/** Right eye horizontal animator definition rule or null. */
+	public func ADRule getADRuleRightHorizontal()
+		return pADRuleRightHorizontal
+	end
+	
+	/** Right eye vertical animator definition rule or null. */
+	public func ADRule getADRuleRightVertical()
+		return pADRuleRightVertical
+	end
+	
+	/** Left eye horizontal animator definition rule or null. */
+	public func ADRule getADRuleLeftHorizontal()
+		return pADRuleLeftHorizontal
+	end
+	
+	/** Left eye vertical animator definition rule or null. */
+	public func ADRule getADRuleLeftVertical()
+		return pADRuleLeftVertical
+	end
+	
+	
+	
+	/** Init element clas. */
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
+		pADControllerRightHorizontal = null
+		pADControllerRightVertical = null
+		pADControllerLeftHorizontal = null
+		pADControllerLeftVertical = null
+		
+		pADRuleRightHorizontal = null
+		pADRuleRightVertical = null
+		pADRuleLeftHorizontal = null
+		pADRuleLeftVertical = null
+		
+		if not pRightBone.empty() and not pLeftBone.empty()
+			return
+		end
+		
+		// add behavior
+		var ECBMotionTransferEyes behavior = ECBMotionTransferEyes.new(eclass, this)
+		
+		// add controller, link and rules
+		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
+		var AnimatorDefinition adef = config.getAnimatorDefinition()
+		
+		// add reset rule. this is done so we can use two bone rotators instead of a state
+		// manipulator followed by a bone rotator. this is more predictable in situations
+		// where the character has unfortunate eye bone orientations
+		var ADRuleStateManipulator ruleReset = ADRuleStateManipulator.new()
+		if not pRightBone.empty()
+			ruleReset.addBone(pRightBone)
+		end
+		if not pLeftBone.empty()
+			ruleReset.addBone(pLeftBone)
+		end
+		adef.addRule(ruleReset)
+		
+		// add eye rules
+		var Matrix matrix
+		
+		if not pRightBone.empty()
+			matrix = Matrix.newRotation(pRightRotation)
+			
+			pADControllerRightHorizontal = addADController(adef,\
+				behavior.getControllerNameRightHorizontal(), -pLimitOut, pLimitIn)
+			
+			pADControllerRightVertical = addADController(adef,\
+				behavior.getControllerNameRightVertical(), -pLimitDown, pLimitUp)
+			
+			pADRuleRightHorizontal = addADRuleEye(adef,\
+				addADLink(adef, pADControllerRightHorizontal), pRightBone, matrix.getUpVector())
+			
+			pADRuleRightVertical = addADRuleEye(adef,\
+				addADLink(adef, pADControllerRightVertical), pRightBone, matrix.getRightVector())
+			
+			recordAnimation.addBone(pRightBone)
+		end
+		
+		if not pLeftBone.empty()
+			matrix = Matrix.newRotation(pLeftRotation)
+			
+			pADControllerLeftHorizontal = addADController(adef,\
+				behavior.getControllerNameLeftHorizontal(), -pLimitIn, pLimitOut)
+			
+			pADControllerLeftVertical = addADController(adef,\
+				behavior.getControllerNameLeftVertical(), -pLimitDown, pLimitUp)
+			
+			pADRuleLeftHorizontal = addADRuleEye(adef,\
+				addADLink(adef, pADControllerLeftHorizontal), pLeftBone, matrix.getUpVector())
+			
+			pADRuleLeftVertical = addADRuleEye(adef,\
+				addADLink(adef, pADControllerLeftVertical), pLeftBone, matrix.getRightVector())
+			
+			recordAnimation.addBone(pLeftBone)
+		end
+	end
+	
+	/** Add animator definition controller. */
+	protected func ADController addADController(AnimatorDefinition adef, String name,\
+	float minValue, float maxValue)
+		var ADController controller = ADController.new()
+		controller.setName(name)
+		controller.setMinimum(minValue)
+		controller.setMaximum(maxValue)
+		adef.addController(controller)
+		return controller
+	end
+	
+	/** Add animator definition link. */
+	protected func ADLink addADLink(AnimatorDefinition adef, ADController controller)
+		var ADLink link = ADLink.new()
+		link.setController(controller)
+		link.setCurve(CurveBezier.newDefaultLinear())
+		// ^== TODO an S-curve would make the movement more gentle towards the limits
+		adef.addLink(link)
+		return link
+	end
+	
+	/** Add animator rule. */
+	protected func ADRule addADRuleEye(AnimatorDefinition adef, ADLink link, String bone, Vector axis)
+		var ADRuleBoneTransformator rule = ADRuleBoneTransformator.new()
+		var ADController controller = link.getController()
+		rule.setName(controller.getName())
+		rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+		rule.setAxis(axis)
+		rule.setMinimumAngle(controller.getMinimum())
+		rule.setMaximumAngle(controller.getMaximum())
+		rule.setUseAxis(true)
+		rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+		rule.addBone(bone)
+		adef.addRule(rule)
+		return rule
+	end
+	
+	/** Create copy of motion transfer. */
+	public func MotionTransfer createCopy()
+		return MotionTransferEyes.new(this)
+	end
+	
+	/** Load from XML. */
+	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("name")
+				setName(element.getFirstCData())
+				
+			elif tagName.equals("rightBone")
+				setRightBone(element.getFirstCData())
+				
+			elif tagName.equals("leftBone")
+				setLeftBone(element.getFirstCData())
+				
+			elif tagName.equals("rightRotation")
+				setRightRotation(loader.readVector(element))
+				
+			elif tagName.equals("leftRotation")
+				setLeftRotation(loader.readVector(element))
+				
+			elif tagName.equals("limitIn")
+				pLimitIn = element.getFirstCDataFloat()
+				
+			elif tagName.equals("limitOut")
+				pLimitOut = element.getFirstCDataFloat()
+				
+			elif tagName.equals("limitUp")
+				pLimitUp = element.getFirstCDataFloat()
+				
+			elif tagName.equals("limitDown")
+				pLimitDown = element.getFirstCDataFloat()
+			end
+		end)
+	end
+	
+	/** Save to XML. */
+	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+		tag.addDataTag("name", getName())
+		tag.addDataTag("rightBone", pRightBone)
+		tag.addDataTag("leftBone", pLeftBone)
+		loader.writeVector(tag, "rightRotation", pRightRotation)
+		loader.writeVector(tag, "leftRotation", pLeftRotation)
+		tag.addDataTag("limitIn", pLimitIn)
+		tag.addDataTag("limitOut", pLimitOut)
+		tag.addDataTag("limitUp", pLimitUp)
+		tag.addDataTag("limitDown", pLimitOut)
+	end
+end
