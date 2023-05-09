@@ -425,7 +425,8 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			var Rig rig = component.getRig()
 			
 			var Array nonPhysicsBones = findNonPhysicsBones(rig)
-			if nonPhysicsBones.getCount() == 0
+			var bool hasNonPhysicsBones = nonPhysicsBones.getCount() > 0
+			if not hasNonPhysicsBones and component.getVertexPositionSetCount() == 0
 				return
 			end
 			
@@ -439,9 +440,9 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			end)
 			
 			var ARStateManipulator rule = ARStateManipulator.new()
-			rule.setEnableOrientation(true)
-			rule.setEnablePosition(true)
-			rule.setEnableSize(true)
+			rule.setEnableOrientation(hasNonPhysicsBones)
+			rule.setEnablePosition(hasNonPhysicsBones)
+			rule.setEnableSize(hasNonPhysicsBones)
 			nonPhysicsBones.forEach(block String each
 				rule.addBone(each)
 			end)
