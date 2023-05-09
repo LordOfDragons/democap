@@ -28,7 +28,7 @@ import bpy
 from mathutils import Vector, Quaternion
 from .configuration import Configuration
 from .asyncio_helper import startAsyncioLoop, stopAsyncioLoop
-from .live_protocol import MessageCodes, LinkStateCodes
+from .live_protocol import MessageCodes, LinkStateCodes, Features
 from .live_utils import convertBoneName, convertBoneTransform
 from .live_utils import convertPosition, convertOrientation
 from .live_utils import convertBonePosition, convertBoneOrientation
@@ -59,11 +59,20 @@ class DemocapLiveCaptureFrame:
         def matrix(self):
             return self._matrix
 
+    class VertexPositionSet:
+        def __init__(self, weight):
+            self._weight = weight
+
+        @property
+        def weight(self):
+            return self._weight
+
     def __init__(self):
         self.position = Vector()
         self.orientation = Quaternion()
         self.scale = 1.0
         self.bones = []
+        self.vertexPositionSets = []
 
 
 class DemocapLiveCaptureBoneLayout:
@@ -85,10 +94,19 @@ class DemocapLiveCaptureBoneLayout:
         def matrix(self):
             return self._matrix
 
+    class VertexPositionSet:
+        def __init__(self, name):
+            self._name = name
+
+        @property
+        def name(self):
+            return self._name
+
     def __init__(self):
         self.revision = 0
         self.bones = []
         self.rootBones = []
+        self.vertexPositionSets = []
 
 
 class DemocapLiveStateRecordPlayback(dnl.state.State):
@@ -118,9 +136,10 @@ class DemocapLiveConnection(dnl.Connection):
     def __init__(self):
         dnl.Connection.__init__(self)
         self._infoStatus = "Disconnected"
-        self._supportedFeatures = 0
+        self._supportedFeatures = Features.ENABLE_VERTEX_POSITION_SETS
         self._ready = False
         self._enabledFeatures = 0
+        self._useVertexPositionSets = False
         self._frameNumberWindowSize = 180
         self._lastFrameNumber = -1
         self._captureBoneLayout = None
@@ -132,6 +151,10 @@ class DemocapLiveConnection(dnl.Connection):
     def dispose(self) -> None:
         stopAsyncioLoop()
         dnl.Connection.dispose(self)
+
+    @property
+    def useVertexPositionSets(self):
+        return self._useVertexPositionSets
 
     @property
     def captureBoneLayout(self):
@@ -268,6 +291,11 @@ class DemocapLiveConnection(dnl.Connection):
             self.disconnect()
             return
 
+        self._useVertexPositionSets = (
+            self._enabledFeatures & Features.ENABLE_VERTEX_POSITION_SETS) != 0
+        logger.info("DemocapLiveConnection: Use Vertex Position Sets = {}"
+                    .format(self._useVertexPositionSets))
+
         logger.info("DemocapLiveConnection: Ready")
         self._ready = True
         self._captureActor = DemocapLiveCaptureActor(self)
@@ -290,6 +318,16 @@ class DemocapLiveConnection(dnl.Connection):
 
             if boneParent == -1:
                 layout.rootBones.append(i)
+
+        """only send if vertex position sets are enabled"""
+        if self._useVertexPositionSets:
+            vpsCount = reader.read_ushort()
+            layout.vertexPositionSets = [None] * vpsCount
+
+            for i in range(vpsCount):
+                vpsName = convertBoneName(reader.read_string8())
+                layout.vertexPositionSets[i] = (
+                    DemocapLiveCaptureBoneLayout.VertexPositionSet(vpsName))
 
         """finished reading message. store bone layout"""
         self._captureBoneLayout = layout
@@ -338,5 +376,14 @@ class DemocapLiveConnection(dnl.Connection):
                 convertBonePosition(bonePosition),
                 convertBoneOrientation(boneOrientation),
                 None)  # localTransform)
+
+        """only send if vertex position sets are enabled"""
+        if self._useVertexPositionSets:
+            vpsCount = len(self._captureBoneLayout.vertexPositionSets)
+            frame.vertexPositionSets = [None] * vpsCount
+            for i in range(vpsCount):
+                vpsWeight = reader.read_float()
+                frame.vertexPositionSets[i] = (
+                    DemocapLiveCaptureFrame.VertexPositionSet(vpsWeight))
 
         self._captureFrame = frame

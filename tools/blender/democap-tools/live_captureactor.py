@@ -65,11 +65,47 @@ class DemocapLiveCaptureActor:
                 self._poseBone.keyframe_insert(data_path="location")
                 self._poseBone.keyframe_insert(data_path="rotation_quaternion")
 
+    class VertexPositionSetMapping:
+        def __init__(self, indexShapeKey, shapeKey,
+                     indexVertexPositionSet, vertexPositionSet):
+            self._indexShapeKey = indexShapeKey
+            self._shapeKey = shapeKey
+            self._indexVertexPositionSet = indexVertexPositionSet
+            self._vertexPositionSet = vertexPositionSet
+
+        @property
+        def indexShapeKey(self):
+            return self._indexShapeKey
+
+        @property
+        def shapeKey(self):
+            return self._shapeKey
+
+        @property
+        def indexVertexPositionSet(self):
+            return self._indexVertexPositionSet
+
+        @property
+        def vertexPositionSet(self):
+            return self._vertexPositionSet
+
+        def updateState(self, captureFrame, insertKeyframes):
+            frameVPS = captureFrame.vertexPositionSets[
+                self._indexVertexPositionSet]
+            self._shapeKey.value = frameVPS.weight
+            if insertKeyframes:
+                # C.active_object.data.shape_keys.animation_data.action
+                self._shapeKey.keyframe_insert(
+                    data_path="key_blocks[\"{}\"].value".format(
+                        self._shapeKey.name))
+
     def __init__(self, connection):
         self._connection = connection
         self._object = None
+        self._objectMesh = None
         self._boneLayout = None
         self._boneMapping = None
+        self._vpsMapping = None
         self._captureFrame = None
         addFrameUpdater(self)
 
@@ -88,6 +124,20 @@ class DemocapLiveCaptureActor:
         self._object = value
         self._boneLayout = None
         self._boneMapping = None
+        self._vpsMapping = None
+
+    @property
+    def objectMesh(self):
+        return self._objectMesh
+
+    @objectMesh.setter
+    def objectMesh(self, value):
+        if value == self._objectMesh:
+            return
+        self._objectMesh = value
+        self._boneLayout = None
+        self._boneMapping = None
+        self._vpsMapping = None
 
     def onUpdatePreview(self):
         self._captureActor(False)
@@ -107,36 +157,46 @@ class DemocapLiveCaptureActor:
 
     def _captureActor(self, insertKeyframes):
         self.object = bpy.context.scene.democaptoolslive_actor
-        if self._object is None:
+        self.objectMesh = bpy.context.scene.democaptoolslive_actormesh
+        if self._object is None and self._objectMesh is None:
             return
-        self._updateBoneMapping()
+        self._updateMappings()
 
         self._captureFrame = self._connection.captureFrame
         if self._captureFrame is None:
             return
 
-        self._object.location = self._captureFrame.position
-        self._object.rotation_quaternion = self._captureFrame.orientation
-        if insertKeyframes:
-            self._object.keyframe_insert(data_path="location")
-            self._object.keyframe_insert(data_path="rotation_quaternion")
+        if self._object:
+            self._object.location = self._captureFrame.position
+            self._object.rotation_quaternion = self._captureFrame.orientation
+            if insertKeyframes:
+                self._object.keyframe_insert(data_path="location")
+                self._object.keyframe_insert(data_path="rotation_quaternion")
+            for b in self._boneMapping:
+                b.updatePose(self._captureFrame, insertKeyframes)
 
-        for b in self._boneMapping:
-            b.updatePose(self._captureFrame, insertKeyframes)
+        if self._objectMesh:
+            for v in self._vpsMapping:
+                v.updateState(self._captureFrame, insertKeyframes)
         """frame = self._connection.captureFrame()
         logger.info("onFrameUpdate %d", self._connection.lastFrameNumber)"""
 
-    def _updateBoneMapping(self):
+    def _updateMappings(self):
         boneLayout = self._connection.captureBoneLayout
-        if boneLayout != self._boneLayout:
-            self._boneLayout = boneLayout
-            if boneLayout is None:
-                self._boneMapping = []
-                return
-            self._initBoneMapping()
+        if boneLayout == self._boneLayout:
+            return
+        self._boneLayout = boneLayout
+        if boneLayout is None:
+            self._boneMapping = []
+            self._vpsMapping = []
+            return
+        self._initBoneMapping()
+        self._initVPSMapping()
 
     def _initBoneMapping(self):
         self._boneMapping = []
+        if self._object is None:
+            return
         pose = self._object.pose
         if pose is None:
             return
@@ -150,3 +210,22 @@ class DemocapLiveCaptureActor:
                 continue  # not in list
             self._boneMapping.append(DemocapLiveCaptureActor.BoneMapping(
                 indexPoseBone, pose.bones[indexPoseBone], i, layoutBone))
+
+    def _initVPSMapping(self):
+        self._vpsMapping = []
+        if self._objectMesh is None:
+            return
+        shapeKeys = self._objectMesh.data.shape_keys.key_blocks
+        if shapeKeys is None:
+            return
+
+        names = shapeKeys.keys()
+        for i in range(len(self._boneLayout.vertexPositionSets)):
+            vps = self._boneLayout.vertexPositionSets[i]
+            try:
+                indexShapeKey = names.index(vps.name)
+            except ValueError:
+                continue  # not in list
+            self._vpsMapping.append(
+                DemocapLiveCaptureActor.VertexPositionSetMapping(
+                    indexShapeKey, shapeKeys[indexShapeKey], i, vps))

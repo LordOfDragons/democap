@@ -134,6 +134,8 @@ class VIEW3D_PT_DemocapToolsLiveActor(bpy.types.Panel):
         block = layout.column(align=True)
         block.row(align=True).prop(context.scene,
                                    "democaptoolslive_actor", expand=True)
+        block.row(align=True).prop(context.scene,
+                                   "democaptoolslive_actormesh", expand=True)
 
 
 class WM_OT_DemocapLiveCaptureFrame(bpy.types.Operator):
@@ -296,6 +298,10 @@ def filterOnlyArmatures(self, object):
     return object.type == 'ARMATURE'
 
 
+def filterOnlyMeshes(self, object):
+    return object.type == 'MESH'
+
+
 def actorChanged(self, context):
     """"logger.info("Actor changed to {}".format(
         context.scene.democaptoolslive_actor))"""
@@ -307,6 +313,13 @@ bpy.types.Scene.democaptoolslive_actor = bpy.props.PointerProperty(
     name="Actor",
     description="Armature to link MoCap actor to",
     poll=filterOnlyArmatures,
+    update=actorChanged)
+
+bpy.types.Scene.democaptoolslive_actormesh = bpy.props.PointerProperty(
+    type=bpy.types.Object,
+    name="Mesh",
+    description="Mesh to link MoCap actor to",
+    poll=filterOnlyMeshes,
     update=actorChanged)
 
 bpy.types.Scene.democaptoolslive_previewrate = bpy.props.IntProperty(

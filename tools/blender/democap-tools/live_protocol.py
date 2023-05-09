@@ -25,6 +25,10 @@
 from enum import IntEnum
 
 
+class Features(IntEnum):
+    ENABLE_VERTEX_POSITION_SETS = 0x1
+
+
 class MessageCodes(IntEnum):
     CONNECT_REQUEST = 1
     CONNECT_ACCEPTED = 2
