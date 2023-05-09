@@ -60,6 +60,31 @@ class SmoothAnimationWMM
 	
 	/** Smooth keyframes. */
 	public func void smooth(RecordAnimation animation)
+		smoothKeyframes(animation)
+		smoothKeyframesVPS(animation)
+	end
+	
+	
+	
+	/** Init weights. */
+	protected func void initWeights()
+		// weights are symmetric in the form [w1, w2, w3, w2, w1]
+		var float base = 2 //3
+		
+		pWeight1 = DEMath.mix(0.0, 1.0, pStrength)
+		pWeight2 = DEMath.mix(0.0, base, pStrength)
+		pWeight3 = base * base
+		
+		var float factor = 1.0 / (pWeight1 + pWeight2 + pWeight3 + pWeight2 + pWeight1)
+		pWeight1 *= factor
+		pWeight2 *= factor
+		pWeight3 *= factor
+		
+		pSlerpWeight2 = pWeight2 / (pWeight3 + pWeight2)
+		pSlerpWeight1 = pWeight1 / (pWeight3 + pWeight2 + pWeight1)
+	end
+	
+	protected func void smoothKeyframes(RecordAnimation animation)
 		var int boneCount = animation.getBoneCount()
 		if boneCount == 0
 			return
@@ -115,23 +140,47 @@ class SmoothAnimationWMM
 		end
 	end
 	
-	
-	
-	/** Init weights. */
-	protected func void initWeights()
-		// weights are symmetric in the form [w1, w2, w3, w2, w1]
-		var float base = 2 //3
+	protected func void smoothKeyframesVPS(RecordAnimation animation)
+		var int vpsCount = animation.getVPSCount()
+		if vpsCount == 0
+			return
+		end
 		
-		pWeight1 = DEMath.mix(0.0, 1.0, pStrength)
-		pWeight2 = DEMath.mix(0.0, base, pStrength)
-		pWeight3 = base * base
+		var int frameCount = animation.getVPSKeyframeCount() / vpsCount
+		if frameCount < 5
+			return
+		end
 		
-		var float factor = 1.0 / (pWeight1 + pWeight2 + pWeight3 + pWeight2 + pWeight1)
-		pWeight1 *= factor
-		pWeight2 *= factor
-		pWeight3 *= factor
+		var Array keyframes = animation.getVPSKeyframes()
+		var RecordAnimationVPSKeyframe v1, v2, v3, v4, v5
+		var int strideLast = (frameCount - 1) * vpsCount
+		var int i, j, next, current, last
+		var float weight
 		
-		pSlerpWeight2 = pWeight2 / (pWeight3 + pWeight2)
-		pSlerpWeight1 = pWeight1 / (pWeight3 + pWeight2 + pWeight1)
+		for i = 0 to vpsCount
+			current = i
+			last = current + strideLast
+			next = current + 2 * vpsCount
+			v5 = keyframes.getAt(current + vpsCount) cast RecordAnimationVPSKeyframe
+			v4 = keyframes.getAt(current) cast RecordAnimationVPSKeyframe
+			v3 = v4
+			v2 = v4
+			
+			for j = 0 to frameCount
+				v1 = v2
+				v2 = v3
+				v3 = v4
+				v4 = v5
+				v5 = keyframes.getAt(DEMath.min(next, last)) cast RecordAnimationVPSKeyframe
+				next += vpsCount
+				
+				weight = v3.getWeight() * pWeight3 \
+					+ (v2.getWeight() + v4.getWeight()) * pWeight2 \
+					+ (v1.getWeight() + v5.getWeight()) * pWeight1
+				
+				keyframes.setAt(current, RecordAnimationVPSKeyframe.new(v3.getTime(), weight))
+				current += vpsCount
+			end
+		end
 	end
 end
