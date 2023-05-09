@@ -44,17 +44,29 @@ public class DNCaptureBoneLayout
 		end
 	end
 	
+	class VertexPositionSet
+		public var int index
+		public var String name
+		
+		public func new()
+		end
+	end
+	
 	
 	private var int pRevision
 	private var Array pBones
+	private var Array pVPS
 	private var MemoryFile pMessageData
+	private var MemoryFile pMessageDataVPS
 	
 	
 	/** Create capture bone layout. */
 	public func new(int revision)
 		pRevision = revision
 		pBones = Array.new()
+		pVPS = Array.new()
 		pMessageData = MemoryFile.new("")
+		pMessageDataVPS = MemoryFile.new("")
 	end
 	
 	
@@ -86,6 +98,28 @@ public class DNCaptureBoneLayout
 	end
 	
 	
+	/** Vertex position sets. */
+	public func int getVPSCount()
+		return pVPS.getCount()
+	end
+	
+	public func VertexPositionSet getVPSAt(int index)
+		return pVPS.getAt(index) cast VertexPositionSet
+	end
+	
+	public func void addVPSSet(VertexPositionSet vps)
+		pVPS.add(vps)
+	end
+	
+	public func void removeAllVPS()
+		pVPS.removeAll()
+	end
+	
+	public func void forEachVPS(Block ablock)
+		pVPS.forEach(ablock)
+	end
+	
+	
 	/** Init from motion capture actor. */
 	public func void initCaptureBoneLayout(MoCapActor actor)
 		pBones.removeAll()
@@ -109,17 +143,32 @@ public class DNCaptureBoneLayout
 		
 		for i = 0 to boneCount
 			bone = Bone.new()
+			bone.index = i
 			bone.name = rig.boneGetName(i)
 			bone.parent = rig.boneGetParent(i)
 			bone.position = rig.boneGetPosition(i)
 			bone.orientation = rig.boneGetOrientation(i)
 			pBones.add(bone)
 		end
+		
+		var int vpsCount = component.getVertexPositionSetCount()
+		var VertexPositionSet vps
+		
+		for i = 0 to vpsCount
+			vps = VertexPositionSet.new()
+			vps.index = i
+			vps.name = component.vertexPositionSetGetNameAt(i)
+			pVPS.add(vps)
+		end
 	end
 	
 	/** Message data. */
 	public func MemoryFile getMessageData()
 		return pMessageData
+	end
+	
+	public func MemoryFile getMessageDataVPS()
+		return pMessageDataVPS
 	end
 	
 	/** Update message data. */
@@ -134,6 +183,16 @@ public class DNCaptureBoneLayout
 			writer.writeShort(each.parent)
 			each.position.writeToFile(writer)
 			each.orientation.writeToFile(writer)
+		end)
+		
+		// vps specific
+		writer = pMessageDataVPS.getWriter(false)
+		writer.writeData(pMessageData.getReader())
+		
+		writer.writeUShort(pVPS.getCount())
+		
+		pVPS.forEach(block VertexPositionSet each
+			writer.writeString8(each.name)
 		end)
 	end
 end

@@ -41,20 +41,32 @@ public class DNCaptureFrame
 		end
 	end
 	
+	public class VertexPositionSet
+		public var float weight
+		
+		public func new()
+		end
+	end
+	
 	
 	private var DNCaptureBoneLayout pLayout
 	private var Vector pPosition
 	private var Quaternion pOrientation
 	private var float pScale
 	private var Array pBones
+	private var Array pVPS
 	private var MemoryFile pMessageData
+	private var MemoryFile pMessageDataVPS
 	
 	
 	/** Create capture frame. */
 	public func new(DNCaptureBoneLayout layout)
+		var Quaternion zeroOrientation = Quaternion.new()
+		var Vector zeroPosition = Vector.new()
+		
 		pLayout = layout
-		pPosition = Vector.new()
-		pOrientation = Quaternion.new()
+		pPosition = zeroPosition
+		pOrientation = zeroOrientation
 		pScale = 1
 		
 		var int i, count = layout.getBoneCount()
@@ -63,12 +75,23 @@ public class DNCaptureFrame
 		pBones = Array.new(count)
 		for i = 0 to count
 			bone = Bone.new()
-			bone.position = pPosition
-			bone.orientation = pOrientation
+			bone.position = zeroPosition
+			bone.orientation = zeroOrientation
 			pBones.add(bone)
 		end
 		
+		count = layout.getVPSCount()
+		var VertexPositionSet vps
+		
+		pVPS = Array.new(count)
+		for i = 0 to count
+			vps = VertexPositionSet.new()
+			vps.weight = 0
+			pVPS.add(vps)
+		end
+		
 		pMessageData = MemoryFile.new("")
+		pMessageDataVPS = MemoryFile.new("")
 	end
 	
 	
@@ -117,6 +140,19 @@ public class DNCaptureFrame
 		pBones.forEach(ablock)
 	end
 	
+	/**
+	 * VertexPositionSetCount vertex position set states as described below.
+	 * VertexPositionSetCount matches VertexPositionSetCount from the most recent Actor
+	 * Capture Bone Layout message. Array of DNCaptureFrame.VertexPositionSet.
+	 */
+	public func VertexPositionSet getVPSAt(int index)
+		return pVPS.getAt(index) cast VertexPositionSet
+	end
+	
+	public func void forEachVPS(Block ablock)
+		pVPS.forEach(ablock)
+	end
+	
 	
 	/** Update from motion capture actor. */
 	public func void update(MoCapActor actor)
@@ -141,12 +177,20 @@ public class DNCaptureFrame
 			bone.orientation = matrix.toQuaternion()
 			*/
 		end)
+		
+		pVPS.forEach(block int index, VertexPositionSet vps
+			vps.weight = component.vertexPositionSetGetWeightAt(index)
+		end)
 	end
 	
 	
 	/** Message data. */
 	public func MemoryFile getMessageData()
 		return pMessageData
+	end
+	
+	public func MemoryFile getMessageDataVPS()
+		return pMessageDataVPS
 	end
 	
 	/** Update message data. */
@@ -162,6 +206,14 @@ public class DNCaptureFrame
 		pBones.forEach(block Bone each
 			each.position.writeToFile(writer)
 			each.orientation.writeToFile(writer)
+		end)
+		
+		// vps specific
+		writer = pMessageDataVPS.getWriter(false)
+		writer.writeData(pMessageData.getReader())
+		
+		pVPS.forEach(block VertexPositionSet each
+			writer.writeFloat(each.weight)
 		end)
 	end
 end

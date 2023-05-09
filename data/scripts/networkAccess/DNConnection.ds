@@ -27,6 +27,10 @@ pin Dragengine.Networking
  * DEMoCap Networking connected client.
  */
 public class DNConnection implements ConnectionListener
+	class Features
+		static fixed public var int enableVertexPositionSets = 0h1
+	end
+	
 	class MessageCode
 		static fixed public var int connectRequest = 1
 		static fixed public var int connectAccepted = 2
@@ -45,6 +49,7 @@ public class DNConnection implements ConnectionListener
 	private var int pEnabledFeatures
 	private var String pName
 	private var int pNextFrameNumber
+	private var bool pUseVertexPositionSets
 	
 	
 	/** Create server. */
@@ -92,6 +97,11 @@ public class DNConnection implements ConnectionListener
 		return frameNumber
 	end
 	
+	/** Vertex position sets are enabled. */
+	public func bool useVertexPositionSets()
+		return pUseVertexPositionSets
+	end
+	
 	
 	/** Link server states to client. */
 	public func void linkServerStates()
@@ -116,7 +126,14 @@ public class DNConnection implements ConnectionListener
 			var NetworkMessage message = NetworkMessage.new()
 			var FileWriter writer = message.getWriter(false)
 			writer.writeByte(MessageCode.actorCaptureBoneLayout)
-			writer.writeData(layout.getMessageData().getReader())
+			
+			if pUseVertexPositionSets
+				writer.writeData(layout.getMessageDataVPS().getReader())
+				
+			else
+				writer.writeData(layout.getMessageData().getReader())
+			end
+			
 			writer = null
 			pConnection.sendReliableMessage(message)
 			
@@ -137,7 +154,14 @@ public class DNConnection implements ConnectionListener
 			var FileWriter writer = message.getWriter(false)
 			writer.writeByte(MessageCode.actorCaptureFrame)
 			writer.writeUShort(nextFrameNumber())
-			writer.writeData(frame.getMessageData().getReader())
+			
+			if pUseVertexPositionSets
+				writer.writeData(frame.getMessageDataVPS().getReader())
+				
+			else
+				writer.writeData(frame.getMessageData().getReader())
+			end
+			
 			writer = null
 			pConnection.sendMessage(message, 0)
 			
@@ -208,9 +232,12 @@ public class DNConnection implements ConnectionListener
 			end
 			
 			var int supportedFeatures = message.readUInt()
-			var int serverSupportedFeatures = 0
+			var int serverSupportedFeatures = Features.enableVertexPositionSets
 			
 			pEnabledFeatures = supportedFeatures & serverSupportedFeatures
+			
+			pUseVertexPositionSets = (pEnabledFeatures & Features.enableVertexPositionSets) != 0
+			
 			pName = message.readString8()
 			
 			var NetworkMessage response = NetworkMessage.new()
