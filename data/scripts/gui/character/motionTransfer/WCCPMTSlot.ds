@@ -34,7 +34,7 @@ pin Dragengine.Scenery
  * Edit character config window motion transfer slot panel.
  */
 class WCCPMTSlot extends WCCPanelMotionTransfer
-	private var DefaultListModel pModelListTarget
+	private var SharedListModel pModelListTarget
 	private var DefaultTextModel pModelTextTarget
 	private var WCCPMTTracker pEditSourceTracker
 	private var EditVector pEditScaleRotation
@@ -45,12 +45,12 @@ class WCCPMTSlot extends WCCPanelMotionTransfer
 	public func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
 		pModelTypeName.setText("Copy Slot State")
 		
-		pModelListTarget = DefaultListModel.new()
+		pModelListTarget = SharedListModel.new(window.getModelTrackerSlotNames())
 		pModelListTarget.setAutoSelect(false)
 		pModelTextTarget = DefaultTextModel.new()
 		
 		runWhileBlockingLayout(block
-			createContent(optionPrefix)
+			createContent(window.getModelTrackerSlotNames(), optionPrefix)
 		end)
 	end
 	
@@ -109,7 +109,7 @@ class WCCPMTSlot extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent(String optionPrefix)
+	protected func void createContent(DefaultListModel modelTrackerSlotNames, String optionPrefix)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var TextField textField
 		var ComboBox comboBox
@@ -136,14 +136,8 @@ class WCCPMTSlot extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(pEditScaleRotation)
 		
 		// tracker
-		pEditSourceTracker = WCCPMTTracker.new(optionPrefix + "/SourceTracker", this, "Source Tracker", false)
+		pEditSourceTracker = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/SourceTracker", this, "Source Tracker", false)
 		addWidget(pEditSourceTracker)
-	end
-	
-	/** Update slot lists. */
-	public func void updateSlotLists(Array slots)
-		pModelListTarget.setContent(slots)
-		pEditSourceTracker.updateSlotLists(slots)
 	end
 	
 	/** Motion transfer changed. */

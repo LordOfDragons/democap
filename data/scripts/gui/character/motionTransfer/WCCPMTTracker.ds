@@ -37,7 +37,7 @@ class WCCPMTTracker extends CollapsibleGroup
 	private var WCCPanelMotionTransfer pPanelMotionTransfer
 	private var MotionTransferTracker pTracker
 	
-	private var DefaultListModel pModelListSlot
+	private var SharedListModel pModelListSlot
 	private var DefaultTextModel pModelTextSlot
 	private var EditVector pEditOffsetPosition
 	private var EditVector pEditOffsetRotation
@@ -46,11 +46,11 @@ class WCCPMTTracker extends CollapsibleGroup
 	
 	
 	/** Create window. */
-	public func new(String optionPrefix, WCCPanelMotionTransfer panelMotionTransfer,\
+	public func new(DefaultListModel modelTrackerSlotNames, String optionPrefix, WCCPanelMotionTransfer panelMotionTransfer,\
 	String label, bool toggled) super(label, "motiontransfertracker", CollapsibleGroup.persistModel(optionPrefix, toggled))
 		pPanelMotionTransfer = panelMotionTransfer
 		
-		pModelListSlot = DefaultListModel.new()
+		pModelListSlot = SharedListModel.new(modelTrackerSlotNames)
 		pModelListSlot.setAutoSelect(false)
 		pModelTextSlot = DefaultTextModel.new()
 		pModelAutoTransform = DefaultListModel.new(MotionTransferTracker.AutoTransform.all().toArray())
@@ -173,10 +173,5 @@ class WCCPMTTracker extends CollapsibleGroup
 		comboBox.setToolTip("What parts of the transform calculated from trackers to use. "\
 			+ "Apply position and rotation (full), only rotation (orientation) or none at all (none).")
 		content.addWidget(comboBox)
-	end
-	
-	/** Update slot lists. */
-	public func void updateSlotLists(Array slots)
-		pModelListSlot.setContent(slots)
 	end
 end

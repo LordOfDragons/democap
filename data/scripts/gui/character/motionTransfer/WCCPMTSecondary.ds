@@ -34,14 +34,14 @@ pin Dragengine.Scenery
  * Edit character config window motion transfer secondary panel.
  */
 class WCCPMTSecondary extends WCCPanelMotionTransfer
-	private var DefaultListModel pModelListSourceBone
+	private var SharedListModel pModelListSourceBone
 	private var DefaultTextModel pModelTextSourceBone
 	private var DefaultListModel pModelParameter
 	private var DefaultTextModel pModelMinimum
 	private var DefaultTextModel pModelMaximum
 	private var DefaultListModel pModelTargetBones
 	private var DefaultListModel pModelMode
-	private var DefaultListModel pModelListMove
+	private var SharedListModel pModelListMove
 	private var DefaultTextModel pModelTextMove
 	private var DefaultTextModel pModelReferenceTime
 	private var DefaultToggleModel pModelFlip
@@ -52,7 +52,7 @@ class WCCPMTSecondary extends WCCPanelMotionTransfer
 	public func new(WindowCharacterConfiguration window) super(window)
 		pModelTypeName.setText("Secondary Motion")
 		
-		pModelListSourceBone = DefaultListModel.new()
+		pModelListSourceBone = SharedListModel.new(window.getModelBones())
 		pModelListSourceBone.setAutoSelect(false)
 		pModelTextSourceBone = DefaultTextModel.new()
 		pModelParameter = DefaultListModel.new(MotionTransferSecondary.Parameter.all().toArray())
@@ -61,7 +61,7 @@ class WCCPMTSecondary extends WCCPanelMotionTransfer
 		pModelTargetBones = DefaultListModel.new()
 		pModelTargetBones.setAutoSelect(false)
 		pModelMode = DefaultListModel.new(MotionTransferSecondary.Mode.all().toArray())
-		pModelListMove = DefaultListModel.new()
+		pModelListMove = SharedListModel.new(window.getModelMoves())
 		pModelListMove.setAutoSelect(false)
 		pModelTextMove = DefaultTextModel.new()
 		pModelReferenceTime = DefaultTextModel.new()
@@ -243,15 +243,5 @@ class WCCPMTSecondary extends WCCPanelMotionTransfer
 		checkBox.setDesignerSelector("CheckBox.WindowCharacterConfiguration")
 		checkBox.setToolTip("Reverse mapping. Maximum maps to start of animation and minimum to end.")
 		pPanelForm.addWidget(checkBox)
-	end
-	
-	/** Update bone lists. */
-	public func void updateBoneLists(Array bones)
-		pModelListSourceBone.setContent(bones)
-	end
-	
-	/** Update move lists. */
-	public func void updateMoveLists(Array moves)
-		pModelListMove.setContent(moves)
 	end
 end

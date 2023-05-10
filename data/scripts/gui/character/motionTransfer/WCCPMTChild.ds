@@ -34,7 +34,7 @@ pin Dragengine.Scenery
  * Edit character config window motion transfer child panel.
  */
 class WCCPMTChild extends WCCPanelMotionTransfer
-	private var DefaultListModel pModelListBone
+	private var SharedListModel pModelListBone
 	private var DefaultTextModel pModelTextBone
 	private var WCCPMTTracker pEditTracker
 	
@@ -44,12 +44,12 @@ class WCCPMTChild extends WCCPanelMotionTransfer
 	public func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
 		pModelTypeName.setText("Child Coordinate System")
 		
-		pModelListBone = DefaultListModel.new()
+		pModelListBone = SharedListModel.new(window.getModelBones())
 		pModelListBone.setAutoSelect(false)
 		pModelTextBone = DefaultTextModel.new()
 		
 		runWhileBlockingLayout(block
-			createContent(optionPrefix)
+			createContent(window.getModelTrackerSlotNames(), optionPrefix)
 		end)
 	end
 	
@@ -103,7 +103,7 @@ class WCCPMTChild extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent(String optionPrefix)
+	protected func void createContent(DefaultListModel modelTrackerSlotNames, String optionPrefix)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var TextField textField
 		var ComboBox comboBox
@@ -125,18 +125,8 @@ class WCCPMTChild extends WCCPanelMotionTransfer
 		CPEBone.new(preview, label, comboBox)
 		
 		// tracker
-		pEditTracker = WCCPMTTracker.new(optionPrefix + "/Tracker", this, "Tracker", false)
+		pEditTracker = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/Tracker", this, "Tracker", false)
 		addWidget(pEditTracker)
-	end
-	
-	/** Update bone lists. */
-	public func void updateBoneLists(Array bones)
-		pModelListBone.setContent(bones)
-	end
-	
-	/** Update slot lists. */
-	public func void updateSlotLists(Array slots)
-		pEditTracker.updateSlotLists(slots)
 	end
 	
 	/** Motion transfer changed. */

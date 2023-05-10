@@ -34,13 +34,13 @@ pin Dragengine.Scenery
  * Edit character config window motion transfer bend panel.
  */
 class WCCPMTBend extends WCCPanelMotionTransfer
-	private var DefaultListModel pModelListTargetBone
+	private var SharedListModel pModelListTargetBone
 	private var DefaultTextModel pModelTextTargetBone
-	private var DefaultListModel pModelListTargetBaseBone
+	private var SharedListModel pModelListTargetBaseBone
 	private var DefaultTextModel pModelTextTargetBaseBone
-	private var DefaultListModel pModelListTipBone
+	private var SharedListModel pModelListTipBone
 	private var DefaultTextModel pModelTextTipBone
-	private var DefaultListModel pModelListBaseBone
+	private var SharedListModel pModelListBaseBone
 	private var DefaultTextModel pModelTextBaseBone
 	private var WCCPMTTracker pEditTargetTracker
 	private var WCCPMTTracker pEditBaseTracker
@@ -55,19 +55,19 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	public func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
 		pModelTypeName.setText("Bend Bone Chain")
 		
-		pModelListTargetBone = DefaultListModel.new()
+		pModelListTargetBone = SharedListModel.new(window.getModelBones())
 		pModelListTargetBone.setAutoSelect(false)
 		pModelTextTargetBone = DefaultTextModel.new()
 		
-		pModelListTargetBaseBone = DefaultListModel.new()
+		pModelListTargetBaseBone = SharedListModel.new(window.getModelBones())
 		pModelListTargetBaseBone.setAutoSelect(false)
 		pModelTextTargetBaseBone = DefaultTextModel.new()
 		
-		pModelListTipBone = DefaultListModel.new()
+		pModelListTipBone = SharedListModel.new(window.getModelBones())
 		pModelListTipBone.setAutoSelect(false)
 		pModelTextTipBone = DefaultTextModel.new()
 		
-		pModelListBaseBone = DefaultListModel.new()
+		pModelListBaseBone = SharedListModel.new(window.getModelBones())
 		pModelListBaseBone.setAutoSelect(false)
 		pModelTextBaseBone = DefaultTextModel.new()
 		
@@ -75,7 +75,7 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pModelFitCurveToTarget = DefaultToggleModel.new(false)
 		
 		runWhileBlockingLayout(block
-			createContent(optionPrefix)
+			createContent(window.getModelTrackerSlotNames(), optionPrefix)
 		end)
 	end
 	
@@ -174,7 +174,7 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent(String optionPrefix)
+	protected func void createContent(DefaultListModel modelTrackerSlotNames, String optionPrefix)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var ComboBox comboBox, comboBoxTip, comboBoxBase
 		var Label label, labelTip, labelBase
@@ -276,25 +276,11 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(checkBox)
 		
 		// trackers
-		pEditTargetTracker = WCCPMTTracker.new(optionPrefix + "/TargetTracker", this, "Target Tracker", false)
+		pEditTargetTracker = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/TargetTracker", this, "Target Tracker", false)
 		addWidget(pEditTargetTracker)
 		
-		pEditBaseTracker = WCCPMTTracker.new(optionPrefix + "/BaseTracker", this, "Base Tracker", false)
+		pEditBaseTracker = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/BaseTracker", this, "Base Tracker", false)
 		addWidget(pEditBaseTracker)
-	end
-	
-	/** Update bone lists. */
-	public func void updateBoneLists(Array bones)
-		pModelListTargetBone.setContent(bones)
-		pModelListTargetBaseBone.setContent(bones)
-		pModelListTipBone.setContent(bones)
-		pModelListBaseBone.setContent(bones)
-	end
-	
-	/** Update slot lists. */
-	public func void updateSlotLists(Array slots)
-		pEditTargetTracker.updateSlotLists(slots)
-		pEditBaseTracker.updateSlotLists(slots)
 	end
 	
 	/** Motion transfer changed. */

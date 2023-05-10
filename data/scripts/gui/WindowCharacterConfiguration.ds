@@ -46,8 +46,9 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 		
 		public func void characterReloaded(WidgetCharacterPreview widget)
-			pWindow.updateBoneLists()
-			pWindow.updateMoveLists()
+			pWindow.updateBoneList()
+			pWindow.updateMoveList()
+			pWindow.updateVPSList()
 			pWindow.updateMoveCalibrate()
 		end
 	end
@@ -340,21 +341,21 @@ class WindowCharacterConfiguration extends WindowDialog
 	private var CharacterConfiguration pCharacterConfiguration
 	private var DefaultTextModel pModelConfigName
 	private var DefaultListModel pModelScaleMode
-	private var DefaultListModel pModelListMoveCalibrate
+	private var SharedListModel pModelListMoveCalibrate
 	private var DefaultTextModel pModelTextMoveCalibrate
-	private var DefaultListModel pModelListCameraBone
+	private var SharedListModel pModelListCameraBone
 	private var DefaultTextModel pModelTextCameraBone
-	private var DefaultListModel pModelListGrabBoneRight
+	private var SharedListModel pModelListGrabBoneRight
 	private var DefaultTextModel pModelTextGrabBoneRight
-	private var DefaultListModel pModelListGrabTipBoneRight
+	private var SharedListModel pModelListGrabTipBoneRight
 	private var DefaultTextModel pModelTextGrabTipBoneRight
-	private var DefaultListModel pModelListGrabBaseBoneRight
+	private var SharedListModel pModelListGrabBaseBoneRight
 	private var DefaultTextModel pModelTextGrabBaseBoneRight
-	private var DefaultListModel pModelListGrabBoneLeft
+	private var SharedListModel pModelListGrabBoneLeft
 	private var DefaultTextModel pModelTextGrabBoneLeft
-	private var DefaultListModel pModelListGrabTipBoneLeft
+	private var SharedListModel pModelListGrabTipBoneLeft
 	private var DefaultTextModel pModelTextGrabTipBoneLeft
-	private var DefaultListModel pModelListGrabBaseBoneLeft
+	private var SharedListModel pModelListGrabBaseBoneLeft
 	private var DefaultTextModel pModelTextGrabBaseBoneLeft
 	private var EditVector pEditCameraPosition
 	private var EditVector pEditCameraRotation
@@ -365,6 +366,10 @@ class WindowCharacterConfiguration extends WindowDialog
 	private var WCCPTrackerSlot pPanelTrackerSlot
 	private var Array pPanelsMotionTransfer
 	private var bool pInVR
+	private var DefaultListModel pModelBones
+	private var DefaultListModel pModelMoves
+	private var DefaultListModel pModelVPS
+	private var DefaultListModel pModelTrackerSlotNames
 	
 	
 	
@@ -378,40 +383,52 @@ class WindowCharacterConfiguration extends WindowDialog
 			each.initFromType(actorProfile)
 		end)
 		
+		pModelBones = DefaultListModel.new()
+		pModelBones.setAutoSelect(false)
+		
+		pModelMoves = DefaultListModel.new()
+		pModelMoves.setAutoSelect(false)
+		
+		pModelVPS = DefaultListModel.new()
+		pModelVPS.setAutoSelect(false)
+		
+		pModelTrackerSlotNames = DefaultListModel.new()
+		pModelTrackerSlotNames.setAutoSelect(false)
+		
 		pModelConfigName = DefaultTextModel.new(config.getName())
 		
 		pModelScaleMode = DefaultListModel.new(CharacterConfiguration.ScaleMode.all().toArray())
 		pModelScaleMode.setSelected(pModelScaleMode.indexOf(config.getScaleMode()))
 		
-		pModelListMoveCalibrate = DefaultListModel.new()
+		pModelListMoveCalibrate = SharedListModel.new(pModelMoves)
 		pModelListMoveCalibrate.setAutoSelect(false)
 		pModelTextMoveCalibrate = DefaultTextModel.new(config.getMoveCalibrate())
 		
-		pModelListCameraBone = DefaultListModel.new()
+		pModelListCameraBone = SharedListModel.new(pModelBones)
 		pModelListCameraBone.setAutoSelect(false)
 		pModelTextCameraBone = DefaultTextModel.new(config.getCameraBone())
 		
-		pModelListGrabBoneRight = DefaultListModel.new()
+		pModelListGrabBoneRight = SharedListModel.new(pModelBones)
 		pModelListGrabBoneRight.setAutoSelect(false)
 		pModelTextGrabBoneRight = DefaultTextModel.new(config.getGrabBoneRight())
 		
-		pModelListGrabTipBoneRight = DefaultListModel.new()
+		pModelListGrabTipBoneRight = SharedListModel.new(pModelBones)
 		pModelListGrabTipBoneRight.setAutoSelect(false)
 		pModelTextGrabTipBoneRight = DefaultTextModel.new(config.getGrabTipBoneRight())
 		
-		pModelListGrabBaseBoneRight = DefaultListModel.new()
+		pModelListGrabBaseBoneRight = SharedListModel.new(pModelBones)
 		pModelListGrabBaseBoneRight.setAutoSelect(false)
 		pModelTextGrabBaseBoneRight = DefaultTextModel.new(config.getGrabBaseBoneRight())
 		
-		pModelListGrabBoneLeft = DefaultListModel.new()
+		pModelListGrabBoneLeft = SharedListModel.new(pModelBones)
 		pModelListGrabBoneLeft.setAutoSelect(false)
 		pModelTextGrabBoneLeft = DefaultTextModel.new(config.getGrabBoneLeft())
 		
-		pModelListGrabTipBoneLeft = DefaultListModel.new()
+		pModelListGrabTipBoneLeft = SharedListModel.new(pModelBones)
 		pModelListGrabTipBoneLeft.setAutoSelect(false)
 		pModelTextGrabTipBoneLeft = DefaultTextModel.new(config.getGrabTipBoneLeft())
 		
-		pModelListGrabBaseBoneLeft = DefaultListModel.new()
+		pModelListGrabBaseBoneLeft = SharedListModel.new(pModelBones)
 		pModelListGrabBaseBoneLeft.setAutoSelect(false)
 		pModelTextGrabBaseBoneLeft = DefaultTextModel.new(config.getGrabBaseBoneLeft())
 		
@@ -502,6 +519,11 @@ class WindowCharacterConfiguration extends WindowDialog
 		pModelTrackerSlots = null
 		pModelMotionTransfers = null
 		pModelMotionTransferPanel = null
+		
+		pModelBones = null
+		pModelMoves = null
+		pModelVPS = null
+		pModelTrackerSlotNames = null
 	end
 	
 	
@@ -519,6 +541,23 @@ class WindowCharacterConfiguration extends WindowDialog
 	/** Tracker slot panel. */
 	public func WCCPTrackerSlot getPanelTrackerSlot()
 		return pPanelTrackerSlot
+	end
+	
+	/** Shared models. */
+	public func DefaultListModel getModelBones()
+		return pModelBones
+	end
+	
+	public func DefaultListModel getModelMoves()
+		return pModelMoves
+	end
+	
+	public func DefaultListModel getModelVPS()
+		return pModelVPS
+	end
+	
+	public func DefaultListModel getModelTrackerSlotNames()
+		return pModelTrackerSlotNames
 	end
 	
 	
@@ -738,8 +777,8 @@ class WindowCharacterConfiguration extends WindowDialog
 		end ), BorderLayout.Area.bottom )
 	end
 	
-	/** Update bone lists. */
-	public func void updateBoneLists()
+	/** Update shared bone list. */
+	public func void updateBoneList()
 		var Array bones = Array.new()
 		var Rig rig
 		
@@ -758,22 +797,11 @@ class WindowCharacterConfiguration extends WindowDialog
 			end)
 		end
 		
-		pModelListCameraBone.setContent(bones)
-		
-		pModelListGrabBoneRight.setContent(bones)
-		pModelListGrabTipBoneRight.setContent(bones)
-		pModelListGrabBaseBoneRight.setContent(bones)
-		pModelListGrabBoneLeft.setContent(bones)
-		pModelListGrabTipBoneLeft.setContent(bones)
-		pModelListGrabBaseBoneLeft.setContent(bones)
-		
-		pPanelsMotionTransfer.forEach(block WCCPanelMotionTransfer each
-			each.updateBoneLists(bones)
-		end)
+		pModelBones.setContent(bones)
 	end
 	
-	/** Update move lists. */
-	public func void updateMoveLists()
+	/** Update shared move list. */
+	public func void updateMoveList()
 		var Array moves = Array.new()
 		var Animation animation
 		
@@ -795,11 +823,30 @@ class WindowCharacterConfiguration extends WindowDialog
 			end)
 		end
 		
-		pModelListMoveCalibrate.setContent(moves)
+		pModelMoves.setContent(moves)
+	end
+	
+	/** Update shared vertex position set list. */
+	public func void updateVPSList()
+		var Array vps = Array.new()
+		var Component component
 		
-		pPanelsMotionTransfer.forEach(block WCCPanelMotionTransfer each
-			each.updateMoveLists(moves)
-		end)
+		var BehaviorElement element = pCharacterPreview.getCharacterPreview()
+		if element != null
+			component = ECBehaviorComponent.getInstanceIn(element).getComponent()
+		end
+		
+		if component != null
+			var int i, count = component.getVertexPositionSetCount()
+			for i = 0 to count
+				vps.add(component.vertexPositionSetGetNameAt(i))
+			end
+			vps.sort(block String a, String b
+				return a.compareNoCase(b)
+			end)
+		end
+		
+		pModelVPS.setContent(vps)
 	end
 	
 	/** Update calibration move. */
@@ -1054,13 +1101,12 @@ class WindowCharacterConfiguration extends WindowDialog
 	
 	/** Update tracker slot lists. */
 	public func void updateTrackerSlotLists()
-		var Array slots = pModelTrackerSlots.getContent().map(block CharacterTrackerSlot each
-			return each.getName()
-		end)
-		
-		pPanelsMotionTransfer.forEach(block WCCPanelMotionTransfer each
-			each.updateSlotLists(slots)
-		end)
+		pModelTrackerSlotNames.setContent(\
+			pModelTrackerSlots.getContent().map(block CharacterTrackerSlot each
+				return each.getName()
+			end).sorted(block String a, String b
+				return a.compareNoCase(b)
+			end))
 	end
 	
 	

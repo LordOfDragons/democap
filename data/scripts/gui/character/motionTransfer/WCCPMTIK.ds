@@ -34,11 +34,11 @@ pin Dragengine.Scenery
  * Edit character config window motion transfer ik panel.
  */
 class WCCPMTIK extends WCCPanelMotionTransfer
-	private var DefaultListModel pModelListTipBone
+	private var SharedListModel pModelListTipBone
 	private var DefaultTextModel pModelTextTipBone
-	private var DefaultListModel pModelListBaseBone
+	private var SharedListModel pModelListBaseBone
 	private var DefaultTextModel pModelTextBaseBone
-	private var DefaultListModel pModelListGuideBone
+	private var SharedListModel pModelListGuideBone
 	private var DefaultTextModel pModelTextGuideBone
 	private var WCCPMTTracker pEditTrackerTip
 	private var WCCPMTTracker pEditTrackerGuide
@@ -47,9 +47,9 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	private var DefaultTextModel pModelReachLimit
 	private var EditVector pEditReachScaling
 	private var DefaultToggleModel pModelAdjustPosition
-	private var DefaultListModel pModelListMoveBaseIK
+	private var SharedListModel pModelListMoveBaseIK
 	private var DefaultTextModel pModelTextMoveBaseIK
-	private var DefaultListModel pModelListMoveRetracted
+	private var SharedListModel pModelListMoveRetracted
 	private var DefaultTextModel pModelTextMoveRetracted
 	private var DefaultTextModel pModelTwistPropagation
 	private var DefaultTextModel pModelTwistBoneCount
@@ -62,25 +62,25 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	public func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
 		pModelTypeName.setText("Inverse Kinematic")
 		
-		pModelListTipBone = DefaultListModel.new()
+		pModelListTipBone = SharedListModel.new(window.getModelBones())
 		pModelListTipBone.setAutoSelect(false)
 		pModelTextTipBone = DefaultTextModel.new()
 		
-		pModelListBaseBone = DefaultListModel.new()
+		pModelListBaseBone = SharedListModel.new(window.getModelBones())
 		pModelListBaseBone.setAutoSelect(false)
 		pModelTextBaseBone = DefaultTextModel.new()
 		
-		pModelListGuideBone = DefaultListModel.new()
+		pModelListGuideBone = SharedListModel.new(window.getModelBones())
 		pModelListGuideBone.setAutoSelect(false)
 		pModelTextGuideBone = DefaultTextModel.new()
 		
 		pModelActorReach = DefaultListModel.new(MotionTransferIK.ActorReach.all().toArray())
 		pModelReachLimit = DefaultTextModel.new()
 		pModelAdjustPosition = DefaultToggleModel.new()
-		pModelListMoveBaseIK = DefaultListModel.new()
+		pModelListMoveBaseIK = SharedListModel.new(window.getModelMoves())
 		pModelListMoveBaseIK.setAutoSelect(false)
 		pModelTextMoveBaseIK = DefaultTextModel.new()
-		pModelListMoveRetracted = DefaultListModel.new()
+		pModelListMoveRetracted = SharedListModel.new(window.getModelMoves())
 		pModelListMoveRetracted.setAutoSelect(false)
 		pModelTextMoveRetracted = DefaultTextModel.new()
 		pModelTwistPropagation = DefaultTextModel.new()
@@ -88,7 +88,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pModelGuideTwistStrength = DefaultTextModel.new()
 		
 		runWhileBlockingLayout(block
-			createContent(optionPrefix)
+			createContent(window.getModelTrackerSlotNames(), optionPrefix)
 		end)
 	end
 	
@@ -206,7 +206,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent(String optionPrefix)
+	protected func void createContent(DefaultListModel modelTrackerSlotNames, String optionPrefix)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var ComboBox comboBox, comboBoxTip, comboBoxBase
 		var Label label, labelTip, labelBase
@@ -250,13 +250,13 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		CPEBone.new(preview, label, comboBox)
 		
 		// trackers
-		pEditTrackerTip = WCCPMTTracker.new(optionPrefix + "/TipTracker", this, "Tip Tracker", false)
+		pEditTrackerTip = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/TipTracker", this, "Tip Tracker", false)
 		addWidget(pEditTrackerTip)
 		
-		pEditTrackerGuide = WCCPMTTracker.new(optionPrefix + "/GuideTracker", this, "Guide Tracker", false)
+		pEditTrackerGuide = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/GuideTracker", this, "Guide Tracker", false)
 		addWidget(pEditTrackerGuide)
 		
-		pEditTrackerBase = WCCPMTTracker.new(optionPrefix + "/BaseTracker", this, "Base Tracker", false)
+		pEditTrackerBase = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/BaseTracker", this, "Base Tracker", false)
 		addWidget(pEditTrackerBase)
 		
 		// actor reach
@@ -351,26 +351,6 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("Percentage of Tip Bone twist relative to Base Bone to apply to guide bone.")
 		pPanelForm.addWidget(textField)
-	end
-	
-	/** Update bone lists. */
-	public func void updateBoneLists(Array bones)
-		pModelListTipBone.setContent(bones)
-		pModelListGuideBone.setContent(bones)
-		pModelListBaseBone.setContent(bones)
-	end
-	
-	/** Update slot lists. */
-	public func void updateSlotLists(Array slots)
-		pEditTrackerTip.updateSlotLists(slots)
-		pEditTrackerGuide.updateSlotLists(slots)
-		pEditTrackerBase.updateSlotLists(slots)
-	end
-	
-	/** Update move lists. */
-	public func void updateMoveLists(Array moves)
-		pModelListMoveBaseIK.setContent(moves)
-		pModelListMoveRetracted.setContent(moves)
 	end
 	
 	/** Motion transfer changed. */
