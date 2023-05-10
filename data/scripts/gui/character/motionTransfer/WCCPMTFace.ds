@@ -55,7 +55,7 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 	
 	
 	/** Create window. */
-	public func new(WindowCharacterConfiguration window) super(window)
+	public func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
 		var DefaultListModel modelVPS = window.getModelVPS()
 		
 		pModelTypeName.setText("Face")
@@ -65,7 +65,7 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 		end)
 		
 		runWhileBlockingLayout(block
-			createContent()
+			createContent(optionPrefix)
 		end)
 	end
 	
@@ -118,7 +118,7 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent()
+	protected func void createContent(String optionPrefix)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var ComboBox comboBox
 		var Label label
@@ -126,14 +126,28 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 		createBaseContent("motiontransferface")
 		
 		// expressions
-		pExpressions.forEach(block Expression each
-			label = Label.new(each.info.getName() + ":", "Label.FormCaption")
-			pPanelForm.addWidget(label)
+		addExpressionWidgets("Eye", "eye", optionPrefix + "/ExprEye")
+		addExpressionWidgets("Jaw", "jaw", optionPrefix + "/ExprJaw")
+		addExpressionWidgets("Cheek", "cheek", optionPrefix + "/ExprCheek")
+		addExpressionWidgets("Mouth", "mouth", optionPrefix + "/ExprMouth")
+		addExpressionWidgets("Tongue", "tongue", optionPrefix + "/ExprTongue")
+	end
+	
+	protected func void addExpressionWidgets(String label, String expressionIdPrefix, String optPrefix)
+		addWidget(CollapsibleGroup.new(label, "", CollapsibleGroup.persistModel(optPrefix, false),\
+		FormLayout.new(true, 10, 2), block Panel p
+			var ComboBox comboBox
 			
-			comboBox = ComboBox.new(each.modelList, DefaultComboBoxEditor.new(each.modelText))
-			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-			comboBox.setToolTip(each.info.getDescription())
-			pPanelForm.addWidget(comboBox)
-		end)
+			pExpressions.forEach(block Expression each
+				if each.info.getId().startsWith(expressionIdPrefix)
+					p.addWidget(Label.new(each.info.getName() + ":", "Label.FormCaption"))
+					
+					comboBox = ComboBox.new(each.modelList, DefaultComboBoxEditor.new(each.modelText))
+					comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+					comboBox.setToolTip(each.info.getDescription())
+					p.addWidget(comboBox)
+				end
+			end)
+		end))
 	end
 end
