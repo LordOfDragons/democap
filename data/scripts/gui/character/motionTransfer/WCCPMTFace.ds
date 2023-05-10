@@ -1,0 +1,139 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer face panel.
+ */
+class WCCPMTFace extends WCCPanelMotionTransfer
+	class Expression
+		public var MotionTransferFace.ExpressionInfo info
+		public var SharedListModel modelList
+		public var DefaultTextModel modelText
+		
+		public func new(MotionTransferFace.ExpressionInfo info, DefaultListModel modelVPS)
+			this.info = info
+			
+			modelList = SharedListModel.new(modelVPS)
+			modelList.setAutoSelect(false)
+			
+			modelText = DefaultTextModel.new()
+		end
+	end
+	
+	
+	private var Array pExpressions
+	
+	
+	
+	/** Create window. */
+	public func new(WindowCharacterConfiguration window) super(window)
+		var DefaultListModel modelVPS = window.getModelVPS()
+		
+		pModelTypeName.setText("Face")
+		
+		pExpressions = MotionTransferFace.expressionInfos.map(block MotionTransferFace.ExpressionInfo each
+			return Expression.new(each, modelVPS)
+		end)
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		pExpressions = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	public func void loadValues()
+		runWhileBlockingLayout(block
+			super.loadValues()
+			
+			if pMotionTransfer != null
+				var MotionTransferFace mt = pMotionTransfer cast MotionTransferFace
+				pExpressions.forEach(block Expression each
+					each.modelText.setText(mt.getExpressionVPSAt(each.info.getExpression()))
+				end)
+				
+			else
+				pExpressions.forEach(block Expression each
+					each.modelText.setText("")
+				end)
+			end
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	public func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		super.saveValues()
+		
+		var MotionTransferFace mt = pMotionTransfer cast MotionTransferFace
+		pExpressions.forEach(block Expression each
+			mt.setExpressionVPSAt(each.info.getExpression(), each.modelText.getText())
+		end)
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferFace
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var ComboBox comboBox
+		var Label label
+		
+		createBaseContent("motiontransferface")
+		
+		// expressions
+		pExpressions.forEach(block Expression each
+			label = Label.new(each.info.getName() + ":", "Label.FormCaption")
+			pPanelForm.addWidget(label)
+			
+			comboBox = ComboBox.new(each.modelList, DefaultComboBoxEditor.new(each.modelText))
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+			comboBox.setToolTip(each.info.getDescription())
+			pPanelForm.addWidget(comboBox)
+		end)
+	end
+end

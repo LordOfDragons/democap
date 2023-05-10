@@ -1,0 +1,348 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Democap.Actors
+pin Democap.Behaviors
+pin Democap.Characters
+
+pin Dragengine.Animators
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+/**
+ * Motion transfer affecting facial expressions.
+ * 
+ * Supports input from face trackers to adjust the appropriate vertex position set weights.
+ */
+class MotionTransferFace extends DefaultMotionTransfer
+	/** Factory. */
+	class Factory implements MotionTransferFactory
+		public func new()
+		end
+		
+		public func String factoryID()
+			return "face"
+		end
+		
+		public func MotionTransfer createMotionTransfer()
+			return MotionTransferFace.new(factoryID())
+		end
+		
+		public func String displayName()
+			return "Face"
+		end
+	end
+	
+	/** Expression information. */
+	class ExpressionInfo
+		private var int pExpression
+		private var String pId
+		private var String pName
+		private var String pDescription
+		
+		public func new(int expression, String id, String name, String description)
+			pExpression = expression
+			pId = id
+			pName = name
+			pDescription = description
+		end
+		
+		public func int getExpression()
+			return pExpression
+		end
+		
+		public func String getId()
+			return pId
+		end
+		
+		public func String getName()
+			return pName
+		end
+		
+		public func String getDescription()
+			return pDescription
+		end
+	end
+	
+	
+	
+	private var Array pExpressionsVPS
+	
+	private var Array pADControllersVPS
+	private var Array pADRulesExpression
+	
+	public static fixed var Array expressionInfos = pInitExpressionInfos()
+	
+	
+	
+	/** Create motion transfer. */
+	public func new(String factoryID) super(factoryID)
+		pExpressionsVPS = Array.new(expressionInfos.getCount(), "")
+		pADRulesExpression = Array.new(expressionInfos.getCount(), null)
+	end
+	
+	/** Create copy of motion transfer. */
+	public func new(MotionTransferFace transfer) super(transfer)
+		pExpressionsVPS = Array.new(transfer.pExpressionsVPS)
+		pADRulesExpression = Array.new(expressionInfos.getCount(), null)
+	end
+	
+	
+	
+	/** Vertex position set name for expression (InputDeviceFaceExpression). */
+	public func String getExpressionVPSAt(int expression)
+		return pExpressionsVPS.getAt(expression) cast String
+	end
+	
+	/** Set vertex position set name for expression (InputDeviceFaceExpression). */
+	public func void setExpressionVPSAt(int expression, String name)
+		if name == null
+			throw ENullPointer.new("name")
+		end
+		pExpressionsVPS.setAt(expression, name)
+	end
+	
+	
+	
+	/** Animator definition rule for expression or null. */
+	public func ADRule getADRuleExpressionAt(int expression)
+		return pADRulesExpression.getAt(expression) cast ADRule
+	end
+	
+	
+	
+	/** Init element clas. */
+	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
+		var int i, count = expressionInfos.getCount()
+		for i = 0 to count
+			pADControllersVPS.setAt(i, null)
+			pADRulesExpression.setAt(i, null)
+		end
+		
+		if pExpressionsVPS.find(block String each
+			return not each.empty()
+		end) == null
+			return
+		end
+		
+		// add behavior
+		var ECBMotionTransferFace behavior = ECBMotionTransferFace.new(eclass, this)
+		
+		// add controller, link and rules
+		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
+		var AnimatorDefinition adef = config.getAnimatorDefinition()
+		var String baseControllerName = behavior.getBaseControllerName()
+		
+		expressionInfos.forEach(block ExpressionInfo each
+			var String vps = pExpressionsVPS.getAt(each.getExpression()) cast String
+			if not vps.empty()
+				var ADController controller = addADController(adef, baseControllerName + each.getId())
+				pADControllersVPS.add(controller)
+				
+				pADRulesExpression.add(addADRuleEye(adef, addADLink(adef, controller), vps))
+				
+				recordAnimation.addVPS(vps)
+			end
+		end)
+	end
+	
+	/** Add animator definition controller. */
+	protected func ADController addADController(AnimatorDefinition adef, String name)
+		var ADController controller = ADController.new()
+		controller.setName(name)
+		adef.addController(controller)
+		return controller
+	end
+	
+	/** Add animator definition link. */
+	protected func ADLink addADLink(AnimatorDefinition adef, ADController controller)
+		var ADLink link = ADLink.new()
+		link.setController(controller)
+		adef.addLink(link)
+		return link
+	end
+	
+	/** Add animator rule. */
+	protected func ADRule addADRuleEye(AnimatorDefinition adef, ADLink link, String vps)
+		var ADRuleStateManipulator rule = ADRuleStateManipulator.new()
+		rule.setName(link.getController().getName())
+		rule.setEnableOrientation(false)
+		rule.setMaximumVertexPositionSet(1)
+		rule.addTargetLink(ADRuleTargetLink.new(ARStateManipulatorTarget.vertexPositionSet, link))
+		rule.addVertexPositionSet(vps)
+		adef.addRule(rule)
+		return rule
+	end
+	
+	/** Create copy of motion transfer. */
+	public func MotionTransfer createCopy()
+		return MotionTransferFace.new(this)
+	end
+	
+	/** Load from XML. */
+	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("name")
+				setName(element.getFirstCData())
+				
+			elif tagName.equals("expressionVPS")
+				var String id = element.getAttributeNamed("id")
+				var ExpressionInfo info = expressionInfos.find(block ExpressionInfo each
+					return each.getId().equals(id)
+				end) cast ExpressionInfo
+				if info != null
+					setExpressionVPSAt(info.getExpression(), element.getFirstCData())
+				end
+			end
+		end)
+	end
+	
+	/** Save to XML. */
+	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+		tag.addDataTag("name", getName())
+		
+		expressionInfos.forEach(block ExpressionInfo each
+			var EasyXMLElement dt = tag.addTag("expressionVPS")
+			dt.setAttribute("id", each.getId())
+			dt.setCDataContent(pExpressionsVPS.getAt(each.getExpression()) cast String)
+		end)
+	end
+	
+	
+	
+	private static func Array pInitExpressionInfos()
+		var Array l = Array.new()
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeLeftBlink,\
+			"eyeLeftBlink", "Eye Left Blink", "Eye Left Blink"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeLeftWide,\
+			"eyeLeftWide", "Eye Left Wide", "Eye Left Wide"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeLeftSqueeze,\
+			"eyeLeftSqueeze", "Eye Left Squeeze", "Eye Left Squeeze"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeLeftDown,\
+			"eyeLeftDown", "Eye Left Down", "Eye Left Down"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeLeftUp,\
+			"eyeLeftUp", "Eye Left Up", "Eye Left Up"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeLeftIn,\
+			"eyeLeftIn", "Eye Left In", "Eye Left In"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeLeftOut,\
+			"eyeLeftOut", "Eye Left Out", "Eye Left Out"))
+		
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeRightBlink,\
+			"eyeRightBlink", "Eye Right Blink", "Eye Right Blink"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeRightWide,\
+			"eyeRightWide", "Eye Right Wide", "Eye Right Wide"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeRightSqueeze,\
+			"eyeRightSqueeze", "Eye Right Squeeze", "Eye Right Squeeze"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeRightDown,\
+			"eyeRightDown", "Eye Right Down", "Eye Right Down"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeRightUp,\
+			"eyeRightUp", "Eye Right Up", "Eye Right Up"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeRightIn,\
+			"eyeRightIn", "Eye Right In", "Eye Right In"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.eyeRightOut,\
+			"eyeRightOut", "Eye Right Out", "Eye Right Out"))
+		
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.jawRight,\
+			"jawRight", "Jaw Right", "Jaw Right"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.jawLeft,\
+			"jawLeft", "Jaw Left", "Jaw Left"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.jawForward,\
+			"jawForward", "Jaw Forward", "Jaw Forward"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.jawOpen,\
+			"jawOpen", "Jaw Open", "Jaw Open"))
+		
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.cheekPuffRight,\
+			"cheekPuffRight", "Cheek Puff Right", "Cheek Puff Right"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.cheekPuffLeft,\
+			"cheekPuffLeft", "Cheek Puff Left", "Cheek Puff Left"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.cheekSuck,\
+			"cheekSuck", "Cheek Suck", "Cheek Suck"))
+		
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthApeShape,\
+			"mouthApeShape", "Mouth Ape Shape", "Mouth Ape Shape"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthUpperRight,\
+			"mouthUpperRight", "Mouth Upper Right", "Mouth Upper Right"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthUpperLeft,\
+			"mouthUpperLeft", "Mouth Upper Left", "Mouth Upper Left"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthUpperUpRight,\
+			"mouthUpperUpRight", "Mouth Upper Up Right", "Mouth Upper Up Right"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthUpperUpLeft,\
+			"mouthUpperUpLeft", "Mouth Upper Up Left", "Mouth Upper Up Left"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthUpperOverturn,\
+			"mouthUpperOverturn", "Mouth Upper Overturn", "Mouth Upper Overturn"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthUpperInside,\
+			"mouthUpperInside", "Mouth Upper Inside", "Mouth Upper Inside"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthLowerRight,\
+			"mouthLowerRight", "Mouth Lower Right", "Mouth Lower Right"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthLowerLeft,\
+			"mouthLowerLeft", "Mouth Lower Left", "Mouth Lower Left"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthLowerDownRight,\
+			"mouthLowerDownRight", "Mouth Lower Down Right", "Mouth Lower Down Right"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthLowerDownLeft,\
+			"mouthLowerDownLeft", "Mouth Lower Down Left", "Mouth Lower Down Left"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthLowerOverturn,\
+			"mouthLowerOverturn", "Mouth Lower Overturn", "Mouth Lower Overturn"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthLowerInside,\
+			"mouthLowerInside", "Mouth Lower Inside", "Mouth Lower Inside"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthLowerOverlay,\
+			"mouthLowerOverlay", "Mouth Lower Overlay", "Mouth Lower Overlay"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthPout,\
+			"mouthPout", "Mouth Pout", "Mouth Pout"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthSmileRight,\
+			"mouthSmileRight", "Mouth Smile Right", "Mouth Smile Right"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthSmileLeft,\
+			"mouthSmileLeft", "Mouth Smile Left", "Mouth Smile Left"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthSadRight,\
+			"mouthSadRight", "Mouth Sad Right", "Mouth Sad Right"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.mouthSadLeft,\
+			"mouthSadLeft", "Mouth Sad Left", "Mouth Sad Left"))
+		
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.tongueLeft,\
+			"tongueLeft", "Tongue Left", "Tongue Left"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.tongueRight,\
+			"tongueRight", "Tongue Right", "Tongue Right"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.tongueUp,\
+			"tongueUp", "Tongue Up", "Tongue Up"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.tongueDown,\
+			"tongueDown", "Tongue Down", "Tongue Down"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.tongueRoll,\
+			"tongueRoll", "Tongue Roll", "Tongue Roll"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.tongueLongStep1,\
+			"tongueLongStep1", "Tongue Long Step 1", "Tongue Long Step 1"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.tongueLongStep2,\
+			"tongueLongStep2", "Tongue Long Step 2", "Tongue Long Step 2"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.tongueMorphUpRight,\
+			"tongueMorphUpRight", "Tongue Morph Up Right", "Tongue Morph Up Right"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.tongueMorphUpLeft,\
+			"tongueMorphUpLeft", "Tongue Morph Up Left", "Tongue Morph Up Left"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.tongueMorphDownRight,\
+			"tongueMorphDownRight", "Tongue Morph Down Right", "Tongue Morph Down Right"))
+		l.add(ExpressionInfo.new(InputDeviceFaceExpression.tongueMorphDownLeft,\
+			"tongueMorphDownLeft", "Tongue Morph Down Left", "Tongue Morph Down Left"))
+		
+		return l
+	end
+end
