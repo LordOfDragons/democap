@@ -75,6 +75,7 @@ public class SessionSettings
 		
 		public func void toggledChanged(ToggleModel model)
 			var GameApp app = GameApp.getGameApp()
+			var SessionSettings settings = app.getSessionSettings()
 			var Console console = app.getConsole()
 			
 			// VR runtimes can be crashy. save project just in case
@@ -83,13 +84,17 @@ public class SessionSettings
 			if model.getToggled()
 				console.addMessage("Start VR Runtime...")
 				try
+					VRSystem.requestFeatureEyeGazeTracking(settings.getModelUseEyeGazeTracking().getToggled()\
+						if VRFeatureSupportLevel.optional else VRFeatureSupportLevel.disabled)
+					VRSystem.requestFeatureFacialTracking(settings.getModelUseFacialTracking().getToggled()\
+						if VRFeatureSupportLevel.optional else VRFeatureSupportLevel.disabled)
 					VRSystem.startRuntime()
 					
 				catch Exception e
-					console.addMessage("Failed starting VR Runtime")
+					console.addError("Failed starting VR Runtime", e)
 				end
 				
-				app.getSessionSettings().getModelShowVRCamera().setToggled(VRSystem.isRuntimeRunning())
+				settings.getModelShowVRCamera().setToggled(VRSystem.isRuntimeRunning())
 				
 			else
 				console.addMessage("Stop VR Runtime...")
@@ -98,10 +103,10 @@ public class SessionSettings
 					VRSystem.stopRuntime()
 					
 				catch Exception e
-					console.addMessage("Failed stopping VR Runtime")
+					console.addError("Failed stopping VR Runtime", e)
 				end
 				
-				app.getSessionSettings().getModelShowVRCamera().setToggled(false)
+				settings.getModelShowVRCamera().setToggled(false)
 			end
 		end
 	end
@@ -262,10 +267,10 @@ public class SessionSettings
 		pModelShowVRCamera = DefaultToggleModel.new(false)
 		pModelShowVRCamera.addListener(ToggleShowVRCameraListener.new())
 		
-		pModelUseEyeGazeTracking = DefaultToggleModel.new(false)
+		pModelUseEyeGazeTracking = DefaultToggleModel.new(s.getBoolAt("UseEyeGazeTracking", false))
 		pModelUseEyeGazeTracking.addListener(SaveToggleModelChanged.new("UseEyeGazeTracking"))
 		
-		pModelUseFacialTracking = DefaultToggleModel.new(false)
+		pModelUseFacialTracking = DefaultToggleModel.new(s.getBoolAt("UseFacialTracking", false))
 		pModelUseFacialTracking.addListener(SaveToggleModelChanged.new("UseFacialTracking"))
 		
 		pModelAutoExport = DefaultToggleModel.new(s.getBoolAt("AutoExport", false))
