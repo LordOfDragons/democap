@@ -561,9 +561,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferSpine.setTargetBone("")
 		pTransferSpine.setTargetBaseBone("")
 		
-		pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new())
 		pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
-		
+		pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new())
+
 		pTransferSpine.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 		pTransferSpine.getBaseTracker().setOffsetRotation(Vector.new(90, 0, 0))
 		
@@ -604,7 +604,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferSpine.setBaseBone(baseBone)
 			pTransferSpine.setTwistBoneCount(DEMath.max(chainSpine.getCount() - 1, 0))
 			
-			if chainHead.getCount() > 1
+			if chainHead.getCount() > 1 and isSlotChestAttached
 				pTransferSpine.setTargetBone(chainHead.getAt(-2) cast String)
 				
 			else
@@ -737,7 +737,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferArmRight.setGuideBone(chain.getAt(index - 2) cast String)
 			
 		else
-			pTransferArmRight.setGuideBone(pTransferArmRight.getBaseBone())
+			//pTransferArmRight.setGuideBone(pTransferArmRight.getBaseBone())
+			pTransferArmRight.setGuideBone("")
 		end
 		
 		pTransferArmRight.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
@@ -784,7 +785,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferArmLeft.setGuideBone(chain.getAt(index - 2) cast String)
 			
 		else
-			pTransferArmLeft.setGuideBone(pTransferArmLeft.getBaseBone())
+			//pTransferArmLeft.setGuideBone(pTransferArmLeft.getBaseBone())
+			pTransferArmLeft.setGuideBone("")
 		end
 		
 		pTransferArmLeft.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
@@ -818,7 +820,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegRight.setTipBone(pBoneFootRight)
 		pTransferLegRight.setMoveBaseIK(pMoveBaseIK)
 		pTransferLegRight.setMoveRetracted(pMoveCrouch)
-		pTransferLegRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
 		pTransferLegRight.setActorReach(MotionTransferIK.ActorReach.leg)
 		pTransferLegRight.setTwistBoneCount(0)//DEMath.max(chainRightLeg.getCount() - 2, 0))
 		pTransferLegRight.setTwistPropagation(1)
@@ -826,7 +827,14 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		if chainRightLeg.getCount() > 0
 			pTransferLegRight.setBaseBone(chainRightLeg.getAt(-1) cast String)
-			pTransferLegRight.setGuideBone(pTransferLegRight.getBaseBone())
+
+			if chainRightLeg.getCount() > 1
+				pTransferLegRight.setGuideBone(chainRightLeg.getAt(-2) cast String)
+
+			else
+				//pTransferLegRight.setGuideBone(pTransferLegRight.getBaseBone())
+				pTransferLegRight.setGuideBone("")
+			end
 			
 		else
 			pTransferLegRight.setBaseBone("")
@@ -864,7 +872,14 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		if chainLeftLeg.getCount() > 0
 			pTransferLegLeft.setBaseBone(chainLeftLeg.getAt(-1) cast String)
-			pTransferLegLeft.setGuideBone(pTransferLegLeft.getBaseBone())
+
+			if chainLeftLeg.getCount() > 1
+				pTransferLegLeft.setGuideBone(chainLeftLeg.getAt(-2) cast String)
+
+			else
+				//pTransferLegLeft.setGuideBone(pTransferLegLeft.getBaseBone())
+				pTransferLegLeft.setGuideBone("")
+			end
 			
 		else
 			pTransferLegLeft.setBaseBone("")
