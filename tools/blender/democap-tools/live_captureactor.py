@@ -96,8 +96,7 @@ class DemocapLiveCaptureActor:
             if insertKeyframes:
                 # C.active_object.data.shape_keys.animation_data.action
                 self._shapeKey.keyframe_insert(
-                    data_path="key_blocks[\"{}\"].value".format(
-                        self._shapeKey.name))
+                    data_path="value".format(self._shapeKey.name))
 
     def __init__(self, connection):
         self._connection = connection
