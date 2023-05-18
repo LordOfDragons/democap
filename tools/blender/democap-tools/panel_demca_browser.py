@@ -202,7 +202,18 @@ class LIST_OT_DemcaBrowserImportAnimation(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if context.active_object and context.active_object.type == 'ARMATURE':
+        if not object:
+            return False
+        
+        armature = None
+        if object.type == 'ARMATURE':
+            armature = object
+        elif object.type == 'MESH':
+            parent = object.parent
+            if parent and parent.type == 'ARMATURE':
+                armature = parent
+        
+        if armature:
             dtlist = context.window_manager.democaptools_filelistdemca
             index = context.window_manager.democaptools_filelistdemca_index
             dtprops = context.window_manager.democaptools_properties
@@ -212,8 +223,20 @@ class LIST_OT_DemcaBrowserImportAnimation(bpy.types.Operator):
         return False
 
     def execute(self, context):
-        if (not context.active_object
-                or context.active_object.type != 'ARMATURE'):
+        object = context.active_object
+        if not object:
+            return {'CANCELLED'}
+        
+        armature = None
+        mesh = None
+        if object.type == 'ARMATURE':
+            armature = object
+        elif object.type == 'MESH':
+            mesh = object
+            if mesh.parent and mesh.parent.type == 'ARMATURE':
+                armature = mesh.parent
+        
+        if not armature:
             return {'CANCELLED'}
 
         dtlist = context.window_manager.democaptools_filelistdemca
@@ -224,6 +247,13 @@ class LIST_OT_DemcaBrowserImportAnimation(bpy.types.Operator):
 
         if dtlist[index].isDirectory:
             return {'CANCELLED'}
+
+        for o in context.selected_objects[:]:
+            o.select_set(False)
+        armature.select_set(True)
+        if mesh:
+            mesh.select_set(True)
+        context.view_layer.objects.active = armature
 
         path = dtprops.browserSelectionInfo.pathAnimation
         path = Demca.getAbsPath(dtlist[index].path, path)
