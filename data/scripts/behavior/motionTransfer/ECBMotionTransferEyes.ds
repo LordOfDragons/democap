@@ -72,6 +72,8 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 		private var float pLimitEyeLeftOffsetV
 		private var float pCenterHorizontal
 		private var float pCenterVertical
+		private var float pAdjustRotationHorizontal
+		private var float pAdjustRotationVertical
 		private var AnimatorController pControllerRightHorizontal
 		private var AnimatorController pControllerRightVertical
 		private var AnimatorController pControllerLeftHorizontal
@@ -136,6 +138,10 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			pCenterHorizontal = transfer.getCalibrateRotation().getY()
 			pCenterVertical = transfer.getCalibrateRotation().getX()
 			
+			// adjustments
+			pAdjustRotationHorizontal = transfer.getAdjustRotationHorizontal()
+			pAdjustRotationVertical = transfer.getAdjustRotationVertical()
+
 			// add listener
 			pMoCapAnimator.addListener(UpdateControllers.new(this))
 		end
@@ -196,8 +202,8 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			//
 			// for the purpose of motion capturing we use only the orientation
 			var Vector rotation = pSlotTracker.getMatrixComponent().getEulerAngles()
-			var float eyeHorizontal = rotation.getY() - pCenterHorizontal
-			var float eyeVertical = rotation.getX() - pCenterVertical
+			var float eyeHorizontal = rotation.getY() - pCenterHorizontal + pAdjustRotationHorizontal
+			var float eyeVertical = rotation.getX() - pCenterVertical + pAdjustRotationVertical
 			
 			// limit right eye rotation
 			var float horizontal = (eyeHorizontal - pLimitEyeRightOffsetH) / pLimitEyeRightScaleH

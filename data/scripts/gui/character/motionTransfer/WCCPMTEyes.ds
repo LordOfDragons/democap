@@ -46,6 +46,8 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 	private var DefaultTextModel pModelLimitOut
 	private var DefaultTextModel pModelLimitUp
 	private var DefaultTextModel pModelLimitDown
+	private var DefaultRangeModel pModelAdjustRotationHorizontal
+	private var DefaultRangeModel pModelAdjustRotationVertical
 	
 	
 	
@@ -70,6 +72,9 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		pModelLimitUp = DefaultTextModel.new()
 		pModelLimitDown = DefaultTextModel.new()
 		
+		pModelAdjustRotationHorizontal = DefaultRangeModel.new(0, 40, 5, 10, 1)
+		pModelAdjustRotationVertical = DefaultRangeModel.new(0, 40, 5, 10, 1)
+		
 		runWhileBlockingLayout(block
 			createContent()
 		end)
@@ -93,6 +98,8 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		pModelLimitOut = null
 		pModelLimitUp = null
 		pModelLimitDown = null
+		pModelAdjustRotationHorizontal = null
+		pModelAdjustRotationVertical = null
 		super.dispose()
 	end
 	
@@ -114,6 +121,8 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 				pModelLimitOut.setText(mt.getLimitOut().toString())
 				pModelLimitUp.setText(mt.getLimitUp().toString())
 				pModelLimitDown.setText(mt.getLimitDown().toString())
+				pModelAdjustRotationHorizontal.setValue((mt.getAdjustRotationHorizontal() * 1.0 + 20.5) cast int)
+				pModelAdjustRotationVertical.setValue((mt.getAdjustRotationVertical() * 1.0 + 20.5) cast int)
 				
 			else
 				pModelTextTrackerSlot.setText("")
@@ -125,6 +134,8 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 				pModelLimitOut.setText("")
 				pModelLimitUp.setText("")
 				pModelLimitDown.setText("")
+				pModelAdjustRotationHorizontal.setValue(20)
+				pModelAdjustRotationVertical.setValue(20)
 			end
 		end)
 		doLayoutIfBlocked()
@@ -147,6 +158,8 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		mt.setLimitOut(pModelLimitOut.getText().toFloat())
 		mt.setLimitUp(pModelLimitUp.getText().toFloat())
 		mt.setLimitDown(pModelLimitDown.getText().toFloat())
+		mt.setAdjustRotationHorizontal(1.0 * pModelAdjustRotationHorizontal.getValue() - 20.0)
+		mt.setAdjustRotationVertical(1.0 * pModelAdjustRotationVertical.getValue() - 20.0)
 	end
 	
 	/** Supports motion transfer type. */
@@ -162,6 +175,7 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		var ComboBox comboBox
 		var Label label, labelBone
 		var TextField textField
+		var Slider slider
 		
 		createBaseContent("motiontransfereyes")
 		
@@ -255,5 +269,43 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("Limit angle in degrees of eyes rotation down.")
 		pPanelForm.addWidget(textField)
+		
+		// adjust horizontal rotation
+		toolTip = "Adjust horizontal eye rotation. 0=-20°, 20=0, 40=20°"
+		
+		label = Label.new("Adjust Horz-Rot:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+			slider = Slider.new(Orientation.horizontal, pModelAdjustRotationHorizontal)
+			slider.setToolTip(toolTip)
+			p.addWidget(slider)
+			
+			textField = TextField.new(RangeTextModel.new(pModelAdjustRotationHorizontal), 2)
+			textField.setToolTip(toolTip)
+			textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+			p.addWidget(textField)
+			textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelAdjustRotationHorizontal))
+		end))
+		
+		// adjust verticaal rotation
+		toolTip = "Adjust vertical eye rotation. 0=-20°, 20=0, 40=20°"
+		
+		label = Label.new("Adjust Vert-Rot:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+			slider = Slider.new(Orientation.horizontal, pModelAdjustRotationVertical)
+			slider.setToolTip(toolTip)
+			p.addWidget(slider)
+			
+			textField = TextField.new(RangeTextModel.new(pModelAdjustRotationVertical), 2)
+			textField.setToolTip(toolTip)
+			textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+			p.addWidget(textField)
+			textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelAdjustRotationVertical))
+		end))
 	end
 end

@@ -68,6 +68,8 @@ class MotionTransferEyes extends DefaultMotionTransfer
 	private var float pLimitOut
 	private var float pLimitUp
 	private var float pLimitDown
+	private var float pAdjustRotationHorizontal
+	private var float pAdjustRotationVertical
 	
 	private var ADController pADControllerRightHorizontal
 	private var ADController pADControllerRightVertical
@@ -95,6 +97,8 @@ class MotionTransferEyes extends DefaultMotionTransfer
 		pLimitOut = 45
 		pLimitUp = 45
 		pLimitDown = 45
+		pAdjustRotationHorizontal = 0
+		pAdjustRotationVertical = 0
 		pCalibrateRotation = Vector.new()
 	end
 	
@@ -109,6 +113,8 @@ class MotionTransferEyes extends DefaultMotionTransfer
 		pLimitOut = transfer.pLimitOut
 		pLimitUp = transfer.pLimitUp
 		pLimitDown = transfer.pLimitDown
+		pAdjustRotationHorizontal = transfer.pAdjustRotationHorizontal
+		pAdjustRotationVertical = transfer.pAdjustRotationVertical
 		pCalibrateRotation = transfer.pCalibrateRotation
 	end
 	
@@ -223,6 +229,26 @@ class MotionTransferEyes extends DefaultMotionTransfer
 	public func void setLimitDown(float angle)
 		pLimitDown = angle
 	end
+
+	/** Adjust horizontal rotation. */
+	public func float getAdjustRotationHorizontal()
+		return pAdjustRotationHorizontal
+	end
+
+	/** Set adjust horizontal rotation. */
+	public func void setAdjustRotationHorizontal(float adjust)
+		pAdjustRotationHorizontal = adjust
+	end
+
+	/** Adjust vertical rotation. */
+	public func float getAdjustRotationVertical()
+		return pAdjustRotationVertical
+	end
+
+	/** Set adjust vertical rotation. */
+	public func void setAdjustRotationVertical(float adjust)
+		pAdjustRotationVertical = adjust
+	end
 	
 	
 	
@@ -279,7 +305,8 @@ class MotionTransferEyes extends DefaultMotionTransfer
 			return
 		end
 		
-		pCalibrateRotation = pTrackerSlot.getCalibrateComponentMatrix().getEulerAngles()
+		//pCalibrateRotation = pTrackerSlot.getCalibrateComponentMatrix().getEulerAngles()
+		pCalibrateRotation = Vector.new()
 	end
 	
 	/** Init element clas. */
@@ -307,18 +334,6 @@ class MotionTransferEyes extends DefaultMotionTransfer
 		// add controller, link and rules
 		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
 		var AnimatorDefinition adef = config.getAnimatorDefinition()
-		
-		// add reset rule. this is done so we can use two bone rotators instead of a state
-		// manipulator followed by a bone rotator. this is more predictable in situations
-		// where the character has unfortunate eye bone orientations
-		var ADRuleStateManipulator ruleReset = ADRuleStateManipulator.new()
-		if not pRightBone.empty()
-			ruleReset.addBone(pRightBone)
-		end
-		if not pLeftBone.empty()
-			ruleReset.addBone(pLeftBone)
-		end
-		adef.addRule(ruleReset)
 		
 		// add eye rules
 		var Matrix matrix
@@ -435,6 +450,12 @@ class MotionTransferEyes extends DefaultMotionTransfer
 			elif tagName.equals("limitDown")
 				pLimitDown = element.getFirstCDataFloat()
 				
+			elif tagName.equals("adjustRotationHorizontal")
+				pAdjustRotationHorizontal = element.getFirstCDataFloat()
+
+			elif tagName.equals("adjustRotationVertical")
+				pAdjustRotationVertical = element.getFirstCDataFloat()
+
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
 			end
@@ -466,6 +487,8 @@ class MotionTransferEyes extends DefaultMotionTransfer
 		tag.addDataTag("limitOut", pLimitOut)
 		tag.addDataTag("limitUp", pLimitUp)
 		tag.addDataTag("limitDown", pLimitOut)
+		tag.addDataTag("adjustRotationHorizontal", pAdjustRotationHorizontal)
+		tag.addDataTag("adjustRotationVertical", pAdjustRotationVertical)
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
