@@ -60,6 +60,8 @@ class MotionTransferEyes extends DefaultMotionTransfer
 	
 	private var String pRightBone
 	private var String pLeftBone
+	private var String pTracker
+	private var CharacterTrackerSlot pTrackerSlot
 	private var Vector pRightRotation
 	private var Vector pLeftRotation
 	private var float pLimitIn
@@ -78,30 +80,36 @@ class MotionTransferEyes extends DefaultMotionTransfer
 	private var ADRule pADRuleLeftHorizontal
 	private var ADRule pADRuleLeftVertical
 	
+	private var Vector pCalibrateRotation
+	
 	
 	
 	/** Create motion transfer. */
 	public func new(String factoryID) super(factoryID)
 		pRightBone = ""
 		pLeftBone = ""
+		pTracker = ""
 		pRightRotation = Vector.new()
 		pLeftRotation = Vector.new()
 		pLimitIn = 45
 		pLimitOut = 45
 		pLimitUp = 45
 		pLimitDown = 45
+		pCalibrateRotation = Vector.new()
 	end
 	
 	/** Create copy of motion transfer. */
 	public func new(MotionTransferEyes transfer) super(transfer)
 		pRightBone = transfer.pRightBone
 		pLeftBone = transfer.pLeftBone
+		pTracker = transfer.pTracker
 		pRightRotation = transfer.pRightRotation
 		pLeftRotation = transfer.pLeftRotation
 		pLimitIn = transfer.pLimitIn
 		pLimitOut = transfer.pLimitOut
 		pLimitUp = transfer.pLimitUp
 		pLimitDown = transfer.pLimitDown
+		pCalibrateRotation = transfer.pCalibrateRotation
 	end
 	
 	
@@ -130,6 +138,24 @@ class MotionTransferEyes extends DefaultMotionTransfer
 			throw ENullPointer.new("bone")
 		end
 		pLeftBone = bone
+	end
+	
+	/** Tracker slot name. */
+	public func String getTracker()
+		return pTracker
+	end
+	
+	/** Set tracker slot name. */
+	public func void setTracker(String tracker)
+		if tracker == null
+			throw ENullPointer.new("tracker")
+		end
+		pTracker = tracker
+	end
+	
+	/** Tracker slot or null. */
+	public func CharacterTrackerSlot getTrackerSlot()
+		return pTrackerSlot
 	end
 	
 	/** Rotation of right eye component space. */
@@ -227,6 +253,35 @@ class MotionTransferEyes extends DefaultMotionTransfer
 	
 	
 	
+	/** Calibrate rotation. */
+	public func Vector getCalibrateRotation()
+		return pCalibrateRotation
+	end
+	
+	
+	
+	/** Reset calibration. */
+	public func void resetCalibration()
+		pTrackerSlot = null
+		pCalibrateRotation = Vector.new()
+	end
+	
+	/** Calibrate character. */
+	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile,\
+	BaseVRActor actor, Component component)
+		var Rig rig = component.getRig()
+		pTrackerSlot = config.getTrackerSlots().getNamed(pTracker)
+		
+		if pTrackerSlot == null
+			return
+		end
+		if pRightBone.empty() and pLeftBone.empty()
+			return
+		end
+		
+		pCalibrateRotation = pTrackerSlot.getCalibrateComponentMatrix().getEulerAngles()
+	end
+	
 	/** Init element clas. */
 	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
 		pADControllerRightHorizontal = null
@@ -239,6 +294,9 @@ class MotionTransferEyes extends DefaultMotionTransfer
 		pADRuleLeftHorizontal = null
 		pADRuleLeftVertical = null
 		
+		if pTrackerSlot == null
+			return
+		end
 		if pRightBone.empty() and pLeftBone.empty()
 			return
 		end
@@ -356,6 +414,9 @@ class MotionTransferEyes extends DefaultMotionTransfer
 			elif tagName.equals("leftBone")
 				setLeftBone(element.getFirstCData())
 				
+			elif tagName.equals("tracker")
+				pTracker = element.getFirstCData()
+				
 			elif tagName.equals("rightRotation")
 				setRightRotation(loader.readVector(element))
 				
@@ -373,8 +434,24 @@ class MotionTransferEyes extends DefaultMotionTransfer
 				
 			elif tagName.equals("limitDown")
 				pLimitDown = element.getFirstCDataFloat()
+				
+			elif tagName.equals("calibrated")
+				loadCalibrated(loader, element)
 			end
 		end)
+	end
+	
+	public func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("rotation")
+				pCalibrateRotation = loader.readVector(element)
+			end
+		end)
+	end
+	
+	/** Post load initialize. */
+	public func void postLoadInit(CharacterConfiguration config)
+		pTrackerSlot = config.getTrackerSlots().getNamed(pTracker)
 	end
 	
 	/** Save to XML. */
@@ -382,11 +459,17 @@ class MotionTransferEyes extends DefaultMotionTransfer
 		tag.addDataTag("name", getName())
 		tag.addDataTag("rightBone", pRightBone)
 		tag.addDataTag("leftBone", pLeftBone)
+		tag.addDataTag("tracker", pTracker)
 		loader.writeVector(tag, "rightRotation", pRightRotation)
 		loader.writeVector(tag, "leftRotation", pLeftRotation)
 		tag.addDataTag("limitIn", pLimitIn)
 		tag.addDataTag("limitOut", pLimitOut)
 		tag.addDataTag("limitUp", pLimitUp)
 		tag.addDataTag("limitDown", pLimitOut)
+		saveCalibrated(loader, tag.addTag("calibrated"))
+	end
+	
+	public func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+		loader.writeVector(tag, "rotation", pCalibrateRotation)
 	end
 end

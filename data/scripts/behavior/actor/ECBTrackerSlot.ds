@@ -97,6 +97,9 @@ class ECBTrackerSlot extends DefaultECBehavior
 		private var Matrix pComponentMatrix
 		private var AttachDetachListener pAttachDetachListener
 		private var DebugDrawer pDDCoordSystem
+		private var Vector pCalibrationPosition
+		private var Quaternion pCalibrationOrientation
+		private var int pCalibrationCounter
 		
 		
 		
@@ -256,6 +259,19 @@ class ECBTrackerSlot extends DefaultECBehavior
 			pReferenceMatrix = matrix
 		end
 		
+		/** Character component matrix. */
+		public func Matrix getMatrixComponent()
+			return pComponentMatrix
+		end
+		
+		/** Set character component matrix. */
+		public func void setMatrixComponent(Matrix matrix)
+			if matrix == null
+				throw ENullPointer.new("matrix")
+			end
+			pComponentMatrix = matrix
+		end
+		
 		/** World position. */
 		public func DVector getPosition()
 			return pVRPlayspace.getMatrix() * DVector.new(pPosition)
@@ -346,7 +362,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 				return // dispose protection
 			end
 			
-			updateMatrix()
+			updateMatrix(false)
 			
 			var Component component = pComponent.getComponent()
 			if component != null
@@ -394,6 +410,55 @@ class ECBTrackerSlot extends DefaultECBehavior
 		
 		
 		
+		/** Begin calibration. */
+		public func void beginCalibration()
+			pCalibrationPosition = Vector.new()
+			pCalibrationOrientation = Quaternion.new()
+			pCalibrationCounter = 0
+			findInputDevice()
+		end
+		
+		/** Update calibration. */
+		public func void updateCalibration()
+			if pInputDevice == null
+				return
+			end
+			
+			pCalibrationPosition = pCalibrationPosition + pInputDevice.getDevicePosePosition()
+			pCalibrationOrientation = pCalibrationOrientation + pInputDevice.getDevicePoseOrientation()
+			pCalibrationCounter++
+		end
+		
+		/** End calibration. */
+		public func void endCalibration()
+			if pInputDevice == null
+				return
+			end
+			
+			if pCalibrationCounter > 1
+				pCalibrationPosition = pCalibrationPosition / pCalibrationCounter
+				pCalibrationOrientation = pCalibrationOrientation / pCalibrationCounter
+			end
+			pCalibrationCounter++
+		end
+		
+		/** Calibration position. */
+		public func Vector getCalibrationPosition()
+			return pCalibrationPosition
+		end
+		
+		/** Calibration orientation. */
+		public func Quaternion getCalibrationOrientation()
+			return pCalibrationOrientation
+		end
+		
+		/** Calibration counter. */
+		public func int getCalibrationCounter()
+			return pCalibrationCounter
+		end
+		
+		
+		
 		/** Update component model and skin. */
 		protected func void updateModelSkin()
 			var Component component = pComponent.getComponent()
@@ -421,7 +486,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 		end
 		
 		/** Update matrix. */
-		public func void updateMatrix()
+		public func void updateMatrix(bool calibrating)
 			var CharacterTrackerSlot slot = pECBehavior.getTrackerSlot()
 			var CharacterConfiguration config = slot.getConfiguration()
 			
@@ -436,7 +501,17 @@ class ECBTrackerSlot extends DefaultECBehavior
 			pReferenceMatrix = slot.getMatrix() * config.getMatrixScale()
 			
 			if pInputDevice != null
-				pComponentMatrix = applySmoothing(pInputDevice.getDevicePoseMatrix())
+				if calibrating
+					if pCalibrationCounter > 0
+						pComponentMatrix = Matrix.newWorld(pCalibrationPosition, pCalibrationOrientation)
+						
+					else
+						pComponentMatrix = pInputDevice.getDevicePoseMatrix()
+					end
+					
+				else
+					pComponentMatrix = applySmoothing(pInputDevice.getDevicePoseMatrix())
+				end
 				pMatrix = pComponentMatrix * config.getMatrixCalibrate() * config.getMatrixScale()
 				
 			else

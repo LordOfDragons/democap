@@ -35,6 +35,7 @@ pin Dragengine.Scenery
 class AACalibrate extends AABase
 	enum State
 		waiting
+		delayCalibrating
 		calibrating
 		done
 	end
@@ -46,6 +47,7 @@ class AACalibrate extends AABase
 	protected var RangeModel modelProgress
 	protected var State state
 	protected var float calibrateElapsed
+	protected var float calibrateDelayTime
 	protected var float calibrateWaitTime
 	protected var int triggerPressCount
 	
@@ -54,7 +56,8 @@ class AACalibrate extends AABase
 	/** Create action. */
 	public func new()
 		state = State.waiting
-		calibrateWaitTime = 1
+		calibrateDelayTime = 0.5
+		calibrateWaitTime = 2
 	end
 	
 	
@@ -136,24 +139,23 @@ class AACalibrate extends AABase
 		
 		select state
 		case State.waiting
-			state = State.calibrating
+			character.beginCalibration(actor cast BaseVRActor)
+			state = State.delayCalibrating
 			triggerPressCount++
 			
-		case State.calibrating
+		case State.delayCalibrating, State.calibrating
 			triggerPressCount++
 		end
 	end
 	
 	/** Trigger released. */
 	public func void triggerRelease(bool rightHand)
-		if state != State.calibrating
-			return
-		end
-		
-		triggerPressCount--
-		
-		if triggerPressCount == 0
-			resetToWaiting()
+		select state
+		case State.delayCalibrating, State.calibrating
+			triggerPressCount--
+			if triggerPressCount == 0
+				resetToWaiting()
+			end
 		end
 	end
 	
@@ -177,6 +179,28 @@ class AACalibrate extends AABase
 		super.think(elapsed)
 		
 		select state
+		case State.delayCalibrating
+			// sanity check
+			var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
+			var CharacterConfiguration character = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
+			if actor == null or character == null
+				resetToWaiting()
+				return
+			end
+			
+			// wait until timeout
+			calibrateElapsed += elapsed
+			
+			if modelProgress != null
+				modelProgress.setValue(DEMath.linearStep(calibrateElapsed, 0, calibrateWaitTime, 0, 100) cast int)
+			end
+			
+			// once timout elapsed calibrate and finish
+			if calibrateElapsed >= calibrateDelayTime
+				state = State.calibrating
+				character.updateCalibration()
+			end
+			
 		case State.calibrating
 			// sanity check
 			var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
@@ -185,6 +209,8 @@ class AACalibrate extends AABase
 				resetToWaiting()
 				return
 			end
+			
+			character.updateCalibration()
 			
 			// wait until timeout
 			calibrateElapsed += elapsed

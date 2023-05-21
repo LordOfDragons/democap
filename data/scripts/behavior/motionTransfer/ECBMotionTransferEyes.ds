@@ -37,31 +37,6 @@ pin Dragengine.Utils
 class ECBMotionTransferEyes extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
-		/** Controller attach/detach listener. */
-		class AttachDetachListener extends DefaultBindingManagerListener
-			private var Instance pInstance
-			
-			public func new(Instance instance)
-				pInstance = instance
-			end
-			
-			public func void deviceAttached(BindingManager manager, InputDevice device)
-				if pInstance.getInputDevice() == null and device.getType() == InputDeviceType.vrEyeTracker
-					pInstance.setInputDevice(device)
-				end
-			end
-			
-			public func void deviceDetached(BindingManager manager, InputDevice device)
-				if pInstance.getInputDevice() == device
-					pInstance.setInputDevice(null)
-				end
-			end
-			
-			public func void devicesReloaded(BindingManager manager)
-				pInstance.findInputDevice()
-			end
-		end
-		
 		/** Update controllers. */
 		class UpdateControllers extends ECBMoCapAnimator.DefaultListener
 			private var Instance pInstance
@@ -86,6 +61,7 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 		private var ECBMotionTransferEyes pECBehavior
 		private var ECBehaviorVRPlayspace.Instance pVRPlayspace
 		private var ECBMoCapAnimator.Instance pMoCapAnimator
+		private var ECBTrackerSlot.Instance pSlotTracker
 		private var float pLimitEyeRightScaleH
 		private var float pLimitEyeRightScaleV
 		private var float pLimitEyeRightOffsetH
@@ -94,12 +70,12 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 		private var float pLimitEyeLeftScaleV
 		private var float pLimitEyeLeftOffsetH
 		private var float pLimitEyeLeftOffsetV
+		private var float pCenterHorizontal
+		private var float pCenterVertical
 		private var AnimatorController pControllerRightHorizontal
 		private var AnimatorController pControllerRightVertical
 		private var AnimatorController pControllerLeftHorizontal
 		private var AnimatorController pControllerLeftVertical
-		private var InputDevice pInputDevice
-		private var AttachDetachListener pAttachDetachListener
 		
 		
 		
@@ -107,15 +83,16 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 		public func new(ECBMotionTransferEyes ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			
-			pAttachDetachListener = AttachDetachListener.new(this)
-			
 			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
 			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
+			if ecbehavior.getSlotTracker() != null
+				pSlotTracker = ecbehavior.getSlotTracker().instance(element)
+			end
 		end
 		
 		/** Dispose of instance. */
 		public func void dispose()
-			pAttachDetachListener = null
+			pSlotTracker = null
 			pVRPlayspace = null
 			pMoCapAnimator = null
 			super.dispose()
@@ -125,6 +102,8 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
+			var MotionTransferEyes transfer = pECBehavior.getTransfer()
+			
 			var ECBehaviorActorAnimated.Instance actorAnimated = pMoCapAnimator.getActorAnimated()
 			pControllerRightHorizontal = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRightHorizontal())
 			pControllerRightVertical = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRightVertical())
@@ -153,6 +132,10 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			pLimitEyeLeftScaleV = DEMath.max((upper - lower) / 2, 0.01)
 			pLimitEyeLeftOffsetV = (lower + upper) / 2
 			
+			// center position
+			pCenterHorizontal = transfer.getCalibrateRotation().getY()
+			pCenterVertical = transfer.getCalibrateRotation().getX()
+			
 			// add listener
 			pMoCapAnimator.addListener(UpdateControllers.new(this))
 		end
@@ -171,6 +154,11 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 		/** Motion capture animator. */
 		public func ECBMoCapAnimator.Instance getMoCapAnimator()
 			return pMoCapAnimator
+		end
+		
+		/** Tracker slot behavior instance or null. */
+		public func ECBTrackerSlot.Instance getSlotTracker()
+			return pSlotTracker
 		end
 		
 		/** Animator controller right horizontal. */
@@ -193,35 +181,11 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			return pControllerLeftVertical
 		end
 		
-		/** Input device or null if detached. */
-		public func InputDevice getInputDevice()
-			return pInputDevice
-		end
-		
-		/** Set input device or null if detached. */
-		public func void setInputDevice(InputDevice device)
-			pInputDevice = device
-		end
-		
-		
-		
-		/** Element has been added to game world. Start tracking device. */
-		public func void addToGameWorld()
-			GameApp.getGameApp().getBindingManager().addListener(pAttachDetachListener)
-			findInputDevice()
-		end
-		
-		/** Element has been removed from game world. Stop tracking device. */
-		public func void removeFromGameWorld()
-			GameApp.getGameApp().getBindingManager().removeListener(pAttachDetachListener)
-			setInputDevice(null)
-		end
-		
 		
 		
 		/** Update controllers. */
 		public func void updateControllers()
-			if pInputDevice == null
+			if pSlotTracker == null
 				return
 			end
 			
@@ -231,11 +195,13 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			// matrix formed by the orientation.
 			//
 			// for the purpose of motion capturing we use only the orientation
-			var Vector rotation = pInputDevice.getDevicePoseOrientation().getEulerAngles()
+			var Vector rotation = pSlotTracker.getMatrixComponent().getEulerAngles()
+			var float eyeHorizontal = rotation.getY() - pCenterHorizontal
+			var float eyeVertical = rotation.getX() - pCenterVertical
 			
 			// limit right eye rotation
-			var float horizontal = (rotation.getY() - pLimitEyeRightOffsetH) / pLimitEyeRightScaleH
-			var float vertical = (rotation.getX() - pLimitEyeRightOffsetV) / pLimitEyeRightScaleV
+			var float horizontal = (eyeHorizontal - pLimitEyeRightOffsetH) / pLimitEyeRightScaleH
+			var float vertical = (eyeVertical - pLimitEyeRightOffsetV) / pLimitEyeRightScaleV
 			
 			var Vector2 direction = Vector2.new(horizontal, vertical)
 			if direction.getLength() > 1
@@ -248,8 +214,8 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			pControllerRightVertical.setValue(vertical * pLimitEyeRightScaleV + pLimitEyeRightOffsetV)
 			
 			// limit left eye rotation
-			horizontal = (rotation.getY() - pLimitEyeLeftOffsetH) / pLimitEyeLeftScaleH
-			vertical = (rotation.getX() - pLimitEyeLeftOffsetV) / pLimitEyeLeftScaleV
+			horizontal = (eyeHorizontal - pLimitEyeLeftOffsetH) / pLimitEyeLeftScaleH
+			vertical = (eyeVertical - pLimitEyeLeftOffsetV) / pLimitEyeLeftScaleV
 			
 			direction = Vector2.new(horizontal, vertical)
 			if direction.getLength() > 1
@@ -261,13 +227,6 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			pControllerLeftHorizontal.setValue(horizontal * pLimitEyeLeftScaleH + pLimitEyeLeftOffsetH)
 			pControllerLeftVertical.setValue(vertical * pLimitEyeLeftScaleV + pLimitEyeLeftOffsetV)
 		end
-		
-		/** Find input device. */
-		public func void findInputDevice()
-			setInputDevice(GameApp.getApp().getBindingManager().findDevice(block InputDevice each
-				return each.getType() == InputDeviceType.vrEyeTracker
-			end))
-		end
 	end
 	
 	
@@ -275,6 +234,7 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 	private var MotionTransferEyes pTransfer
 	private var ECBehaviorVRPlayspace pVRPlayspace
 	private var ECBMoCapAnimator pMoCapAnimator
+	private var ECBTrackerSlot pSlotTracker
 	private var String pControllerNameRightHorizontal
 	private var String pControllerNameRightVertical
 	private var String pControllerNameLeftHorizontal
@@ -294,6 +254,9 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 		pTransfer = transfer
 		pVRPlayspace = eclass.getVRPlayspace()
 		pMoCapAnimator = ECBMoCapAnimator.getBehaviorIn(eclass)
+		if transfer.getTrackerSlot() != null
+			pSlotTracker = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getTracker())
+		end
 		
 		pControllerNameRightHorizontal = transfer.getName() + ".rightHorizontal"
 		pControllerNameRightVertical = transfer.getName() + ".rightVertical"
@@ -307,6 +270,7 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 	public func void dispose()
 		pVRPlayspace = null
 		pTransfer = null
+		pSlotTracker = null
 		super.dispose()
 	end
 	
@@ -325,6 +289,11 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 	/** Motion capture animator behavior. */
 	public func ECBMoCapAnimator getMoCapAnimator()
 		return pMoCapAnimator
+	end
+	
+	/** Tracker slot behavior or null. */
+	public func ECBTrackerSlot getSlotTracker()
+		return pSlotTracker
 	end
 	
 	/** Animator controller name right horizontal. */

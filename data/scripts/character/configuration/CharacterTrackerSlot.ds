@@ -50,6 +50,7 @@ class CharacterTrackerSlot
 		leftKnee
 		rightFoot
 		leftFoot
+		eyes
 	end
 	
 	
@@ -78,6 +79,8 @@ class CharacterTrackerSlot
 	private var Matrix pCalibrateMatrixInverse
 	private var Matrix pCalibrateReferenceMatrix
 	private var Matrix pCalibrateReferenceMatrixInverse
+	private var Matrix pCalibrateComponentMatrix
+	private var Matrix pCalibrateComponentMatrixInverse
 	
 	private var Matrix pRecalibrateMatrix
 	
@@ -86,6 +89,7 @@ class CharacterTrackerSlot
 	private var ADLink pADLinkPosition
 	private var ADLink pADLinkRotation
 	private var ECBTrackerSlot pBehavior
+	private var ECBTrackerSlot.Instance pInstanceCalibrating
 	
 	
 	
@@ -118,6 +122,8 @@ class CharacterTrackerSlot
 		pCalibrateMatrixInverse = Matrix.new()
 		pCalibrateReferenceMatrix = Matrix.new()
 		pCalibrateReferenceMatrixInverse = Matrix.new()
+		pCalibrateComponentMatrix = Matrix.new()
+		pCalibrateComponentMatrixInverse = Matrix.new()
 		
 		pRecalibrateMatrix = Matrix.new()
 		
@@ -153,6 +159,8 @@ class CharacterTrackerSlot
 		pCalibrateMatrixInverse = slot.pCalibrateMatrixInverse
 		pCalibrateReferenceMatrix = slot.pCalibrateReferenceMatrix
 		pCalibrateReferenceMatrixInverse = slot.pCalibrateReferenceMatrixInverse
+		pCalibrateComponentMatrix = slot.pCalibrateComponentMatrix
+		pCalibrateComponentMatrixInverse = slot.pCalibrateComponentMatrixInverse
 		
 		pRecalibrateMatrix = slot.pRecalibrateMatrix
 		
@@ -163,6 +171,7 @@ class CharacterTrackerSlot
 	public func void dispose()
 		pConfiguration = null
 		pBehavior = null
+		pInstanceCalibrating = null
 	end
 	
 	
@@ -545,6 +554,11 @@ class CharacterTrackerSlot
 		case Type.leftFoot
 			pInputDeviceType = InputDeviceType.vrTracker
 			pPosition = Vector.new(-(footDistance * 0.5), 0, 0.12)
+			
+		case Type.eyes
+			pInputDeviceType = InputDeviceType.vrEyeTracker
+			pPosition = Vector.new()
+			pRotation = Vector.new()
 		end
 		
 		pMatrix = Matrix.newRT(pRotation, pPosition)
@@ -619,6 +633,25 @@ class CharacterTrackerSlot
 		pCalibrateReferenceMatrixInverse = matrix.getInverse()
 	end
 	
+	/** Calibrate componentz matrix. */
+	public func Matrix getCalibrateComponentMatrix()
+		return pCalibrateComponentMatrix
+	end
+	
+	/** Inverse calibrate component matrix. */
+	public func Matrix getCalibrateComponentMatrixInverse()
+		return pCalibrateComponentMatrixInverse
+	end
+	
+	/** Set calibrate component matrix. */
+	public func void setCalibrateComponentMatrix(Matrix matrix)
+		if matrix == null
+			throw ENullPointer.new("matrix")
+		end
+		pCalibrateComponentMatrix = matrix
+		pCalibrateComponentMatrixInverse = matrix.getInverse()
+	end
+	
 	/** Recalibrate matrix. */
 	public func Matrix getRecalibrateMatrix()
 		return pRecalibrateMatrix
@@ -642,32 +675,52 @@ class CharacterTrackerSlot
 		pCalibrateMatrixInverse = pMatrix.getInverse()
 		pCalibrateReferenceMatrix = pMatrix
 		pCalibrateReferenceMatrixInverse = pMatrix.getInverse()
+		pCalibrateComponentMatrix = pMatrix
+		pCalibrateComponentMatrixInverse = pMatrix.getInverse()
 		pRecalibrateMatrix = pMatrix
 		pBehavior = null
 	end
 	
+	/** Begin calibration. */
+	public func void beginCalibration(BaseVRActor actor)
+		pInstanceCalibrating = ECBTrackerSlot.getInstanceIn(actor, pName)
+		if pInstanceCalibrating != null
+			pInstanceCalibrating.beginCalibration()
+		end
+	end
+	
+	/** Update calibration. */
+	public func void updateCalibration()
+		if pInstanceCalibrating != null
+			pInstanceCalibrating.updateCalibration()
+		end
+	end
+	
 	/** Calibrate character. */
 	public func void calibrate(ActorProfile actorProfile, BaseVRActor actor)
-		var ECBTrackerSlot.Instance behavior = ECBTrackerSlot.getInstanceIn(actor, pName)
-		if behavior == null
+		if pInstanceCalibrating == null
 			resetCalibration()
 			return
 		end
 		
-		initFromType(actorProfile)
-		behavior.findInputDevice()
-		behavior.updateMatrix()
+		pInstanceCalibrating.endCalibration()
 		
-		pCalibrateReferenceMatrix = behavior.getMatrixReference()
+		initFromType(actorProfile)
+		pInstanceCalibrating.updateMatrix(true)
+		
+		pCalibrateReferenceMatrix = pInstanceCalibrating.getMatrixReference()
 		pCalibrateReferenceMatrixInverse = pCalibrateReferenceMatrix.getInverse()
 		
-		pCalibrateMatrix = behavior.getMatrixCharacter()
+		pCalibrateComponentMatrix = pInstanceCalibrating.getMatrixComponent()
+		pCalibrateComponentMatrixInverse = pCalibrateComponentMatrix.getInverse()
+		
+		pCalibrateMatrix = pInstanceCalibrating.getMatrixCharacter()
 		
 		select pInputDeviceType
 		case pInputDeviceType.vrHMD
 			var Vector position = pCalibrateMatrix.getPosition()
 			pCalibrateMatrix = Matrix.newTranslation(position)
-			behavior.setMatrixCharacter(position, Vector.new())
+			pInstanceCalibrating.setMatrixCharacter(position, Vector.new())
 		end
 		
 		pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
@@ -742,6 +795,9 @@ class CharacterTrackerSlot
 			
 		case Type.leftFoot
 			return "Left Foot"
+			
+		case Type.eyes
+			return "Eyes"
 			
 		else
 			return "Slot"

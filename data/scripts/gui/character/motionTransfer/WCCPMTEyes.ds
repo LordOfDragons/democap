@@ -34,6 +34,8 @@ pin Dragengine.Scenery
  * Edit character config window motion transfer eyes panel.
  */
 class WCCPMTEyes extends WCCPanelMotionTransfer
+	private var SharedListModel pModelListTrackerSlot
+	private var DefaultTextModel pModelTextTrackerSlot
 	private var SharedListModel pModelListRightBone
 	private var DefaultTextModel pModelTextRightBone
 	private var SharedListModel pModelListLeftBone
@@ -50,6 +52,10 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 	/** Create window. */
 	public func new(WindowCharacterConfiguration window) super(window)
 		pModelTypeName.setText("Eyes")
+		
+		pModelListTrackerSlot = SharedListModel.new(window.getModelTrackerSlotNames())
+		pModelListTrackerSlot.setAutoSelect(false)
+		pModelTextTrackerSlot = DefaultTextModel.new()
 		
 		pModelListRightBone = SharedListModel.new(window.getModelBones())
 		pModelListRightBone.setAutoSelect(false)
@@ -71,6 +77,9 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 	
 	/** Dispose of window. */
 	public func void dispose()
+		pModelListTrackerSlot = null
+		pModelTextTrackerSlot = null
+		
 		pModelListRightBone = null
 		pModelTextRightBone = null
 		
@@ -96,6 +105,7 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 			
 			if pMotionTransfer != null
 				var MotionTransferEyes mt = pMotionTransfer cast MotionTransferEyes
+				pModelTextTrackerSlot.setText(mt.getTracker())
 				pModelTextRightBone.setText(mt.getRightBone())
 				pModelTextLeftBone.setText(mt.getLeftBone())
 				pEditRightRotation.setVector(mt.getRightRotation())
@@ -106,6 +116,7 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 				pModelLimitDown.setText(mt.getLimitDown().toString())
 				
 			else
+				pModelTextTrackerSlot.setText("")
 				pModelTextRightBone.setText("")
 				pModelTextLeftBone.setText("")
 				pEditRightRotation.setVector(Vector.new())
@@ -127,6 +138,7 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		super.saveValues()
 		
 		var MotionTransferEyes mt = pMotionTransfer cast MotionTransferEyes
+		mt.setTracker(pModelTextTrackerSlot.getText())
 		mt.setRightBone(pModelTextRightBone.getText())
 		mt.setLeftBone(pModelTextLeftBone.getText())
 		mt.setRightRotation(pEditRightRotation.getVector())
@@ -152,6 +164,14 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		var TextField textField
 		
 		createBaseContent("motiontransfereyes")
+		
+		// tracker slot
+		pPanelForm.addWidget(Label.new("Tracker Slot:", "Label.FormCaption"))
+		
+		comboBox = ComboBox.new(pModelListTrackerSlot, DefaultComboBoxEditor.new(pModelTextTrackerSlot))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Tracker slot to use. Requires an VR device supporting eye gaze tracking.")
+		pPanelForm.addWidget(comboBox)
 		
 		// right bone
 		labelBone = Label.new("Right Bone:", "Label.FormCaption")
