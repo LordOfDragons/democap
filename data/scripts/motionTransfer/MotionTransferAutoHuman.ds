@@ -460,7 +460,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		assignSlots(config)
 		
-		// determine what devices are attached. it is important to to resolve all trackers
+		// determine what devices are attached. it is important to resolve all trackers
 		// that are used to determine motion transfer parameters or first time calibrate
 		// can yield wrong results
 		pTransferWaist.getTracker().resolveRealSlot(config)
@@ -473,54 +473,35 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmRight.getGuideTracker().resolveRealSlot(config)
 		pTransferArmLeft.getTipTracker().resolveRealSlot(config)
 		pTransferArmLeft.getGuideTracker().resolveRealSlot(config)
-		
 		pTransferNeck.getBaseTracker().resolveRealSlot(config)
 		
-		var bool hasSlotWaist = pTransferWaist.getTracker().getRealSlot() != null \
-			and pTransferWaist.getTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.waist
-		var bool isSlotWaistAttached = hasSlotWaist \
-			and pTransferWaist.getTracker().getRealSlot().isDeviceAttached()
+		var bool hasSlotWaist = hasSlot(pTransferWaist.getTracker(), CharacterTrackerSlot.Type.waist)
+		var bool isSlotWaistAttached = hasSlotWaist and pTransferWaist.getTracker().getRealSlot().isDeviceAttached()
 		
-		var bool hasSlotChest = pTransferSpine.getTargetTracker().getRealSlot() != null \
-			and pTransferSpine.getTargetTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.chest
-		var bool isSlotChestAttached = hasSlotChest \
-			and pTransferSpine.getTargetTracker().getRealSlot().isDeviceAttached()
+		var bool hasSlotChest = hasSlot(pTransferSpine.getTargetTracker(), CharacterTrackerSlot.Type.chest)
+		var bool isSlotChestAttached = hasSlotChest and pTransferSpine.getTargetTracker().getRealSlot().isDeviceAttached()
 		
-		var bool hasSlotRightFoot = pTransferLegRight.getTipTracker().getRealSlot() != null \
-			and pTransferLegRight.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightFoot
-		var bool isSlotRightFootAttached = hasSlotRightFoot \
-			and pTransferLegRight.getTipTracker().getRealSlot().isDeviceAttached()
+		var bool hasSlotRightFoot = hasSlot(pTransferLegRight.getTipTracker(), CharacterTrackerSlot.Type.rightFoot)
+		var bool isSlotRightFootAttached = hasSlotRightFoot and pTransferLegRight.getTipTracker().getRealSlot().isDeviceAttached()
 		
-		var bool hasSlotRightKnee = pTransferLegRight.getGuideTracker().getRealSlot() != null \
-			and pTransferLegRight.getGuideTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightKnee
-		var bool isSlotRightKneeAttached = hasSlotRightKnee \
-			and pTransferLegRight.getGuideTracker().getRealSlot().isDeviceAttached()
+		var bool hasSlotRightKnee = hasSlot(pTransferLegRight.getGuideTracker(), CharacterTrackerSlot.Type.rightKnee)
+		var bool isSlotRightKneeAttached = hasSlotRightKnee and pTransferLegRight.getGuideTracker().getRealSlot().isDeviceAttached()
 		
-		var bool hasSlotLeftFoot = pTransferLegLeft.getTipTracker().getRealSlot() != null \
-			and pTransferLegLeft.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.leftFoot
-		var bool isSlotLeftFootAttached = hasSlotLeftFoot \
-			and pTransferLegLeft.getTipTracker().getRealSlot().isDeviceAttached()
+		var bool hasSlotLeftFoot = hasSlot(pTransferLegLeft.getTipTracker(), CharacterTrackerSlot.Type.leftFoot)
+		var bool isSlotLeftFootAttached = hasSlotLeftFoot and pTransferLegLeft.getTipTracker().getRealSlot().isDeviceAttached()
 		
-		var bool hasSlotLeftKnee = pTransferLegLeft.getGuideTracker().getRealSlot() != null \
-			and pTransferLegLeft.getGuideTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightKnee
-		var bool isSlotLeftKneeAttached = hasSlotLeftKnee \
-			and pTransferLegLeft.getGuideTracker().getRealSlot().isDeviceAttached()
+		var bool hasSlotLeftKnee = hasSlot(pTransferLegLeft.getGuideTracker(), CharacterTrackerSlot.Type.rightKnee)
+		var bool isSlotLeftKneeAttached = hasSlotLeftKnee and pTransferLegLeft.getGuideTracker().getRealSlot().isDeviceAttached()
 		
-		var bool hasSlotRightHandController = pTransferArmRight.getTipTracker().getRealSlot() != null \
-			and pTransferArmRight.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightHandController
+		var bool hasSlotRightHandController = hasSlot(pTransferArmRight.getTipTracker(), CharacterTrackerSlot.Type.rightHandController)
 		
-		var bool hasSlotRightElbow = pTransferArmRight.getGuideTracker().getRealSlot() != null \
-			and pTransferArmRight.getGuideTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.rightElbow
-		var bool isSlotRightElbowAttached = hasSlotRightElbow \
-			and pTransferArmRight.getGuideTracker().getRealSlot().isDeviceAttached()
+		var bool hasSlotRightElbow = hasSlot(pTransferArmRight.getGuideTracker(), CharacterTrackerSlot.Type.rightElbow)
+		var bool isSlotRightElbowAttached = hasSlotRightElbow and pTransferArmRight.getGuideTracker().getRealSlot().isDeviceAttached()
 		
-		var bool hasSlotLeftHandController = pTransferArmLeft.getTipTracker().getRealSlot() != null \
-			and pTransferArmLeft.getTipTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.leftHandController
+		var bool hasSlotLeftHandController = hasSlot(pTransferArmLeft.getTipTracker(), CharacterTrackerSlot.Type.leftHandController)
 		
-		var bool hasSlotLeftElbow = pTransferArmLeft.getGuideTracker().getRealSlot() != null \
-			and pTransferArmLeft.getGuideTracker().getRealSlot().getType() == CharacterTrackerSlot.Type.leftElbow
-		var bool isSlotLeftElbowAttached = hasSlotLeftElbow \
-			and pTransferArmLeft.getGuideTracker().getRealSlot().isDeviceAttached()
+		var bool hasSlotLeftElbow = hasSlot(pTransferArmLeft.getGuideTracker(), CharacterTrackerSlot.Type.leftElbow)
+		var bool isSlotLeftElbowAttached = hasSlotLeftElbow and pTransferArmLeft.getGuideTracker().getRealSlot().isDeviceAttached()
 		
 		
 		
@@ -570,13 +551,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferSpine.setBendShape(pBendShapeSpine)
 		pTransferSpine.setBendAxisRotation(Vector.new(90, 0, 0))
 		pTransferSpine.setFitCurveToTarget(true)
-		
-		if isSlotChestAttached
-			pTransferSpine.setTwistPropagation(1)
-			
-		else
-			pTransferSpine.setTwistPropagation(0.5)
-		end
+		pTransferSpine.setTwistPropagation(isSlotChestAttached if 1.0 else 0.5)
 		
 		if chainSpine.getCount() > 1
 			var String baseBone = chainSpine.getAt(-2) cast String
@@ -711,13 +686,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmRight.setReachScaling(pReachScalingArmRight)
 		pTransferArmRight.setTwistPropagation(0.5)
 		pTransferArmRight.setTwistAxisRotation(Vector.new(0, -90, 0))
-		
-		if isSlotRightElbowAttached
-			pTransferArmRight.setTwistBoneCount(1)
-			
-		else
-			pTransferArmRight.setTwistBoneCount(2)
-		end
+		pTransferArmRight.setTwistBoneCount(isSlotRightElbowAttached if 1 else 2)
 		
 		if hasSlotRightHandController
 			pTransferArmRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.none)
@@ -759,13 +728,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.setReachScaling(pReachScalingArmLeft)
 		pTransferArmLeft.setTwistPropagation(0.5)
 		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))
-		
-		if isSlotLeftElbowAttached
-			pTransferArmLeft.setTwistBoneCount(1)
-			
-		else
-			pTransferArmLeft.setTwistBoneCount(2)
-		end
+		pTransferArmLeft.setTwistBoneCount(isSlotLeftElbowAttached if 1 else 2)
 		
 		if hasSlotLeftHandController
 			pTransferArmLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.none)
@@ -844,13 +807,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegRight.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
 		pTransferLegRight.getGuideTracker().setOffsetPosition(Vector.new())
 		pTransferLegRight.getGuideTracker().setOffsetRotation(Vector.new())
-		
-		if hasSlotRightKnee
-			pTransferLegRight.setGuideTwistStrength(0)
-			
-		else
-			pTransferLegRight.setGuideTwistStrength(0.5)
-		end
+		pTransferLegRight.setGuideTwistStrength(hasSlotRightKnee if 0.0 else 0.5)
 		
 		
 		
@@ -882,13 +839,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegLeft.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
 		pTransferLegLeft.getGuideTracker().setOffsetPosition(Vector.new())
 		pTransferLegLeft.getGuideTracker().setOffsetRotation(Vector.new())
-		
-		if hasSlotLeftKnee
-			pTransferLegLeft.setGuideTwistStrength(0)
-			
-		else
-			pTransferLegLeft.setGuideTwistStrength(0.5)
-		end
+		pTransferLegLeft.setGuideTwistStrength(hasSlotLeftKnee if 0.0 else 0.5)
 	end
 	
 	/** Create copy of motion transfer. */
@@ -1071,6 +1022,11 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	end
 	
 	
+	
+	/** Has slot. */
+	protected func bool hasSlot(MotionTransferTracker tracker, CharacterTrackerSlot.Type type)
+		return tracker.getRealSlot() != null and tracker.getRealSlot().getType() == type
+	end
 	
 	/** Find guide bone or empty string. */
 	protected func String findBoneBeforeBase(Rig rig, String tipBone, String baseBone)
