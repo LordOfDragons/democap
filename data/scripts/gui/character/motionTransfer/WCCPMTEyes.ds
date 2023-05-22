@@ -40,8 +40,11 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 	private var DefaultTextModel pModelTextRightBone
 	private var SharedListModel pModelListLeftBone
 	private var DefaultTextModel pModelTextLeftBone
+	private var SharedListModel pModelListViewBone
+	private var DefaultTextModel pModelTextViewBone
 	private var EditVector pEditRightRotation
 	private var EditVector pEditLeftRotation
+	private var EditVector pEditViewRotation
 	private var DefaultTextModel pModelLimitIn
 	private var DefaultTextModel pModelLimitOut
 	private var DefaultTextModel pModelLimitUp
@@ -67,13 +70,17 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		pModelListLeftBone.setAutoSelect(false)
 		pModelTextLeftBone = DefaultTextModel.new()
 		
+		pModelListViewBone = SharedListModel.new(window.getModelBones())
+		pModelListViewBone.setAutoSelect(false)
+		pModelTextViewBone = DefaultTextModel.new()
+		
 		pModelLimitIn = DefaultTextModel.new()
 		pModelLimitOut = DefaultTextModel.new()
 		pModelLimitUp = DefaultTextModel.new()
 		pModelLimitDown = DefaultTextModel.new()
 		
-		pModelAdjustRotationHorizontal = DefaultRangeModel.new(0, 40, 5, 10, 1)
-		pModelAdjustRotationVertical = DefaultRangeModel.new(0, 40, 5, 10, 1)
+		pModelAdjustRotationHorizontal = DefaultRangeModel.new(-20, 20, 5, 10, 1)
+		pModelAdjustRotationVertical = DefaultRangeModel.new(-20, 20, 5, 10, 1)
 		
 		runWhileBlockingLayout(block
 			createContent()
@@ -91,8 +98,12 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		pModelListLeftBone = null
 		pModelTextLeftBone = null
 		
+		pModelListViewBone = null
+		pModelTextViewBone = null
+		
 		pEditRightRotation = null
 		pEditLeftRotation = null
+		pEditViewRotation = null
 		
 		pModelLimitIn = null
 		pModelLimitOut = null
@@ -115,21 +126,25 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 				pModelTextTrackerSlot.setText(mt.getTracker())
 				pModelTextRightBone.setText(mt.getRightBone())
 				pModelTextLeftBone.setText(mt.getLeftBone())
+				pModelTextViewBone.setText(mt.getViewBone())
 				pEditRightRotation.setVector(mt.getRightRotation())
 				pEditLeftRotation.setVector(mt.getLeftRotation())
+				pEditViewRotation.setVector(mt.getViewRotation())
 				pModelLimitIn.setText(mt.getLimitIn().toString())
 				pModelLimitOut.setText(mt.getLimitOut().toString())
 				pModelLimitUp.setText(mt.getLimitUp().toString())
 				pModelLimitDown.setText(mt.getLimitDown().toString())
-				pModelAdjustRotationHorizontal.setValue((mt.getAdjustRotationHorizontal() * 1.0 + 20.5) cast int)
-				pModelAdjustRotationVertical.setValue((mt.getAdjustRotationVertical() * 1.0 + 20.5) cast int)
+				pModelAdjustRotationHorizontal.setValue((mt.getAdjustRotationHorizontal() + 0.5) cast int)
+				pModelAdjustRotationVertical.setValue((mt.getAdjustRotationVertical() + 0.5) cast int)
 				
 			else
 				pModelTextTrackerSlot.setText("")
 				pModelTextRightBone.setText("")
 				pModelTextLeftBone.setText("")
+				pModelTextViewBone.setText("")
 				pEditRightRotation.setVector(Vector.new())
 				pEditLeftRotation.setVector(Vector.new())
+				pEditViewRotation.setVector(Vector.new())
 				pModelLimitIn.setText("")
 				pModelLimitOut.setText("")
 				pModelLimitUp.setText("")
@@ -152,14 +167,16 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		mt.setTracker(pModelTextTrackerSlot.getText())
 		mt.setRightBone(pModelTextRightBone.getText())
 		mt.setLeftBone(pModelTextLeftBone.getText())
+		mt.setViewBone(pModelTextViewBone.getText())
 		mt.setRightRotation(pEditRightRotation.getVector())
 		mt.setLeftRotation(pEditLeftRotation.getVector())
+		mt.setViewRotation(pEditViewRotation.getVector())
 		mt.setLimitIn(pModelLimitIn.getText().toFloat())
 		mt.setLimitOut(pModelLimitOut.getText().toFloat())
 		mt.setLimitUp(pModelLimitUp.getText().toFloat())
 		mt.setLimitDown(pModelLimitDown.getText().toFloat())
-		mt.setAdjustRotationHorizontal(1.0 * pModelAdjustRotationHorizontal.getValue() - 20.0)
-		mt.setAdjustRotationVertical(1.0 * pModelAdjustRotationVertical.getValue() - 20.0)
+		mt.setAdjustRotationHorizontal(pModelAdjustRotationHorizontal.getValue())
+		mt.setAdjustRotationVertical(pModelAdjustRotationVertical.getValue())
 	end
 	
 	/** Supports motion transfer type. */
@@ -223,7 +240,8 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		CPEBone.new(preview, labelBone, comboBox)
 		
 		// left rotation
-		toolTip = "Left eye coordinate system. Horizontal rotation along Y (green) axis, vertical along along X (red) axis and Z axis (blue) pointing through the iris."
+		toolTip = "Left eye coordinate system. Horizontal rotation along Y (green) axis,"\
+			+ " vertical along along X (red) axis and Z axis (blue) pointing through the iris."
 		label = Label.new("Left Axis:", "Label.FormCaption")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
@@ -233,6 +251,30 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(pEditLeftRotation)
 		
 		CPECoordinateSystem.new(preview, null, null, label, pEditLeftRotation, comboBox, null)
+		
+		// view bone
+		labelBone = Label.new("View Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelBone)
+		
+		comboBox = ComboBox.new(pModelListViewBone, DefaultComboBoxEditor.new(pModelTextViewBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("View bone (character looking direction)")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, labelBone, comboBox)
+		
+		// view rotation
+		toolTip = "View coordinate system. Horizontal rotation along Y (green) axis,"\
+			+ " vertical along along X (red) axis and Z axis (blue) pointing through the iris."
+		label = Label.new("View Axis:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditViewRotation = EditVector.new()
+		pEditViewRotation.setToolTip(toolTip)
+		pPanelForm.addWidget(pEditViewRotation)
+		
+		CPECoordinateSystem.new(preview, null, null, label, pEditViewRotation, comboBox, null)
 		
 		// limit in
 		pPanelForm.addWidget(Label.new("Limit In Angle:", "Label.FormCaption"))
@@ -271,7 +313,7 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(textField)
 		
 		// adjust horizontal rotation
-		toolTip = "Adjust horizontal eye rotation. 0=-20°, 20=0, 40=20°"
+		toolTip = "Adjust horizontal eye rotation"
 		
 		label = Label.new("Adjust Horz-Rot:", "Label.FormCaption")
 		label.setToolTip(toolTip)
@@ -290,7 +332,7 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		end))
 		
 		// adjust verticaal rotation
-		toolTip = "Adjust vertical eye rotation. 0=-20°, 20=0, 40=20°"
+		toolTip = "Adjust vertical eye rotation"
 		
 		label = Label.new("Adjust Vert-Rot:", "Label.FormCaption")
 		label.setToolTip(toolTip)

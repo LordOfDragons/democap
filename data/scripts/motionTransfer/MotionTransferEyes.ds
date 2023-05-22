@@ -60,10 +60,12 @@ class MotionTransferEyes extends DefaultMotionTransfer
 	
 	private var String pRightBone
 	private var String pLeftBone
+	private var String pViewBone
 	private var String pTracker
 	private var CharacterTrackerSlot pTrackerSlot
 	private var Vector pRightRotation
 	private var Vector pLeftRotation
+	private var Vector pViewRotation
 	private var float pLimitIn
 	private var float pLimitOut
 	private var float pLimitUp
@@ -75,12 +77,16 @@ class MotionTransferEyes extends DefaultMotionTransfer
 	private var ADController pADControllerRightVertical
 	private var ADController pADControllerLeftHorizontal
 	private var ADController pADControllerLeftVertical
+	private var ADController pADControllerViewHorizontal
+	private var ADController pADControllerViewVertical
 	
 	private var ADRule pADRuleReset
 	private var ADRule pADRuleRightHorizontal
 	private var ADRule pADRuleRightVertical
 	private var ADRule pADRuleLeftHorizontal
 	private var ADRule pADRuleLeftVertical
+	private var ADRule pADRuleViewHorizontal
+	private var ADRule pADRuleViewVertical
 	
 	private var Vector pCalibrateRotation
 	
@@ -90,9 +96,11 @@ class MotionTransferEyes extends DefaultMotionTransfer
 	public func new(String factoryID) super(factoryID)
 		pRightBone = ""
 		pLeftBone = ""
+		pViewBone = ""
 		pTracker = ""
 		pRightRotation = Vector.new()
 		pLeftRotation = Vector.new()
+		pViewRotation = Vector.new()
 		pLimitIn = 45
 		pLimitOut = 45
 		pLimitUp = 45
@@ -105,10 +113,12 @@ class MotionTransferEyes extends DefaultMotionTransfer
 	/** Create copy of motion transfer. */
 	public func new(MotionTransferEyes transfer) super(transfer)
 		pRightBone = transfer.pRightBone
+		pViewBone = transfer.pViewBone
 		pLeftBone = transfer.pLeftBone
 		pTracker = transfer.pTracker
 		pRightRotation = transfer.pRightRotation
 		pLeftRotation = transfer.pLeftRotation
+		pViewRotation = transfer.pViewRotation
 		pLimitIn = transfer.pLimitIn
 		pLimitOut = transfer.pLimitOut
 		pLimitUp = transfer.pLimitUp
@@ -144,6 +154,19 @@ class MotionTransferEyes extends DefaultMotionTransfer
 			throw ENullPointer.new("bone")
 		end
 		pLeftBone = bone
+	end
+	
+	/** View eye bone name. */
+	public func String getViewBone()
+		return pViewBone
+	end
+	
+	/** Set view eye bone name. */
+	public func void setViewBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pViewBone = bone
 	end
 	
 	/** Tracker slot name. */
@@ -188,6 +211,19 @@ class MotionTransferEyes extends DefaultMotionTransfer
 			throw ENullPointer.new("rotation")
 		end
 		pLeftRotation = rotation
+	end
+	
+	/** Rotation of view eye component space. */
+	public func Vector getViewRotation()
+		return pViewRotation
+	end
+	
+	/** Set rotation of view eye in component space. */
+	public func void setViewRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pViewRotation = rotation
 	end
 	
 	/** Horizontal eye rotation limit towards the nose in degrees. */
@@ -277,6 +313,16 @@ class MotionTransferEyes extends DefaultMotionTransfer
 		return pADRuleLeftVertical
 	end
 	
+	/** View eye horizontal animator definition rule or null. */
+	public func ADRule getADRuleViewHorizontal()
+		return pADRuleViewHorizontal
+	end
+	
+	/** View eye vertical animator definition rule or null. */
+	public func ADRule getADRuleViewVertical()
+		return pADRuleViewVertical
+	end
+	
 	
 	
 	/** Calibrate rotation. */
@@ -301,7 +347,7 @@ class MotionTransferEyes extends DefaultMotionTransfer
 		if pTrackerSlot == null
 			return
 		end
-		if pRightBone.empty() and pLeftBone.empty()
+		if pRightBone.empty() and pLeftBone.empty() and pViewBone.empty()
 			return
 		end
 		
@@ -315,16 +361,20 @@ class MotionTransferEyes extends DefaultMotionTransfer
 		pADControllerRightVertical = null
 		pADControllerLeftHorizontal = null
 		pADControllerLeftVertical = null
+		pADControllerViewHorizontal = null
+		pADControllerViewVertical = null
 		
 		pADRuleRightHorizontal = null
 		pADRuleRightVertical = null
 		pADRuleLeftHorizontal = null
 		pADRuleLeftVertical = null
+		pADRuleViewHorizontal = null
+		pADRuleViewVertical = null
 		
 		if pTrackerSlot == null
 			return
 		end
-		if pRightBone.empty() and pLeftBone.empty()
+		if pRightBone.empty() and pLeftBone.empty() and pViewBone.empty()
 			return
 		end
 		
@@ -372,6 +422,24 @@ class MotionTransferEyes extends DefaultMotionTransfer
 				addADLink(adef, pADControllerLeftVertical), pLeftBone, matrix.getRightVector())
 			
 			recordAnimation.addBone(pLeftBone)
+		end
+		
+		if not pViewBone.empty()
+			matrix = Matrix.newRotation(pViewRotation)
+			
+			pADControllerViewHorizontal = addADController(adef,\
+				behavior.getControllerNameViewHorizontal(), -45, 45)
+			
+			pADControllerViewVertical = addADController(adef,\
+				behavior.getControllerNameViewVertical(), -45, 45)
+			
+			pADRuleViewHorizontal = addADRuleEye(adef,\
+				addADLink(adef, pADControllerViewHorizontal), pViewBone, matrix.getUpVector())
+			
+			pADRuleViewVertical = addADRuleEye(adef,\
+				addADLink(adef, pADControllerViewVertical), pViewBone, matrix.getRightVector())
+			
+			recordAnimation.addBone(pViewBone)
 		end
 	end
 	
@@ -429,6 +497,9 @@ class MotionTransferEyes extends DefaultMotionTransfer
 			elif tagName.equals("leftBone")
 				setLeftBone(element.getFirstCData())
 				
+			elif tagName.equals("viewBone")
+				setViewBone(element.getFirstCData())
+				
 			elif tagName.equals("tracker")
 				pTracker = element.getFirstCData()
 				
@@ -437,6 +508,9 @@ class MotionTransferEyes extends DefaultMotionTransfer
 				
 			elif tagName.equals("leftRotation")
 				setLeftRotation(loader.readVector(element))
+				
+			elif tagName.equals("viewRotation")
+				setViewRotation(loader.readVector(element))
 				
 			elif tagName.equals("limitIn")
 				pLimitIn = element.getFirstCDataFloat()
@@ -480,9 +554,11 @@ class MotionTransferEyes extends DefaultMotionTransfer
 		tag.addDataTag("name", getName())
 		tag.addDataTag("rightBone", pRightBone)
 		tag.addDataTag("leftBone", pLeftBone)
+		tag.addDataTag("viewBone", pViewBone)
 		tag.addDataTag("tracker", pTracker)
 		loader.writeVector(tag, "rightRotation", pRightRotation)
 		loader.writeVector(tag, "leftRotation", pLeftRotation)
+		loader.writeVector(tag, "viewRotation", pViewRotation)
 		tag.addDataTag("limitIn", pLimitIn)
 		tag.addDataTag("limitOut", pLimitOut)
 		tag.addDataTag("limitUp", pLimitUp)

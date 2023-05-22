@@ -78,6 +78,8 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 		private var AnimatorController pControllerRightVertical
 		private var AnimatorController pControllerLeftHorizontal
 		private var AnimatorController pControllerLeftVertical
+		private var AnimatorController pControllerViewHorizontal
+		private var AnimatorController pControllerViewVertical
 		
 		
 		
@@ -111,29 +113,35 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			pControllerRightVertical = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRightVertical())
 			pControllerLeftHorizontal = actorAnimated.getControllerNamed(pECBehavior.getControllerNameLeftHorizontal())
 			pControllerLeftVertical = actorAnimated.getControllerNamed(pECBehavior.getControllerNameLeftVertical())
+			pControllerViewHorizontal = actorAnimated.getControllerNamed(pECBehavior.getControllerNameViewHorizontal())
+			pControllerViewVertical = actorAnimated.getControllerNamed(pECBehavior.getControllerNameViewVertical())
 			
 			// right eye limit factors
-			var float lower = pControllerRightHorizontal.getLower()
-			var float upper = pControllerRightHorizontal.getUpper()
-			pLimitEyeRightScaleH = DEMath.max((upper - lower) / 2, 0.01)
-			pLimitEyeRightOffsetH = (lower + upper) / 2
-			
-			lower = pControllerRightVertical.getLower()
-			upper = pControllerRightVertical.getUpper()
-			pLimitEyeRightScaleV = DEMath.max((upper - lower) / 2, 0.01)
-			pLimitEyeRightOffsetV = (lower + upper) / 2
+			if pControllerRightHorizontal != null
+				var float lower = pControllerRightHorizontal.getLower()
+				var float upper = pControllerRightHorizontal.getUpper()
+				pLimitEyeRightScaleH = DEMath.max((upper - lower) / 2, 0.01)
+				pLimitEyeRightOffsetH = (lower + upper) / 2
+				
+				lower = pControllerRightVertical.getLower()
+				upper = pControllerRightVertical.getUpper()
+				pLimitEyeRightScaleV = DEMath.max((upper - lower) / 2, 0.01)
+				pLimitEyeRightOffsetV = (lower + upper) / 2
+			end
 			
 			// left eye limit factors
-			lower = pControllerLeftHorizontal.getLower()
-			upper = pControllerLeftHorizontal.getUpper()
-			pLimitEyeLeftScaleH = DEMath.max((upper - lower) / 2, 0.01)
-			pLimitEyeLeftOffsetH = (lower + upper) / 2
-			
-			lower = pControllerLeftVertical.getLower()
-			upper = pControllerLeftVertical.getUpper()
-			pLimitEyeLeftScaleV = DEMath.max((upper - lower) / 2, 0.01)
-			pLimitEyeLeftOffsetV = (lower + upper) / 2
-			
+			if pControllerLeftHorizontal != null
+				var float lower = pControllerLeftHorizontal.getLower()
+				var float upper = pControllerLeftHorizontal.getUpper()
+				pLimitEyeLeftScaleH = DEMath.max((upper - lower) / 2, 0.01)
+				pLimitEyeLeftOffsetH = (lower + upper) / 2
+				
+				lower = pControllerLeftVertical.getLower()
+				upper = pControllerLeftVertical.getUpper()
+				pLimitEyeLeftScaleV = DEMath.max((upper - lower) / 2, 0.01)
+				pLimitEyeLeftOffsetV = (lower + upper) / 2
+			end
+
 			// center position
 			pCenterHorizontal = transfer.getCalibrateRotation().getY()
 			pCenterVertical = transfer.getCalibrateRotation().getX()
@@ -187,6 +195,16 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			return pControllerLeftVertical
 		end
 		
+		/** Animator controller view horizontal. */
+		public func AnimatorController getControllerViewHorizontal()
+			return pControllerViewHorizontal
+		end
+		
+		/** Animator controller view vertical. */
+		public func AnimatorController getControllerViewVertical()
+			return pControllerViewVertical
+		end
+		
 		
 		
 		/** Update controllers. */
@@ -206,32 +224,42 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			var float eyeVertical = rotation.getX() - pCenterVertical + pAdjustRotationVertical
 			
 			// limit right eye rotation
-			var float horizontal = (eyeHorizontal - pLimitEyeRightOffsetH) / pLimitEyeRightScaleH
-			var float vertical = (eyeVertical - pLimitEyeRightOffsetV) / pLimitEyeRightScaleV
-			
-			var Vector2 direction = Vector2.new(horizontal, vertical)
-			if direction.getLength() > 1
-				direction = direction.normalize()
-				horizontal = direction.getX()
-				vertical = direction.getY()
+			if pControllerRightHorizontal != null
+				var float horizontal = (eyeHorizontal - pLimitEyeRightOffsetH) / pLimitEyeRightScaleH
+				var float vertical = (eyeVertical - pLimitEyeRightOffsetV) / pLimitEyeRightScaleV
+				
+				var Vector2 direction = Vector2.new(horizontal, vertical)
+				if direction.getLength() > 1
+					direction = direction.normalize()
+					horizontal = direction.getX()
+					vertical = direction.getY()
+				end
+				
+				pControllerRightHorizontal.setValue(horizontal * pLimitEyeRightScaleH + pLimitEyeRightOffsetH)
+				pControllerRightVertical.setValue(vertical * pLimitEyeRightScaleV + pLimitEyeRightOffsetV)
 			end
-			
-			pControllerRightHorizontal.setValue(horizontal * pLimitEyeRightScaleH + pLimitEyeRightOffsetH)
-			pControllerRightVertical.setValue(vertical * pLimitEyeRightScaleV + pLimitEyeRightOffsetV)
-			
+
 			// limit left eye rotation
-			horizontal = (eyeHorizontal - pLimitEyeLeftOffsetH) / pLimitEyeLeftScaleH
-			vertical = (eyeVertical - pLimitEyeLeftOffsetV) / pLimitEyeLeftScaleV
-			
-			direction = Vector2.new(horizontal, vertical)
-			if direction.getLength() > 1
-				direction = direction.normalize()
-				horizontal = direction.getX()
-				vertical = direction.getY()
+			if pControllerLeftHorizontal != null
+				var float horizontal = (eyeHorizontal - pLimitEyeLeftOffsetH) / pLimitEyeLeftScaleH
+				var float vertical = (eyeVertical - pLimitEyeLeftOffsetV) / pLimitEyeLeftScaleV
+				
+				var Vector2 direction = Vector2.new(horizontal, vertical)
+				if direction.getLength() > 1
+					direction = direction.normalize()
+					horizontal = direction.getX()
+					vertical = direction.getY()
+				end
+				
+				pControllerLeftHorizontal.setValue(horizontal * pLimitEyeLeftScaleH + pLimitEyeLeftOffsetH)
+				pControllerLeftVertical.setValue(vertical * pLimitEyeLeftScaleV + pLimitEyeLeftOffsetV)
 			end
-			
-			pControllerLeftHorizontal.setValue(horizontal * pLimitEyeLeftScaleH + pLimitEyeLeftOffsetH)
-			pControllerLeftVertical.setValue(vertical * pLimitEyeLeftScaleV + pLimitEyeLeftOffsetV)
+
+			// view rotation
+			if pControllerViewHorizontal != null
+				pControllerViewHorizontal.setValue(eyeHorizontal)
+				pControllerViewVertical.setValue(eyeVertical)
+			end
 		end
 	end
 	
@@ -245,6 +273,8 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 	private var String pControllerNameRightVertical
 	private var String pControllerNameLeftHorizontal
 	private var String pControllerNameLeftVertical
+	private var String pControllerNameViewHorizontal
+	private var String pControllerNameViewVertical
 	
 	
 	
@@ -268,6 +298,8 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 		pControllerNameRightVertical = transfer.getName() + ".rightVertical"
 		pControllerNameLeftHorizontal = transfer.getName() + ".leftHorizontal"
 		pControllerNameLeftVertical = transfer.getName() + ".leftVertical"
+		pControllerNameViewHorizontal = transfer.getName() + ".viewHorizontal"
+		pControllerNameViewVertical = transfer.getName() + ".viewVertical"
 		
 		eclass.addBehavior(this)
 	end
@@ -320,6 +352,16 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 	/** Animator controller name left vertical. */
 	public func String getControllerNameLeftVertical()
 		return pControllerNameLeftVertical
+	end
+	
+	/** Animator controller name view horizontal. */
+	public func String getControllerNameViewHorizontal()
+		return pControllerNameViewHorizontal
+	end
+	
+	/** Animator controller name view vertical. */
+	public func String getControllerNameViewVertical()
+		return pControllerNameViewVertical
 	end
 	
 	
