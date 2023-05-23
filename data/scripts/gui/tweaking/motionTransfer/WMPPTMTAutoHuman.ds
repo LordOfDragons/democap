@@ -1,0 +1,290 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Tweak panel motion transfer.
+ */
+class WMPPTMTAutoHuman extends WMPPMotionTransfer
+	class BendShapeSpineChanged extends DefaultRangeModelListener
+		protected var WMPPTMTAutoHuman pPanel
+		
+		public func new(WMPPTMTAutoHuman panel)
+			pPanel = panel
+		end
+		
+		public func void valueChanged(RangeModel rangeModel)
+			pPanel.onBendShapeSpineChanged()
+		end
+	end
+	
+	class BendShapeNeckChanged extends DefaultRangeModelListener
+		protected var WMPPTMTAutoHuman pPanel
+		
+		public func new(WMPPTMTAutoHuman panel)
+			pPanel = panel
+		end
+		
+		public func void valueChanged(RangeModel rangeModel)
+			pPanel.onBendShapeNeckChanged()
+		end
+	end
+	
+	class ReachScalingArmRightChanged implements ActionListener
+		protected var WMPPTMTAutoHuman pPanel
+		
+		public func new(WMPPTMTAutoHuman panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			pPanel.onReachScalingArmRightChanged()
+		end
+	end
+	
+	class ReachScalingArmLeftChanged implements ActionListener
+		protected var WMPPTMTAutoHuman pPanel
+		
+		public func new(WMPPTMTAutoHuman panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			pPanel.onReachScalingArmLeftChanged()
+		end
+	end
+	
+	
+	
+	
+	private var DefaultRangeModel pModelBendShapeSpine
+	private var DefaultRangeModel pModelBendShapeNeck
+	private var WMPPTweakValue pEditReachScalingArmRightX
+	private var WMPPTweakValue pEditReachScalingArmRightY
+	private var WMPPTweakValue pEditReachScalingArmRightZ
+	private var WMPPTweakValue pEditReachScalingArmLeftX
+	private var WMPPTweakValue pEditReachScalingArmLeftY
+	private var WMPPTweakValue pEditReachScalingArmLeftZ
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPPanelTweaking panelTweaking) super(panelTweaking)
+// 		pModelBendShapeSpine = DefaultRangeModel.new(0, 20, 5, 10, 1)
+// 		pModelBendShapeNeck = DefaultRangeModel.new(0, 20, 5, 10, 1)
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+		
+// 		pModelBendShapeSpine.addListener(BendShapeSpineChanged.new(this))
+// 		pModelBendShapeNeck.addListener(BendShapeNeckChanged.new(this))
+	end
+	
+	/** Dispose of panel. */
+	public func void dispose()
+// 		pModelBendShapeSpine = null
+// 		pModelBendShapeNeck = null
+		pEditReachScalingArmRightX = null
+		pEditReachScalingArmRightY = null
+		pEditReachScalingArmRightZ = null
+		pEditReachScalingArmLeftX = null
+		pEditReachScalingArmLeftY = null
+		pEditReachScalingArmLeftZ = null
+		super.dispose()
+	end
+	
+	
+	
+	public func void onTweaked()
+		if pMotionTransfer == null
+			return
+		end
+		
+		runWhileBlockingLayout(block
+			var MotionTransferAutoHuman mt = pMotionTransfer cast MotionTransferAutoHuman
+// 			pModelBendShapeSpine.setValue((mt.getBendShapeSpine() * 20 + 0.5) cast int)
+// 			pModelBendShapeNeck.setValue((mt.getBendShapeNeck() * 20 + 0.5) cast int)
+			
+			var Vector v = mt.getReachScalingArmRight()
+			pEditReachScalingArmRightX.setValue(v.getX())
+			pEditReachScalingArmRightY.setValue(v.getY())
+			pEditReachScalingArmRightZ.setValue(v.getZ())
+			
+			v = mt.getReachScalingArmLeft()
+			pEditReachScalingArmLeftX.setValue(v.getX())
+			pEditReachScalingArmLeftY.setValue(v.getY())
+			pEditReachScalingArmLeftZ.setValue(v.getZ())
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	public func void onBendShapeSpineChanged()
+		var MotionTransferAutoHuman mt = pMotionTransfer cast MotionTransferAutoHuman
+		if mt != null
+			var float value = 0.05 * pModelBendShapeSpine.getValue()
+			if DEMath.fabs(value - mt.getBendShapeSpine()) > 0.001
+				mt.setBendShapeSpine(value)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	public func void onBendShapeNeckChanged()
+		var MotionTransferAutoHuman mt = pMotionTransfer cast MotionTransferAutoHuman
+		if mt != null
+			var float value = 0.05 * pModelBendShapeNeck.getValue()
+			if DEMath.fabs(value - mt.getBendShapeNeck()) > 0.001
+				mt.setBendShapeNeck(value)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	public func void onReachScalingArmRightChanged()
+		var MotionTransferAutoHuman mt = pMotionTransfer cast MotionTransferAutoHuman
+		if mt != null
+			var Vector v = Vector.new(pEditReachScalingArmRightX.getValue(),\
+				pEditReachScalingArmRightY.getValue(), pEditReachScalingArmRightZ.getValue())
+			if not mt.getReachScalingArmRight().equals(v)
+				mt.setReachScalingArmRight(v)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	public func void onReachScalingArmLeftChanged()
+		var MotionTransferAutoHuman mt = pMotionTransfer cast MotionTransferAutoHuman
+		if mt != null
+			var Vector v = Vector.new(pEditReachScalingArmLeftX.getValue(),\
+				pEditReachScalingArmLeftY.getValue(), pEditReachScalingArmLeftZ.getValue())
+			if not mt.getReachScalingArmLeft().equals(v)
+				mt.setReachScalingArmLeft(v)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferAutoHuman
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var TextField textField
+		var Label label
+		var String toolTip
+		var Slider slider
+		
+		// bend shape neck
+		/*
+		toolTip = "Weight distribution across neck bones. 0=base, 10=equal, 20=tip"
+		
+		label = Label.new("Neck Bend Shape:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+			slider = Slider.new(Orientation.horizontal, pModelBendShapeNeck)
+			slider.setToolTip(toolTip)
+			p.addWidget(slider)
+			
+			textField = TextField.new(RangeTextModel.new(pModelBendShapeNeck), 2)
+			textField.setToolTip(toolTip)
+			textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+			p.addWidget(textField)
+			textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelBendShapeNeck))
+		end))
+		*/
+		
+		// bend shape spine
+		/*
+		toolTip = "Weight distribution across spine bones. 0=base, 10=equal, 20=tip"
+		
+		label = Label.new("Spine Bend Shape:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+			slider = Slider.new(Orientation.horizontal, pModelBendShapeSpine)
+			slider.setToolTip(toolTip)
+			p.addWidget(slider)
+			
+			textField = TextField.new(RangeTextModel.new(pModelBendShapeSpine), 2)
+			textField.setToolTip(toolTip)
+			textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+			p.addWidget(textField)
+			textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelBendShapeSpine))
+		end))
+		*/
+		
+		// right arm reach scaling
+		toolTip = "Right arm scale reach along axis"
+		
+		label = Label.new("Reach Scaling RA:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 1), block Panel p
+			var ReachScalingArmRightChanged action = ReachScalingArmRightChanged.new(this)
+			pEditReachScalingArmRightX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
+			p.addWidget(pEditReachScalingArmRightX)
+			pEditReachScalingArmRightY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
+			p.addWidget(pEditReachScalingArmRightY)
+			pEditReachScalingArmRightZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
+			p.addWidget(pEditReachScalingArmRightZ)
+		end))
+		
+		// left arm reach scaling
+		toolTip = "Left arm scale reach along axis"
+		
+		label = Label.new("Reach Scaling LA:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 1), block Panel p
+			var ReachScalingArmLeftChanged action = ReachScalingArmLeftChanged.new(this)
+			pEditReachScalingArmLeftX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
+			p.addWidget(pEditReachScalingArmLeftX)
+			pEditReachScalingArmLeftY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
+			p.addWidget(pEditReachScalingArmLeftY)
+			pEditReachScalingArmLeftZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
+			p.addWidget(pEditReachScalingArmLeftZ)
+		end))
+	end
+end

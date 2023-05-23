@@ -1,0 +1,246 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+
+/**
+ * Tweaking panel.
+ */
+class WMPPanelTweaking extends CollapsibleGroup
+	public class CharacterChanged extends WorldSpawnCharacter.DefaultListener
+		private var WMPPanelTweaking pPanel
+		
+		public func new(WMPPanelTweaking panel)
+			pPanel = panel
+		end
+		
+		public func void characterChanged(WorldSpawnCharacter wsc)
+			pPanel.setCharacter(wsc.getCharacter())
+		end
+	end
+	
+	class MotionTransferSelected extends DefaultListModelListener
+		private var WMPPanelTweaking pPanel
+		
+		public func new(WMPPanelTweaking panel)
+			pPanel = panel
+		end
+		
+		public func void selectionChanged(ListModel listModel)
+			pPanel.selectMotionTransfer()
+		end
+	end
+	
+	/** Character tweaked listener. */
+	class CharacterTweaked extends DefaultCharacterConfigurationsListener
+		private var WMPPanelTweaking pPanel
+		
+		public func new(WMPPanelTweaking panel)
+			pPanel = panel
+		end
+		
+		public func void configurationTweaked(CharacterConfigurations configurations,\
+		CharacterConfiguration configuration)
+			if pPanel.getCharacter() == configuration
+				pPanel.onCharacterTweaked()
+			end
+		end
+	end
+	
+	
+	
+	protected var String pPrefixUIOptions
+	protected var CharacterChanged pCharacterChanged
+	protected var CharacterTweaked pCharacterTweaked
+	protected var CharacterConfiguration pCharacter
+	protected var DefaultListModel pModelMotionTransfers
+	protected var DefaultRangeModel pModelMotionTransferPanel
+	protected var Array pPanelsMotionTransfer
+	protected var float pSaveConfigTimeout
+	protected var bool pRequiresSaving
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPanelCharacter panelCharacter) super("Tweaking", "uipanelcharacter#tweaking",\
+	CollapsibleGroup.persistModel(prefixUIOptions(panelCharacter), false))
+		pPrefixUIOptions = prefixUIOptions(panelCharacter)
+		
+		pCharacterTweaked = CharacterTweaked.new(this)
+		
+		pModelMotionTransfers = DefaultListModel.new()
+		pModelMotionTransferPanel = DefaultRangeModel.new()
+		pPanelsMotionTransfer = Array.new()
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+		
+		pModelMotionTransfers.addListener(MotionTransferSelected.new(this))
+		selectMotionTransfer()
+		
+		pCharacterChanged = CharacterChanged.new(this)
+		GameApp.getGameApp().getWorldSpawnCharacter().addListener(pCharacterChanged)
+		
+		startFrameUpdater()
+	end
+	
+	/** Dispose of widget. */
+	public func void dispose()
+		if pCharacterChanged != null
+			GameApp.getGameApp().getWorldSpawnCharacter().removeListener(pCharacterChanged)
+			pCharacterChanged = null
+		end
+		
+		pPanelsMotionTransfer = null
+		pModelMotionTransfers = null
+		pModelMotionTransferPanel = null
+		pCharacterTweaked = null
+		
+		super.dispose()
+	end
+	
+	/** UI options prefix. */
+	static public func String prefixUIOptions(WMPanelCharacter panelCharacter)
+		return panelCharacter.getPrefixUIOptions() + "/WMPPanelTweaking"
+	end
+	
+	
+	
+	/** Character configuration or null. */
+	public func CharacterConfiguration getCharacter()
+		return pCharacter
+	end
+	
+	/** Set character configuration or null. */
+	public func void setCharacter(CharacterConfiguration character)
+		if character == pCharacter
+			return
+		end
+		
+		if pCharacter != null
+			pCharacter.getProfile().getConfigurations().removeListener(pCharacterTweaked)
+		end
+		pModelMotionTransfers.removeAll()
+		
+		pCharacter = character
+		
+		if character != null
+			character.getProfile().getConfigurations().addListener(pCharacterTweaked)
+			pModelMotionTransfers.setContent(character.getMotionTransfers().toArray())
+		end
+		
+		pSaveConfigTimeout = 0
+		pRequiresSaving = false
+	end
+	
+	/** Select motion transfer. */
+	public func void selectMotionTransfer()
+		var int selection = pModelMotionTransferPanel.getValue()
+		var WMPPMotionTransfer panel
+		
+		if selection > 0
+			panel = pPanelsMotionTransfer.getAt(selection - 1) cast WMPPMotionTransfer
+		end
+		
+		if pModelMotionTransfers.getSelected() != -1
+			var MotionTransfer motionTransfer = pModelMotionTransfers.getAt(\
+				pModelMotionTransfers.getSelected()) cast MotionTransfer
+			
+			panel = pPanelsMotionTransfer.find(block WMPPMotionTransfer each
+				return each.supports(motionTransfer)
+			end) cast WMPPMotionTransfer
+			
+			pModelMotionTransferPanel.setValue(pPanelsMotionTransfer.indexOf(panel) + 1)
+			
+			if panel != null
+				panel.setMotionTransfer(motionTransfer)
+			end
+			
+		else
+			pModelMotionTransferPanel.setValue(0)
+		end
+	end
+	
+	/** Character tweaked. */
+	public func void onCharacterTweaked()
+		var int selection = pModelMotionTransferPanel.getValue()
+		if selection > 0
+			(pPanelsMotionTransfer.getAt(selection - 1) cast WMPPMotionTransfer).onTweaked()
+		end
+	end
+	
+	/** Notify character tweaked. */
+	public func void notifyCharacterTweaked()
+		if pCharacter != null
+			pCharacter.getProfile().getConfigurations().notifyTweaked(pCharacter)
+			pSaveConfigTimeout = 0
+			pRequiresSaving = true
+		end
+	end
+	
+	/** Frame update. */
+	public func void onFrameUpdate(float elapsed)
+		if pRequiresSaving
+			pSaveConfigTimeout += elapsed
+			if pSaveConfigTimeout > 0.5
+				pRequiresSaving = false
+				if pCharacter != null
+					pCharacter.getProfile().save()
+				end
+			end
+		end
+	end
+	
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		content.setLayout(FlowLayout.new(LayoutAxis.y))
+		
+		content.addWidget(ComboBox.new(pModelMotionTransfers, WindowCharacterConfiguration.MotionTransferRenderer.new()))
+		
+		var SwitchPanel switcher = SwitchPanel.new(pModelMotionTransferPanel)
+		content.addWidget(switcher)
+		
+		pPanelsMotionTransfer.add(WMPPTMTIK.new(this))
+		pPanelsMotionTransfer.add(WMPPTMTEyes.new(this))
+		pPanelsMotionTransfer.add(WMPPTMTAutoHuman.new(this))
+		pPanelsMotionTransfer.add(WMPPTMTAutoFPV.new(this))
+		
+		switcher.addWidget(Panel.new()) // empty
+		pPanelsMotionTransfer.forEach(block WMPPMotionTransfer each
+			switcher.addWidget(each)
+		end)
+	end
+end

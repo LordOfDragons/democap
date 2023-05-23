@@ -1,0 +1,132 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Tweak panel motion transfer.
+ */
+class WMPPTMTIK extends WMPPMotionTransfer
+	class ReachScalingChanged implements ActionListener
+		protected var WMPPTMTIK pPanel
+		
+		public func new(WMPPTMTIK panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			pPanel.onReachScalingChanged()
+		end
+	end
+	
+	
+	
+	
+	private var WMPPTweakValue pEditReachScalingX
+	private var WMPPTweakValue pEditReachScalingY
+	private var WMPPTweakValue pEditReachScalingZ
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPPanelTweaking panelTweaking) super(panelTweaking)
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+	end
+	
+	/** Dispose of panel. */
+	public func void dispose()
+		pEditReachScalingX = null
+		pEditReachScalingY = null
+		pEditReachScalingZ = null
+		super.dispose()
+	end
+	
+	
+	
+	public func void onTweaked()
+		if pMotionTransfer == null
+			return
+		end
+		
+		runWhileBlockingLayout(block
+			var MotionTransferIK mt = pMotionTransfer cast MotionTransferIK
+			var Vector v = mt.getReachScaling()
+			pEditReachScalingX.setValue(v.getX())
+			pEditReachScalingY.setValue(v.getY())
+			pEditReachScalingZ.setValue(v.getZ())
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	public func void onReachScalingChanged()
+		var MotionTransferIK mt = pMotionTransfer cast MotionTransferIK
+		if mt != null
+			var Vector v = Vector.new(pEditReachScalingX.getValue(),\
+				pEditReachScalingY.getValue(), pEditReachScalingZ.getValue())
+			if not mt.getReachScaling().equals(v)
+				mt.setReachScaling(v)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferIK
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var Label label
+		var String toolTip
+		
+		// reach scaling
+		toolTip = "Scale reach along axis"
+		
+		label = Label.new("Reach Scaling:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 1), block Panel p
+			var ReachScalingChanged action = ReachScalingChanged.new(this)
+			pEditReachScalingX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
+			p.addWidget(pEditReachScalingX)
+			pEditReachScalingY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
+			p.addWidget(pEditReachScalingY)
+			pEditReachScalingZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
+			p.addWidget(pEditReachScalingZ)
+		end))
+	end
+end

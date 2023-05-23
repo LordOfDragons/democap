@@ -1,0 +1,180 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Tweak panel motion transfer.
+ */
+class WMPPTMTEyes extends WMPPMotionTransfer
+	class AdjustRotationHorizontalChanged extends DefaultRangeModelListener
+		protected var WMPPTMTEyes pPanel
+		
+		public func new(WMPPTMTEyes panel)
+			pPanel = panel
+		end
+		
+		public func void valueChanged(RangeModel rangeModel)
+			pPanel.onAdjustRotationHorizontalChanged()
+		end
+	end
+	
+	class AdjustRotationVerticalChanged extends DefaultRangeModelListener
+		protected var WMPPTMTEyes pPanel
+		
+		public func new(WMPPTMTEyes panel)
+			pPanel = panel
+		end
+		
+		public func void valueChanged(RangeModel rangeModel)
+			pPanel.onAdjustRotationVerticalChanged()
+		end
+	end
+	
+	
+	
+	
+	private var DefaultRangeModel pModelAdjustRotationHorizontal
+	private var DefaultRangeModel pModelAdjustRotationVertical
+	
+	
+	
+	/** Create panel. */
+	public func new(WMPPanelTweaking panelTweaking) super(panelTweaking)
+		pModelAdjustRotationHorizontal = DefaultRangeModel.new(-20, 20, 5, 10, 1)
+		pModelAdjustRotationVertical = DefaultRangeModel.new(-20, 20, 5, 10, 1)
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+		
+		pModelAdjustRotationHorizontal.addListener(AdjustRotationHorizontalChanged.new(this))
+		pModelAdjustRotationVertical.addListener(AdjustRotationVerticalChanged.new(this))
+	end
+	
+	/** Dispose of panel. */
+	public func void dispose()
+		pModelAdjustRotationHorizontal = null
+		pModelAdjustRotationVertical = null
+		super.dispose()
+	end
+	
+	
+	
+	public func void onTweaked()
+		if pMotionTransfer == null
+			return
+		end
+		
+		runWhileBlockingLayout(block
+			var MotionTransferEyes mt = pMotionTransfer cast MotionTransferEyes
+			pModelAdjustRotationHorizontal.setValue((mt.getAdjustRotationHorizontal() + 0.5) cast int)
+			pModelAdjustRotationVertical.setValue((mt.getAdjustRotationVertical() + 0.5) cast int)
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	public func void onAdjustRotationHorizontalChanged()
+		var MotionTransferEyes mt = pMotionTransfer cast MotionTransferEyes
+		if mt != null
+			var float value = pModelAdjustRotationHorizontal.getValue()
+			if DEMath.fabs(value - mt.getAdjustRotationHorizontal()) > 0.001
+				mt.setAdjustRotationHorizontal(value)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	public func void onAdjustRotationVerticalChanged()
+		var MotionTransferEyes mt = pMotionTransfer cast MotionTransferEyes
+		if mt != null
+			var float value = pModelAdjustRotationVertical.getValue()
+			if DEMath.fabs(value - mt.getAdjustRotationVertical()) > 0.001
+				mt.setAdjustRotationVertical(value)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferEyes
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var TextField textField
+		var Label label
+		var String toolTip
+		var Slider slider
+		
+		// adjust horizontal eye rotation
+		toolTip = "Adjust horizontal eye rotation"
+		
+		label = Label.new("Adjust Horz-Rot:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+			slider = Slider.new(Orientation.horizontal, pModelAdjustRotationVertical)
+			slider.setToolTip(toolTip)
+			p.addWidget(slider)
+			
+			textField = TextField.new(RangeTextModel.new(pModelAdjustRotationVertical), 2)
+			textField.setToolTip(toolTip)
+			textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+			p.addWidget(textField)
+			textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelAdjustRotationVertical))
+		end))
+		
+		// adjust vertical eye rotation
+		toolTip = "Adjust vertical eye rotation"
+		
+		label = Label.new("Adjust Vert-Rot:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+			slider = Slider.new(Orientation.horizontal, pModelAdjustRotationHorizontal)
+			slider.setToolTip(toolTip)
+			p.addWidget(slider)
+			
+			textField = TextField.new(RangeTextModel.new(pModelAdjustRotationHorizontal), 2)
+			textField.setToolTip(toolTip)
+			textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+			p.addWidget(textField)
+			textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelAdjustRotationHorizontal))
+		end))
+	end
+end

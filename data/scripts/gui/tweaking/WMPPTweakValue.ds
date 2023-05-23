@@ -1,0 +1,166 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Tweak value widget.
+ */
+class WMPPTweakValue extends Panel
+	class ActionIncrement implements ActionListener
+		protected var WMPPTweakValue pWMPPTweakValue
+		protected var float pIncrement
+		
+		public func new(WMPPTweakValue edit, float increment)
+			pWMPPTweakValue = edit
+			pIncrement = increment
+		end
+		
+		public func void onAction(ActionEvent event)
+			pWMPPTweakValue.increment(pIncrement)
+		end
+	end
+	
+	
+	
+	protected var Label pLabelValue
+	protected var Button pButtonIncrement
+	protected var Button pButtonIncrement2
+	protected var Button pButtonIncrement3
+	protected var Button pButtonDecrement
+	protected var Button pButtonDecrement2
+	protected var Button pButtonDecrement3
+	protected var float pValue
+	protected var float pIncrement
+	protected var float pIncrement2
+	protected var float pIncrement3
+	protected var int pPrecision
+	protected var float pRoundUnit
+	protected var Array pActionListeners
+	protected var String pFormatString
+	
+	
+	
+	public func new(int precision, float increment, float increment2, float increment3, ActionListener action)
+		pActionListeners = Array.new()
+		pPrecision = DEMath.clamp(precision, 0, 6)
+		pRoundUnit = DEMath.pow(0.1, pPrecision)
+		pFormatString = "{:." + pPrecision + "f}"
+		pIncrement = increment
+		pIncrement2 = increment2
+		pIncrement3 = increment2
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+		
+		addActionListener(action)
+	end
+	
+	public func void dispose()
+		pActionListeners = null
+		pLabelValue = null
+		pButtonIncrement = null
+		pButtonIncrement2 = null
+		pButtonIncrement3 = null
+		pButtonDecrement = null
+		pButtonDecrement2 = null
+		pButtonDecrement3 = null
+		super.dispose()
+	end
+	
+	
+	public func float getValue()
+		return pValue
+	end
+	
+	public func void setValue(float value)
+		if DEMath.fabs(value - pValue) <= pRoundUnit
+			return
+		end
+		
+		pValue = value
+		updateLabel()
+		notifyListeners()
+	end
+	
+	protected func void updateLabel()
+		pLabelValue.setText(pFormatString.format(Array.newWith(pValue)))
+	end
+	
+	
+	
+	public func void addActionListener(ActionListener listener)
+		if listener == null
+			throw ENullPointer.new("listener")
+		end
+		pActionListeners.add(listener)
+	end
+	
+	public func void removeActionListener(ActionListener listener)
+		pActionListeners.remove(listener)
+	end
+	
+	
+	
+	protected func void createContent()
+		setLayout(BorderLayout.new(2))
+		
+		pLabelValue = Label.new("0", "Label.FormText.Center")
+		addWidget(pLabelValue, BorderLayout.Area.content)
+		
+		addWidget(Panel.new(GridLayout.new(3, 1, 1, LayoutAxis.x), block Panel p
+			p.addWidget(Button.new("<<<", ActionIncrement.new(this, -pIncrement3)))
+			p.addWidget(Button.new("<<", ActionIncrement.new(this, -pIncrement2)))
+			p.addWidget(Button.new("<", ActionIncrement.new(this, -pIncrement)))
+		end), BorderLayout.Area.left)
+		
+		addWidget(Panel.new(GridLayout.new(3, 1, 1, LayoutAxis.x), block Panel p
+			p.addWidget(Button.new(">", ActionIncrement.new(this, pIncrement)))
+			p.addWidget(Button.new(">>", ActionIncrement.new(this, pIncrement2)))
+			p.addWidget(Button.new(">>>", ActionIncrement.new(this, pIncrement3)))
+		end), BorderLayout.Area.right)
+	end
+	
+	public func void increment(float increment)
+		pValue += increment
+		updateLabel()
+		notifyListeners()
+	end
+	
+	protected func void notifyListeners()
+		if pActionListeners != null
+			var ActionEvent event = ActionEvent.new(this, ActionEvent.idAction, 0)
+			pActionListeners.forEach(block ActionListener each
+				each.onAction(event)
+			end)
+		end
+	end
+end

@@ -114,6 +114,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var float pCalibrateReachRetracted
 	private var Array pCalibrateTwistAxes
 	private var Vector pCalibrateTwistBoneAxisRotation
+	private var float pCalibrateReachScaleFront
+	private var float pCalibrateReachScaleDown
+	private var bool pCalibrateCanTweakReachScale
 	
 	
 	
@@ -683,6 +686,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBaseTracker.resetTransform()
 		pCalibrateTwistAxes.removeAll()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
+		pCalibrateReachScaleFront = 0
+		pCalibrateReachScaleDown = 0
+		pCalibrateCanTweakReachScale = false
 	end
 	
 	/** Calibrate character. */
@@ -763,7 +769,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 				var float reachRotateTip = (posTip.absolute() - posRotate).getLength()
 				var float reachBaseRotate = (posRotate - posBase.absolute()).getLength() // can be 0
-				var float scaleFront, scaleDown
 				var Vector tip, actorTip
 				
 				// reach scaling
@@ -778,16 +783,18 @@ class MotionTransferIK extends DefaultMotionTransfer
 				tip = Vector.new(reachBaseRotate * DEMath.cos(rotateFront),\
 					0, reachRotateTip + reachBaseRotate * DEMath.sin(rotateFront))
 				
-				scaleFront = tip.getLength() / pCalibrateReach
+				pCalibrateReachScaleFront = tip.getLength() / pCalibrateReach
 				
 				// down
 				tip = Vector.new(reachBaseRotate * DEMath.cos(rotateDown),\
 					-(reachRotateTip + reachBaseRotate * DEMath.sin(rotateDown)), 0)
 				
-				scaleDown = tip.getLength() / pCalibrateReach
+				pCalibrateReachScaleDown = tip.getLength() / pCalibrateReach
 				
 				// store direction specific scale
-				pCalibrateReachScaleDirection = Vector.new(1, scaleDown, scaleFront).compMultiply(pReachScaling)
+				pCalibrateReachScaleDirection = Vector.new(1, pCalibrateReachScaleDown,\
+					pCalibrateReachScaleFront).compMultiply(pReachScaling)
+				pCalibrateCanTweakReachScale = true
 				
 			case ActorReach.leg
 				// reach scale is not working well with legs
@@ -899,6 +906,16 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end
 	end
 	
+	public func void tweaked()
+		if pCalibrateCanTweakReachScale
+			select pActorReach
+			case ActorReach.arm
+				pCalibrateReachScaleDirection = Vector.new(1, pCalibrateReachScaleDown,\
+					pCalibrateReachScaleFront).compMultiply(pReachScaling)
+			end
+		end
+	end
+	
 	/** Create copy of motion transfer. */
 	public func MotionTransfer createCopy()
 		return MotionTransferIK.new(this)
@@ -975,6 +992,12 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("reachScaleDirection")
 				pCalibrateReachScaleDirection = loader.readVector(element)
 				
+			elif tagName.equals("reachScaleFront")
+				pCalibrateReachScaleFront = element.getFirstCDataFloat()
+				
+			elif tagName.equals("reachScaleDown")
+				pCalibrateReachScaleDown = element.getFirstCDataFloat()
+				
 			elif tagName.equals("reachRange")
 				pCalibrateReachRange = element.getFirstCDataFloat()
 				
@@ -1001,6 +1024,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 			elif tagName.equals("twistBoneAxisRotation")
 				pCalibrateTwistBoneAxisRotation = loader.readVector(element)
+				
+			elif tagName.equals("canTweakReachScale")
+				pCalibrateCanTweakReachScale = element.getFirstCDataBool()
 			end
 		end)
 	end
@@ -1038,6 +1064,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		tag.addDataTag("reach", pCalibrateReach)
 		tag.addDataTag("reachScale", pCalibrateReachScale)
 		loader.writeVector(tag, "reachScaleDirection", pCalibrateReachScaleDirection)
+		tag.addDataTag("reachScaleFront", pCalibrateReachScaleFront)
+		tag.addDataTag("reachScaleDown", pCalibrateReachScaleDown)
 		tag.addDataTag("reachRange", pCalibrateReachRange)
 		loader.writeVector(tag, "tipOffset", pCalibrateTipOffset)
 		pCalibrateBones.forEach(block String each
@@ -1051,5 +1079,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 			loader.writeVector(tag, "twistAxis", each)
 		end)
 		loader.writeVector(tag, "twistBoneAxisRotation", pCalibrateTwistBoneAxisRotation)
+		tag.addDataTag("canTweakReachScale", pCalibrateCanTweakReachScale)
 	end
 end
