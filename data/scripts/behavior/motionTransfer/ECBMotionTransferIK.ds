@@ -88,6 +88,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var Component pComponent
 		private var int pTwistBone
 		private var Vector pScaleReach
+		private var Vector pScaleReachBack
+		private var Matrix pReachMatrix
 		private var Quaternion pTwistQuat, pTwistQuatInv
 		private var bool pEnableScaleReach
 		private var bool pEnableTipOffset
@@ -98,27 +100,29 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		
 		/** Create instance. */
 		public func new(ECBMotionTransferIK ecbehavior, BehaviorElement element) super(element)
+			var MotionTransferIK transfer = ecbehavior.getTransfer()
 			pECBehavior = ecbehavior
 			
 			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
 			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
 			
-			pTipOffset = ecbehavior.getTransfer().getCalibrateTipOffset()
-			pScaleReach = ecbehavior.getTransfer().getCalibrateReachScaleDirection()\
-				* ecbehavior.getTransfer().getCalibrateReachScale()
+			pTipOffset = transfer.getCalibrateTipOffset()
+			pScaleReach = transfer.getCalibrateReachScaleDirection() * transfer.getCalibrateReachScale()
+			pScaleReachBack = transfer.getCalibrateReachScaleDirectionBack() * transfer.getCalibrateReachScale()
+			pReachMatrix = Matrix.newRotation(transfer.getCalibrateReachRotation())
 			
-			pTwistQuat = Quaternion.newFromEuler(ecbehavior.getTransfer().getCalibrateTwistBoneAxisRotation())
+			pTwistQuat = Quaternion.newFromEuler(transfer.getCalibrateTwistBoneAxisRotation())
 			pTwistQuatInv = pTwistQuat.conjugate()
 			
 			if ecbehavior.getSlotTip() != null
 				pSlotTip = ecbehavior.getSlotTip().instance(element)
-				pTransformTip = ecbehavior.getTransfer().getTipTracker().getTransformMatrix()
+				pTransformTip = transfer.getTipTracker().getTransformMatrix()
 				pTransformTipQuat = pTransformTip.normalize().toQuaternion()
 			end
 			
 			if ecbehavior.getSlotGuide() != null
 				pSlotGuide = ecbehavior.getSlotGuide().instance(element)
-				pTransformGuide = ecbehavior.getTransfer().getGuideTracker().getTransformMatrix()
+				pTransformGuide = transfer.getGuideTracker().getTransformMatrix()
 			end
 		end
 		
@@ -214,6 +218,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			// support tweaking
 			var MotionTransferIK transfer = pECBehavior.getTransfer()
 			pScaleReach = transfer.getCalibrateReachScaleDirection() * transfer.getCalibrateReachScale()
+			pScaleReachBack = transfer.getCalibrateReachScaleDirectionBack() * transfer.getCalibrateReachScale()
 			
 			if pControllerBlend != null
 				pControllerBlend.setValue(1)
@@ -263,17 +268,23 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			var float retractedLength = 1
 			
 			if pEnableScaleReach
-				var Matrix boneMatrix = pComponent.boneGetMatrix(pBaseBone)
+				var Matrix reachMatrix = pReachMatrix * pComponent.boneGetMatrix(pBaseBone)
+				
+				var Vector targetInReach = reachMatrix.getInverse() * targetPosition
 				
 				if pEnableTipOffset
-					targetPosition = targetPosition + boneMatrix.transformNormal(pTipOffset)
+					targetInReach = targetInReach + pTipOffset
 				end
 				
-				var Vector basePosition = boneMatrix.getPosition()
+				targetInReach = targetInReach.compMultiply(pScaleReach).combine(\
+					targetInReach.compMultiply(pScaleReachBack),\
+					targetInReach.getX() > 0,\
+					targetInReach.getY() > 0,\
+					targetInReach.getZ() > 0)
 				
-				targetPosition = basePosition + (targetPosition - basePosition).compMultiply(pScaleReach)
+				targetPosition = reachMatrix * targetInReach
 				
-				retractedLength = (targetPosition - basePosition).getLength()
+				retractedLength = targetInReach.getLength()
 			end
 			
 			// orientation

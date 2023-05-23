@@ -46,6 +46,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	private var DefaultListModel pModelActorReach
 	private var DefaultTextModel pModelReachLimit
 	private var EditVector pEditReachScaling
+	private var EditVector pEditReachScalingBack
 	private var DefaultToggleModel pModelAdjustPosition
 	private var SharedListModel pModelListMoveBaseIK
 	private var DefaultTextModel pModelTextMoveBaseIK
@@ -142,6 +143,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pModelActorReach.setSelected(pModelActorReach.indexOf(mt.getActorReach()))
 				pModelReachLimit.setText(mt.getReachLimit().toString())
 				pEditReachScaling.setVector(mt.getReachScaling())
+				pEditReachScalingBack.setVector(mt.getReachScalingBack())
 				pModelAdjustPosition.setToggled(mt.getAdjustPosition())
 				pModelTextMoveBaseIK.setText(mt.getMoveBaseIK())
 				pModelTextMoveRetracted.setText(mt.getMoveRetracted())
@@ -160,6 +162,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pModelActorReach.setSelected(pModelActorReach.indexOf(MotionTransferIK.ActorReach.none))
 				pModelReachLimit.setText("")
 				pEditReachScaling.setVector(Vector.new(1, 1, 1))
+				pEditReachScalingBack.setVector(Vector.new(1, 1, 1))
 				pModelAdjustPosition.setToggled(false)
 				pModelTextMoveBaseIK.setText("")
 				pModelTextMoveRetracted.setText("")
@@ -189,6 +192,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		mt.setActorReach(pModelActorReach.getAt(pModelActorReach.getSelected()) cast MotionTransferIK.ActorReach)
 		mt.setReachLimit(pModelReachLimit.getText().toFloat())
 		mt.setReachScaling(pEditReachScaling.getVector())
+		mt.setReachScalingBack(pEditReachScalingBack.getVector())
 		mt.setAdjustPosition(pModelAdjustPosition.getToggled())
 		mt.setMoveBaseIK(pModelTextMoveBaseIK.getText())
 		mt.setMoveRetracted(pModelTextMoveRetracted.getText())
@@ -278,7 +282,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(textField)
 		
 		// reach scaling
-		toolTip = "Scale reach along axis"
+		toolTip = "Reach scaling relative to Twist Axis: positive X, positive Y, positive Z"
 		
 		label = Label.new("Reach Scaling:", "Label.FormCaption")
 		label.setToolTip(toolTip)
@@ -287,6 +291,17 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pEditReachScaling = EditVector.new()
 		pEditReachScaling.setToolTip(toolTip)
 		pPanelForm.addWidget(pEditReachScaling)
+		
+		// reach scaling backwards
+		toolTip = "Reach scaling relative to Twist Axis: negative X, negative Y, negative Z"
+		
+		label = Label.new("Reach Scaling Back:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditReachScalingBack = EditVector.new()
+		pEditReachScalingBack.setToolTip(toolTip)
+		pPanelForm.addWidget(pEditReachScalingBack)
 		
 		// adjust position
 		pPanelForm.addWidget(Label.new(""))

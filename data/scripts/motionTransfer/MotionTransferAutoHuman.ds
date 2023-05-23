@@ -70,7 +70,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	private var String pMoveBaseIK
 	private var String pMoveCrouch
 	private var Vector pReachScalingArmRight
+	private var Vector pReachScalingArmRightBack
 	private var Vector pReachScalingArmLeft
+	private var Vector pReachScalingArmLeftBack
 	
 	private var MotionTransferChild pTransferWaist
 	//private var MotionTransferIK pTransferSpineHead
@@ -98,7 +100,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pMoveBaseIK = ""
 		pMoveCrouch = ""
 		pReachScalingArmRight = Vector.new(1, 1, 1)
+		pReachScalingArmRightBack = Vector.new(1, 1, 1)
 		pReachScalingArmLeft = Vector.new(1, 1, 1)
+		pReachScalingArmLeftBack = Vector.new(1, 1, 1)
 		
 		// create child motion transfers
 		var MotionTransferChild.Factory factoryChild = MotionTransferChild.Factory.new()
@@ -175,7 +179,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pMoveBaseIK = transfer.pMoveBaseIK
 		pMoveCrouch = transfer.pMoveCrouch
 		pReachScalingArmRight = transfer.pReachScalingArmRight
+		pReachScalingArmRightBack = transfer.pReachScalingArmRightBack
 		pReachScalingArmLeft = transfer.pReachScalingArmLeft
+		pReachScalingArmLeftBack = transfer.pReachScalingArmLeftBack
 		
 		pTransferWaist = MotionTransferChild.new(transfer.pTransferWaist)
 		//pTransferSpineHead = MotionTransferIK.new(transfer.pTransferSpineHead)
@@ -352,6 +358,19 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pReachScalingArmRight = scaling
 	end
 	
+	/** Right arm reach scaling backwards. */
+	public func Vector getReachScalingArmRightBack()
+		return pReachScalingArmRightBack
+	end
+	
+	/** Set right arm reach scaling backwards. */
+	public func void setReachScalingArmRightBack(Vector scaling)
+		if scaling == null
+			throw ENullPointer.new("scaling")
+		end
+		pReachScalingArmRightBack = scaling
+	end
+	
 	/** Left arm reach scaling. */
 	public func Vector getReachScalingArmLeft()
 		return pReachScalingArmLeft
@@ -363,6 +382,19 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			throw ENullPointer.new("scaling")
 		end
 		pReachScalingArmLeft = scaling
+	end
+	
+	/** Left arm reach scaling backwarts. */
+	public func Vector getReachScalingArmLeftBack()
+		return pReachScalingArmLeftBack
+	end
+	
+	/** Set left arm reach scaling backwards. */
+	public func void setReachScalingArmLeftBack(Vector scaling)
+		if scaling == null
+			throw ENullPointer.new("scaling")
+		end
+		pReachScalingArmLeftBack = scaling
 	end
 	
 	
@@ -685,7 +717,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmRight.setMoveBaseIK(pMoveBaseIK)
 		pTransferArmRight.setActorReach(MotionTransferIK.ActorReach.arm)
 		pTransferArmRight.setReachLimit(1)
-		pTransferArmRight.setReachScaling(pReachScalingArmRight)
+		pTransferArmRight.setReachScaling(Vector.new(pReachScalingArmRightBack.getZ(),\
+			pReachScalingArmRightBack.getY(), pReachScalingArmRight.getX()))
+		pTransferArmRight.setReachScalingBack(Vector.new(pReachScalingArmRight.getZ(),\
+			pReachScalingArmRight.getY(), pReachScalingArmRightBack.getX()))
 		pTransferArmRight.setTwistPropagation(0.5)
 		pTransferArmRight.setTwistAxisRotation(Vector.new(0, -90, 0))
 		pTransferArmRight.setTwistBoneCount(isSlotRightElbowAttached if 1 else 2)
@@ -727,7 +762,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.setMoveBaseIK(pMoveBaseIK)
 		pTransferArmLeft.setActorReach(MotionTransferIK.ActorReach.arm)
 		pTransferArmLeft.setReachLimit(1)
-		pTransferArmLeft.setReachScaling(pReachScalingArmLeft)
+		pTransferArmLeft.setReachScaling(Vector.new(pReachScalingArmLeft.getZ(),\
+			pReachScalingArmLeftBack.getY(), pReachScalingArmLeft.getX()))
+		pTransferArmLeft.setReachScalingBack(Vector.new(pReachScalingArmLeftBack.getZ(),\
+			pReachScalingArmLeft.getY(), pReachScalingArmLeftBack.getX()))
 		pTransferArmLeft.setTwistPropagation(0.5)
 		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))
 		pTransferArmLeft.setTwistBoneCount(isSlotLeftElbowAttached if 1 else 2)
@@ -904,10 +942,16 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 // 		pTransferNeck.setBendShape(pBendShapeNeck)
 // 		pTransferNeck.tweaked()
 		
-		pTransferArmRight.setReachScaling(pReachScalingArmRight)
+		pTransferArmRight.setReachScaling(Vector.new(pReachScalingArmRightBack.getZ(),\
+			pReachScalingArmRightBack.getY(), pReachScalingArmRight.getX()))
+		pTransferArmRight.setReachScalingBack(Vector.new(pReachScalingArmRight.getZ(),\
+			pReachScalingArmRight.getY(), pReachScalingArmRightBack.getX()))
 		pTransferArmRight.tweaked()
 		
-		pTransferArmLeft.setReachScaling(pReachScalingArmLeft)
+		pTransferArmLeft.setReachScaling(Vector.new(pReachScalingArmLeft.getZ(),\
+			pReachScalingArmLeftBack.getY(), pReachScalingArmLeft.getX()))
+		pTransferArmLeft.setReachScalingBack(Vector.new(pReachScalingArmLeftBack.getZ(),\
+			pReachScalingArmLeft.getY(), pReachScalingArmLeftBack.getX()))
 		pTransferArmLeft.tweaked()
 	end
 	
@@ -953,8 +997,14 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			elif tagName.equals("reachScalingArmRight")
 				pReachScalingArmRight = loader.readVector(element)
 				
+			elif tagName.equals("reachScalingArmRightBack")
+				pReachScalingArmRightBack = loader.readVector(element)
+				
 			elif tagName.equals("reachScalingArmLeft")
 				pReachScalingArmLeft = loader.readVector(element)
+				
+			elif tagName.equals("reachScalingArmLeftBack")
+				pReachScalingArmLeftBack = loader.readVector(element)
 				
 			elif tagName.equals("transfers")
 				loadTransfers(loader, element)
@@ -1024,7 +1074,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		tag.addDataTag("moveBaseIK", pMoveBaseIK)
 		tag.addDataTag("moveCrouch", pMoveCrouch)
 		loader.writeVector(tag, "reachScalingArmRight", pReachScalingArmRight)
+		loader.writeVector(tag, "reachScalingArmRightBack", pReachScalingArmRightBack)
 		loader.writeVector(tag, "reachScalingArmLeft", pReachScalingArmLeft)
+		loader.writeVector(tag, "reachScalingArmLeftBack", pReachScalingArmLeftBack)
 		
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
 		pTransferWaist.save(loader, tagTransfers.addTag("waist"))

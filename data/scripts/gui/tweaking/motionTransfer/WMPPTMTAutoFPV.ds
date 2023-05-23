@@ -46,6 +46,18 @@ class WMPPTMTAutoFPV extends WMPPMotionTransfer
 		end
 	end
 	
+	class ReachScalingArmRightBackChanged implements ActionListener
+		protected var WMPPTMTAutoFPV pPanel
+		
+		public func new(WMPPTMTAutoFPV panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			pPanel.onReachScalingArmRightBackChanged()
+		end
+	end
+	
 	class ReachScalingArmLeftChanged implements ActionListener
 		protected var WMPPTMTAutoFPV pPanel
 		
@@ -58,15 +70,33 @@ class WMPPTMTAutoFPV extends WMPPMotionTransfer
 		end
 	end
 	
+	class ReachScalingArmLeftBackChanged implements ActionListener
+		protected var WMPPTMTAutoFPV pPanel
+		
+		public func new(WMPPTMTAutoFPV panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			pPanel.onReachScalingArmLeftBackChanged()
+		end
+	end
+	
 	
 	
 	
 	private var WMPPTweakValue pEditReachScalingArmRightX
 	private var WMPPTweakValue pEditReachScalingArmRightY
 	private var WMPPTweakValue pEditReachScalingArmRightZ
+	private var WMPPTweakValue pEditReachScalingArmRightBackX
+	private var WMPPTweakValue pEditReachScalingArmRightBackY
+	private var WMPPTweakValue pEditReachScalingArmRightBackZ
 	private var WMPPTweakValue pEditReachScalingArmLeftX
 	private var WMPPTweakValue pEditReachScalingArmLeftY
 	private var WMPPTweakValue pEditReachScalingArmLeftZ
+	private var WMPPTweakValue pEditReachScalingArmLeftBackX
+	private var WMPPTweakValue pEditReachScalingArmLeftBackY
+	private var WMPPTweakValue pEditReachScalingArmLeftBackZ
 	
 	
 	
@@ -82,9 +112,15 @@ class WMPPTMTAutoFPV extends WMPPMotionTransfer
 		pEditReachScalingArmRightX = null
 		pEditReachScalingArmRightY = null
 		pEditReachScalingArmRightZ = null
+		pEditReachScalingArmRightBackX = null
+		pEditReachScalingArmRightBackY = null
+		pEditReachScalingArmRightBackZ = null
 		pEditReachScalingArmLeftX = null
 		pEditReachScalingArmLeftY = null
 		pEditReachScalingArmLeftZ = null
+		pEditReachScalingArmLeftBackX = null
+		pEditReachScalingArmLeftBackY = null
+		pEditReachScalingArmLeftBackZ = null
 		super.dispose()
 	end
 	
@@ -103,10 +139,20 @@ class WMPPTMTAutoFPV extends WMPPMotionTransfer
 			pEditReachScalingArmRightY.setValue(v.getY())
 			pEditReachScalingArmRightZ.setValue(v.getZ())
 			
+			v = mt.getReachScalingArmRightBack()
+			pEditReachScalingArmRightBackX.setValue(v.getX())
+			pEditReachScalingArmRightBackY.setValue(v.getY())
+			pEditReachScalingArmRightBackZ.setValue(v.getZ())
+			
 			v = mt.getReachScalingArmLeft()
 			pEditReachScalingArmLeftX.setValue(v.getX())
 			pEditReachScalingArmLeftY.setValue(v.getY())
 			pEditReachScalingArmLeftZ.setValue(v.getZ())
+			
+			v = mt.getReachScalingArmLeftBack()
+			pEditReachScalingArmLeftBackX.setValue(v.getX())
+			pEditReachScalingArmLeftBackY.setValue(v.getY())
+			pEditReachScalingArmLeftBackZ.setValue(v.getZ())
 		end)
 		doLayoutIfBlocked()
 	end
@@ -118,6 +164,19 @@ class WMPPTMTAutoFPV extends WMPPMotionTransfer
 				pEditReachScalingArmRightY.getValue(), pEditReachScalingArmRightZ.getValue())
 			if not mt.getReachScalingArmRight().equals(v)
 				mt.setReachScalingArmRight(v)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	public func void onReachScalingArmRightBackChanged()
+		var MotionTransferAutoFPV mt = pMotionTransfer cast MotionTransferAutoFPV
+		if mt != null
+			var Vector v = Vector.new(pEditReachScalingArmRightBackX.getValue(),\
+				pEditReachScalingArmRightBackY.getValue(), pEditReachScalingArmRightBackZ.getValue())
+			if not mt.getReachScalingArmRightBack().equals(v)
+				mt.setReachScalingArmRightBack(v)
 				mt.tweaked()
 				pPanelTweaking.notifyCharacterTweaked()
 			end
@@ -137,6 +196,19 @@ class WMPPTMTAutoFPV extends WMPPMotionTransfer
 		end
 	end
 	
+	public func void onReachScalingArmLeftBackChanged()
+		var MotionTransferAutoFPV mt = pMotionTransfer cast MotionTransferAutoFPV
+		if mt != null
+			var Vector v = Vector.new(pEditReachScalingArmLeftBackX.getValue(),\
+				pEditReachScalingArmLeftBackY.getValue(), pEditReachScalingArmLeftBackZ.getValue())
+			if not mt.getReachScalingArmLeftBack().equals(v)
+				mt.setReachScalingArmLeftBack(v)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
 	/** Supports motion transfer type. */
 	public func bool supports(MotionTransfer motionTranfer)
 		return motionTranfer castable MotionTransferAutoFPV
@@ -150,37 +222,120 @@ class WMPPTMTAutoFPV extends WMPPMotionTransfer
 		var String toolTip
 		
 		// right arm reach scaling
+		var ReachScalingArmRightChanged actionAR = ReachScalingArmRightChanged.new(this)
 		toolTip = "Right arm scale reach along axis"
 		
-		label = Label.new("Reach Scaling\nRight Arm:", "Label.FormCaption")
+		label = Label.new("Reach Scaling", "Label.FormCaption")
 		label.setToolTip(toolTip)
 		addWidget(label)
 		
-		addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 1), block Panel p
-			var ReachScalingArmRightChanged action = ReachScalingArmRightChanged.new(this)
-			pEditReachScalingArmRightX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
-			p.addWidget(pEditReachScalingArmRightX)
-			pEditReachScalingArmRightY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
-			p.addWidget(pEditReachScalingArmRightY)
-			pEditReachScalingArmRightZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
-			p.addWidget(pEditReachScalingArmRightZ)
-		end))
+		label = Label.new("Right Arm:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		
+		label = Label.new("Right:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		pEditReachScalingArmRightX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionAR)
+		addWidget(pEditReachScalingArmRightX)
+		
+		label = Label.new("Down:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		pEditReachScalingArmRightY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionAR)
+		addWidget(pEditReachScalingArmRightY)
+		
+		label = Label.new("Front:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		pEditReachScalingArmRightZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionAR)
+		addWidget(pEditReachScalingArmRightZ)
+		
+		
+		var ReachScalingArmRightBackChanged actionARB = ReachScalingArmRightBackChanged.new(this)
+		
+		label = Label.new("Left:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		pEditReachScalingArmRightBackX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionARB)
+		addWidget(pEditReachScalingArmRightBackX)
+		
+		label = Label.new("Up:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		pEditReachScalingArmRightBackY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionARB)
+		addWidget(pEditReachScalingArmRightBackY)
+		
+		label = Label.new("Back:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		pEditReachScalingArmRightBackZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionARB)
+		addWidget(pEditReachScalingArmRightBackZ)
+		
 		
 		// left arm reach scaling
+		var ReachScalingArmLeftChanged actionAL = ReachScalingArmLeftChanged.new(this)
 		toolTip = "Left arm scale reach along axis"
 		
-		label = Label.new("Reach Scaling\nLeft Arm:", "Label.FormCaption")
+		label = Label.new("Reach Scaling", "Label.FormCaption")
 		label.setToolTip(toolTip)
 		addWidget(label)
 		
-		addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 1), block Panel p
-			var ReachScalingArmLeftChanged action = ReachScalingArmLeftChanged.new(this)
-			pEditReachScalingArmLeftX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
-			p.addWidget(pEditReachScalingArmLeftX)
-			pEditReachScalingArmLeftY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
-			p.addWidget(pEditReachScalingArmLeftY)
-			pEditReachScalingArmLeftZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
-			p.addWidget(pEditReachScalingArmLeftZ)
-		end))
+		label = Label.new("Left Arm:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		
+		label = Label.new("Left:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		pEditReachScalingArmLeftX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionAL)
+		addWidget(pEditReachScalingArmLeftX)
+		
+		label = Label.new("Down:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		pEditReachScalingArmLeftY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionAL)
+		addWidget(pEditReachScalingArmLeftY)
+		
+		label = Label.new("Front:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		pEditReachScalingArmLeftZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionAL)
+		addWidget(pEditReachScalingArmLeftZ)
+		
+		
+		var ReachScalingArmLeftBackChanged actionALB = ReachScalingArmLeftBackChanged.new(this)
+		
+		label = Label.new("Right:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		pEditReachScalingArmLeftBackX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionALB)
+		addWidget(pEditReachScalingArmLeftBackX)
+		
+		label = Label.new("Up:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		pEditReachScalingArmLeftBackY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionALB)
+		addWidget(pEditReachScalingArmLeftBackY)
+		
+		label = Label.new("Back:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		pEditReachScalingArmLeftBackZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionALB)
+		addWidget(pEditReachScalingArmLeftBackZ)
 	end
 end

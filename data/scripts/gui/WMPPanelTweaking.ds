@@ -69,8 +69,13 @@ class WMPPanelTweaking extends CollapsibleGroup
 			pPanel = panel
 		end
 		
-		public func void configurationTweaked(CharacterConfigurations configurations,\
-		CharacterConfiguration configuration)
+		public func void configurationChanged(CharacterConfigurations configurations, CharacterConfiguration configuration)
+			if pPanel.getCharacter() == configuration
+				pPanel.onCharacterChanged()
+			end
+		end
+		
+		public func void configurationTweaked(CharacterConfigurations configurations, CharacterConfiguration configuration)
 			if pPanel.getCharacter() == configuration
 				pPanel.onCharacterTweaked()
 			end
@@ -151,14 +156,14 @@ class WMPPanelTweaking extends CollapsibleGroup
 		if pCharacter != null
 			pCharacter.getProfile().getConfigurations().removeListener(pCharacterTweaked)
 		end
-		pModelMotionTransfers.removeAll()
 		
 		pCharacter = character
 		
 		if character != null
 			character.getProfile().getConfigurations().addListener(pCharacterTweaked)
-			pModelMotionTransfers.setContent(character.getMotionTransfers().toArray())
 		end
+		
+		onCharacterChanged()
 		
 		pSaveConfigTimeout = 0
 		pRequiresSaving = false
@@ -174,8 +179,7 @@ class WMPPanelTweaking extends CollapsibleGroup
 		end
 		
 		if pModelMotionTransfers.getSelected() != -1
-			var MotionTransfer motionTransfer = pModelMotionTransfers.getAt(\
-				pModelMotionTransfers.getSelected()) cast MotionTransfer
+			var MotionTransfer motionTransfer = pModelMotionTransfers.getSelectedElement() cast MotionTransfer
 			
 			panel = pPanelsMotionTransfer.find(block WMPPMotionTransfer each
 				return each.supports(motionTransfer)
@@ -192,6 +196,31 @@ class WMPPanelTweaking extends CollapsibleGroup
 		end
 	end
 	
+	/** Character changed. */
+	public func void onCharacterChanged()
+		var String selection
+		if pModelMotionTransfers.getSelected() != -1
+			selection = (pModelMotionTransfers.getSelectedElement() cast MotionTransfer).getName()
+		end
+		
+		if pCharacter != null
+			pModelMotionTransfers.setContent(pCharacter.getMotionTransfers().toArray())
+			
+		else
+			pModelMotionTransfers.removeAll()
+		end
+		
+		if selection != null
+			var MotionTransfer matching = pModelMotionTransfers.find(block MotionTransfer each
+				return each.getName().equals(selection)
+			end) cast MotionTransfer
+			
+			if matching != null
+				pModelMotionTransfers.setSelectedElement(matching)
+			end
+		end
+	end
+	
 	/** Character tweaked. */
 	public func void onCharacterTweaked()
 		var int selection = pModelMotionTransferPanel.getValue()
@@ -203,7 +232,7 @@ class WMPPanelTweaking extends CollapsibleGroup
 	/** Notify character tweaked. */
 	public func void notifyCharacterTweaked()
 		if pCharacter != null
-			pCharacter.getProfile().getConfigurations().notifyTweaked(pCharacter)
+			pCharacter.notifyTweaked()
 			pSaveConfigTimeout = 0
 			pRequiresSaving = true
 		end
@@ -217,6 +246,7 @@ class WMPPanelTweaking extends CollapsibleGroup
 				pRequiresSaving = false
 				if pCharacter != null
 					pCharacter.getProfile().save()
+					pCharacter.notifyTweaked()
 				end
 			end
 		end

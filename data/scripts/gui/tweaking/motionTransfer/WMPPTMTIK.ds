@@ -46,12 +46,27 @@ class WMPPTMTIK extends WMPPMotionTransfer
 		end
 	end
 	
+	class ReachScalingBackChanged implements ActionListener
+		protected var WMPPTMTIK pPanel
+		
+		public func new(WMPPTMTIK panel)
+			pPanel = panel
+		end
+		
+		public func void onAction(ActionEvent event)
+			pPanel.onReachScalingBackChanged()
+		end
+	end
+	
 	
 	
 	
 	private var WMPPTweakValue pEditReachScalingX
 	private var WMPPTweakValue pEditReachScalingY
 	private var WMPPTweakValue pEditReachScalingZ
+	private var WMPPTweakValue pEditReachScalingBackX
+	private var WMPPTweakValue pEditReachScalingBackY
+	private var WMPPTweakValue pEditReachScalingBackZ
 	
 	
 	
@@ -67,6 +82,9 @@ class WMPPTMTIK extends WMPPMotionTransfer
 		pEditReachScalingX = null
 		pEditReachScalingY = null
 		pEditReachScalingZ = null
+		pEditReachScalingBackX = null
+		pEditReachScalingBackY = null
+		pEditReachScalingBackZ = null
 		super.dispose()
 	end
 	
@@ -79,10 +97,16 @@ class WMPPTMTIK extends WMPPMotionTransfer
 		
 		runWhileBlockingLayout(block
 			var MotionTransferIK mt = pMotionTransfer cast MotionTransferIK
+			
 			var Vector v = mt.getReachScaling()
 			pEditReachScalingX.setValue(v.getX())
 			pEditReachScalingY.setValue(v.getY())
 			pEditReachScalingZ.setValue(v.getZ())
+			
+			v = mt.getReachScalingBack()
+			pEditReachScalingBackX.setValue(v.getX())
+			pEditReachScalingBackY.setValue(v.getY())
+			pEditReachScalingBackZ.setValue(v.getZ())
 		end)
 		doLayoutIfBlocked()
 	end
@@ -94,6 +118,19 @@ class WMPPTMTIK extends WMPPMotionTransfer
 				pEditReachScalingY.getValue(), pEditReachScalingZ.getValue())
 			if not mt.getReachScaling().equals(v)
 				mt.setReachScaling(v)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	public func void onReachScalingBackChanged()
+		var MotionTransferIK mt = pMotionTransfer cast MotionTransferIK
+		if mt != null
+			var Vector v = Vector.new(pEditReachScalingBackX.getValue(),\
+				pEditReachScalingBackY.getValue(), pEditReachScalingBackZ.getValue())
+			if not mt.getReachScalingBack().equals(v)
+				mt.setReachScalingBack(v)
 				mt.tweaked()
 				pPanelTweaking.notifyCharacterTweaked()
 			end
@@ -113,7 +150,7 @@ class WMPPTMTIK extends WMPPMotionTransfer
 		var String toolTip
 		
 		// reach scaling
-		toolTip = "Scale reach along axis"
+		toolTip = "Reach scaling relative to Twist Axis: positive X, positive Y, positive Z"
 		
 		label = Label.new("Reach Scaling:", "Label.FormCaption")
 		label.setToolTip(toolTip)
@@ -127,6 +164,23 @@ class WMPPTMTIK extends WMPPMotionTransfer
 			p.addWidget(pEditReachScalingY)
 			pEditReachScalingZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
 			p.addWidget(pEditReachScalingZ)
+		end))
+		
+		// reach scaling backwards
+		toolTip = "Reach scaling relative to Twist Axis: negative X, negative Y, negative Z"
+		
+		label = Label.new("Reach Scaling Back:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		addWidget(label)
+		
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 1), block Panel p
+			var ReachScalingBackChanged action = ReachScalingBackChanged.new(this)
+			pEditReachScalingBackX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
+			p.addWidget(pEditReachScalingBackX)
+			pEditReachScalingBackY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
+			p.addWidget(pEditReachScalingBackY)
+			pEditReachScalingBackZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
+			p.addWidget(pEditReachScalingBackZ)
 		end))
 	end
 end
