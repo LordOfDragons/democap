@@ -48,6 +48,10 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	private var DefaultRangeModel pModelBendShape
 	private var EditVector pEditBendAxisRotation
 	private var DefaultToggleModel pModelFitCurveToTarget
+	private var DefaultToggleModel pModelUseRotation
+	private var DefaultTextModel pModelTwistPropagation
+	private var DefaultTextModel pModelTwistScale
+	private var DefaultTextModel pModelTwistBoneCount
 	
 	
 	
@@ -73,6 +77,11 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		
 		pModelBendShape = DefaultRangeModel.new(0, 20, 5, 10, 1)
 		pModelFitCurveToTarget = DefaultToggleModel.new(false)
+		pModelUseRotation = DefaultToggleModel.new(false)
+		
+		pModelTwistPropagation = DefaultTextModel.new()
+		pModelTwistScale = DefaultTextModel.new()
+		pModelTwistBoneCount = DefaultTextModel.new()
 		
 		runWhileBlockingLayout(block
 			createContent(window.getModelTrackerSlotNames(), optionPrefix)
@@ -95,12 +104,17 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		
 		pModelBendShape = null
 		pModelFitCurveToTarget = null
+		pModelUseRotation = null
 		
 		pEditTargetTracker.setTracker(null)
 		pEditTargetTracker = null
 		
 		pEditBaseTracker.setTracker(null)
 		pEditBaseTracker = null
+		
+		pModelTwistPropagation = null
+		pModelTwistScale = null
+		pModelTwistBoneCount = null
 		
 		pEditScaleRotation = null
 		pEditBendAxisRotation = null
@@ -128,6 +142,10 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 				pModelBendShape.setValue((mt.getBendShape() * 20 + 0.5) cast int)
 				pEditBendAxisRotation.setVector(mt.getBendAxisRotation())
 				pModelFitCurveToTarget.setToggled(mt.getFitCurveToTarget())
+				pModelUseRotation.setToggled(mt.getUseRotation())
+				pModelTwistPropagation.setText(mt.getTwistPropagation().toString())
+				pModelTwistScale.setText(mt.getTwistScale().toString())
+				pModelTwistBoneCount.setText(mt.getTwistBoneCount().toString())
 				
 			else
 				pModelTextTargetBone.setText("")
@@ -136,10 +154,14 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 				pModelTextBaseBone.setText("")
 				pEditTargetTracker.setTracker(null)
 				pEditBaseTracker.setTracker(null)
-				pEditScaleRotation.setVector2(Vector2.new())
+				pEditScaleRotation.setVector2(Vector2.new(1, 1))
 				pModelBendShape.setValue(10)
 				pEditBendAxisRotation.setVector(Vector.new())
 				pModelFitCurveToTarget.setToggled(false)
+				pModelUseRotation.setToggled(false)
+				pModelTwistPropagation.setText("")
+				pModelTwistScale.setText("")
+				pModelTwistBoneCount.setText("")
 			end
 		end)
 		doLayoutIfBlocked()
@@ -164,6 +186,10 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		mt.setBendShape(0.05 * pModelBendShape.getValue())
 		mt.setBendAxisRotation(pEditBendAxisRotation.getVector())
 		mt.setFitCurveToTarget(pModelFitCurveToTarget.getToggled())
+		mt.setUseRotation(pModelUseRotation.getToggled())
+		mt.setTwistPropagation(pModelTwistPropagation.getText().toFloat())
+		mt.setTwistScale(pModelTwistScale.getText().toFloat())
+		mt.setTwistBoneCount(pModelTwistBoneCount.getText().toInt())
 	end
 	
 	/** Supports motion transfer type. */
@@ -233,7 +259,7 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(Label.new("Scale Rotation:", "Label.FormCaption"))
 		
 		pEditScaleRotation = EditVector2.new()
-		pEditScaleRotation.setToolTip("Per component scaling to apply to bending angle before modifying chain")
+		pEditScaleRotation.setToolTip("Scaling to apply to bending before modifying chain")
 		pPanelForm.addWidget(pEditScaleRotation)
 		
 		// bend shape
@@ -270,10 +296,44 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		// fit curve to target
 		pPanelForm.addWidget(Label.new("", "Label.FormCaption"))
 		
-		checkBox = CheckBox.new(pModelFitCurveToTarget, "Fit Curve To Target")
+		checkBox = CheckBox.new(pModelFitCurveToTarget, "Fit curve to target")
 		checkBox.setToolTip("Calculate bending angles for curve to touch target. "\
 			+ "Use only if target is at or beyond tip bone.")
 		pPanelForm.addWidget(checkBox)
+		
+		// use rotation of target relative to base instead of position to calculate bending angle
+		pPanelForm.addWidget(Label.new("", "Label.FormCaption"))
+		
+		checkBox = CheckBox.new(pModelUseRotation, "Use rotation to bend")
+		checkBox.setToolTip("Use rotation of target relative to base instead of position to calculate bending angle.")
+		pPanelForm.addWidget(checkBox)
+		
+		// twist propagation
+		pPanelForm.addWidget(Label.new("Twist Propagation:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelTwistPropagation, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("Percentage of Tip Bone twist relative to Base Bone to propagate along bone chain.")
+		pPanelForm.addWidget(textField)
+		
+		// twist scale
+		pPanelForm.addWidget(Label.new("Twist Scale:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelTwistScale, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("Scaling of twist angle before application.")
+		pPanelForm.addWidget(textField)
+		
+		// twist bone count
+		pPanelForm.addWidget(Label.new("Twist Bone Count:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelTwistBoneCount, 4)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
+		textField.setToolTip("Count of bones along chain to apply twist to starting at first bone after Tip Bone.")
+		pPanelForm.addWidget(textField)
 		
 		// trackers
 		pEditTargetTracker = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/TargetTracker", this, "Target Tracker", false)
