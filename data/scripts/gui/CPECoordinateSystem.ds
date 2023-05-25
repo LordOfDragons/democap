@@ -247,19 +247,22 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 	private var EditVector pEditRotation
 	private var ComboBox pCBBone
 	private var ComboBox pCBSlot
+	private var bool pNoParentRotation
 	private var InteractHandleListener pInteractHandleListener
 	
 	
 	
 	/** Create character preview editor. */
 	public func new(WidgetCharacterPreview preview, Label labelPosition, EditVector editPosition,\
-	Label labelRotation, EditVector editRotation, ComboBox cbBone, ComboBox cbSlot) super(preview)
+	Label labelRotation, EditVector editRotation, ComboBox cbBone, ComboBox cbSlot,\
+	bool noParentRotation) super(preview)
 		pLabelPosition = labelPosition
 		pLabelRotation = labelRotation
 		pEditPosition = editPosition
 		pEditRotation = editRotation
 		pCBBone = cbBone
 		pCBSlot = cbSlot
+		pNoParentRotation = noParentRotation
 		
 		if labelPosition != null
 			labelPosition.addMouseListener(ClickedActivateEditor.new(this, editPosition.getEditX()))
@@ -360,9 +363,13 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 	
 	
 	
+	protected func ECBPreviewCoordSystem.Instance getUsePreviewCoordSystem()
+		return getPreviewCoordSystem()
+	end
+	
 	/** Show coordinate system. */
 	protected func void showCoordSystem()
-		var ECBPreviewCoordSystem.Instance coordSystem = getPreviewCoordSystem()
+		var ECBPreviewCoordSystem.Instance coordSystem = getUsePreviewCoordSystem()
 		if coordSystem == null
 			return
 		end
@@ -373,7 +380,7 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 	
 	/** Hide coordinate system. */
 	protected func void hideCoordSystem()
-		var ECBPreviewCoordSystem.Instance coordSystem = getPreviewCoordSystem()
+		var ECBPreviewCoordSystem.Instance coordSystem = getUsePreviewCoordSystem()
 		if coordSystem == null
 			return
 		end
@@ -384,7 +391,7 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 	
 	/** Update coordinate system. */
 	protected func void updateCoordSystem()
-		var ECBPreviewCoordSystem.Instance coordSystem = getPreviewCoordSystem()
+		var ECBPreviewCoordSystem.Instance coordSystem = getUsePreviewCoordSystem()
 		if coordSystem == null
 			return
 		end
@@ -404,6 +411,8 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 		end
 		
 		if pCBBone != null
+			coordSystem.setNoParentRotation(pNoParentRotation)
+			
 			if pCBBone.getEditor() != null
 				coordSystem.setBone(pCBBone.getEditor().getEditorValue() cast String)
 				

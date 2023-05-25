@@ -44,6 +44,7 @@ class ECBToggleVisibility extends DefaultECBehavior
 		private var Vector pRotation
 		private var float pDistance
 		private var bool pLockZRotation
+		private var bool pScaleWithActor
 		
 		
 		
@@ -60,6 +61,7 @@ class ECBToggleVisibility extends DefaultECBehavior
 			pRotation = pECBehavior.getRotation().getVector(stub, codec)
 			pDistance = pECBehavior.getDistance().getValue(stub)
 			pLockZRotation = pECBehavior.getLockZRotation().getValue(stub)
+			pScaleWithActor = pECBehavior.getScaleWithActor().getValue(stub)
 		end
 		
 		
@@ -89,6 +91,11 @@ class ECBToggleVisibility extends DefaultECBehavior
 			return pLockZRotation
 		end
 		
+		/** Scale with actor. */
+		public func bool getScaleWithActor()
+			return pScaleWithActor
+		end
+		
 		
 		
 		/** Element is visible. */
@@ -114,10 +121,11 @@ class ECBToggleVisibility extends DefaultECBehavior
 			var DMatrix matrix = DMatrix.newTranslation(DVector.new(position))
 			var Quaternion corient = camera.getOrientation()
 			var DVector cpos = camera.getPosition()
+			var float scale = getUseScaling(actor)
 			
 			if pPivot != null
 				matrix = matrix * DMatrix.newWorld(actor.getPosition().\
-					combine(cpos, false, true, false) + DVector.new(pPivot), corient)
+					combine(cpos, false, true, false) + DVector.new(pPivot) * scale, corient)
 				
 			else
 				matrix = matrix * DMatrix.newWorld(cpos, corient)
@@ -152,16 +160,18 @@ class ECBToggleVisibility extends DefaultECBehavior
 			
 			matrix = DMatrix.newWorld(mpos, view, up)
 			
-			reposition(matrix)
+			reposition(actor, matrix)
 		end
 		
 		/** Reposition element along point-at direction. */
 		public func void reposition(ECBehaviorVRHandPointAt.Instance pointAt)
-			reposition(pointAt.calcTestMatrix())
+			reposition(pointAt.getElement() cast BaseVRActor, pointAt.calcTestMatrix())
 		end
 		
 		/** Reposition element. */
-		public func void reposition(DMatrix matrix)
+		public func void reposition(BaseVRActor actor, DMatrix matrix)
+			var float scale = getUseScaling(actor)
+			
 			if pLockZRotation
 				matrix = DMatrix.newRT(matrix.getEulerAngles().compSelect(true, true, false), matrix.getPosition())
 			end
@@ -180,9 +190,23 @@ class ECBToggleVisibility extends DefaultECBehavior
 			end
 			
 			matrix = DMatrix.newRotation(DVector.new(pRotation))\
-				* DMatrix.newTranslation(0, 0, -pDistance) * matrix
+				* DMatrix.newTranslation(0, 0, -pDistance * scale) * matrix
 			
-			getElement().setGeometry(matrix.getPosition(), matrix.toQuaternion())
+			getElement().setGeometry(matrix.getPosition(), matrix.toQuaternion(), Vector.new(scale, scale, scale))
+		end
+		
+		/** Scaling to use. */
+		public func float getUseScaling(BaseVRActor actor)
+			if not pScaleWithActor
+				return 1
+			end
+			
+			var ECBCharacterConfiguration.Instance character = ECBCharacterConfiguration.getInstanceIn(actor)
+			if character == null
+				return 1
+			end
+			
+			return character.getCharacter().getCalibrateScale()
 		end
 	end
 	
@@ -193,6 +217,7 @@ class ECBToggleVisibility extends DefaultECBehavior
 	private var ECPVector pRotation
 	private var ECPFloat pDistance
 	private var ECPBoolean pLockZRotation
+	private var ECPBoolean pScaleWithActor
 	
 	
 	
@@ -214,6 +239,9 @@ class ECBToggleVisibility extends DefaultECBehavior
 		
 		pLockZRotation = ECPBoolean.new(prefix + "lockZRotation", false)
 		eclass.addProperty(pLockZRotation)
+		
+		pScaleWithActor = ECPBoolean.new(prefix + "scaleWithActor", false)
+		eclass.addProperty(pScaleWithActor)
 		
 		eclass.addBehavior(this)
 	end
@@ -243,6 +271,11 @@ class ECBToggleVisibility extends DefaultECBehavior
 	/** Lock Z rotation. */
 	public func ECPBoolean getLockZRotation()
 		return pLockZRotation
+	end
+	
+	/** Scale with actor. */
+	public func ECPBoolean getScaleWithActor()
+		return pScaleWithActor
 	end
 	
 	

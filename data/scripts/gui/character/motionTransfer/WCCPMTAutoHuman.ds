@@ -60,6 +60,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 	private var EditVector pEditReachScalingArmLeftBack
 	private var EditVector pEditScaleHeadRotation
 	private var EditVector pEditScaleSpineBending
+	private var EditVector pEditHeadBendAxisRotation
+	private var EditVector pEditSpineBendAxisRotation
 	
 	
 	
@@ -149,6 +151,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		pEditReachScalingArmLeftBack = null
 		pEditScaleHeadRotation = null
 		pEditScaleSpineBending = null
+		pEditHeadBendAxisRotation = null
+		pEditSpineBendAxisRotation = null
 		super.dispose()
 	end
 	
@@ -178,6 +182,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pEditReachScalingArmLeftBack.setVector(mt.getReachScalingArmLeftBack())
 				pEditScaleHeadRotation.setVector(mt.getScaleHeadRotation())
 				pEditScaleSpineBending.setVector(mt.getScaleSpineBending())
+				pEditHeadBendAxisRotation.setVector(mt.getHeadBendAxisRotation())
+				pEditSpineBendAxisRotation.setVector(mt.getSpineBendAxisRotation())
 				
 			else
 				pModelTextBoneHead.setText("")
@@ -197,6 +203,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pEditReachScalingArmLeftBack.setVector(Vector.new(1, 1, 1))
 				pEditScaleHeadRotation.setVector(Vector.new(1, 1, 1))
 				pEditScaleSpineBending.setVector(Vector.new(1, 1, 1))
+				pEditHeadBendAxisRotation.setVector(Vector.new(90, 0, 0))
+				pEditSpineBendAxisRotation.setVector(Vector.new(90, 0, 0))
 			end
 		end)
 		doLayoutIfBlocked()
@@ -227,6 +235,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		mt.setReachScalingArmLeftBack(pEditReachScalingArmLeftBack.getVector())
 		mt.setScaleHeadRotation(pEditScaleHeadRotation.getVector())
 		mt.setScaleSpineBending(pEditScaleSpineBending.getVector())
+		mt.setHeadBendAxisRotation(pEditHeadBendAxisRotation.getVector())
+		mt.setSpineBendAxisRotation(pEditSpineBendAxisRotation.getVector())
 	end
 	
 	/** Supports motion transfer type. */
@@ -264,12 +274,12 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		label = Label.new("Chest:", "Label.FormCaption")
 		pPanelForm.addWidget(label)
 		
-		comboBox = ComboBox.new(pModelListBoneChest, DefaultComboBoxEditor.new(pModelTextBoneChest))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Chest bone where neck and arms are attached to.")
-		pPanelForm.addWidget(comboBox)
+		var ComboBox comboBoxChest = ComboBox.new(pModelListBoneChest, DefaultComboBoxEditor.new(pModelTextBoneChest))
+		comboBoxChest.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxChest.setToolTip("Chest bone where neck and arms are attached to.")
+		pPanelForm.addWidget(comboBoxChest)
 		
-		CPEBone.new(preview, label, comboBox)
+		CPEBone.new(preview, label, comboBoxChest)
 		
 		// right hand bone
 		label = Label.new("Right Hand:", "Label.FormCaption")
@@ -297,12 +307,12 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		label = Label.new("Hip:", "Label.FormCaption")
 		pPanelForm.addWidget(label)
 		
-		comboBox = ComboBox.new(pModelListBoneHip, DefaultComboBoxEditor.new(pModelTextBoneHip))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Hip bone where spine and legs are attached to.")
-		pPanelForm.addWidget(comboBox)
+		var ComboBox comboBoxHip = ComboBox.new(pModelListBoneHip, DefaultComboBoxEditor.new(pModelTextBoneHip))
+		comboBoxHip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxHip.setToolTip("Hip bone where spine and legs are attached to.")
+		pPanelForm.addWidget(comboBoxHip)
 		
-		CPEBone.new(preview, label, comboBox)
+		CPEBone.new(preview, label, comboBoxHip)
 		
 		// right foot bone
 		label = Label.new("Right Foot:", "Label.FormCaption")
@@ -452,6 +462,32 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 			pEditScaleSpineBending = EditVector.new()
 			pEditScaleSpineBending.setToolTip(toolTip)
 			p.addWidget(pEditScaleSpineBending)
+			
+			// head bend axis rotation
+			toolTip = "Head bend axis rotation. Z-Axis (blue arrow) points towards the head. Y-Axis (green arrow) points out of the back."
+			
+			label = Label.new("Head bend axis:", "Label.FormCaption")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			pEditHeadBendAxisRotation = EditVector.new()
+			pEditHeadBendAxisRotation.setToolTip(toolTip)
+			p.addWidget(pEditHeadBendAxisRotation)
+			
+			CPECoordinateSystemAxis.new(preview, null, null, label, pEditHeadBendAxisRotation, comboBoxChest, null, true)
+			
+			// spine bend axis rotation
+			toolTip = "Spine bend axis rotation. Z-Axis (blue arrow) points towards the head. Y-Axis (green arrow) points out of the back."
+			
+			label = Label.new("Spine bend axis:", "Label.FormCaption")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			pEditSpineBendAxisRotation = EditVector.new()
+			pEditSpineBendAxisRotation.setToolTip(toolTip)
+			p.addWidget(pEditSpineBendAxisRotation)
+			
+			CPECoordinateSystemAxis.new(preview, null, null, label, pEditSpineBendAxisRotation, comboBoxHip, null, true)
 		end))
 	end
 end

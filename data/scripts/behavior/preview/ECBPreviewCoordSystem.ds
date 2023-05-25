@@ -51,25 +51,26 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
-		private var ECBPreviewCoordSystem pECBehavior
-		private var ECBPreviewDataQuery.Instance pDataQuery
-		private var ECBehaviorComponent.Instance pComponent
-		private var Model pModel
-		private var DebugDrawer pDebugDrawerMove
-		private var DebugDrawer pDebugDrawerRotate
-		private var ColliderVolume pColliderMoveX
-		private var ColliderVolume pColliderMoveY
-		private var ColliderVolume pColliderMoveZ
-		private var ColliderVolume pColliderRotateX
-		private var ColliderVolume pColliderRotateY
-		private var ColliderVolume pColliderRotateZ
-		private var String pBone
-		private var String pSlot
-		private var Vector pPosition
-		private var Vector pRotation
-		private var bool pVisibleMove
-		private var bool pVisibleRotate
-		private var Array pRingRotMat
+		protected var ECBPreviewCoordSystem pECBehavior
+		protected var ECBPreviewDataQuery.Instance pDataQuery
+		protected var ECBehaviorComponent.Instance pComponent
+		protected var Model pModel
+		protected var DebugDrawer pDebugDrawerMove
+		protected var DebugDrawer pDebugDrawerRotate
+		protected var ColliderVolume pColliderMoveX
+		protected var ColliderVolume pColliderMoveY
+		protected var ColliderVolume pColliderMoveZ
+		protected var ColliderVolume pColliderRotateX
+		protected var ColliderVolume pColliderRotateY
+		protected var ColliderVolume pColliderRotateZ
+		protected var String pBone
+		protected var String pSlot
+		protected var bool pNoParentRotation
+		protected var Vector pPosition
+		protected var Vector pRotation
+		protected var bool pVisibleMove
+		protected var bool pVisibleRotate
+		protected var Array pRingRotMat
 		
 		
 		
@@ -80,8 +81,6 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 			pSlot = ""
 			pPosition = Vector.new()
 			pRotation = Vector.new()
-			pVisibleMove = false
-			pVisibleRotate = false
 			
 			pRingRotMat = Array.new()
 			pRingRotMat.add(Matrix.newRotationX(35))
@@ -124,6 +123,10 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 		end
 		
 		
+		
+		public func ECBPreviewCoordSystem getECBehavior()
+			return pECBehavior
+		end
 		
 		/** Move debug drawer. */
 		public func DebugDrawer getDebugDrawerMove()
@@ -170,6 +173,16 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 			end
 			pBone = bone
 			updateCoordSystemGeometry()
+		end
+		
+		/** Use no parent rotation. */
+		public func bool getNoParentRotation()
+			return pNoParentRotation
+		end
+		
+		/** Set to not use parent rotation. */
+		public func void setNoParentRotation(bool noRotation)
+			pNoParentRotation = noRotation
 		end
 		
 		/** Tracker slot or empty string. */
@@ -224,10 +237,22 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 			var DMatrix matrix = getElement().getElementMatrix().normalize()
 			
 			if not pBone.empty()
-				matrix = pComponent.getComponent().getBoneMatrix(pBone).toDMatrix() * matrix
+				if pNoParentRotation
+					matrix = DMatrix.newTranslation(DVector.new(\
+						pComponent.getComponent().getBoneMatrix(pBone).getPosition())) * matrix
+					
+				else
+					matrix = pComponent.getComponent().getBoneMatrix(pBone).toDMatrix() * matrix
+				end
 				
 			elif pSlot != null and pDataQuery.getDataQuery() != null
-				matrix = pDataQuery.getDataQuery().getSlotMatrix(pSlot).toDMatrix() * matrix
+				if pNoParentRotation
+					matrix = DMatrix.newTranslation(DVector.new(\
+						pDataQuery.getDataQuery().getSlotMatrix(pSlot).getPosition())) * matrix
+					
+				else
+					matrix = pDataQuery.getDataQuery().getSlotMatrix(pSlot).toDMatrix() * matrix
+				end
 			end
 			
 			return matrix
@@ -289,7 +314,7 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 			
 			// move
 			pDebugDrawerMove.setXRay(true)
-			pDebugDrawerMove.setShapeCount(3)
+			pDebugDrawerMove.setShapeCount(4)
 			
 			pDebugDrawerMove.shapeSetEdgeColor(0, Color.transparent)
 			pDebugDrawerMove.shapeSetFillColor(0, Color.new(Color.red, transparency))
@@ -299,6 +324,9 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 			
 			pDebugDrawerMove.shapeSetEdgeColor(2, Color.transparent)
 			pDebugDrawerMove.shapeSetFillColor(2, Color.new(Color.blue, transparency))
+			
+			pDebugDrawerMove.shapeSetEdgeColor(3, Color.transparent)
+			pDebugDrawerMove.shapeSetFillColor(3, Color.new(Color.blue * 0.5, transparency))
 			
 			pColliderMoveX = createCoordSystemCollider()
 			pColliderMoveX.setOwner(Handle.moveX)
@@ -352,6 +380,7 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 			pDebugDrawerMove.shapeSetFacesFromModel(0, pModel, "move x", matrix)
 			pDebugDrawerMove.shapeSetFacesFromModel(1, pModel, "move y", matrix)
 			pDebugDrawerMove.shapeSetFacesFromModel(2, pModel, "move z", matrix)
+			pDebugDrawerMove.shapeSetFacesFromModel(3, pModel, "move z neg", matrix)
 			
 			shape.addBox(Vector.new(0.45 * scale, 0, 0), Vector.new(0.4, 0.1, 0.1) * scale)
 			pColliderMoveX.setShape(shape)
@@ -435,15 +464,15 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 	
 	
 	
-	private var ECBPreviewDataQuery pDataQuery
-	private var ECBehaviorComponent pComponent
-	private var ECPModel pModel
+	protected var ECBPreviewDataQuery pDataQuery
+	protected var ECBehaviorComponent pComponent
+	protected var ECPModel pModel
 	
 	
 	
 	/** Create behavior and add it to element class. */
 	public func new(BehaviorElementClass eclass, ECBPreviewDataQuery dataQuery,\
-	ECBehaviorComponent component) super(eclass)
+	ECBehaviorComponent component, String id) super(eclass, id)
 		if dataQuery == null
 			throw ENullPointer.new("dataQuery")
 		end
@@ -451,7 +480,7 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 			throw ENullPointer.new("component")
 		end
 		
-		var String prefix = "previewCoordSystem."
+		var String prefix = id.empty() if "previewCoordSystem." else "previewCoordSystem(" + id + ")."
 		
 		pDataQuery = dataQuery
 		pComponent = component
@@ -489,21 +518,21 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance( BehaviorElement element )
+	public func Instance instance(BehaviorElement element)
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Get instance for element or null. */
-	static public func Instance getInstanceIn(BehaviorElement element)
+	static public func Instance getInstanceIn(BehaviorElement element, String id)
 		return element.findInstance(block Instance each
-			return true
+			return each.getECBehavior().getID().equals(id)
 		end) cast Instance
 	end
 	
 	/** Get behavior in element class or null if absent. */
-	static public func ECBPreviewCoordSystem getBehaviorIn(BehaviorElementClass eclass)
+	static public func ECBPreviewCoordSystem getBehaviorIn(BehaviorElementClass eclass, String id)
 		return eclass.findBehavior(block ECBPreviewCoordSystem each
-			return true
+			return each.getID().equals(id)
 		end) cast ECBPreviewCoordSystem
 	end
 	

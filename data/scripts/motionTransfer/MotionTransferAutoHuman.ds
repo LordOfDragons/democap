@@ -75,6 +75,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	private var Vector pReachScalingArmLeftBack
 	private var Vector pScaleHeadRotation
 	private var Vector pScaleSpineBending
+	private var Vector pHeadBendAxisRotation
+	private var Vector pSpineBendAxisRotation
 	
 	private var MotionTransferChild pTransferWaist
 // 	private var MotionTransferIK pTransferSpineHead
@@ -107,6 +109,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pReachScalingArmLeftBack = Vector.new(1, 1, 1)
 		pScaleHeadRotation = Vector.new(1, 1, 1)
 		pScaleSpineBending = Vector.new(1, 1, 1)
+		pHeadBendAxisRotation = Vector.new(90, 0, 0)
+		pSpineBendAxisRotation = Vector.new(90, 0, 0)
 		
 		// create child motion transfers
 		var MotionTransferChild.Factory factoryChild = MotionTransferChild.Factory.new()
@@ -128,12 +132,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		pTransferNeck = MotionTransferBend.new(factoryBend.factoryID())
 		pTransferNeck.setName("AutoHuman: Neck")
-		pTransferNeck.setBendAxisRotation(Vector.new(90, 0, 0))
+		pTransferNeck.setBendAxisRotation(pHeadBendAxisRotation)
 		pTransferNeck.setTwistPropagation(0.5)
 		
 		pTransferSpine = MotionTransferBend.new(factoryBend.factoryID())
 		pTransferSpine.setName("AutoHuman: Spine")
-		pTransferSpine.setBendAxisRotation(Vector.new(90, 0, 0))
+		pTransferSpine.setBendAxisRotation(pSpineBendAxisRotation)
 		pTransferSpine.setTwistPropagation(0.5)
 		
 		pTransferArmRight = MotionTransferIK.new(factoryIK.factoryID())
@@ -188,6 +192,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pReachScalingArmLeftBack = transfer.pReachScalingArmLeftBack
 		pScaleHeadRotation = transfer.pScaleHeadRotation
 		pScaleSpineBending = transfer.pScaleSpineBending
+		pHeadBendAxisRotation = transfer.pHeadBendAxisRotation
+		pSpineBendAxisRotation = transfer.pSpineBendAxisRotation
 		
 		pTransferWaist = MotionTransferChild.new(transfer.pTransferWaist)
 // 		pTransferSpineHead = MotionTransferIK.new(transfer.pTransferSpineHead)
@@ -429,6 +435,32 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pScaleSpineBending = scaling
 	end
 	
+	/** Head bend axis rotation. */
+	public func Vector getHeadBendAxisRotation()
+		return pHeadBendAxisRotation
+	end
+	
+	/** Set head bend axis rotation. */
+	public func void setHeadBendAxisRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pHeadBendAxisRotation = rotation
+	end
+	
+	/** Spine bend axis rotation. */
+	public func Vector getSpineBendAxisRotation()
+		return pSpineBendAxisRotation
+	end
+	
+	/** Set spine bend axis rotation. */
+	public func void setSpineBendAxisRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pSpineBendAxisRotation = rotation
+	end
+	
 	
 	
 	/** Child motion transfer. */
@@ -613,7 +645,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferSpine.getBaseTracker().setOffsetRotation(Vector.new(90, 0, 0))
 		
 		pTransferSpine.setBendShape(pBendShapeSpine)
-		pTransferSpine.setBendAxisRotation(Vector.new(90, 0, 0))
+		pTransferSpine.setBendAxisRotation(pSpineBendAxisRotation)
 		pTransferSpine.setFitCurveToTarget(true)
 		pTransferSpine.setUseRotation(false)
 		pTransferSpine.setTwistPropagation(isSlotChestAttached if 1.0 else 0.5)
@@ -681,7 +713,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferNeck.getBaseTracker().setOffsetPosition(Vector.new())
 		
 		pTransferNeck.setBendShape(pBendShapeNeck)
-		pTransferNeck.setBendAxisRotation(Vector.new(90, 0, 0))
+		pTransferNeck.setBendAxisRotation(pHeadBendAxisRotation)
 		pTransferNeck.setFitCurveToTarget(false)
 		pTransferNeck.setUseRotation(true)
 		pTransferNeck.setTwistPropagation(1)
@@ -1057,6 +1089,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			elif tagName.equals("scaleSpineBending")
 				pScaleSpineBending = loader.readVector(element)
 				
+			elif tagName.equals("headBendAxisRotation")
+				pHeadBendAxisRotation = loader.readVector(element)
+				
+			elif tagName.equals("spineBendAxisRotation")
+				pSpineBendAxisRotation = loader.readVector(element)
+				
 			elif tagName.equals("transfers")
 				loadTransfers(loader, element)
 			end
@@ -1128,6 +1166,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		loader.writeVector(tag, "reachScalingArmLeftBack", pReachScalingArmLeftBack)
 		loader.writeVector(tag, "scaleHeadRotation", pScaleHeadRotation)
 		loader.writeVector(tag, "scaleSpineBending", pScaleSpineBending)
+		loader.writeVector(tag, "headBendAxisRotation", pHeadBendAxisRotation)
+		loader.writeVector(tag, "spineBendAxisRotation", pSpineBendAxisRotation)
 		
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
 		pTransferWaist.save(loader, tagTransfers.addTag("waist"))
