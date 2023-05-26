@@ -606,7 +606,7 @@ class ECBAGrab extends DefaultECBehavior
 				* pComponent.boneGetInverseMatrix(pGrabIKBoneIndex)
 			
 			pControllerGrabIKLocalPosition.setVector(matrix.getPosition())
-			pControllerGrabIKLocalRotation.setRotation(-matrix.getEulerAngles())
+			pControllerGrabIKLocalRotation.setRotation(-matrix.normalize().getEulerAngles())
 			
 			pControllerGrabIKApplyRotation.setValue(pPhysicsGrabConstraint.lockGrabRotation if 1 else 0)
 			
@@ -722,12 +722,12 @@ class ECBAGrab extends DefaultECBehavior
 						* pComponent.boneGetMatrix(bone).toDMatrix() * pComponent.getMatrix()
 					var DVector position = pPhysicsGrabConstraint.limitAnchor(targetMatrix.getPosition())
 					
-					targetMatrix = DMatrix.newWorld(position, targetMatrix.toQuaternion())
+					targetMatrix = DMatrix.newWorld(position, targetMatrix.normalize().toQuaternion())
 					
 					var Matrix goalMatrix = (targetMatrix * pComponent.getInverseMatrix()).toMatrix()
 					
 					pControllerGrabIKGoalPosition.setVector(goalMatrix.getPosition())
-					pControllerGrabIKGoalRotation.setRotation(goalMatrix.getEulerAngles())
+					pControllerGrabIKGoalRotation.setRotation(goalMatrix.normalize().getEulerAngles())
 				end
 				*/
 				var DMatrix anchorMatrix
@@ -745,7 +745,7 @@ class ECBAGrab extends DefaultECBehavior
 				var Matrix goalMatrix = (anchorMatrix * pComponent.getInverseMatrix()).toMatrix()
 				
 				pControllerGrabIKGoalPosition.setVector(goalMatrix.getPosition())
-				pControllerGrabIKGoalRotation.setRotation(goalMatrix.getEulerAngles())
+				pControllerGrabIKGoalRotation.setRotation(goalMatrix.normalize().getEulerAngles())
 			end
 			
 			pAnimatorGrabIK.setBlendFactor(blend)

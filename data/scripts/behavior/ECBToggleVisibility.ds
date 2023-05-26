@@ -173,17 +173,19 @@ class ECBToggleVisibility extends DefaultECBehavior
 			var float scale = getUseScaling(actor)
 			
 			if pLockZRotation
-				matrix = DMatrix.newRT(matrix.getEulerAngles().compSelect(true, true, false), matrix.getPosition())
+				matrix = DMatrix.newRT(\
+					matrix.normalize().getEulerAngles().compSelect(true, true, false),\
+					matrix.getPosition())
 			end
 			
 			matrix = DMatrix.newRotationY(180) * matrix
 			
 			if pLockUpAxis != null
 				var DVector lockUp = DVector.new(pLockUpAxis)
-				var DVector view = matrix.getViewVector()
+				var DVector view = matrix.getViewVector().normalize()
 				
 				if DEMath.fabs(view * lockUp) > 0.707 // 45 degrees
-					view = matrix.getRightVector() % lockUp
+					view = matrix.getRightVector().normalize() % lockUp
 				end
 				
 				matrix = DMatrix.newWorld(matrix.getPosition(), view, lockUp)
@@ -192,7 +194,8 @@ class ECBToggleVisibility extends DefaultECBehavior
 			matrix = DMatrix.newRotation(DVector.new(pRotation))\
 				* DMatrix.newTranslation(0, 0, -pDistance * scale) * matrix
 			
-			getElement().setGeometry(matrix.getPosition(), matrix.toQuaternion(), Vector.new(scale, scale, scale))
+			getElement().setGeometry(matrix.getPosition(),\
+				matrix.normalize().toQuaternion(), Vector.new(scale, scale, scale))
 		end
 		
 		/** Scaling to use. */

@@ -1,0 +1,172 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer copy panel.
+ */
+class WCCPMTRotation extends WCCPanelMotionTransfer
+	private var DefaultListModel pModelBones
+	private var DefaultListModel pModelCounterBones
+	private var EditVector pEditAxisRotation
+	private var DefaultTextModel pModelAngle
+	
+	
+	
+	/** Create window. */
+	public func new(WindowCharacterConfiguration window) super(window)
+		pModelTypeName.setText("Rotate Bones")
+		
+		pModelBones = DefaultListModel.new()
+		pModelBones.setAutoSelect(false)
+		pModelCounterBones = DefaultListModel.new()
+		pModelCounterBones.setAutoSelect(false)
+		pModelAngle = DefaultTextModel.new()
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+	end
+	
+	/** Dispose of window. */
+	public func void dispose()
+		pModelBones = null
+		pModelCounterBones = null
+		pModelAngle = null
+		pEditAxisRotation = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	public func void loadValues()
+		runWhileBlockingLayout(block
+			super.loadValues()
+			
+			if pMotionTransfer != null
+				var MotionTransferRotation mt = pMotionTransfer cast MotionTransferRotation
+				pModelBones.setContent(mt.getBones())
+				pModelCounterBones.setContent(mt.getCounterBones())
+				pModelAngle.setText(mt.getAngle().toString())
+				pEditAxisRotation.setVector(mt.getAxisRotation())
+				
+			else
+				pModelBones.removeAll()
+				pModelCounterBones.removeAll()
+				pModelAngle.setText("")
+				pEditAxisRotation.setVector(Vector.new())
+			end
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	public func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		super.saveValues()
+		
+		var MotionTransferRotation mt = pMotionTransfer cast MotionTransferRotation
+		mt.getBones().removeAll()
+		mt.getBones().addAll(pModelBones.getContent())
+		mt.getCounterBones().removeAll()
+		mt.getCounterBones().addAll(pModelCounterBones.getContent())
+		mt.setAngle(pModelAngle.getText().toFloat())
+		mt.setAxisRotation(pEditAxisRotation.getVector())
+	end
+	
+	/** Supports motion transfer type. */
+	public func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferRotation
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var TextField textField
+		var ComboBox comboBox
+		var Button button
+		var ListBox listBox
+		var Label label
+		var CheckBox checkBox
+		
+		createBaseContent("motiontransfercopy")
+		
+		// bones
+		label = Label.new("Bones:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		listBox = ListBox.new(pModelBones)
+		listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
+		listBox.setToolTip("Bones to apply rotation to.")
+		listBox.setNumberDisplayLines(3)
+		pPanelForm.addWidget(ScrollPanel.new(listBox))
+		
+		CPEBoneList.new(preview, label, listBox)
+		
+		// target bones
+		label = Label.new("Counter Bones:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		listBox = ListBox.new(pModelCounterBones)
+		listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
+		listBox.setToolTip("Bones to apply opposite rotation (negative angle).")
+		listBox.setNumberDisplayLines(5)
+		pPanelForm.addWidget(ScrollPanel.new(listBox))
+		
+		CPEBoneList.new(preview, label, listBox)
+		
+		// axis rotation
+		var String toolTip = "Rotation coordinate system. Rotates clock wise along Z (around blue from red towards green)."
+		label = Label.new("Axis:", "Label.FormCaption")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditAxisRotation = EditVector.new()
+		pEditAxisRotation.setToolTip(toolTip)
+		pPanelForm.addWidget(pEditAxisRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditAxisRotation, null, null, true)
+		
+		// angle
+		pPanelForm.addWidget(Label.new("Angle:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelAngle, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("Angle to rotate bones. Counter bones are rotate by the negative angle")
+		pPanelForm.addWidget(textField)
+	end
+end
