@@ -233,6 +233,8 @@ class AACalibrate extends AABase
 				catch Exception e
 					log(e)
 				end
+				
+				toggleLargeMirror()
 			end
 		end
 	end
@@ -259,5 +261,25 @@ class AACalibrate extends AABase
 	/** Show actor model. */
 	protected func void showActorModel()
 		ECBehaviorComponent.getInstanceIn(actor).getComponent().setVisible(true)
+	end
+	
+	/** Toggle large mirror. */
+	public func void toggleLargeMirror()
+		var BehaviorElement mirror = GameApp.getGameApp().getWorldSpawnCharacter().getMirrorLarge()
+		if mirror == null
+			return
+		end
+		
+		var ECBToggleVisibility.Instance toggleVisibility = ECBToggleVisibility.getInstanceIn(mirror)
+		if toggleVisibility == null
+			return
+		end
+		
+		if toggleVisibility.getVisible()
+			return
+		end
+		
+		toggleVisibility.repositionHmd(actor cast BaseVRActor, Vector.new(0, 0, 0.5))
+		toggleVisibility.setVisible(true)
 	end
 end

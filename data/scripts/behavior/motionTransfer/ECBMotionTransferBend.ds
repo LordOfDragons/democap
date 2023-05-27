@@ -73,14 +73,15 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		private var Matrix pTransformTarget
 		private var Matrix pTransformBase
 		private var Matrix pTransformTwist
-		private var Matrix pZeroRotationX
-		private var Matrix pZeroRotationY
+// 		private var Matrix pZeroRotationX
+// 		private var Matrix pZeroRotationY
 		private var Matrix pTipAxisMatrix
 		private var Matrix pBendAxisMatrix
+		private var Matrix pZeroMatrix
 		private var float pScaleRotationX
 		private var float pScaleRotationY
 		private var Component pComponent
-		private var int pTwistBone
+		private var int pTargetBone
 		private var bool pUseTwistSlot
 		private var bool pUseRotation
 		private var float pTwistScale
@@ -101,9 +102,10 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			
 			pBendAxisMatrix = transfer.getCalibrateBendAxisMatrix()
 			pTipAxisMatrix = Matrix.newRotation(transfer.getCalibrateZeroRotation())
+			pZeroMatrix = pBendAxisMatrix * pTipAxisMatrix
 			
-			pZeroRotationX = pBendAxisMatrix * Matrix.newRotationX(-transfer.getCalibrateZeroRotation().getX())
-			pZeroRotationY = pBendAxisMatrix * Matrix.newRotationY(-transfer.getCalibrateZeroRotation().getY())
+// 			pZeroRotationX = pBendAxisMatrix * Matrix.newRotationX(-transfer.getCalibrateZeroRotation().getX())
+// 			pZeroRotationY = pBendAxisMatrix * Matrix.newRotationY(-transfer.getCalibrateZeroRotation().getY())
 			
 			pScaleRotationX = transfer.getScaleRotation().getX()
 			pScaleRotationY = transfer.getScaleRotation().getY()
@@ -154,9 +156,9 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			
 			pUseTwistSlot = pECBehavior.getTransfer().getTargetTracker().getRealSlot() != null
 			
-			pTwistBone = -1
+			pTargetBone = -1
 			if not pECBehavior.getTransfer().getTargetBone().empty()
-				pTwistBone = pComponent.indexOfBoneNamed(pECBehavior.getTransfer().getTargetBone())
+				pTargetBone = pComponent.indexOfBoneNamed(pECBehavior.getTransfer().getTargetBone())
 			end
 			
 			pMoCapAnimator.addListener(UpdateControllers.new(this))
@@ -206,7 +208,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		
 		/** Internal use. */
 		public func int requiredPhaseCount()
-			if pSlotTarget != null and pControllerTwist != null and (pTwistBone != -1 or pUseTwistSlot)
+			if pSlotTarget != null and pControllerTwist != null and (pTargetBone != -1 or pUseTwistSlot)
 				return 2
 				
 			else
@@ -224,8 +226,8 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			var Matrix targetMatrix = pTransformTarget * pSlotTarget.getMatrixCharacter()
 			
 			var Matrix bendMatrix = targetMatrix * baseMatrix.getInverse()
-			var Vector rotation
-			var float bend
+			var Vector rotation, position
+			var float bend, rotX, rotY
 			
 			if pUseRotation
 				bendMatrix = (pTipAxisMatrix * bendMatrix * pBendAxisMatrix).normalize()
@@ -233,6 +235,21 @@ class ECBMotionTransferBend extends DefaultECBehavior
 // 				var Quaternion orientation = bendMatrix.toQuaternion()
 // 				rotation = (orientation.slerp(Quaternion.new(), factor)).getEulerAngles() / factor
 				rotation = bendMatrix.getEulerAngles()
+				
+			else
+				bendMatrix = bendMatrix * pZeroMatrix
+				position = bendMatrix.getPosition()
+				
+				var float radius = Vector2.new(position.getX(), position.getZ()).getLength()
+				rotY = DEMath.atan2(-position.getX(), position.getZ())
+				
+				if DEMath.fabs(rotY) <= 90
+					rotX = DEMath.atan2(position.getY(), radius)
+					
+				else
+					rotX = DEMath.atan2(position.getY(), -radius)
+					rotY = DEMath.normalize(rotY + 180, -90, 90)
+				end
 			end
 			
 			if pControllerBendX != null
@@ -240,8 +257,9 @@ class ECBMotionTransferBend extends DefaultECBehavior
 					bend = pBendCurveX.evaluateAt(rotation.getX())
 					
 				else
-					var Vector position = (bendMatrix * pZeroRotationX).getPosition()
-					bend = pBendCurveX.evaluateAt(DEMath.atan2(position.getY(), position.getZ()))
+					bend = pBendCurveX.evaluateAt(rotX)
+// 					var Vector position = (bendMatrix * pZeroRotationX).getPosition()
+// 					bend = pBendCurveX.evaluateAt(DEMath.atan2(position.getY(), position.getZ()))
 				end
 				
 				pControllerBendX.setValue(bend * pScaleRotationX)
@@ -252,8 +270,9 @@ class ECBMotionTransferBend extends DefaultECBehavior
 					bend = pBendCurveX.evaluateAt(rotation.getY())
 					
 				else
-					var Vector position = (bendMatrix * pZeroRotationY).getPosition()
-					bend = pBendCurveY.evaluateAt(-DEMath.atan2(position.getX(), position.getZ()))
+					bend = pBendCurveY.evaluateAt(rotY)
+// 					var Vector position = (bendMatrix * pZeroRotationY).getPosition()
+// 					bend = pBendCurveY.evaluateAt(-DEMath.atan2(position.getX(), position.getZ()))
 				end
 				
 				pControllerBendY.setValue(bend * pScaleRotationY)
@@ -266,22 +285,21 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		
 		public func void updateControllersPhase2()
 			if pSlotTarget != null and pSlotBase != null and pControllerTwist != null\
-			and (pTwistBone != -1 or pUseTwistSlot)
+			and (pTargetBone != -1 or pUseTwistSlot)
 				var Matrix matrix = Matrix.newFromQuaternion(pTwistQuat)
 				
 				if pUseTwistSlot
 					var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixCharacter()
 					var Matrix targetMatrix = pTransformTarget * pSlotTarget.getMatrixCharacter()
 					
-					matrix = matrix * (targetMatrix * baseMatrix.getInverse()\
-						* pTransformTwist).normalize().getRotation()
+					matrix = matrix * (targetMatrix * baseMatrix.getInverse() * pTransformTwist).getRotation()
 					
-				elif pTwistBone != -1
-					matrix = matrix * pComponent.boneGetMatrix(pTwistBone).getRotation()
+				elif pTargetBone != -1
+					matrix = matrix * pComponent.boneGetMatrix(pTargetBone).getRotation()
 				end
 				
 				//orientation = orientation * pTwistQuatInv
-				matrix = matrix * Matrix.newFromQuaternion(pTwistQuatInv)
+				matrix = matrix.normalize() * Matrix.newFromQuaternion(pTwistQuatInv)
 				var Quaternion orientation = matrix.toQuaternion()
 				
 				// this calculation is instable beyond ~88 degrees elevation

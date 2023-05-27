@@ -572,15 +572,36 @@ class MotionTransferBend extends DefaultMotionTransfer
 					return
 				end
 				
-// 				pCalibrateZeroRotation = (bendAxisMatrix\
-// 					* component.boneGetInverseMatrix(indexBone).getRotation()).getEulerAngles()
-				pCalibrateZeroRotation = (bendAxisMatrix\
-					* targetMatrix.normalize().getRotation().getInverse()).getEulerAngles()
+				pCalibrateZeroRotation = (bendAxisMatrix * targetMatrix.getRotation().getInverse()).normalize().getEulerAngles()
 				
 			else
+				// rotation.x = atan2(y, abs((x, z)))
+				// rotation.y = atan2(-x, z)
+				// rotation.z = 0
+				// calibration = -rotation
+				//             = (-atan2(y, abs((x, z))), -atan2(-x, z), 0)
+				//             = (atan2(-y, abs((x, z))), atan2(x, z), 0)
+				
+				/*
 				pCalibrateZeroRotation = Vector.new(\
-					DEMath.atan2(position.getY(), position.getZ()),\
-					-DEMath.atan2(position.getX(), position.getZ()), 0)
+					DEMath.atan2(-position.getY(), Vector2.new(position.getX(), position.getZ()).getLength()),\
+					DEMath.atan2(position.getX(), position.getZ()), 0)
+				*/
+				
+				var float radius = Vector2.new(position.getX(), position.getZ()).getLength()
+				var float rotY = DEMath.atan2(-position.getX(), position.getZ())
+				var float rotX
+				
+				if DEMath.fabs(rotY) <= 90
+					rotX = DEMath.atan2(position.getY(), radius)
+					
+				else
+					rotX = DEMath.atan2(position.getY(), -radius)
+					rotY = DEMath.normalize(rotY + 180, -90, 90)
+				end
+				
+				pCalibrateZeroRotation = Vector.new(-rotX, -rotY, 0)
+				
 			end
 			
 			// bend axes
