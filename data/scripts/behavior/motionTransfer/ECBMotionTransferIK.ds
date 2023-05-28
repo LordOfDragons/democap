@@ -80,7 +80,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var Matrix pTransformTip
 		private var Quaternion pTransformTipQuat
 		private var Matrix pTransformGuide
-		private var Vector pTipOffset
+		private var Matrix pMatrixRelocateTip
 		private var int pBaseBone
 		private var int pGuideBone
 		private var int pTipBone
@@ -92,7 +92,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var Matrix pReachMatrix
 		private var Quaternion pTwistQuat, pTwistQuatInv
 		private var bool pEnableScaleReach
-		private var bool pEnableTipOffset
+		private var bool pEnableRelocateTip
 		private var bool pEnableTwist
 		private var Matrix pMatrixAdjustSlotComponent
 		
@@ -106,7 +106,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
 			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
 			
-			pTipOffset = transfer.getCalibrateTipOffset()
+			pMatrixRelocateTip = transfer.getCalibrateMatrixRelocateTip()
+			pEnableRelocateTip = transfer.getRelocateTip()
 			pScaleReach = transfer.getCalibrateReachScaleDirection() * transfer.getCalibrateReachScale()
 			pScaleReachBack = transfer.getCalibrateReachScaleDirectionBack() * transfer.getCalibrateReachScale()
 			pReachMatrix = Matrix.newRotation(transfer.getCalibrateReachRotation())
@@ -117,7 +118,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			if ecbehavior.getSlotTip() != null
 				pSlotTip = ecbehavior.getSlotTip().instance(element)
 				pTransformTip = transfer.getTipTracker().getTransformMatrix()
-				pTransformTipQuat = pTransformTip.normalize().toQuaternion()
+				pTransformTipQuat = pTransformTip.toQuaternion()
 			end
 			
 			if ecbehavior.getSlotGuide() != null
@@ -140,6 +141,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
 			var ECBehaviorActorAnimated.Instance actorAnimated = pMoCapAnimator.getActorAnimated()
+			var MotionTransferIK transfer = pECBehavior.getTransfer()
 			
 			pComponent = actorAnimated.getComponent().getComponent()
 			
@@ -152,20 +154,18 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pControllerBlend = actorAnimated.getControllerNamed(pECBehavior.getControllerNameBlend())
 			
 			pTwistBone = -1
-			if not pECBehavior.getTransfer().getTipBone().empty()
-				pTwistBone = pComponent.indexOfBoneNamed(pECBehavior.getTransfer().getTipBone())
+			if not transfer.getTipBone().empty()
+				pTwistBone = pComponent.indexOfBoneNamed(transfer.getTipBone())
 			end
 			
 			pEnableTwist = pSlotTip != null and pControllerTwist != null and pTwistBone != -1
 			
-			pBaseBone = pComponent.indexOfBoneNamed(pECBehavior.getTransfer().getBaseBone())
-			pGuideBone = pComponent.indexOfBoneNamed(pECBehavior.getTransfer().getGuideBone())
-			pTipBone = pComponent.indexOfBoneNamed(pECBehavior.getTransfer().getTipBone())
+			pBaseBone = pComponent.indexOfBoneNamed(transfer.getBaseBone())
+			pGuideBone = pComponent.indexOfBoneNamed(transfer.getGuideBone())
+			pTipBone = pComponent.indexOfBoneNamed(transfer.getTipBone())
 			
 			pEnableScaleReach = pSlotTip != null and pBaseBone != -1 \
 				and pControllerTipPosition != null and pControllerBlend != null
-			
-			pEnableTipOffset = pEnableScaleReach and not pTipOffset.isZero()
 			
 			pMoCapAnimator.addListener(UpdateControllers.new(this))
 		end
@@ -261,7 +261,12 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				return
 			end
 			
-			var Matrix matrix = pTransformTip * pSlotTip.getMatrixCharacter()
+			// normalize is important since transform tip is unscaled and we need matrix unscaled
+			var Matrix matrix = pTransformTip * pSlotTip.getMatrixCharacter().normalize()
+			
+			if pEnableRelocateTip
+				matrix = matrix * pMatrixRelocateTip * pComponent.boneGetMatrix(pBaseBone)
+			end
 			
 			// position, retracted length
 			var Vector targetPosition = matrix.getPosition()
@@ -271,10 +276,6 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				var Matrix reachMatrix = pReachMatrix * pComponent.boneGetMatrix(pBaseBone)
 				
 				var Vector targetInReach = reachMatrix.getInverse() * targetPosition
-				
-				if pEnableTipOffset
-					targetInReach = targetInReach + pTipOffset
-				end
 				
 				targetInReach = targetInReach.compMultiply(pScaleReach).combine(\
 					targetInReach.compMultiply(pScaleReachBack),\
@@ -288,7 +289,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			end
 			
 			// orientation
-			var Vector targetRotation = matrix.normalize().getEulerAngles()
+			var Vector targetRotation = matrix.getEulerAngles()
 			
 			// update controllers
 			if pControllerTipPosition != null
@@ -320,7 +321,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				//      is neglectable for reach scalings close to 1 but become noticable
 				//      for large reach scaling differences
 				pControllerGuideRotation.setRotation((pTransformGuide\
-					* pSlotGuide.getMatrixCharacter()).normalize().getEulerAngles())
+					* pSlotGuide.getMatrixCharacter().normalize()).getEulerAngles())
 			end
 		end
 		
@@ -371,7 +372,9 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			and pSlotTip.getComponent() != null\
 			and (pSlotTip.getInputDevice().getType() == InputDeviceType.vrRightHand\
 			or pSlotTip.getInputDevice().getType() == InputDeviceType.vrLeftHand)
-				pMatrixAdjustSlotComponent = pECBehavior.getTransfer().getTipTracker().getReverseTransformMatrix()
+				pMatrixAdjustSlotComponent = \
+					ECBCharacterConfiguration.getInstanceIn(getElement()).getCharacter().getMatrixScale()\
+					* pECBehavior.getTransfer().getTipTracker().getReverseTransformMatrix()
 			end
 		end
 	end

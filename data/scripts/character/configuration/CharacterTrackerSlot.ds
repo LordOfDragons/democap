@@ -310,7 +310,13 @@ class CharacterTrackerSlot
 		pTargetMatrix = Matrix.newRT(pTargetRotation, pTargetPosition)
 	end
 	
-	/** Character relative matrix. */
+	/**
+	 * Character relative matrix.
+	 * 
+	 * \warning Matrix is not scaled. Requires CharacterConfiguration.getMatrixScale() to be used
+	 *          correctly with scaled matrices as returned by getCalibrate*Matrix calls like this:
+	 *          <code>config.getMatrixScale() * slot.getTargetMatrix()</code>
+	 */
 	public func Matrix getTargetMatrix()
 		return pTargetMatrix
 	end
@@ -322,9 +328,12 @@ class CharacterTrackerSlot
 		end
 		
 		var float scale = pConfiguration.getProfile().getShoulderLevel() / actorProfile.getShoulderLevel()
-		pTargetMatrix = pMatrix * Matrix.newScaling(scale, scale, scale)
-		pTargetPosition = pTargetMatrix.getPosition()
-		pTargetRotation = pTargetMatrix.normalize().getEulerAngles()
+		var Matrix scaled = pMatrix * Matrix.newScaling(scale, scale, scale)
+		pTargetPosition = scaled.getPosition()
+		pTargetRotation = scaled.normalize().getEulerAngles()
+		
+		// target matrix is required to have no scaling
+		pTargetMatrix = Matrix.newRT(pTargetRotation, pTargetPosition)
 	end
 	
 	/** Input device type to auto-assign or null. */
@@ -633,7 +642,7 @@ class CharacterTrackerSlot
 		pCalibrateReferenceMatrixInverse = matrix.getInverse()
 	end
 	
-	/** Calibrate componentz matrix. */
+	/** Calibrate component matrix. */
 	public func Matrix getCalibrateComponentMatrix()
 		return pCalibrateComponentMatrix
 	end

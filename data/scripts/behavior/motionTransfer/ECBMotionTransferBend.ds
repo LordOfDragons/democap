@@ -222,15 +222,15 @@ class ECBMotionTransferBend extends DefaultECBehavior
 				return
 			end
 			
-			var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixCharacter()
-			var Matrix targetMatrix = pTransformTarget * pSlotTarget.getMatrixCharacter()
+			var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixCharacter().normalize()
+			var Matrix targetMatrix = pTransformTarget * pSlotTarget.getMatrixCharacter().normalize()
 			
 			var Matrix bendMatrix = targetMatrix * baseMatrix.getInverse()
 			var Vector rotation, position
 			var float bend, rotX, rotY
 			
 			if pUseRotation
-				bendMatrix = (pTipAxisMatrix * bendMatrix * pBendAxisMatrix).normalize()
+				bendMatrix = pTipAxisMatrix * bendMatrix * pBendAxisMatrix
 // 				var float factor = 0.5
 // 				var Quaternion orientation = bendMatrix.toQuaternion()
 // 				rotation = (orientation.slerp(Quaternion.new(), factor)).getEulerAngles() / factor
@@ -289,18 +289,17 @@ class ECBMotionTransferBend extends DefaultECBehavior
 				var Matrix matrix = Matrix.newFromQuaternion(pTwistQuat)
 				
 				if pUseTwistSlot
-					var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixCharacter()
-					var Matrix targetMatrix = pTransformTarget * pSlotTarget.getMatrixCharacter()
+					var Matrix baseMatrix = pTransformBase * pSlotBase.getMatrixCharacter().normalize()
+					var Matrix targetMatrix = pTransformTarget * pSlotTarget.getMatrixCharacter().normalize()
 					
 					matrix = matrix * (targetMatrix * baseMatrix.getInverse() * pTransformTwist).getRotation()
 					
 				elif pTargetBone != -1
-					matrix = matrix * pComponent.boneGetMatrix(pTargetBone).getRotation()
+					matrix = matrix * pComponent.boneGetMatrix(pTargetBone).normalize().getRotation()
 				end
 				
 				//orientation = orientation * pTwistQuatInv
-				matrix = matrix.normalize() * Matrix.newFromQuaternion(pTwistQuatInv)
-				var Quaternion orientation = matrix.toQuaternion()
+				var Quaternion orientation = matrix.toQuaternion() * pTwistQuatInv
 				
 				// this calculation is instable beyond ~88 degrees elevation
 				//pControllerTwist.setValue(orientation.getEulerAngles().getZ())

@@ -54,6 +54,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 	private var DefaultTextModel pModelTextMoveBaseIK
 	private var SharedListModel pModelListMoveCrouch
 	private var DefaultTextModel pModelTextMoveCrouch
+	private var DefaultToggleModel pModelRelocateArms
 	private var EditVector pEditReachScalingArmRight
 	private var EditVector pEditReachScalingArmRightBack
 	private var EditVector pEditReachScalingArmLeft
@@ -108,6 +109,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		pModelListMoveCrouch.setAutoSelect(false)
 		pModelTextMoveCrouch = DefaultTextModel.new()
 		
+		pModelRelocateArms = DefaultToggleModel.new()
+		
 		runWhileBlockingLayout(block
 			createContent(optionPrefix)
 		end)
@@ -145,6 +148,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		pModelListMoveCrouch = null
 		pModelTextMoveCrouch = null
 		
+		pModelRelocateArms = null
+		
 		pEditReachScalingArmRight = null
 		pEditReachScalingArmRightBack = null
 		pEditReachScalingArmLeft = null
@@ -176,6 +181,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelBendShapeNeck.setValue((mt.getBendShapeNeck() * 20 + 0.5) cast int)
 				pModelTextMoveBaseIK.setText(mt.getMoveBaseIK())
 				pModelTextMoveCrouch.setText(mt.getMoveCrouch())
+				pModelRelocateArms.setToggled(mt.getRelocateArms())
 				pEditReachScalingArmRight.setVector(mt.getReachScalingArmRight())
 				pEditReachScalingArmRightBack.setVector(mt.getReachScalingArmRightBack())
 				pEditReachScalingArmLeft.setVector(mt.getReachScalingArmLeft())
@@ -197,6 +203,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelBendShapeNeck.setValue(10)
 				pModelTextMoveBaseIK.setText("")
 				pModelTextMoveCrouch.setText("")
+				pModelRelocateArms.setToggled(false)
 				pEditReachScalingArmRight.setVector(Vector.new(1, 1, 1))
 				pEditReachScalingArmRightBack.setVector(Vector.new(1, 1, 1))
 				pEditReachScalingArmLeft.setVector(Vector.new(1, 1, 1))
@@ -229,6 +236,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		mt.setBendShapeNeck(0.05 * pModelBendShapeNeck.getValue())
 		mt.setMoveBaseIK(pModelTextMoveBaseIK.getText())
 		mt.setMoveCrouch(pModelTextMoveCrouch.getText())
+		mt.setRelocateArms(pModelRelocateArms.getToggled())
 		mt.setReachScalingArmRight(pEditReachScalingArmRight.getVector())
 		mt.setReachScalingArmRightBack(pEditReachScalingArmRightBack.getVector())
 		mt.setReachScalingArmLeft(pEditReachScalingArmLeft.getVector())
@@ -256,6 +264,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		var Label label
 		var String toolTip
 		var Slider slider
+		var CheckBox checkBox
 		
 		createBaseContent("motiontransferautohuman")
 		
@@ -492,6 +501,13 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 			p.addWidget(pEditSpineBendAxisRotation)
 			
 			CPECoordinateSystemAxis.new(preview, null, null, label, pEditSpineBendAxisRotation, comboBoxHip, null, true)
+			
+			// relocate tip
+			p.addWidget(Label.new(""))
+			
+			checkBox = CheckBox.new(pModelRelocateArms, "Relocate Arms")
+			checkBox.setToolTip("Relocate arms from reference position to target position. Use if characters arms are located far away.")
+			p.addWidget(checkBox)
 		end))
 	end
 end

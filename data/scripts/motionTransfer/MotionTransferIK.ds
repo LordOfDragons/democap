@@ -93,6 +93,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var int pTwistBoneCount
 	private var Vector pTwistAxisRotation
 	private var float pGuideTwistStrength
+	private var bool pRelocateTip
 	
 	private var ADController pADControllerTipPosition
 	private var ADController pADControllerTipOrientation
@@ -113,7 +114,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var Vector pCalibrateReachScaleDirectionBack
 	private var Vector pCalibrateReachRotation
 	private var float pCalibrateReachRange
-	private var Vector pCalibrateTipOffset
+	private var Matrix pCalibrateMatrixRelocateTip
 	private var float pCalibrateReachRetracted
 	private var Array pCalibrateTwistAxes
 	private var Vector pCalibrateTwistBoneAxisRotation
@@ -142,6 +143,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTwistBoneCount = 0
 		pTwistAxisRotation = Vector.new()
 		pGuideTwistStrength = 0
+		pRelocateTip = false
 		pCalibrateBones = Array.new()
 		pCalibrateReach = 0.6
 		pCalibrateReachScale = 1
@@ -149,7 +151,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateReachScaleDirectionBack = Vector.new(1, 1, 1)
 		pCalibrateReachRange = 0
 		pCalibrateReachRetracted = 1
-		pCalibrateTipOffset = Vector.new()
+		pCalibrateMatrixRelocateTip = Matrix.new()
 		pCalibrateTwistAxes = Array.new()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
 		pCalibrateReachRotation = Vector.new()
@@ -173,6 +175,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTwistPropagation = transfer.pTwistPropagation
 		pTwistBoneCount = transfer.pTwistBoneCount
 		pGuideTwistStrength = transfer.pGuideTwistStrength
+		pRelocateTip = transfer.pRelocateTip
 		pTwistAxisRotation = transfer.pTwistAxisRotation
 		pCalibrateBones = Array.new(transfer.pCalibrateBones)
 		pCalibrateReach = transfer.pCalibrateReach
@@ -181,7 +184,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateReachScaleDirectionBack = transfer.pCalibrateReachScaleDirectionBack
 		pCalibrateReachRange = transfer.pCalibrateReachRange
 		pCalibrateReachRetracted = transfer.pCalibrateReachRetracted
-		pCalibrateTipOffset = transfer.pCalibrateTipOffset
+		pCalibrateMatrixRelocateTip = transfer.pCalibrateMatrixRelocateTip
 		pCalibrateTwistAxes = Array.new(transfer.pCalibrateTwistAxes)
 		pCalibrateTwistBoneAxisRotation = transfer.pCalibrateTwistBoneAxisRotation
 		pCalibrateReachRotation = transfer.pCalibrateReachRotation
@@ -374,6 +377,16 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pGuideTwistStrength = percentage
 	end
 	
+	/** Relocate tip. */
+	public func bool getRelocateTip()
+		return pRelocateTip
+	end
+	
+	/** Set to relocate tip. */
+	public func void setRelocateTip(bool relocate)
+		pRelocateTip = relocate
+	end
+	
 	
 	
 	/** Animator definition rule or null. */
@@ -414,9 +427,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pCalibrateReachRange
 	end
 	
-	/** Calibrate tip offset. */
-	public func Vector getCalibrateTipOffset()
-		return pCalibrateTipOffset
+	/** Calibrate matrix relocate tip. */
+	public func Matrix getCalibrateMatrixRelocateTip()
+		return pCalibrateMatrixRelocateTip
 	end
 	
 	/** Calibrate twist bone axis rotation. */
@@ -822,7 +835,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 				if pTipTracker.getRealSlot() != null
 					actorReach = (pTipTracker.getTransformMatrix()\
-						* pTipTracker.getRealSlot().getCalibrateMatrix())\
+						* pTipTracker.getRealSlot().getCalibrateMatrix().normalize())\
 							.getPosition().absolute().getX()
 					actorArmReach = actorReach - actorShoulderReach
 				end
@@ -870,25 +883,26 @@ class MotionTransferIK extends DefaultMotionTransfer
 				pCalibrateReachScaleDirectionBack = Vector.new(1, 1, 1)
 			end
 			
-			if slotTip != null and pTipTracker.getAutoTransform() == MotionTransferTracker.AutoTransform.orientationTarget
-				var Vector displacement = slotTip.getTargetPosition()\
-					- slotTip.getCalibrateReferenceMatrix().getPosition()
+			if slotTip != null and pRelocateTip
+				var Matrix matrixBase = component.boneGetMatrix(indexBase)
+				var Matrix matrixBaseInv = component.boneGetInverseMatrix(indexBase)
+				var Vector positionTarget = slotTip.getTargetPosition()
+				var Vector positionReference = slotTip.getCalibrateReferenceMatrix().getPosition()
 				
-				if displacement.getLength() > 0.01
-					pCalibrateTipOffset = component.boneGetInverseMatrix(indexBase)\
-						.transformNormal(displacement)
-					
-				else
-					pCalibrateTipOffset = Vector.new()
-				end
+				var Vector targetInBase = matrixBaseInv * positionTarget
+				var Vector referenceInBase = matrixBaseInv * positionReference
 				
-// 				pCalibrateTipOffset = posTip - slotTip.getCalibratePosition()
-				//var Vector slotPos = slotTip.getCalibratePosition()
-				//var float realReach = (slotPos - posGuide).getLength()
-				//pCalibrateReachScale = pCalibrateReach / realReach
+				var Vector normalTargetInbase = targetInBase.normalize()
+				var Vector projReferenceInBase = normalTargetInbase * (normalTargetInbase * referenceInBase)
+				
+				var Vector projReference = matrixBase.transformNormal(projReferenceInBase)
+				
+				var Vector pivot = positionReference - projReference
+				
+				pCalibrateMatrixRelocateTip = Matrix.newTranslation(-pivot) * matrixBaseInv.getRotation()
 				
 			else
-				pCalibrateTipOffset = Vector.new()
+				pCalibrateMatrixRelocateTip = Matrix.new()
 				//pCalibrateReachScale = 1
 				//pCalibrateGuideTrackAxis = ARTrackToAxis.posZ
 				//pCalibrateGuideUpAxis = ARTrackToAxis.posY
@@ -909,7 +923,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			pCalibrateReachScaleDirectionBack = Vector.new(1, 1, 1)
 			pCalibrateReachRange = 0
 			pCalibrateReachRetracted = pCalibrateReach
-			pCalibrateTipOffset = Vector.new()
+			pCalibrateMatrixRelocateTip = Matrix.new()
 		end
 		
 		// calibrate guide tracker. has to come after reach scaling since it uses this value
@@ -954,7 +968,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
 				var int indexBone = component.indexOfBoneNamed(bone)
 				if indexBone != -1
-					pCalibrateTwistAxes.add(component.boneGetInverseMatrix(indexBone).transformNormal(axis))
+					pCalibrateTwistAxes.add(component.boneGetInverseMatrix(indexBone).normalize().transformNormal(axis))
 					
 				else
 					pCalibrateTwistAxes.add(Vector.new(0, 0, 1))
@@ -964,12 +978,12 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		if indexTip != -1
 			pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pTwistAxisRotation) \
-				* component.boneGetInverseMatrix(indexTip)).normalize().getEulerAngles()
+				* component.boneGetInverseMatrix(indexTip).normalize()).getEulerAngles()
 		end
 		
 		if indexBase != -1
 			pCalibrateReachRotation = (Matrix.newRotation(pTwistAxisRotation) \
-				* component.boneGetInverseMatrix(indexBase)).normalize().getEulerAngles()
+				* component.boneGetInverseMatrix(indexBase).normalize()).getEulerAngles()
 		end
 	end
 	
@@ -1047,6 +1061,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("guideTwistStrength")
 				setGuideTwistStrength(element.getFirstCDataFloat())
 				
+			elif tagName.equals("relocateTip")
+				setRelocateTip(element.getFirstCDataBool())
+				
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
 			end
@@ -1079,8 +1096,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("reachRotation")
 				pCalibrateReachRotation = loader.readVector(element)
 				
-			elif tagName.equals("tipOffset")
-				pCalibrateTipOffset = loader.readVector(element)
+			elif tagName.equals("matrixRelocateTip")
+				pCalibrateMatrixRelocateTip = GameApp.getGameApp().getLoadCharacterProfile().readMatrix(element)
 				
 			elif tagName.equals("bone")
 				pCalibrateBones.add(element.getFirstCData())
@@ -1136,6 +1153,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		tag.addDataTag("twistBoneCount", pTwistBoneCount)
 		loader.writeVector(tag, "twistAxisRotation", pTwistAxisRotation)
 		tag.addDataTag("guideTwistStrength", pGuideTwistStrength)
+		tag.addDataTag("relocateTip", pRelocateTip)
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
@@ -1148,7 +1166,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		tag.addDataTag("reachScaleDown", pCalibrateReachScaleDown)
 		tag.addDataTag("reachRange", pCalibrateReachRange)
 		loader.writeVector(tag, "reachRotation", pCalibrateReachRotation)
-		loader.writeVector(tag, "tipOffset", pCalibrateTipOffset)
+		GameApp.getGameApp().getLoadCharacterProfile().writeMatrix(tag, "matrixRelocateTip", pCalibrateMatrixRelocateTip)
 		pCalibrateBones.forEach(block String each
 			tag.addDataTag("bone", each)
 		end)

@@ -549,12 +549,12 @@ class MotionTransferBend extends DefaultMotionTransfer
 		
 		var Matrix baseMatrix = pBaseTracker.getTransformMatrix()
 		if pBaseTracker.getRealSlot() != null
-			baseMatrix = baseMatrix * pBaseTracker.getRealSlot().getCalibrateMatrix()
+			baseMatrix = baseMatrix * pBaseTracker.getRealSlot().getCalibrateMatrix().normalize()
 		end
 		
 		var Matrix targetMatrix = pTargetTracker.getTransformMatrix()
 		if pTargetTracker.getRealSlot() != null
-			targetMatrix = targetMatrix * pTargetTracker.getRealSlot().getCalibrateMatrix()
+			targetMatrix = targetMatrix * pTargetTracker.getRealSlot().getCalibrateMatrix().normalize()
 		end
 		
 		var Matrix bendAxisMatrix = Matrix.newRotation(pBendAxisRotation)
@@ -572,7 +572,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 					return
 				end
 				
-				pCalibrateZeroRotation = (bendAxisMatrix * targetMatrix.getRotation().getInverse()).normalize().getEulerAngles()
+				pCalibrateZeroRotation = (bendAxisMatrix * targetMatrix.getRotation().getInverse()).getEulerAngles()
 				
 			else
 				// rotation.x = atan2(y, abs((x, z)))
@@ -601,7 +601,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 				end
 				
 				pCalibrateZeroRotation = Vector.new(-rotX, -rotY, 0)
-				
+				GameApp.getApp().getConsole().addMessage(getName() + ": pos=" + position + " tp=" + targetMatrix.getPosition() + " bp=" + baseMatrix.getPosition() + " rotX=" + rotX)
 			end
 			
 			// bend axes
@@ -615,7 +615,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 				var int indexBone = component.indexOfBoneNamed(bone)
 				
 				if indexBone != -1
-					var Matrix boneMatrix = component.boneGetInverseMatrix(indexBone)
+					var Matrix boneMatrix = component.boneGetInverseMatrix(indexBone).normalize()
 					pCalibrateBendAxesX.add(boneMatrix.transformNormal(axisX))
 					pCalibrateBendAxesY.add(boneMatrix.transformNormal(axisY))
 					
@@ -743,7 +743,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 			var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
 			var int indexBone = component.indexOfBoneNamed(bone)
 			if indexBone != -1
-				pCalibrateTwistAxes.add(component.boneGetInverseMatrix(indexBone).transformNormal(axis))
+				pCalibrateTwistAxes.add(component.boneGetInverseMatrix(indexBone).normalize().transformNormal(axis))
 				
 			else
 				pCalibrateTwistAxes.add(Vector.new(0, 0, 1))
@@ -753,7 +753,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		var Matrix invTargetMat
 		
 		if indexTarget != -1
-			invTargetMat = component.boneGetInverseMatrix(indexTarget)
+			invTargetMat = component.boneGetInverseMatrix(indexTarget).normalize()
 			
 		elif pTargetTracker.getRealSlot() != null and pBaseTracker.getRealSlot() != null
 			invTargetMat = targetMatrix.getInverse()
@@ -761,7 +761,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		
 		if invTargetMat != null
 			pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pBendAxisRotation)\
-				* invTargetMat.normalize().getRotation()).getEulerAngles()
+				* invTargetMat.getRotation()).getEulerAngles()
 		end
 		
 		// (target * base^-1)^-1 => base * target^-1

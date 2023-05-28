@@ -77,6 +77,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	private var Vector pScaleSpineBending
 	private var Vector pHeadBendAxisRotation
 	private var Vector pSpineBendAxisRotation
+	private var bool pRelocateArms
 	
 	private var MotionTransferChild pTransferWaist
 // 	private var MotionTransferIK pTransferSpineHead
@@ -111,6 +112,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pScaleSpineBending = Vector.new(1, 1, 1)
 		pHeadBendAxisRotation = Vector.new(90, 0, 0)
 		pSpineBendAxisRotation = Vector.new(90, 0, 0)
+		pRelocateArms = false
 		
 		// create child motion transfers
 		var MotionTransferChild.Factory factoryChild = MotionTransferChild.Factory.new()
@@ -194,6 +196,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pScaleSpineBending = transfer.pScaleSpineBending
 		pHeadBendAxisRotation = transfer.pHeadBendAxisRotation
 		pSpineBendAxisRotation = transfer.pSpineBendAxisRotation
+		pRelocateArms = transfer.pRelocateArms
 		
 		pTransferWaist = MotionTransferChild.new(transfer.pTransferWaist)
 // 		pTransferSpineHead = MotionTransferIK.new(transfer.pTransferSpineHead)
@@ -459,6 +462,16 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			throw ENullPointer.new("rotation")
 		end
 		pSpineBendAxisRotation = rotation
+	end
+	
+	/** Relocate arms. */
+	public func bool getRelocateArms()
+		return pRelocateArms
+	end
+	
+	/** Set to relocate arms. */
+	public func void setRelocateArms(bool relocate)
+		pRelocateArms = relocate
 	end
 	
 	
@@ -802,6 +815,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmRight.setTwistPropagation(0.5)
 		pTransferArmRight.setTwistAxisRotation(Vector.new(0, -90, 0))
 		pTransferArmRight.setTwistBoneCount(isSlotRightElbowAttached if 1 else 2)
+		pTransferArmRight.setRelocateTip(pRelocateArms)
 		
 		if hasSlotRightHandController
 			pTransferArmRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.none)
@@ -847,6 +861,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.setTwistPropagation(0.5)
 		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))
 		pTransferArmLeft.setTwistBoneCount(isSlotLeftElbowAttached if 1 else 2)
+		pTransferArmLeft.setRelocateTip(pRelocateArms)
 		
 		if hasSlotLeftHandController
 			pTransferArmLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.none)
@@ -1097,6 +1112,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			elif tagName.equals("spineBendAxisRotation")
 				pSpineBendAxisRotation = loader.readVector(element)
 				
+			elif tagName.equals("relocateArms")
+				pRelocateArms = element.getFirstCDataBool()
+				
 			elif tagName.equals("transfers")
 				loadTransfers(loader, element)
 			end
@@ -1170,6 +1188,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		loader.writeVector(tag, "scaleSpineBending", pScaleSpineBending)
 		loader.writeVector(tag, "headBendAxisRotation", pHeadBendAxisRotation)
 		loader.writeVector(tag, "spineBendAxisRotation", pSpineBendAxisRotation)
+		tag.addDataTag("relocateArms", pRelocateArms)
 		
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
 		pTransferWaist.save(loader, tagTransfers.addTag("waist"))
