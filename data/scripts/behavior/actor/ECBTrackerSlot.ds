@@ -300,7 +300,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 			
 			pMatrix = matrix
 			pPosition = matrix.getPosition()
-			pOrientation = pMatrix.normalize().toQuaternion()
+			pOrientation = pMatrix.toQuaternion()
 			
 			pControllerPosition.setVector(pPosition)
 			pControllerRotation.setRotation(pOrientation.getEulerAngles())
@@ -380,7 +380,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 			var CharacterConfiguration config = slot.getConfiguration()
 			
 			if pDDCoordSystem != null
-				var DMatrix m = matrix.toDMatrix() * pVRPlayspace.getMatrix()
+				var DMatrix m = config.characterToWorld(matrix).toDMatrix() * pVRPlayspace.getMatrix()
 				pDDCoordSystem.setPosition(m.getPosition())
 				pDDCoordSystem.setOrientation(m.toQuaternion())
 			end
@@ -389,12 +389,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 				matrix = slot.getOffsetMatrixInverse() * matrix
 			end
 			
-			if config.getScaleMode() == CharacterConfiguration.ScaleMode.actor
-				matrix = matrix * config.getMatrixCalibrateInverse()
-				
-			else
-				matrix = matrix * config.getMatrixScaleInverse() * config.getMatrixCalibrateInverse()
-			end
+			matrix = config.characterToWorld(matrix) * config.getMatrixCalibrateInverse()
 			
 			var Component component = pComponent.getComponent()
 			if component != null
@@ -492,9 +487,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 			// - pMatrix is the slot location in character space
 			// - getOffsetMatrix() applies only to real VR devices to obtain pMatrix
 			// - config.getMatrixCalibrate() transforms from VR playspace to actor space
-			// - config.getMatrixScale() is characterShoulderLevel / actorShoulderLevel
-			// - config.getMatrixScaleInverse() is actorShoulderLevel / characterShoulderLevel
-			pReferenceMatrix = slot.getMatrix() * config.getMatrixScale()
+			pReferenceMatrix = config.actorToCharacter(slot.getMatrix())
 			
 			if pInputDevice != null
 				if calibrating
@@ -508,15 +501,11 @@ class ECBTrackerSlot extends DefaultECBehavior
 				else
 					pComponentMatrix = applySmoothing(pInputDevice.getDevicePoseMatrix())
 				end
-				pMatrix = pComponentMatrix * config.getMatrixCalibrate() * config.getMatrixScale()
+				pMatrix = config.actorToCharacter(pComponentMatrix * config.getMatrixCalibrate())
 				
 			else
-				pMatrix = config.getMatrixScale() * slot.getTargetMatrix()
-				pComponentMatrix = pMatrix * config.getMatrixScaleInverse() * config.getMatrixCalibrateInverse()
-			end
-			
-			if config.getScaleMode() == CharacterConfiguration.ScaleMode.actor
-				pComponentMatrix = pMatrix * config.getMatrixCalibrateInverse()
+				pMatrix = slot.getTargetMatrix()
+				pComponentMatrix = config.characterToActor(pMatrix) * config.getMatrixCalibrateInverse()
 			end
 			
 			if pInputDevice != null
@@ -524,7 +513,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 			end
 			
 			pPosition = pMatrix.getPosition()
-			pOrientation = pMatrix.normalize().toQuaternion()
+			pOrientation = pMatrix.toQuaternion()
 			
 			pControllerPosition.setVector(pPosition)
 			pControllerRotation.setRotation(pOrientation.getEulerAngles())

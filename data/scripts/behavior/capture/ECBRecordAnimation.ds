@@ -69,11 +69,14 @@ class ECBRecordAnimation extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class RecordDeviceSlot
+			protected var CharacterConfiguration pConfig
 			protected var ECBTrackerSlot.Instance pSlot
 			protected var int pBone
 			protected var Matrix pMatrix1, pMatrix2
 			
-			public func new(ECBTrackerSlot.Instance slot, int bone, Matrix matrix1, Matrix matrix2)
+			public func new(CharacterConfiguration config, ECBTrackerSlot.Instance slot,\
+			int bone, Matrix matrix1, Matrix matrix2)
+				pConfig = config
 				pSlot = slot
 				pBone = bone
 				pMatrix1 = matrix1
@@ -81,7 +84,10 @@ class ECBRecordAnimation extends DefaultECBehavior
 			end
 			
 			public func Matrix calcMatrix()
-				return pMatrix1 * pSlot.getMatrixCharacter() * pMatrix2
+				var Matrix m = pMatrix1 * pSlot.getMatrixCharacter()
+				m = pConfig.characterToActor(m) * pConfig.getMatrixCalibrateInverse()
+				m = pConfig.actorToComponent(m) * pMatrix2
+				return m
 			end
 		end
 		
@@ -369,9 +375,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			if pRecordDevices != SessionSettings.RecordDevices.none and pCharacter != null
 				// has to be done after pTransformRootBones has been calculated
 				var CharacterConfiguration config = pCharacter.getCharacter()
-				var Matrix matCalibInv = config.getMatrixCalibrateInverse()
 				var Rig rig = pRecordAnimationDevices.getRig()
-				var Matrix matScale = config.getMatrixScale()
 				
 				config.getTrackerSlots().forEach(block int index, CharacterTrackerSlot each
 					var ECBTrackerSlot.Instance slot = ECBTrackerSlot.getInstanceIn(getElement(), each.getName())
@@ -386,12 +390,12 @@ class ECBRecordAnimation extends DefaultECBehavior
 						
 					case SessionSettings.RecordDevices.target
 						matrix1 = each.getCalibrateReferenceMatrix() * each.getCalibrateMatrixInverse()\
-							* matScale * each.getTargetMatrix() * each.getCalibrateReferenceMatrixInverse()
+							* each.getTargetMatrix() * each.getCalibrateReferenceMatrixInverse()
 					end
 					
-					var Matrix matrix2 = matCalibInv * pTransformRootBones * rig.getBoneInverseMatrix(index)
+					var Matrix matrix2 = pTransformRootBones * rig.getBoneInverseMatrix(index)
 					
-					pRecordDeviceSlots.add(RecordDeviceSlot.new(slot, index, matrix1, matrix2))
+					pRecordDeviceSlots.add(RecordDeviceSlot.new(config, slot, index, matrix1, matrix2))
 					pRecordAnimationDevices.addBone(each.getName())
 				end)
 			end

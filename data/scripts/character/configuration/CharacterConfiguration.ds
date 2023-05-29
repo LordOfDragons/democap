@@ -70,8 +70,6 @@ class CharacterConfiguration
 	
 	private var bool pIsCalibrated
 	private var float pCalibrateScale
-	private var Matrix pMatrixScale
-	private var Matrix pMatrixScaleInv
 	private var Matrix pMatrixCalibrate
 	private var Matrix pMatrixCalibrateInv
 	
@@ -111,8 +109,6 @@ class CharacterConfiguration
 		
 		pIsCalibrated = false
 		pCalibrateScale = 1
-		pMatrixScale = Matrix.new()
-		pMatrixScaleInv = Matrix.new()
 		pMatrixCalibrate = Matrix.new()
 		pMatrixCalibrateInv = Matrix.new()
 		
@@ -146,8 +142,6 @@ class CharacterConfiguration
 		
 		pIsCalibrated = configuration.pIsCalibrated
 		pCalibrateScale = configuration.pCalibrateScale
-		pMatrixScale = configuration.pMatrixScale
-		pMatrixScaleInv = configuration.pMatrixScaleInv
 		pMatrixCalibrate = configuration.pMatrixCalibrate
 		pMatrixCalibrateInv = configuration.pMatrixCalibrateInv
 		
@@ -211,7 +205,6 @@ class CharacterConfiguration
 			throw ENullPointer.new("scaleMode")
 		end
 		pScaleMode = scaleMode
-		updateScales()
 	end
 	
 	/** Name of animation move to use for calibration or empty string to use none. */
@@ -444,23 +437,6 @@ class CharacterConfiguration
 	/** Set calibrated scale. */
 	public func void setCalibrateScale(float scale)
 		pCalibrateScale = scale
-		updateScales()
-	end
-	
-	/** Update scales. */
-	public func void updateScales()
-		pMatrixScale = Matrix.newScaling(pCalibrateScale, pCalibrateScale, pCalibrateScale)
-		pMatrixScaleInv = Matrix.newScaling(1.0 / pCalibrateScale, 1.0 / pCalibrateScale, 1.0 / pCalibrateScale)
-	end
-	
-	/** Scale matrix. */
-	public func Matrix getMatrixScale()
-		return pMatrixScale
-	end
-	
-	/** Inverse scale matrix. */
-	public func Matrix getMatrixScaleInverse()
-		return pMatrixScaleInv
 	end
 	
 	/** Calibration matrix. */
@@ -479,14 +455,147 @@ class CharacterConfiguration
 		pMatrixCalibrateInv = matrix.getInverse()
 	end
 	
+	
+	
+	/** Convert actor distance to character distance. */
+	public func float actorToCharacter(float distance)
+		return distance * pCalibrateScale
+	end
+	
+	/** Convert actor position to character position. */
+	public func Vector actorToCharacter(Vector position)
+		return position * pCalibrateScale
+	end
+	
+	/** Convert actor matrix to character matrix retaining rotation and scale. */
+	public func Matrix actorToCharacter(Matrix matrix)
+		return matrix.getRotation() * Matrix.newTranslation(actorToCharacter(matrix.getPosition()))
+	end
+	
+	/** Convert character distance to actor distance. */
+	public func float characterToActor(float distance)
+		return distance / pCalibrateScale
+	end
+	
+	/** Convert character position to actor position. */
+	public func Vector characterToActor(Vector position)
+		return position / pCalibrateScale
+	end
+	
+	/** Convert character matrix to actor matrix retaining rotation and scale. */
+	public func Matrix characterToActor(Matrix matrix)
+		return matrix.getRotation() * Matrix.newTranslation(characterToActor(matrix.getPosition()))
+	end
+	
+	
+	
+	/** Convert component distance to character distance. */
+	public func float componentToCharacter(float distance)
+		return distance * pProfile.getScale()
+	end
+	
+	/** Convert component position to character position. */
+	public func Vector componentToCharacter(Vector position)
+		return position * pProfile.getScale()
+	end
+	
+	/** Convert component matrix to character matrix retaining rotation and scale. */
+	public func Matrix componentToCharacter(Matrix matrix)
+		return matrix.getRotation() * Matrix.newTranslation(componentToCharacter(matrix.getPosition()))
+	end
+	
+	/** Convert character distance to component distance. */
+	public func float characterToComponent(float distance)
+		return distance / pProfile.getScale()
+	end
+	
+	/** Convert character position to component position. */
+	public func Vector characterToComponent(Vector position)
+		return position / pProfile.getScale()
+	end
+	
+	/** Convert character matrix to component matrix retaining rotation and scale. */
+	public func Matrix characterToComponent(Matrix matrix)
+		return matrix.getRotation() * Matrix.newTranslation(characterToComponent(matrix.getPosition()))
+	end
+	
+	
+	
+	/** Convert component distance to actor distance. */
+	public func float componentToActor(float distance)
+		return distance * (pProfile.getScale() * pCalibrateScale)
+	end
+	
+	/** Convert component position to actor position. */
+	public func Vector componentToActor(Vector position)
+		return position * (pProfile.getScale() * pCalibrateScale)
+	end
+	
+	/** Convert component matrix to actor matrix retaining rotation and scale. */
+	public func Matrix componentToActor(Matrix matrix)
+		return matrix.getRotation() * Matrix.newTranslation(componentToActor(matrix.getPosition()))
+	end
+	
+	/** Convert actor distance to component distance. */
+	public func float actorToComponent(float distance)
+		return distance / (pProfile.getScale() * pCalibrateScale)
+	end
+	
+	/** Convert actor position to component position. */
+	public func Vector actorToComponent(Vector position)
+		return position / (pProfile.getScale() * pCalibrateScale)
+	end
+	
+	/** Convert actor matrix to component matrix retaining rotation and scale. */
+	public func Matrix actorToComponent(Matrix matrix)
+		return matrix.getRotation() * Matrix.newTranslation(actorToComponent(matrix.getPosition()))
+	end
+	
+	
+	
+	/** Convert character distance to world distance. */
+	public func float characterToWorld(float distance)
+		return pScaleMode == CharacterConfiguration.ScaleMode.actor if distance else characterToActor(distance)
+	end
+	
+	/** Convert character position to world position. */
+	public func Vector characterToWorld(Vector position)
+		return pScaleMode == CharacterConfiguration.ScaleMode.actor if position else characterToActor(position)
+	end
+	
+	/** Convert character matrix to world matrix retaining rotation and scale. */
+	public func Matrix characterToWorld(Matrix matrix)
+		return pScaleMode == CharacterConfiguration.ScaleMode.actor if matrix else characterToActor(matrix)
+	end
+	
+	/** Convert world distance to character distance. */
+	public func float worldToCharacter(float distance)
+		return pScaleMode == CharacterConfiguration.ScaleMode.actor if distance else actorToCharacter(distance)
+	end
+	
+	/** Convert character position to actor position. */
+	public func Vector worldToCharacter(Vector position)
+		return pScaleMode == CharacterConfiguration.ScaleMode.actor if position else actorToCharacter(position)
+	end
+	
+	/** Convert character matrix to actor matrix retaining rotation and scale. */
+	public func Matrix worldToCharacter(Matrix matrix)
+		return pScaleMode == CharacterConfiguration.ScaleMode.actor if matrix else actorToCharacter(matrix)
+	end
+	
+	/** World scaling. */
+	public func float worldScaling()
+		return pScaleMode == CharacterConfiguration.ScaleMode.actor if pCalibrateScale else 1
+	end
+	
+	
+	
 	/** Reset calibration. */
 	public func void resetCalibration(bool calibrating)
 		dropElementClass()
 		
 		pIsCalibrated = false
 		pCalibrateScale = 1
-		pMatrixScale = Matrix.new()
-		pMatrixScaleInv = Matrix.new()
 		pMatrixCalibrate = Matrix.new()
 		pMatrixCalibrateInv = Matrix.new()
 		
@@ -544,7 +653,7 @@ class CharacterConfiguration
 		// measured all the way to the ground. for these reasons actors are required to
 		// have their shoulder level measured to get precise results matching characters
 		var float actorScale = pProfile.getShoulderLevel() / actorProfile.getShoulderLevel()
-		setCalibrateScale(actorScale * pProfile.getScale())
+		setCalibrateScale(actorScale)
 		
 		// get hand positions to align calibration space
 		var Matrix hmd, rightHand, leftHand
@@ -565,13 +674,11 @@ class CharacterConfiguration
 		end
 		
 		// scale element if required
+		var float compScale = pProfile.getScale()
 		if pScaleMode == ScaleMode.character
-			var float scaling = 1.0 / pCalibrateScale
-			actor.setScaling(Vector.new(scaling, scaling, scaling))
-			
-		else
-			actor.setScaling(Vector.new(1, 1, 1))
+			compScale = 1.0 / (compScale * actorScale)
 		end
+		actor.setScaling(Vector.new(compScale, compScale, compScale))
 		
 		// hand controller devices have their pose beyond the controller tip which is
 		// the wrong location to use for calibration. to fix this find the tracker slots

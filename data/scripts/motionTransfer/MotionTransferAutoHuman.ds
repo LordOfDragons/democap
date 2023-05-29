@@ -651,20 +651,31 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferSpine.setTargetBone("")
 		pTransferSpine.setTargetBaseBone("")
 		
-		pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		if isSlotChestAttached
+// 			pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+			pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.reference)
+			pTransferSpine.setTwistScale(pScaleSpineBending.getY())
+			
+		else
+			pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.reference)
+			pTransferSpine.setTwistScale(pScaleSpineBending.getY() * 0.5)
+		end
 		pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new())
-
-		pTransferSpine.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
-// 		pTransferSpine.getBaseTracker().setOffsetRotation(Vector.new(90, 0, 0))
+		
+		if isSlotWaistAttached
+			pTransferSpine.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+			
+		else
+			pTransferSpine.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.reference)
+		end
 		pTransferSpine.getBaseTracker().setOffsetRotation(pSpineBendAxisRotation)
 		
 		pTransferSpine.setBendShape(pBendShapeSpine)
 		pTransferSpine.setBendAxisRotation(pSpineBendAxisRotation)
 		pTransferSpine.setFitCurveToTarget(true)
 		pTransferSpine.setUseRotation(false)
-		pTransferSpine.setTwistPropagation(isSlotChestAttached if 1.0 else 0.5)
 		pTransferSpine.setScaleRotation(Vector2.new(pScaleSpineBending.getX(), pScaleSpineBending.getZ()))
-		pTransferSpine.setTwistScale(pScaleSpineBending.getY())
+		pTransferSpine.setTwistPropagation(1)
 		
 		if chainSpine.getCount() > 1
 			var String baseBone = chainSpine.getAt(-2) cast String
@@ -710,8 +721,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		if pTransferSpine.getBaseBone().empty() or pTransferSpine.getTipBone().empty()
 			pTransferSpine.setTipBone("")
 			pTransferSpine.setBaseBone("")
+			pTransferSpine.setTargetBone("")
 			pTransferSpine.setTargetBaseBone("")
 		end
+		
+		pTransferSpine.setTargetBone("")  // target bones are problematic with far away slots
+		pTransferSpine.setTargetBaseBone("")
 		
 		
 		
@@ -1248,6 +1263,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		var String armSlotBase = slotChest.empty() if slotWaist else slotChest
 		var String spineSlotTarget = slotChest.empty() if slotHead else slotChest
+		var String neckSlotBase = slotChest.empty() if slotWaist else slotChest
 		
 		pTransferWaist.getTracker().setSlot(slotWaist)
 		
@@ -1259,7 +1275,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		end
 		
 		pTransferNeck.getTargetTracker().setSlot(slotHead)
-		pTransferNeck.getBaseTracker().setSlot(spineSlotTarget)
+		pTransferNeck.getBaseTracker().setSlot(neckSlotBase)
 		
 		pTransferSpine.getTargetTracker().setSlot(spineSlotTarget)
 		pTransferSpine.getBaseTracker().setSlot(slotWaist)

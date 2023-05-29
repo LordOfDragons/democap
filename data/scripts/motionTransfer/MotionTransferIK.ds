@@ -761,10 +761,10 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end
 		
 		pTipTracker.resolveRealSlot(config)
-		pTipTracker.setTransform(component, pTipBone)
+		pTipTracker.setTransform(config, component, pTipBone)
 		
 		pBaseTracker.resolveRealSlot(config)
-		pBaseTracker.setTransform(component, guideBone)
+		pBaseTracker.setTransform(config, component, guideBone)
 		
 		// calculate reach of IK chain to avoid over stretching
 		var int indexBase = -1, indexGuide = -1, indexTip = -1
@@ -823,20 +823,18 @@ class MotionTransferIK extends DefaultMotionTransfer
 				end
 				
 				var float reachRotateTip = (posTip.absolute() - posRotate).getLength()
-				var float reachBaseRotate = (posRotate - posBase.absolute()).getLength() // can be 0
+				var float reachBaseRotate = (posRotate - posBase.absolute()).getLength()  // can be 0
 				//var float offsetBase = posBase.absolute().getX()
 				var Vector tip, actorTip
 				
 				// reach scaling
-				var float actorScale = config.getCalibrateScale()
-				var float actorShoulderReach = (actorProfile.getShoulderWidth() / 2) * actorScale
-				var float actorArmReach = actorProfile.getArmLength() * actorScale
+				var float actorShoulderReach = config.actorToComponent(actorProfile.getShoulderWidth() / 2)
+				var float actorArmReach = config.actorToComponent(actorProfile.getArmLength())
 				var float actorReach = actorShoulderReach + actorArmReach
 				
 				if pTipTracker.getRealSlot() != null
-					actorReach = (pTipTracker.getTransformMatrix()\
-						* pTipTracker.getRealSlot().getCalibrateMatrix().normalize())\
-							.getPosition().absolute().getX()
+					actorReach = config.characterToComponent((pTipTracker.getTransformMatrix()\
+						* pTipTracker.getRealSlot().getCalibrateMatrix()).getPosition()).absolute().getX()
 					actorArmReach = actorReach - actorShoulderReach
 				end
 				
@@ -886,8 +884,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 			if slotTip != null and pRelocateTip
 				var Matrix matrixBase = component.boneGetMatrix(indexBase)
 				var Matrix matrixBaseInv = component.boneGetInverseMatrix(indexBase)
-				var Vector positionTarget = slotTip.getTargetPosition()
-				var Vector positionReference = slotTip.getCalibrateReferenceMatrix().getPosition()
+				var Vector positionTarget = config.characterToComponent(slotTip.getTargetPosition())
+				var Vector positionReference = config.characterToComponent(slotTip.getCalibrateReferenceMatrix().getPosition())
 				
 				var Vector targetInBase = matrixBaseInv * positionTarget
 				var Vector referenceInBase = matrixBaseInv * positionReference
@@ -928,7 +926,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		// calibrate guide tracker. has to come after reach scaling since it uses this value
 		pGuideTracker.resolveRealSlot(config)
-		pGuideTracker.setTransform(component, guideBone)
+		pGuideTracker.setTransform(config, component, guideBone)
 		
 		// calculate retracted reach if used
 		if not pMoveRetracted.empty() and indexGuide != -1 and indexTip != -1

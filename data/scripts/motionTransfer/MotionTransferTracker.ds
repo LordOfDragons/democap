@@ -40,6 +40,9 @@ class MotionTransferTracker
 		/** Position and orientation. */
 		full
 		
+		/** Reference position and orientation. */
+		reference
+		
 		/** Orientation only. */
 		orientation
 		
@@ -166,13 +169,7 @@ class MotionTransferTracker
 		return pTransformRotation
 	end
 	
-	/**
-	 * Transform matrix (tracking space to bone space).
-	 * 
-	 * \warning Matrix is not scaled. Requires CharacterConfiguration.getMatrixScale() to be used
-	 *          correctly with scaled matrices as returned by getCalibrate*Matrix calls like this:
-	 *          <code>config.getMatrixScale() * slot.getTargetMatrix()</code>
-	 */
+	/** Transform matrix (tracking space to bone space). */
 	public func Matrix getTransformMatrix()
 		return pTransformMatrix
 	end
@@ -187,13 +184,7 @@ class MotionTransferTracker
 		return pReverseTransformRotation
 	end
 	
-	/**
-	 * Reverse transform matrix (bone space to tracking space).
-	 * 
-	 * \warning Matrix is not scaled. Requires CharacterConfiguration.getMatrixScale() to be used
-	 *          correctly with scaled matrices as returned by getCalibrate*Matrix calls like this:
-	 *          <code>config.getMatrixScale() * slot.getTargetMatrix()</code>
-	 */
+	/** Reverse transform matrix (bone space to tracking space). */
 	public func Matrix getReverseTransformMatrix()
 		return pReverseTransformMatrix
 	end
@@ -220,13 +211,13 @@ class MotionTransferTracker
 	/** Set transform (both directions). */
 	public func void setTransform(Matrix matrix)
 		pTransformPosition = matrix.getPosition()
-		pTransformRotation = matrix.normalize().getEulerAngles()
+		pTransformRotation = matrix.getEulerAngles()
 		pTransformMatrix = matrix
 		setReverseFromTransform()
 	end
 	
 	/** Set transform. */
-	public func void setTransform(Component component, String bone)
+	public func void setTransform(CharacterConfiguration config, Component component, String bone)
 		if pRealSlot == null
 			resetTransform()
 			return
@@ -245,19 +236,23 @@ class MotionTransferTracker
 		
 		if index != -1
 			slotTargetMatrix = getOffsetMatrix() * slotTargetMatrix
-			targetBoneTransform = component.boneGetMatrix(index).normalize() * slotTargetMatrix.getInverse()
+			targetBoneTransform = config.componentToCharacter(\
+				component.boneGetMatrix(index).normalize()) * slotTargetMatrix.getInverse()
 			
 		else
 			targetBoneTransform = getOffsetMatrix()
 		end
 		
-		var Matrix deviceReferenceTransform = (slotRefMatrix * slotInvMatrix).normalize()
-		var Matrix referenceTargetTransform = (slotTargetMatrix * slotRefMatrixInv).normalize()
+		var Matrix deviceReferenceTransform = slotRefMatrix * slotInvMatrix
+		var Matrix referenceTargetTransform = slotTargetMatrix * slotRefMatrixInv
 		var Matrix deviceBoneTransform = targetBoneTransform * referenceTargetTransform * deviceReferenceTransform
 		
 		select pAutoTransform
 		case AutoTransform.full
 			pTransformMatrix = deviceBoneTransform
+			
+		case AutoTransform.reference
+			pTransformMatrix = deviceReferenceTransform
 			
 		case AutoTransform.orientation
 			pTransformMatrix = deviceBoneTransform.getRotation() * Matrix.newTranslation(\
@@ -278,7 +273,7 @@ class MotionTransferTracker
 	end
 	
 	/*
-	public func void setTransformTrackTo(Component component, String bone, Vector axis)
+	public func void setTransformTrackTo(CharacterConfiguration config, Component component, String bone, Vector axis)
 		if pRealSlot == null
 			resetTransform()
 			return
@@ -299,18 +294,22 @@ class MotionTransferTracker
 		var Matrix slotRefMatrix = pRealSlot.getCalibrateReferenceMatrix()
 		var Matrix slotRefMatrixInv = pRealSlot.getCalibrateReferenceMatrixInverse()
 		
-		var Matrix targetBoneTransform = component.boneGetMatrix(index).normalize() * slotTargetMatrixInv
-		var Vector taxis = targetBoneTransform.normalize().transformNormal(axis)
+		var Matrix targetBoneTransform = config.componentToCharacter(\
+			component.boneGetMatrix(index).normalize()) * slotTargetMatrixInv
+		var Vector taxis = targetBoneTransform.transformNormal(axis)
 		var float tdistance = -(taxis * targetBoneTransform.getPosition())
 		targetBoneTransform = targetBoneTransform * Matrix.newTranslation(taxis * tdistance)
 		
-		var Matrix deviceReferenceTransform = (slotRefMatrix * slotInvMatrix).normalize()
-		var Matrix referenceTargetTransform = (slotTargetMatrix * slotRefMatrixInv).normalize()
+		var Matrix deviceReferenceTransform = slotRefMatrix * slotInvMatrix
+		var Matrix referenceTargetTransform = slotTargetMatrix * slotRefMatrixInv
 		var Matrix deviceBoneTransform = targetBoneTransform * referenceTargetTransform * deviceReferenceTransform
 		
 		select pAutoTransform
 		case AutoTransform.full
 			pTransformMatrix = deviceBoneTransform
+			
+		case AutoTransform.reference
+			pTransformMatrix = deviceReferenceTransform
 			
 		case AutoTransform.orientation
 			pTransformMatrix = deviceBoneTransform.getRotation() * Matrix.newTranslation(\

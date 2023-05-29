@@ -310,13 +310,7 @@ class CharacterTrackerSlot
 		pTargetMatrix = Matrix.newRT(pTargetRotation, pTargetPosition)
 	end
 	
-	/**
-	 * Character relative matrix.
-	 * 
-	 * \warning Matrix is not scaled. Requires CharacterConfiguration.getMatrixScale() to be used
-	 *          correctly with scaled matrices as returned by getCalibrate*Matrix calls like this:
-	 *          <code>config.getMatrixScale() * slot.getTargetMatrix()</code>
-	 */
+	/** Character relative matrix. */
 	public func Matrix getTargetMatrix()
 		return pTargetMatrix
 	end
@@ -328,11 +322,9 @@ class CharacterTrackerSlot
 		end
 		
 		var float scale = pConfiguration.getProfile().getShoulderLevel() / actorProfile.getShoulderLevel()
-		var Matrix scaled = pMatrix * Matrix.newScaling(scale, scale, scale)
-		pTargetPosition = scaled.getPosition()
-		pTargetRotation = scaled.normalize().getEulerAngles()
+		pTargetPosition = pMatrix.getPosition() * scale
+		pTargetRotation = pMatrix.getEulerAngles()
 		
-		// target matrix is required to have no scaling
 		pTargetMatrix = Matrix.newRT(pTargetRotation, pTargetPosition)
 	end
 	
@@ -620,7 +612,7 @@ class CharacterTrackerSlot
 		pCalibrateMatrix = matrix
 		pCalibrateMatrixInverse = matrix.getInverse()
 		pCalibratePosition = pCalibrateMatrix.getPosition()
-		pCalibrateRotation = pCalibrateMatrix.normalize().getEulerAngles()
+		pCalibrateRotation = pCalibrateMatrix.getEulerAngles()
 	end
 	
 	/** Calibrate reference matrix. */
@@ -734,7 +726,7 @@ class CharacterTrackerSlot
 		
 		pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
 		pCalibratePosition = pCalibrateMatrix.getPosition()
-		pCalibrateRotation = pCalibrateMatrix.normalize().getEulerAngles()
+		pCalibrateRotation = pCalibrateMatrix.getEulerAngles()
 		
 		pRecalibrateMatrix = pCalibrateMatrix
 	end
@@ -746,7 +738,7 @@ class CharacterTrackerSlot
 			return
 		end
 		
-		behavior.setMatrixReference(pMatrix * pConfiguration.getMatrixScale())
+		behavior.setMatrixReference(pConfiguration.actorToCharacter(pMatrix))
 		behavior.setMatrixCharacter(pRecalibrateMatrix)
 		
 		pCalibrateReferenceMatrix = behavior.getMatrixReference()
@@ -755,7 +747,7 @@ class CharacterTrackerSlot
 		pCalibrateMatrix = behavior.getMatrixCharacter()
 		pCalibrateMatrixInverse = pCalibrateMatrix.getInverse()
 		pCalibratePosition = pCalibrateMatrix.getPosition()
-		pCalibrateRotation = pCalibrateMatrix.normalize().getEulerAngles()
+		pCalibrateRotation = pCalibrateMatrix.getEulerAngles()
 	end
 	
 	

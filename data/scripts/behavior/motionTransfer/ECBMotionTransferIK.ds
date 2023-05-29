@@ -21,6 +21,7 @@
 
 namespace Democap.Behaviors
 
+pin Democap.Characters
 pin Democap.MotionTransferSystem
 
 pin Dragengine.Commands
@@ -257,12 +258,14 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		end
 		
 		protected func void updateControllerIK()
-			if pControllerTipPosition == null or pControllerTipOrientation == null
+			if pControllerTipPosition == null or pControllerTipOrientation == null or pSlotTip == null
 				return
 			end
 			
+			var CharacterConfiguration config = pSlotTip.getTrackerSlot().getConfiguration()
+			
 			// normalize is important since transform tip is unscaled and we need matrix unscaled
-			var Matrix matrix = pTransformTip * pSlotTip.getMatrixCharacter().normalize()
+			var Matrix matrix = config.characterToComponent(pTransformTip * pSlotTip.getMatrixCharacter())
 			
 			if pEnableRelocateTip
 				matrix = matrix * pMatrixRelocateTip * pComponent.boneGetMatrix(pBaseBone)
@@ -320,8 +323,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				//      coordinate system which is then the new rotation. the difference
 				//      is neglectable for reach scalings close to 1 but become noticable
 				//      for large reach scaling differences
-				pControllerGuideRotation.setRotation((pTransformGuide\
-					* pSlotGuide.getMatrixCharacter().normalize()).getEulerAngles())
+				pControllerGuideRotation.setRotation((pTransformGuide * pSlotGuide.getMatrixCharacter()).getEulerAngles())
 			end
 		end
 		
@@ -356,10 +358,13 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		end
 		
 		protected func void adjustSlotComponentPosition(Vector position, Vector rotation)
-			if pMatrixAdjustSlotComponent != null
-				pSlotTip.setComponentFromMatrixCharacter(\
-					pMatrixAdjustSlotComponent * Matrix.newRT(rotation, position))
+			if pMatrixAdjustSlotComponent == null or pSlotTip == null
+				return
 			end
+			
+			var CharacterConfiguration config = pSlotTip.getTrackerSlot().getConfiguration()
+			pSlotTip.setComponentFromMatrixCharacter(pMatrixAdjustSlotComponent\
+				* config.componentToCharacter(Matrix.newRT(rotation, position)))
 		end
 		
 		
@@ -372,9 +377,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			and pSlotTip.getComponent() != null\
 			and (pSlotTip.getInputDevice().getType() == InputDeviceType.vrRightHand\
 			or pSlotTip.getInputDevice().getType() == InputDeviceType.vrLeftHand)
-				pMatrixAdjustSlotComponent = \
-					ECBCharacterConfiguration.getInstanceIn(getElement()).getCharacter().getMatrixScale()\
-					* pECBehavior.getTransfer().getTipTracker().getReverseTransformMatrix()
+				pMatrixAdjustSlotComponent = pECBehavior.getTransfer().getTipTracker().getReverseTransformMatrix()
 			end
 		end
 	end
