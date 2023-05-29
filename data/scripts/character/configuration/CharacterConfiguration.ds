@@ -588,10 +588,31 @@ class CharacterConfiguration
 		return pScaleMode == CharacterConfiguration.ScaleMode.actor if pCalibrateScale else 1
 	end
 	
+	/** Component scaling. */
+	public func float componentScaling()
+		if pScaleMode == ScaleMode.actor
+			return pProfile.getScale()
+			
+		else
+			return 1.0 / (pProfile.getScale() * pCalibrateScale)
+		end
+	end
+	
 	
 	
 	/** Reset calibration. */
-	public func void resetCalibration(bool calibrating)
+	public func void resetCalibration(BaseVRActor actor, bool calibrating)
+		if actor != null
+			actor.getActorAnimated().setAnimator(null)
+			
+			var Component component = actor.getComponent().getComponent()
+			var int i, boneCount = component.getBoneCount()
+			for i = 0 to boneCount
+				component.boneSetPosition(i, Vector.new())
+				component.boneSetRotation(i, Quaternion.new())
+			end
+		end
+		
 		dropElementClass()
 		
 		pIsCalibrated = false
@@ -669,16 +690,13 @@ class CharacterConfiguration
 		
 		// for calibration we need these three for the time being
 		if hmd == null or rightHand == null or leftHand == null
-			resetCalibration(true)
+			resetCalibration(actor, true)
 			return
 		end
 		
 		// scale element if required
-		var float compScale = pProfile.getScale()
-		if pScaleMode == ScaleMode.character
-			compScale = 1.0 / (compScale * actorScale)
-		end
-		actor.setScaling(Vector.new(compScale, compScale, compScale))
+		var float componentScaling = componentScaling()
+		actor.setScaling(Vector.new(componentScaling, componentScaling, componentScaling))
 		
 		// hand controller devices have their pose beyond the controller tip which is
 		// the wrong location to use for calibration. to fix this find the tracker slots
@@ -1000,7 +1018,8 @@ class CharacterConfiguration
 		if pElementClass != null and not isElementClassPreloading()
 			stub = StubElement.new(getElementClass()) // no generated ID on purpose
 			if pScaleMode == ScaleMode.character
-				stub.setScaling(Vector.new(1.0 / pCalibrateScale, 1.0 / pCalibrateScale, 1.0 / pCalibrateScale))
+				var float scaling = componentScaling()
+				stub.setScaling(Vector.new(scaling, scaling, scaling))
 			end
 		end
 		return stub

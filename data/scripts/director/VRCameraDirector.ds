@@ -177,8 +177,8 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 			return pHMD.getMatrix()
 		end
 		
-		var Matrix matrix = config.getCameraMatrix()\
-			* component.getComponent().boneGetMatrix(boneIndex).normalize()
+		var Matrix matrix = config.characterToWorld(config.getCameraMatrix()\
+			* config.componentToCharacter(component.getComponent().boneGetMatrix(boneIndex).normalize()))
 		
 		// protect against stalling. stalling can happen for various reasons:
 		// - activate a configuration previously calibrated against head tracker
@@ -210,6 +210,6 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 		end
 		
 		// attach to bone
-		return (matrix.toDMatrix() * getActor().getElement().getElementMatrix()).normalize()
+		return matrix.toDMatrix() * getActor().getElement().getElementMatrix().normalize()
 	end
 end

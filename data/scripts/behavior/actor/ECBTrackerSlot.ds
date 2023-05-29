@@ -238,7 +238,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 		
 		/** World matrix. */
 		public func DMatrix getMatrix()
-			return pMatrix.toDMatrix() * pVRPlayspace.getMatrix()
+			return pECBehavior.getTrackerSlot().getConfiguration().characterToWorld(pMatrix).toDMatrix() * pVRPlayspace.getMatrix()
 		end
 		
 		/** Character local matrix. */
@@ -274,7 +274,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 		
 		/** World position. */
 		public func DVector getPosition()
-			return pVRPlayspace.getMatrix() * DVector.new(pPosition)
+			return pVRPlayspace.getMatrix() * DVector.new(pECBehavior.getTrackerSlot().getConfiguration().characterToWorld(pPosition))
 		end
 		
 		/** Character local position. */
@@ -302,8 +302,10 @@ class ECBTrackerSlot extends DefaultECBehavior
 			pPosition = matrix.getPosition()
 			pOrientation = pMatrix.toQuaternion()
 			
-			pControllerPosition.setVector(pPosition)
-			pControllerRotation.setRotation(pOrientation.getEulerAngles())
+			if pActorAnimated.getAnimator() != null
+				pControllerPosition.setVector(pPosition)
+				pControllerRotation.setRotation(pOrientation.getEulerAngles())
+			end
 		end
 		
 		/** Set playspace local matrix. */
@@ -319,8 +321,10 @@ class ECBTrackerSlot extends DefaultECBehavior
 			pMatrix = Matrix.newRT(rotation, position)
 			pOrientation = pMatrix.toQuaternion()
 			
-			pControllerPosition.setVector(pPosition)
-			pControllerRotation.setRotation(rotation)
+			if pActorAnimated.getAnimator() != null
+				pControllerPosition.setVector(pPosition)
+				pControllerRotation.setRotation(rotation)
+			end
 		end
 		
 		/** Find input device. */
@@ -362,7 +366,9 @@ class ECBTrackerSlot extends DefaultECBehavior
 			
 			var Component component = pComponent.getComponent()
 			if component != null
-				var DMatrix matrix = pComponentMatrix.toDMatrix() * pVRPlayspace.getMatrix()
+				var DMatrix matrix = pECBehavior.getTrackerSlot().getConfiguration()\
+					.characterToWorld(pComponentMatrix).toDMatrix() * pVRPlayspace.getMatrix()
+				
 				component.setPosition(matrix.getPosition())
 				component.setOrientation(matrix.toQuaternion())
 			end
@@ -381,6 +387,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 			
 			if pDDCoordSystem != null
 				var DMatrix m = config.characterToWorld(matrix).toDMatrix() * pVRPlayspace.getMatrix()
+				
 				pDDCoordSystem.setPosition(m.getPosition())
 				pDDCoordSystem.setOrientation(m.toQuaternion())
 			end
@@ -389,7 +396,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 				matrix = slot.getOffsetMatrixInverse() * matrix
 			end
 			
-			matrix = config.characterToWorld(matrix) * config.getMatrixCalibrateInverse()
+			matrix = config.characterToWorld(matrix * config.getMatrixCalibrateInverse())
 			
 			var Component component = pComponent.getComponent()
 			if component != null
@@ -515,8 +522,10 @@ class ECBTrackerSlot extends DefaultECBehavior
 			pPosition = pMatrix.getPosition()
 			pOrientation = pMatrix.toQuaternion()
 			
-			pControllerPosition.setVector(pPosition)
-			pControllerRotation.setRotation(pOrientation.getEulerAngles())
+			if pActorAnimated.getAnimator() != null
+				pControllerPosition.setVector(pPosition)
+				pControllerRotation.setRotation(pOrientation.getEulerAngles())
+			end
 		end
 		
 		/** Create coordinate system debug drawer if required. */
