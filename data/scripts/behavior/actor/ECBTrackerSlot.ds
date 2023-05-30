@@ -238,7 +238,8 @@ class ECBTrackerSlot extends DefaultECBehavior
 		
 		/** World matrix. */
 		public func DMatrix getMatrix()
-			return pECBehavior.getTrackerSlot().getConfiguration().characterToWorld(pMatrix).toDMatrix() * pVRPlayspace.getMatrix()
+			return pECBehavior.getTrackerSlot().getConfiguration().characterToWorld(pMatrix)\
+				.toDMatrix() * pVRPlayspace.getMatrix().normalize()
 		end
 		
 		/** Character local matrix. */
@@ -274,7 +275,8 @@ class ECBTrackerSlot extends DefaultECBehavior
 		
 		/** World position. */
 		public func DVector getPosition()
-			return pVRPlayspace.getMatrix() * DVector.new(pECBehavior.getTrackerSlot().getConfiguration().characterToWorld(pPosition))
+			return pVRPlayspace.getMatrix().normalize() * DVector.new(\
+				pECBehavior.getTrackerSlot().getConfiguration().characterToWorld(pPosition))
 		end
 		
 		/** Character local position. */
@@ -367,7 +369,8 @@ class ECBTrackerSlot extends DefaultECBehavior
 			var Component component = pComponent.getComponent()
 			if component != null
 				var DMatrix matrix = pECBehavior.getTrackerSlot().getConfiguration()\
-					.characterToWorld(pComponentMatrix).toDMatrix() * pVRPlayspace.getMatrix()
+					.characterToWorld(pComponentMatrix).toDMatrix()\
+						* pVRPlayspace.getMatrix().normalize()
 				
 				component.setPosition(matrix.getPosition())
 				component.setOrientation(matrix.toQuaternion())
@@ -386,7 +389,8 @@ class ECBTrackerSlot extends DefaultECBehavior
 			var CharacterConfiguration config = slot.getConfiguration()
 			
 			if pDDCoordSystem != null
-				var DMatrix m = config.characterToWorld(matrix).toDMatrix() * pVRPlayspace.getMatrix()
+				var DMatrix m = config.characterToWorld(matrix).toDMatrix()\
+					* pVRPlayspace.getMatrix().normalize()
 				
 				pDDCoordSystem.setPosition(m.getPosition())
 				pDDCoordSystem.setOrientation(m.toQuaternion())
@@ -400,7 +404,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 			
 			var Component component = pComponent.getComponent()
 			if component != null
-				var DMatrix m = matrix.toDMatrix() * pVRPlayspace.getMatrix()
+				var DMatrix m = matrix.toDMatrix() * pVRPlayspace.getMatrix().normalize()
 				component.setPosition(m.getPosition())
 				component.setOrientation(m.toQuaternion())
 			end

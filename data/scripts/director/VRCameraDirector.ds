@@ -154,27 +154,27 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 		end
 		
 		if character == null or component == null
-			return pHMD.getMatrix()
+			return getHMDMatrix()
 		end
 		
 		var CharacterConfiguration config = character.getCharacter()
 		if not config.isCalibrated()
-			return pHMD.getMatrix()
+			return getHMDMatrix()
 		end
 		
 // 		var CharacterTrackerSlot slotHmd = config.getTrackerSlots().firstAttachedWithType(CharacterTrackerSlot.Type.headHmd)
 // 		if slotHmd == null
-// 			return pHMD.getMatrix()
+// 			return getHMDMatrix()
 // 		end
 		
 		var String bone = config.getCameraBone()
 		if bone.empty()
-			return pHMD.getMatrix()
+			return getHMDMatrix()
 		end
 		
 		var int boneIndex = component.getComponent().indexOfBoneNamed(bone)
 		if boneIndex == -1
-			return pHMD.getMatrix()
+			return getHMDMatrix()
 		end
 		
 		var Matrix matrix = config.characterToWorld(config.getCameraMatrix()\
@@ -196,7 +196,7 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 			var Quaternion orientation = matrix.toQuaternion()
 			if orientation.isEqualTo(pStallProtection, 0.001)
 				if pStallProtectionTimer > 1
-					return pHMD.getMatrix() // stalled
+					return getHMDMatrix() // stalled
 				end
 				
 			else
@@ -211,5 +211,10 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 		
 		// attach to bone
 		return matrix.toDMatrix() * getActor().getElement().getElementMatrix().normalize()
+	end
+
+	/** Unscaled actor space HMD matrix. */
+	public func DMatrix getHMDMatrix()
+		return DMatrix.new(pHMD.getMatrixPlayspace()) * pHMD.getVRPlayspace().getMatrix().normalize()
 	end
 end
