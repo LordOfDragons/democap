@@ -276,15 +276,18 @@ class AACalibrate extends AABase
 		end
 		
 		var ECBToggleVisibility.Instance toggleVisibility = ECBToggleVisibility.getInstanceIn(mirror)
-		if toggleVisibility == null
+		if toggleVisibility == null or toggleVisibility.getVisible()
 			return
 		end
 		
-		if toggleVisibility.getVisible()
-			return
-		end
-		
-		toggleVisibility.repositionHmd(actor cast BaseVRActor, Vector.new(0, 0, 0.5))
-		toggleVisibility.setVisible(true)
+		// delay showing the mirror by a frame update. this is required since repositionHmd()
+		// uses the current VR camera position. althought the actor has been calibrated at this
+		// point in time the VR camera will pick up the changes when this frame ends. delaying
+		// until the next frame ensures the correct camera position is used
+		var BaseVRActor vractor = actor cast BaseVRActor
+		TimerBlock.new(0, false, block
+			toggleVisibility.repositionHmd(vractor, Vector.new(0, 0, 0.5))
+			toggleVisibility.setVisible(true)
+		end)
 	end
 end
