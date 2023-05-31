@@ -169,13 +169,20 @@ abstract class AABase extends BAAFirstPersonVR implements AAControllerInput, AAC
 	
 	
 	
-	/** Apply looking around changes. Called for player controlled actors only. */
+	protected func void doTurnLook(float elapsed)
+		super.doTurnLook(elapsed)
+		
+		movementHelper.updateSmoothRotation(elapsed)
+		applySmoothRotation(movementHelper.getSmoothRotation())
+	end
+	
 	protected func void applyLookAroundChanges(float deltaHorizontal, float deltaVertical)
 		locomotion.applyLookAround(0, deltaVertical)
-		
-		// TODO smoothing similar to locomotion. locomotion can not be used since this would
-		// smooth movement and turning individually causing strange results
-		movementHelper.rotate(Vector.new(0, 1, 0), -deltaHorizontal)
+		movementHelper.addSmoothRotation(deltaHorizontal)
+	end
+	
+	protected func void applySmoothRotation(float rotation)
+		movementHelper.rotate(Vector.new(0, 1, 0), -rotation)
 	end
 	
 	
