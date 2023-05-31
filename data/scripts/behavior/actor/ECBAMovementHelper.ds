@@ -39,7 +39,8 @@ class ECBAMovementHelper extends DefaultECBehavior
 		protected var ECBAMovementHelper pECBehavior
 		protected var ECBCharacterConfiguration.Instance pCharacter
 		protected var ECBehaviorComponent.Instance pComponent
-		protected var SmoothFloat pSmoothRotation
+		protected var float pSmoothRotation
+		protected var float pAccumSmoothRotation
 		
 		
 		
@@ -47,10 +48,6 @@ class ECBAMovementHelper extends DefaultECBehavior
 		public func new(ECBAMovementHelper ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pComponent = ecbehavior.component.instance(element)
-			
-			pSmoothRotation = SmoothFloat.new()
-			pSmoothRotation.setAdjustRange(90)
-			pSmoothRotation.setAdjustTime(1)
 		end
 		
 		/** Dispose of behavior instance. */
@@ -69,15 +66,17 @@ class ECBAMovementHelper extends DefaultECBehavior
 		
 		
 		public func float getSmoothRotation()
-			return pSmoothRotation.getValue()
+			return pSmoothRotation
 		end
 		
 		public func void addSmoothRotation(float value)
-			pSmoothRotation.setGoal(pSmoothRotation.getGoal() + value)
+			pAccumSmoothRotation += value
 		end
 		
 		public func void updateSmoothRotation(float elapsed)
-			pSmoothRotation.update(elapsed)
+			var float adjustFactor = elapsed * 2.5
+			pSmoothRotation = pAccumSmoothRotation * DEMath.min(adjustFactor, 1.0)
+			pAccumSmoothRotation -= pSmoothRotation
 		end
 		
 		
