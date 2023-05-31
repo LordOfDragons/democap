@@ -191,15 +191,30 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		end
 	end
 	
+	class ToggleRecordObject extends DefaultToggleModelListener
+		protected var WMPSOCapturedAnimations pPanel
+		
+		public func new(WMPSOCapturedAnimations panel)
+			pPanel = panel
+		end
+		
+		public func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorCapturedAnimations().setRecordObject(model.getToggled())
+		end
+	end
+	
 	class CapturedAnimationsChanged extends ECBCapturedAnimations.DefaultListener
 		protected var DefaultToggleModel pModelRecord
+		protected var DefaultToggleModel pModelRecordObject
 		
-		public func new(DefaultToggleModel modelRecord)
+		public func new(DefaultToggleModel modelRecord, DefaultToggleModel modelRecordObject)
 			pModelRecord = modelRecord
+			pModelRecordObject = modelRecordObject
 		end
 		
 		public func void recordChanged(ECBCapturedAnimations.Instance instance)
 			pModelRecord.setToggled(instance.getRecord())
+			pModelRecordObject.setToggled(instance.getRecordObject())
 		end
 	end
 	
@@ -209,6 +224,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	protected var DefaultListModel pModelAnimations
 	protected var DefaultTextModel pModelAnimationInfo
 	protected var DefaultToggleModel pModelRecord
+	protected var DefaultToggleModel pModelRecordObject
 	protected var AnimationsChangedListener pAnimationsChangedListener
 	protected var CharacterAnimation pAnimation
 	protected var CapturedAnimationsChanged pCapturedAnimationsChanged
@@ -222,6 +238,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		pModelAnimations = DefaultListModel.new()
 		pModelAnimationInfo = DefaultTextModel.new("")
 		pModelRecord = DefaultToggleModel.new()
+		pModelRecordObject = DefaultToggleModel.new()
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
@@ -229,9 +246,10 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		
 		pModelAnimations.addListener(SelectedAnimationChanged.new(this))
 		pModelRecord.addListener(ToggleRecord.new(this))
+		pModelRecordObject.addListener(ToggleRecordObject.new(this))
 		
 		pAnimationsChangedListener = AnimationsChangedListener.new(this)
-		pCapturedAnimationsChanged = CapturedAnimationsChanged.new(pModelRecord)
+		pCapturedAnimationsChanged = CapturedAnimationsChanged.new(pModelRecord, pModelRecordObject)
 	end
 	
 	/** Dispose of widget. */
@@ -244,6 +262,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		pModelAnimations = null
 		pModelAnimationInfo = null
 		pModelRecord = null
+		pModelRecordObject = null
 		
 		super.dispose()
 	end
@@ -263,6 +282,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		
 		runWhileBlockingLayout(block
 			pModelRecord.setToggled(pBehaviorCapturedAnimations.getRecord())
+			pModelRecordObject.setToggled(pBehaviorCapturedAnimations.getRecordObject())
 			
 			pAnimation = pBehaviorCapturedAnimations.getAnimations().getActive()
 			pModelAnimations.setSelectedElement(pAnimation)
@@ -471,9 +491,15 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			
 			// recording
 			p.addWidget(Label.new("", "Label.FormCaption"))
-			checkBox = CheckBox.new(pModelRecord, "Record")
-			checkBox.setToolTip("Enable recording.")
-			p.addWidget(checkBox)
+			p.addWidget(Panel.new(GridLayout.new(2, 0), block Panel p2
+				checkBox = CheckBox.new(pModelRecord, "Record")
+				checkBox.setToolTip("Enable recording.")
+				p2.addWidget(checkBox)
+				
+				checkBox = CheckBox.new(pModelRecordObject, "Record Object")
+				checkBox.setToolTip("Enable recording object position and orientation.")
+				p2.addWidget(checkBox)
+			end))
 		end))
 	end
 	

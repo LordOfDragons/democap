@@ -137,6 +137,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 		private var bool pIncrementTime
 		private var Array pListeners
 		private var bool pFullRecording
+		private var bool pRecordObject
 		private var bool pFirstFrame
 		private var RecordStateChanged pRecordStateChanged
 		private var bool pAutoStopRecord
@@ -296,10 +297,12 @@ class ECBRecordAnimation extends DefaultECBehavior
 			// find animation to record
 			pCharacterAnimation = null
 			pFullRecording = false
+			pRecordObject = false
 			
 			if pCapturedAnimations != null
 				pCharacterAnimation = pCapturedAnimations.getAnimations().getActive()
 				pFullRecording = pCapturedAnimations.getAnimations().getAt(0) == pCharacterAnimation
+				pRecordObject = pCapturedAnimations.getRecordObject()
 			end
 			
 			// prepare capturing
@@ -320,10 +323,12 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pRecordAnimationDevices.createRig(pCharacter.getCharacter())
 			end
 			
-			pRecordAnimationObject = RecordAnimation.new("-object")
-			pRecordAnimationObject.setFPS(pRecordAnimation.getFPS())
-			pRecordAnimationObject.setMoveName("MoCapObject")
-			pRecordAnimationObject.createObjectRig()
+			if pRecordObject
+				pRecordAnimationObject = RecordAnimation.new("-object")
+				pRecordAnimationObject.setFPS(pRecordAnimation.getFPS())
+				pRecordAnimationObject.setMoveName("MoCapObject")
+				pRecordAnimationObject.createObjectRig()
+			end
 			
 			if pCharacter != null
 				if pFullRecording

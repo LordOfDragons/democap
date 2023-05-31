@@ -170,6 +170,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		protected var PlaybackSceneChanged pPlaybackSceneChanged
 		protected var CaptureTarget pCaptureTarget
 		protected var bool pRecord
+		protected var bool pRecordObject
 		protected var String pAnimationName
 		protected var Array pListeners
 		
@@ -200,6 +201,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			pCharacterProfile = pECBehavior.characterProfile.getValue(stub)
 			pCaptureTarget = pECBehavior.captureTarget.getEnumeration() cast CaptureTarget
 			pRecord = pECBehavior.record.getValue(stub)
+			pRecordObject = pECBehavior.recordObject.getValue(stub)
 			pAnimationName = pECBehavior.animationName.getValue(stub)
 			
 			pAnimations.add(CharacterAnimation.new(pAnimationName))
@@ -263,6 +265,24 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			
 			pRecord = record
 			getElement().getStub().setPropertyBoolFor(pECBehavior.record.getName(), record)
+			
+			pListeners.forEach(block Listener each
+				each.recordChanged(this)
+			end)
+		end
+		
+		/** Record object. */
+		public func bool getRecordObject()
+			return pRecordObject
+		end
+		
+		public func void setRecordObject(bool record)
+			if record == pRecordObject
+				return
+			end
+			
+			pRecordObject = record
+			getElement().getStub().setPropertyBoolFor(pECBehavior.recordObject.getName(), record)
 			
 			pListeners.forEach(block Listener each
 				each.recordChanged(this)
@@ -546,8 +566,9 @@ class ECBCapturedAnimations extends DefaultECBehavior
 				readFromFileBase(env, reader)
 				
 			case 1
-				var PersistencyFlags flags = PersistencyFlags.new(1, reader)
+				var PersistencyFlags flags = PersistencyFlags.new(2, reader)
 				pRecord = flags.getAt(0)
+				pRecordObject = flags.getAt(1)
 				
 				readFromFileBase(env, reader)
 				
@@ -558,6 +579,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 			// update stub to properly support copy
 			var StubElement stub = getElement().getStub()
 			stub.setPropertyBoolFor(pECBehavior.record.getName(), pRecord)
+			stub.setPropertyBoolFor(pECBehavior.recordObject.getName(), pRecordObject)
 		end
 		
 		private func void readFromFileBase(PersistencyEnvironment env, FileReader reader)
@@ -577,8 +599,9 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
 			writer.writeByte(1) // version
 			
-			var PersistencyFlags flags = PersistencyFlags.new(1)
+			var PersistencyFlags flags = PersistencyFlags.new(2)
 			flags.setAt(0, pRecord)
+			flags.setAt(1, pRecordObject)
 			flags.writeToFile(writer)
 			
 			writer.writeString8(pActorProfile)
@@ -601,6 +624,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	public var ECPString characterProfile
 	public var ECPEnumeration captureTarget
 	public var ECPBoolean record
+	public var ECPBoolean recordObject
 	public var ECPString animationName
 	
 	
@@ -625,6 +649,9 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		
 		record = ECPBoolean.new(prefix + "record", false)
 		eclass.addProperty(record)
+		
+		recordObject = ECPBoolean.new(prefix + "recordObject", false)
+		eclass.addProperty(recordObject)
 		
 		animationName = ECPString.new(prefix + "animationName", "Object")
 		eclass.addProperty(animationName)
