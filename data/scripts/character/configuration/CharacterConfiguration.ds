@@ -641,8 +641,17 @@ class CharacterConfiguration
 	end
 	
 	/** Begin calibration. */
-	public func void beginCalibration(BaseVRActor actor)
+	public func void beginCalibration(BaseVRActor actor, ActorProfile actorProfile)
 		GameApp.getApp().getConsole().addMessage("Begin calibration: " + getLogName())
+		
+		// we have to do a quick calibration up front to be able to assign input devices.
+		// after the calibation finishes we do the real calibration with the collected data
+		var PlayspaceCalibrator calibrator = PlayspaceCalibrator.new(this, actorProfile, actor)
+		if calibrator.calibrate()
+			assignInputDevices(actorProfile)
+		end
+		
+		// now the tracker slots can begin calibration. this requires assigned input devices
 		pTrackerSlots.forEach(block CharacterTrackerSlot each
 			each.beginCalibration(actor)
 		end)
@@ -658,9 +667,6 @@ class CharacterConfiguration
 	/** Calibrate character. */
 	public func void calibrate(BaseVRActor actor, ActorProfile actorProfile)
 		GameApp.getApp().getConsole().addMessage("Finish calibration: " + getLogName())
-// 		if pProfile.getOriginBone().empty()
-// 			throw EInvalidParam.new("profile.originBone is empty")
-// 		end
 		
 		// ensure resources are loaded. if the element class exists already the resources
 		// are already preloaded and doing it synchronously again is fast. furthermore the
@@ -671,109 +677,21 @@ class CharacterConfiguration
 		// drop element class. we need to create a new one
 		dropElementClass()
 		
-		// determine scaling. we could try using the actor hands to find the shoulder level
-		// but this method is unstable. actors can not hold their arms exactly the same way
-		// each time they calibrate. furthermore it is difficult to hold the arms in the
-		// correct location using VR view. last but not least VR system measure distance to
-		// the ground with an offset leading. this causes the actor to be measured with a
-		// too small shoulder level compared to characters where the shoulder level is
-		// measured all the way to the ground. for these reasons actors are required to
-		// have their shoulder level measured to get precise results matching characters
-		var float actorScale = pProfile.getShoulderLevel() / actorProfile.getShoulderLevel()
-		setCalibrateScale(actorScale)
+		// calibrate playspace
+		var PlayspaceCalibrator calibrator = PlayspaceCalibrator.new(this, actorProfile, actor)
 		
-		// get hand positions to align calibration space
-		var Matrix hmd, rightHand, leftHand
-		if actor.getVRHMD().isAttached()
-			hmd = actor.getVRHMD().getMatrixPlayspace()
-		end
-		if actor.getVRRightHand().isAttached()
-			rightHand = actor.getVRRightHand().getMatrixPlayspace()
-		end
-		if actor.getVRLeftHand().isAttached()
-			leftHand = actor.getVRLeftHand().getMatrixPlayspace()
-		end
-		
-		// for calibration we need these three for the time being
-		if hmd == null or rightHand == null or leftHand == null
+		if not calibrator.calibrate()
 			resetCalibration(actor, true)
 			return
 		end
 		
-		// scale element if required
-		var float componentScaling = componentScaling()
-		actor.setScaling(Vector.new(componentScaling, componentScaling, componentScaling))
+		setCalibrateScale(calibrator.getScale())
+		setMatrixCalibrate(calibrator.getCalibrateMatrix())
 		
-		// hand controller devices have their pose beyond the controller tip which is
-		// the wrong location to use for calibration. to fix this find the tracker slots
-		// matching the hand controllers. there the user stored the offset required to
-		// moved the calibration point to a sane location
-		var CharacterTrackerSlot slot = pTrackerSlots.find(block CharacterTrackerSlot each
-			return each.getInputDeviceType() == InputDeviceType.vrRightHand
-		end)
-		if slot != null
-			rightHand = slot.getOffsetMatrix() * rightHand
-		end
+		var float compScale = componentScaling()
+		actor.setScaling(Vector.new(compScale, compScale, compScale))
 		
-		slot = pTrackerSlots.find(block CharacterTrackerSlot each
-			return each.getInputDeviceType() == InputDeviceType.vrLeftHand
-		end)
-		if slot != null
-			leftHand = slot.getOffsetMatrix() * leftHand
-		end
-		
-		// this one here is a bit tricky. we have to figure out if head tracking using HMD
-		// or using a tracker has to be done. for this we need a tracker slot with type
-		// headTracker and an assigned tracker. we assign though trackers to slots after
-		// calculating the calibration matrix. but for calculating the calibration matrix
-		// we need to know the assignment.
-		// 
-		// to solve this problem we calculate first an approximate calibration matrix using
-		// the position centered between the two hand controllers projected down to the
-		// ground. this is enough to assign the head tracker if present. once this is done
-		// we can clear the assignment and continue depending on what we found
-		var CharacterTrackerSlot slotHeadTracker = \
-			pTrackerSlots.firstWithType(CharacterTrackerSlot.Type.headTracker)
-		
-		var bool useHeadTracker
-		
-		if slotHeadTracker != null
-			var Vector posRightHand = rightHand.getPosition()
-			var Vector posLeftHand = leftHand.getPosition()
-			
-			var Vector dirHands = (posRightHand - posLeftHand).compSelect(true, false, true).normalize()
-			var float rotHands = -DEMath.atan2(dirHands.getX(), dirHands.getZ())
-			var Vector centerHands = (posRightHand + posLeftHand) * 0.5
-			
-			var Vector centerBody = centerHands.compSelect(true, false, true)
-			var float turnBody = rotHands + 90
-			
-			setMatrixCalibrate(Matrix.newTranslation(-centerBody) * Matrix.newRotationY(-turnBody))
-			
-			useHeadTracker = findSlotInputDevice(slotHeadTracker) != null
-		end
-		
-		// calculate calibration matrix transforming tracked positions into calibration
-		// coordinate system. hmd looks forwards, hands are aligned along the X axis and
-		// body is centered along X and Z direction. also apply scaling from actor
-		// shoulder level to character shoulder level
-		if not useHeadTracker
-			var Vector posHMD = hmd.getPosition()
-			var float turnHMD = hmd.getEulerAngles().getY()
-			var Matrix hmdNorm = Matrix.newRT(Vector.new(0, turnHMD, 0), posHMD)
-			
-// 			var Vector posNeck = hmdNorm * Vector.new(0, -0.2, -0.1)
-			var Vector posNeck = hmdNorm * Vector.new(0, -0.15, -0.1)
-			
-			var Vector centerBody = posNeck.compSelect(true, false, true)
-			var float turnBody = turnHMD
-			
-			setMatrixCalibrate(Matrix.newTranslation(-centerBody) * Matrix.newRotationY(-turnBody))
-		end
-		
-		// calibrate tracker slots
-		assignInputDevices(actorProfile)
-		
+		// calibrate tracker slots. we did assign devices during begin calibration
 		pTrackerSlots.forEach(block CharacterTrackerSlot each
 			each.calibrate(actorProfile, actor)
 		end)
@@ -814,8 +732,26 @@ class CharacterConfiguration
 		pProfile.notifyCalibrated(this)
 	end
 	
+	/** Find closest slot to input devices and return input device found for slot. */
+	public func InputDevice findSlotInputDevice(CharacterTrackerSlot slot)
+		return GameApp.getGameApp().getBindingManager().findDevice(block InputDevice device
+			select device.getType()
+			case InputDeviceType.vrHMD, InputDeviceType.vrEyeTracker,\
+				 InputDeviceType.vrLeftHand, InputDeviceType.vrRightHand,\
+				 InputDeviceType.vrTracker
+				return pTrackerSlots.bestMatching(device.getType(),\
+					pMatrixCalibrate * device.getDevicePosePosition()) == slot
+				
+			else
+				return false
+			end
+		end)
+	end
+	
+	
+	
 	/** Assign input devices to closest slot with matching type. */
-	public func void assignInputDevices(ActorProfile actorProfile)
+	protected func void assignInputDevices(ActorProfile actorProfile)
 		var BindingManager bindings = GameApp.getGameApp().getBindingManager()
 		
 		// clear all assignments
@@ -849,24 +785,6 @@ class CharacterConfiguration
 			end
 		end)
 	end
-	
-	/** Find closest slot to input devices and return input device found for slot. */
-	public func InputDevice findSlotInputDevice(CharacterTrackerSlot slot)
-		return GameApp.getGameApp().getBindingManager().findDevice(block InputDevice device
-			select device.getType()
-			case InputDeviceType.vrHMD, InputDeviceType.vrEyeTracker,\
-				 InputDeviceType.vrLeftHand, InputDeviceType.vrRightHand,\
-				 InputDeviceType.vrTracker
-				return pTrackerSlots.bestMatching(device.getType(),\
-					pMatrixCalibrate * device.getDevicePosePosition()) == slot
-				
-			else
-				return false
-			end
-		end)
-	end
-	
-	
 	
 	/** Prepare element class. */
 	protected func void prepareElementClass()

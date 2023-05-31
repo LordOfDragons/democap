@@ -133,15 +133,18 @@ class AACalibrate extends AABase
 	
 	/** Trigger pulled. */
 	public func void triggerPull(bool rightHand)
-		var CharacterConfiguration character = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
-		if actor == null or character == null
+		var GameApp app = GameApp.getGameApp()
+		var ActorProfile actorProfile = app.getActiveActorProfile()
+		var CharacterConfiguration character = app.getWorldSpawnCharacter().getCharacter()
+		
+		if actor == null or character == null or actorProfile == null
 			return
 		end
 		
 		select state
 		case State.waiting
 			log("Delay calibration")
-			character.beginCalibration(actor cast BaseVRActor)
+			character.beginCalibration(actor cast BaseVRActor, actorProfile)
 			state = State.delayCalibrating
 			triggerPressCount++
 			

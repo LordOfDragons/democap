@@ -1,0 +1,189 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Characters
+
+pin Democap.Actors
+
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Smooth slot. Applies a weighted moving mean filter.
+ */
+class PlayspaceCalibrator
+	protected var CharacterConfiguration pCharacter
+	protected var ActorProfile pActorProfile
+	protected var BaseVRActor pActor
+	
+	protected var CharacterTrackerSlots pSlots
+	
+	protected var float pScale
+	protected var Matrix pMatrixHmd
+	protected var Matrix pMatrixHandRight
+	protected var Matrix pMatrixHandLeft
+	protected var CharacterTrackerSlot pSlotHeadTracker
+	protected var bool pUseHeadTracker
+	protected var Matrix pCalibrateMatrix
+	
+	
+	
+	/** Create playspace calibrator. */
+	public func new(CharacterConfiguration character, ActorProfile actorProfile, BaseVRActor actor)
+		pCharacter = character
+		pActorProfile = actorProfile
+		pActor = actor
+		
+		pSlots = character.getTrackerSlots()
+	end
+	
+	
+	
+	/** Calibration scale. */
+	public func float getScale()
+		return pScale
+	end
+	
+	/** Calibrate matrix. */
+	public func Matrix getCalibrateMatrix()
+		return pCalibrateMatrix
+	end
+	
+	
+	
+	/** Calibrate playspace. */
+	public func bool calibrate()
+		calcActorScale()
+		findBaseMatrices()
+		
+		// for calibration we need these three for the time being
+		if pMatrixHmd == null or pMatrixHandRight == null or pMatrixHandLeft == null
+			return false
+		end
+		
+		adjustHandMatrices()
+		detectHeadTracker()
+		if not pUseHeadTracker
+			calcHmdCalibrateMatrix()
+		end
+		
+		return true
+	end
+	
+	
+	
+	protected func void calcActorScale()
+		// determine scaling. we could try using the actor hands to find the shoulder level
+		// but this method is unstable. actors can not hold their arms exactly the same way
+		// each time they calibrate. furthermore it is difficult to hold the arms in the
+		// correct location using VR view. last but not least VR system measure distance to
+		// the ground with an offset leading. this causes the actor to be measured with a
+		// too small shoulder level compared to characters where the shoulder level is
+		// measured all the way to the ground. for these reasons actors are required to
+		// have their shoulder level measured to get precise results matching characters
+		pScale = pCharacter.getProfile().getShoulderLevel() / pActorProfile.getShoulderLevel()
+	end
+	
+	protected func void findBaseMatrices()
+		// get hand positions to align calibration space
+		if pActor.getVRHMD().isAttached()
+			pMatrixHmd = pActor.getVRHMD().getMatrixPlayspace()
+		end
+		
+		if pActor.getVRRightHand().isAttached()
+			pMatrixHandRight = pActor.getVRRightHand().getMatrixPlayspace()
+		end
+		
+		if pActor.getVRLeftHand().isAttached()
+			pMatrixHandLeft = pActor.getVRLeftHand().getMatrixPlayspace()
+		end
+	end
+	
+	protected func void adjustHandMatrices()
+		// hand controller devices have their pose beyond the controller tip which is
+		// the wrong location to use for calibration. to fix this find the tracker slots
+		// matching the hand controllers. there the user stored the offset required to
+		// moved the calibration point to a sane location
+		var CharacterTrackerSlot slot = pSlots.find(block CharacterTrackerSlot each
+			return each.getInputDeviceType() == InputDeviceType.vrRightHand
+		end)
+		if slot != null
+			pMatrixHandRight = slot.getOffsetMatrix() * pMatrixHandRight
+		end
+		
+		slot = pSlots.find(block CharacterTrackerSlot each
+			return each.getInputDeviceType() == InputDeviceType.vrLeftHand
+		end)
+		if slot != null
+			pMatrixHandLeft = slot.getOffsetMatrix() * pMatrixHandLeft
+		end
+	end
+	
+	protected func void detectHeadTracker()
+		// this one here is a bit tricky. we have to figure out if head tracking using HMD
+		// or using a tracker has to be done. for this we need a tracker slot with type
+		// headTracker and an assigned tracker. we assign though trackers to slots after
+		// calculating the calibration matrix. but for calculating the calibration matrix
+		// we need to know the assignment.
+		// 
+		// to solve this problem we calculate first an approximate calibration matrix using
+		// the position centered between the two hand controllers projected down to the
+		// ground. this is enough to assign the head tracker if present. once this is done
+		// we can clear the assignment and continue depending on what we found
+		pSlotHeadTracker = pSlots.firstWithType(CharacterTrackerSlot.Type.headTracker)
+		if pSlotHeadTracker == null
+			return
+		end
+		
+		var Vector posRightHand = pMatrixHandRight.getPosition()
+		var Vector posLeftHand = pMatrixHandLeft.getPosition()
+		
+		var Vector dirHands = (posRightHand - posLeftHand).compSelect(true, false, true).normalize()
+		var float rotHands = -DEMath.atan2(dirHands.getX(), dirHands.getZ())
+		var Vector centerHands = (posRightHand + posLeftHand) * 0.5
+		
+		var Vector centerBody = centerHands.compSelect(true, false, true)
+		var float turnBody = rotHands + 90
+		
+		pCalibrateMatrix = Matrix.newTranslation(-centerBody) * Matrix.newRotationY(-turnBody)
+		
+		pUseHeadTracker = pCharacter.findSlotInputDevice(pSlotHeadTracker) != null
+	end
+	
+	protected func void calcHmdCalibrateMatrix()
+		// calculate calibration matrix transforming tracked positions into calibration
+		// coordinate system. hmd looks forwards, hands are aligned along the X axis and
+		// body is centered along X and Z direction. also apply scaling from actor
+		// shoulder level to character shoulder level
+		var Vector posHMD = pMatrixHmd.getPosition()
+		var float turnHMD = pMatrixHmd.getEulerAngles().getY()
+		var Matrix hmdNorm = Matrix.newRT(Vector.new(0, turnHMD, 0), posHMD)
+		
+//		var Vector posNeck = hmdNorm * Vector.new(0, -0.2, -0.1)
+		var Vector posNeck = hmdNorm * Vector.new(0, -0.15, -0.1)
+		
+		var Vector centerBody = posNeck.compSelect(true, false, true)
+		var float turnBody = turnHMD
+		
+		pCalibrateMatrix = Matrix.newTranslation(-centerBody) * Matrix.newRotationY(-turnBody)
+	end
+end
