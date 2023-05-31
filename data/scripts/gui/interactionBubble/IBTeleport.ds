@@ -22,6 +22,8 @@
 namespace Democap.Gui
 
 pin Democap.Behaviors
+pin Democap.Characters
+
 pin Dragengine.Gui.Events
 pin Dragengine.Scenery
 pin Dragengine.Utils
@@ -69,8 +71,24 @@ class IBTeleport extends InteractionBubbleButton
 			return
 		end
 		
-		var DMatrix matrix = configuration.getCharacter().getMatrixCalibrate().toDMatrix()\
-			* element.getElementMatrix().normalize()
+		var CharacterConfiguration config = configuration.getCharacter()
+		var Component component = actor.getComponent().getComponent()
+		var int teleportBone = component.indexOfBoneNamed(config.getProfile().getTeleportBone())
+		
+		var DMatrix matrixTarget = element.getElementMatrix().normalize()
+		var DMatrix matrix
+		
+		if teleportBone != -1
+			matrix = config.characterToWorld(config.componentToCharacter(\
+				(component.boneGetInverseMatrix(teleportBone)\
+					* component.getRig().getBoneMatrix(teleportBone)).normalize())).toDMatrix()
+			
+			matrix = DMatrix.newRT(matrix.getEulerAngles().compSelect(false, true, false),\
+				matrix.getPosition().compSelect(true, false, true)) * matrixTarget
+			
+		else
+			matrix = config.getMatrixCalibrate().toDMatrix() * matrixTarget
+		end
 		
 		actor.setGeometry(matrix.getPosition(), matrix.toQuaternion())
 		

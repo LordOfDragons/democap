@@ -411,6 +411,8 @@ class CharacterConfiguration
 			return
 		end
 		
+		GameApp.getApp().getConsole().addMessage("Drop element class: " + getLogName())
+		
 		disposeOldElementClass()
 		pOldElementClass = pElementClass
 		pElementClass = null
@@ -602,6 +604,8 @@ class CharacterConfiguration
 	
 	/** Reset calibration. */
 	public func void resetCalibration(BaseVRActor actor, bool calibrating)
+		GameApp.getApp().getConsole().addMessage("Reset calibration (" + calibrating + "): " + getLogName())
+		
 		if actor != null
 			actor.getActorAnimated().setAnimator(null)
 			
@@ -638,6 +642,7 @@ class CharacterConfiguration
 	
 	/** Begin calibration. */
 	public func void beginCalibration(BaseVRActor actor)
+		GameApp.getApp().getConsole().addMessage("Begin calibration: " + getLogName())
 		pTrackerSlots.forEach(block CharacterTrackerSlot each
 			each.beginCalibration(actor)
 		end)
@@ -652,6 +657,7 @@ class CharacterConfiguration
 	
 	/** Calibrate character. */
 	public func void calibrate(BaseVRActor actor, ActorProfile actorProfile)
+		GameApp.getApp().getConsole().addMessage("Finish calibration: " + getLogName())
 // 		if pProfile.getOriginBone().empty()
 // 			throw EInvalidParam.new("profile.originBone is empty")
 // 		end
@@ -792,6 +798,8 @@ class CharacterConfiguration
 			return
 		end
 		
+		GameApp.getApp().getConsole().addMessage("Recalibrate: " + getLogName())
+		
 		dropElementClass()
 		
 		pTrackerSlots.forEach(block CharacterTrackerSlot each
@@ -817,7 +825,7 @@ class CharacterConfiguration
 		
 		// assign input devices
 		var Console console = GameApp.getGameApp().getConsole()
-		console.addMessage("Assign input devices:")
+		console.addMessage("Assign input devices: " + getLogName())
 		
 		bindings.forEachDevice(block InputDevice device
 			select device.getType()
@@ -862,6 +870,7 @@ class CharacterConfiguration
 	
 	/** Prepare element class. */
 	protected func void prepareElementClass()
+		GameApp.getApp().getConsole().addMessage("Prepare element class: " + getLogName())
 		pElementClass = MoCapActorClass.new("Character" + GameApp.getGameApp().getNextElementClassID().nextID())
 		
 		// apply appearance. requires for preloading
@@ -874,6 +883,7 @@ class CharacterConfiguration
 			return
 		end
 		
+		GameApp.getApp().getConsole().addMessage("Finish element class: " + getLogName())
 		var ECBCharacterConfiguration character = ECBCharacterConfiguration.new(pElementClass, this)
 		
 		var ECBMoCapAnimator mocapAnimator = ECBMoCapAnimator.new(pElementClass)
@@ -1014,6 +1024,7 @@ class CharacterConfiguration
 	 * null is returned.
 	 */
 	public func StubElement createStubElement()
+		GameApp.getApp().getConsole().addMessage("Create stub element: " + getLogName())
 		var StubElement stub
 		if pElementClass != null and not isElementClassPreloading()
 			stub = StubElement.new(getElementClass()) // no generated ID on purpose
@@ -1023,6 +1034,11 @@ class CharacterConfiguration
 			end
 		end
 		return stub
+	end
+	
+	/** Log name. */
+	public func String getLogName()
+		return "'" + pProfile.getName() + "' -> '" + pName + "'"
 	end
 	
 	

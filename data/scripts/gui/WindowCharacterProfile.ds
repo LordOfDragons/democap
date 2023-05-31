@@ -91,6 +91,8 @@ class WindowCharacterProfile extends WindowDialog
 	private var DefaultTextModel pModelProfileName
 	private var DefaultListModel pModelListOriginBone
 	private var DefaultTextModel pModelTextOriginBone
+	private var DefaultListModel pModelListTeleportBone
+	private var DefaultTextModel pModelTextTeleportBone
 	private var DefaultTextModel pModelShoulderLevel
 	private var DefaultTextModel pModelPathModel
 	private var DefaultTextModel pModelPathSkin
@@ -114,6 +116,9 @@ class WindowCharacterProfile extends WindowDialog
 		pModelListOriginBone = DefaultListModel.new()
 		pModelListOriginBone.setAutoSelect(false)
 		pModelTextOriginBone = DefaultTextModel.new(profile.getOriginBone())
+		pModelListTeleportBone = DefaultListModel.new()
+		pModelListTeleportBone.setAutoSelect(false)
+		pModelTextTeleportBone = DefaultTextModel.new(profile.getTeleportBone())
 		pModelShoulderLevel = DefaultTextModel.new(profile.getShoulderLevel().toString())
 		pModelPathModel = DefaultTextModel.new(profile.getAppearance().getPathModel())
 		pModelPathSkin = DefaultTextModel.new(profile.getAppearance().getPathSkin())
@@ -159,6 +164,8 @@ class WindowCharacterProfile extends WindowDialog
 		pModelProfileName = null
 		pModelListOriginBone = null
 		pModelTextOriginBone = null
+		pModelListTeleportBone = null
+		pModelTextTeleportBone = null
 		pModelShoulderLevel = null
 		pModelPathModel = null
 		pModelPathSkin = null
@@ -199,6 +206,7 @@ class WindowCharacterProfile extends WindowDialog
 		
 		pCharacterProfile.setName(profileName)
 		pCharacterProfile.setOriginBone(pModelTextOriginBone.getText())
+		pCharacterProfile.setTeleportBone(pModelTextTeleportBone.getText())
 		pCharacterProfile.setShoulderLevel(pModelShoulderLevel.getText().toFloat())
 		pCharacterProfile.setPreviewMove(pModelTextPreviewMove.getText())
 		pCharacterProfile.setBoneAxis(pModelBoneAxis.getSelectedElement() cast CharacterProfile.BoneAxis)
@@ -315,6 +323,18 @@ class WindowCharacterProfile extends WindowDialog
 			
 			CPEBone.new(pCharacterPreview, label, comboBox)
 			
+			// teleport bone
+			label = Label.new("Teleport Bone:", "Label.FormCaption")
+			p.addWidget(label)
+			
+			comboBox = ComboBox.new(pModelListTeleportBone, DefaultComboBoxEditor.new(pModelTextTeleportBone))
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterProfile")
+			comboBox.setToolTip("Teleport bone. If not empty string this bone is used to align with markers"\
+				+ " on teleporting. If empty string playspace origin is used instead. Waist bone is recommended.")
+			p.addWidget(comboBox)
+			
+			CPEBone.new(pCharacterPreview, label, comboBox)
+			
 			// shoulder level
 			label = Label.new("Shoulder Level:", "Label.FormCaption")
 			p.addWidget(label)
@@ -394,6 +414,7 @@ class WindowCharacterProfile extends WindowDialog
 		end
 		
 		pModelListOriginBone.setContent(bones)
+		pModelListTeleportBone.setContent(bones)
 	end
 	
 	/** Update move lists. */

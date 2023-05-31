@@ -27,6 +27,7 @@ pin Democap.Characters
 
 pin Dragengine.Gui.Layouts
 pin Dragengine.Scenery
+pin Dragengine.Utils
 
 
 /**
@@ -75,6 +76,10 @@ class AACalibrate extends AABase
 	public func void activate(BehaviorElement actor)
 		super.activate(actor)
 		
+		var GameApp app = GameApp.getGameApp()
+		var ActorProfile actorProfile = app.getActiveActorProfile()
+		var CharacterConfiguration character = app.getWorldSpawnCharacter().getCharacter()
+		
 		stopPointingAtAnything()
 		stopGrabbing()
 		hideVRMenu()
@@ -83,11 +88,7 @@ class AACalibrate extends AABase
 		
 		projectToGround.setEnabled(false)
 		
-		var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
-		var CharacterConfiguration character = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
-		if actor != null and character != null
-			character.resetCalibration(actor cast BaseVRActor, true)
-		end
+		character.resetCalibration(actor cast BaseVRActor, true)
 		
 		if vrHudInfo != null
 			modelProgress = DefaultRangeModel.new(0, 100, 1, 0, 1)
@@ -139,6 +140,7 @@ class AACalibrate extends AABase
 		
 		select state
 		case State.waiting
+			log("Delay calibration")
 			character.beginCalibration(actor cast BaseVRActor)
 			state = State.delayCalibrating
 			triggerPressCount++
@@ -154,6 +156,7 @@ class AACalibrate extends AABase
 		case State.delayCalibrating, State.calibrating
 			triggerPressCount--
 			if triggerPressCount == 0
+				log("Trigger released. Reset to waiting")
 				resetToWaiting()
 			end
 		end
@@ -163,11 +166,13 @@ class AACalibrate extends AABase
 	
 	/** Menu button pressed. */
 	public func void menuPress(bool rightHand)
+		log("Menu pressed. Cancel calibration")
 		cancelCalibrate()
 	end
 	
 	/** Cancel calibrate. */
 	public func void cancelCalibrate()
+		log("Cancel calibration")
 		var CharacterConfiguration character = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
 		if actor != null and character != null
 			character.resetCalibration(actor cast BaseVRActor, false)
@@ -189,6 +194,7 @@ class AACalibrate extends AABase
 			var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
 			var CharacterConfiguration character = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
 			if actor == null or character == null
+				log("Actor/Character lost. Reset to waiting")
 				resetToWaiting()
 				return
 			end
@@ -202,6 +208,7 @@ class AACalibrate extends AABase
 			
 			// once timout elapsed calibrate and finish
 			if calibrateElapsed >= calibrateDelayTime
+				log("Delay finished. Begin collecting calibration data")
 				state = State.calibrating
 				character.updateCalibration()
 			end
@@ -211,6 +218,7 @@ class AACalibrate extends AABase
 			var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
 			var CharacterConfiguration character = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
 			if actor == null or character == null
+				log("Actor/Character lost. Go back to waiting")
 				resetToWaiting()
 				return
 			end
@@ -231,6 +239,7 @@ class AACalibrate extends AABase
 				var BaseVRActor vrActor = actor cast BaseVRActor
 				//actorProfile.calibrate(vrActor)
 				
+				log("Collecting calibration finished. Calibrate character")
 				character.calibrate(vrActor, actorProfile)
 				
 				try
@@ -270,7 +279,8 @@ class AACalibrate extends AABase
 	
 	/** Toggle large mirror. */
 	public func void toggleLargeMirror()
-		var BehaviorElement mirror = GameApp.getGameApp().getWorldSpawnCharacter().getMirrorLarge()
+		var WorldSpawnCharacter wsc = GameApp.getGameApp().getWorldSpawnCharacter()
+		var BehaviorElement mirror = wsc.getMirrorLarge()
 		if mirror == null
 			return
 		end
@@ -280,14 +290,53 @@ class AACalibrate extends AABase
 			return
 		end
 		
-		// delay showing the mirror by a frame update. this is required since repositionHmd()
-		// uses the current VR camera position. althought the actor has been calibrated at this
-		// point in time the VR camera will pick up the changes when this frame ends. delaying
-		// until the next frame ensures the correct camera position is used
-		var BaseVRActor vractor = actor cast BaseVRActor
-		TimerBlock.new(0, false, block
-			toggleVisibility.repositionHmd(vractor, Vector.new(0, 0, 0.5))
-			toggleVisibility.setVisible(true)
-		end)
+		ShowLargeMirrorTimer.new()
+	end
+	
+	/** Show large mirror timer. */
+	class ShowLargeMirrorTimer extends Timer
+		protected var int state
+		
+		public func new() super(0, true)
+		end
+		
+		public func void fire()
+			var WorldSpawnCharacter wsc = GameApp.getGameApp().getWorldSpawnCharacter()
+			var BehaviorElement mirror = wsc.getMirrorLarge()
+			if mirror == null
+				giveUp()
+				return
+			end
+			
+			var ECBToggleVisibility.Instance toggleVisibility = ECBToggleVisibility.getInstanceIn(mirror)
+			if toggleVisibility == null
+				giveUp()
+				return
+			end
+			
+			var CharacterConfiguration character = wsc.getCharacter()
+			var BaseVRActor vractor = wsc.getActor()
+			if vractor == null or character == null
+				return
+			end
+			
+			select state
+			case 0
+				if character.isCalibrated()
+					state++
+				end
+				
+			case 1, 2, 3
+				state++
+				
+			case 4
+				state++
+				toggleVisibility.repositionHmd(vractor, Vector.new(0, 0, 0.5))
+				toggleVisibility.setVisible(true)
+				
+			else
+				giveUp()
+			end
+		end
 	end
 end

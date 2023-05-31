@@ -1,0 +1,167 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Motion capture actor movement helper.
+ */
+class ECBAMovementHelper extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		protected var ECBAMovementHelper pECBehavior
+		protected var ECBCharacterConfiguration.Instance pCharacter
+		protected var ECBehaviorComponent.Instance pComponent
+		
+		
+		
+		/** Create behavior instance. */
+		public func new(ECBAMovementHelper ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pComponent = ecbehavior.component.instance(element)
+		end
+		
+		/** Dispose of behavior instance. */
+		public func void dispose()
+			pCharacter = null
+			super.dispose()
+		end
+		
+		
+		
+		/** Init behavior. */
+		public func void init(StubElement stub)
+			pCharacter = ECBCharacterConfiguration.getInstanceIn(getElement())
+		end
+		
+		
+		
+		/** Calculate movement matrix. */
+		public func DMatrix calcMatrix()
+			var DMatrix matrixElement = getElement().getElementMatrix().normalize()
+			
+			if pCharacter == null
+				return matrixElement
+			end
+			
+			var CharacterConfiguration config = pCharacter.getCharacter()
+			var Component component = pComponent.getComponent()
+			var int teleportBone = component.indexOfBoneNamed(config.getProfile().getTeleportBone())
+			
+			if teleportBone == -1
+				return config.getMatrixCalibrate().toDMatrix() * matrixElement
+			end
+			
+			var Matrix matrixBone = component.boneGetMatrix(teleportBone).normalize()
+			var Matrix matrixRigInv = component.getRig().getBoneInverseMatrix(teleportBone).normalize()
+			
+			var DMatrix transform = config.characterToWorld(\
+				config.componentToCharacter(matrixRigInv * matrixBone)).toDMatrix()
+			
+			return DMatrix.newRT(transform.getEulerAngles().compSelect(false, true, false),\
+				transform.getPosition().compSelect(true, false, true)) * matrixElement
+		end
+		
+		
+		
+		/** Move actor. */
+		public func void move(DVector direction)
+			getElement().setPosition(getElement().getPosition() + moveVector(direction))
+		end
+		
+		/** Move actor. */
+		public func DVector moveVector(DVector direction)
+			var DMatrix matrix = calcMatrix()
+			return matrix.transformNormal(direction)
+		end
+		
+		/** Rotate actor. */
+		public func void rotate(Vector axis, float angle)
+			rotate(Quaternion.newFromAxis(calcMatrix().toMatrix().transformNormal(axis.normalize()), angle))
+		end
+		
+		/** Rotate actor. */
+		public func void rotate(Quaternion rotation)
+			var DMatrix matrix = rotateMatrix(rotation)
+			getElement().setGeometry(matrix.getPosition(), matrix.toQuaternion())
+		end
+		
+		/** Rotate actor. */
+		public func DMatrix rotateMatrix(Vector axis, float angle)
+			return rotateMatrix(Quaternion.newFromAxis(calcMatrix().toMatrix().transformNormal(axis.normalize()), angle))
+		end
+		
+		/** Rotate actor. */
+		public func DMatrix rotateMatrix(Quaternion rotation)
+			var DMatrix matrixElement = getElement().getElementMatrix().normalize()
+			var DMatrix matrix = calcMatrix()
+			
+			return getElement().getElementMatrix().normalize() * matrix.getInverse()\
+				* DMatrix.newFromQuaternion(rotation) * matrix
+		end
+	end
+	
+	
+	
+	public var ECBehaviorComponent component
+	
+	
+	
+	/** Create behavior and add it to element class. */
+	public func new(BehaviorElementClass eclass, ECBehaviorComponent component) super(eclass)
+		this.component = component
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	public func void dispose()
+		component = null
+		super.dispose()
+	end
+	
+	
+	
+	/** Get instance in element from owner element class. */
+	public func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static public func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	/** Create behavior instance. */
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

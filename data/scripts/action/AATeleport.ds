@@ -22,6 +22,7 @@
 namespace Democap.Actions
 
 pin Democap.Behaviors
+pin Democap.Characters
 pin Democap.Elements
 
 pin Dragengine.Scenery
@@ -34,6 +35,9 @@ class AATeleport extends AABase
 	protected var ECBehaviorVRHandPointAt.Instance pointAt
 	protected var ECBATeleportDestination.Instance teleportDestination
 	protected var DVector pPosition
+	protected var DMatrix pMatrixOffset
+	protected var Quaternion pOrientation
+	
 	
 	
 	/** Create action. */
@@ -45,6 +49,9 @@ class AATeleport extends AABase
 	/** Action has been activated. */
 	public func void activate(BehaviorElement actor)
 		super.activate(actor)
+		
+		pOrientation = actor.getOrientation()
+		pMatrixOffset = calcMatrixOffset()
 		
 		stopPointingAtAnything()
 		
@@ -90,6 +97,12 @@ class AATeleport extends AABase
 		checkFinishTeleport()
 	end
 	
+	/** Apply looking around changes. Called for player controlled actors only. */
+	protected func void applyLookAroundChanges(float deltaHorizontal, float deltaVertical)
+		locomotion.applyLookAround(0, deltaVertical)
+		pOrientation = pOrientation * Quaternion.newFromEulerY(deltaHorizontal)
+	end
+	
 	
 	
 	/** Update teleport destination. */
@@ -99,7 +112,9 @@ class AATeleport extends AABase
 		if pPosition != null
 			pPosition = pPosition - DVector.new(0, 0.35, 0) // sphere radius compensation
 			
-			teleportDestination.setGeometry(pPosition, actor.getOrientation())
+			var DMatrix matrix = pMatrixOffset * DMatrix.newWorld(pPosition, pOrientation)
+			
+			teleportDestination.setGeometry(matrix.getPosition(), matrix.toQuaternion())
 			teleportDestination.setVisible(true)
 			
 		else
@@ -125,17 +140,11 @@ class AATeleport extends AABase
 		pointAt.setEnabled(false)
 		
 		if pPosition != null
+			var DMatrix matrix = pMatrixOffset * DMatrix.newWorld(pPosition, pOrientation)
+			
+			actor.setGeometry(matrix.getPosition(), matrix.toQuaternion())
+			
 			var MoCapActor mcactor = getActor() cast MoCapActor
-			
-			// teleport actor element. place center at target point not playspace center
-			var ECBCharacterConfiguration.Instance character = ECBCharacterConfiguration.getInstanceIn(mcactor)
-			var DMatrix matrix = DMatrix.newWorld(pPosition, actor.getOrientation())
-			
-			if character != null
-				matrix = character.getCharacter().getMatrixCalibrate().toDMatrix() * matrix
-			end
-			
-			mcactor.setGeometry(matrix.getPosition(), matrix.toQuaternion())
 			
 			// if physics attachments are used init collider bone states from component.
 			// this is required since collider bone states are in world space and do not
@@ -148,5 +157,31 @@ class AATeleport extends AABase
 		end
 		
 		aiAction.setAction(AADefault.new())
+	end
+	
+	protected func DMatrix calcMatrixOffset()
+		var ECBCharacterConfiguration.Instance character = ECBCharacterConfiguration.getInstanceIn(actor)
+		if character == null
+			return DMatrix.new()
+		end
+		
+		var Component component = (actor cast MoCapActor).getComponent().getComponent()
+		var int teleportBone = component.indexOfBoneNamed(character.getCharacter().getProfile().getTeleportBone())
+		
+		if teleportBone == -1
+			return character.getCharacter().getMatrixCalibrate().toDMatrix()
+		end
+		
+		var CharacterConfiguration config = character.getCharacter()
+		
+		var DMatrix componentMatrix = component.getMatrix()
+		var DMatrix boneMatrix = component.boneGetMatrix(teleportBone).toDMatrix()
+		
+		var DVector componentPosition = componentMatrix.getPosition()
+		var DVector bonePosition = (boneMatrix * componentMatrix).getPosition()
+		
+		var DVector pivot = bonePosition.combine(componentPosition, true, false, true)
+		
+		return componentMatrix.normalize() * DMatrix.newWorld(pivot, actor.getOrientation()).getInverse()
 	end
 end

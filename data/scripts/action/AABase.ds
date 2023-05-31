@@ -32,8 +32,21 @@ pin Dragengine.Scenery
  * supported commands that can be send to actions.
  */
 abstract class AABase extends BAAFirstPersonVR implements AAControllerInput, AAControlCommands
+	protected var ECBAMovementHelper.Instance movementHelper
+	
+	
+	
 	/** Create action. */
 	public func new()
+	end
+	
+	
+	
+	/** Init behaviors. */
+	protected func void initBehaviors()
+		super.initBehaviors()
+		
+		movementHelper = (actor cast MoCapActor).movementHelper
 	end
 	
 	
@@ -152,6 +165,17 @@ abstract class AABase extends BAAFirstPersonVR implements AAControllerInput, AAC
 	
 	/** Controller capabilities changed. */
 	public func void controllerCapabilitiesChanged()
+	end
+	
+	
+	
+	/** Apply looking around changes. Called for player controlled actors only. */
+	protected func void applyLookAroundChanges(float deltaHorizontal, float deltaVertical)
+		locomotion.applyLookAround(0, deltaVertical)
+		
+		// TODO smoothing similar to locomotion. locomotion can not be used since this would
+		// smooth movement and turning individually causing strange results
+		movementHelper.rotate(Vector.new(0, 1, 0), -deltaHorizontal)
 	end
 	
 	

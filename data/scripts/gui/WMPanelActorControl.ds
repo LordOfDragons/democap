@@ -116,9 +116,7 @@ class WMPanelActorControl extends Panel
 	public func void moveActor(DVector direction)
 		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
 		if actor != null
-			var DMatrix matrix = DMatrix.newFromQuaternion(actor.getOrientation())
-			actor.setPosition(actor.getPosition() + matrix.transformNormal(direction)\
-				* SessionSettings.get().getManualMovementStep())
+			ECBAMovementHelper.getInstanceIn(actor).move(direction * SessionSettings.get().getManualMovementStep())
 		end
 	end
 	
@@ -126,9 +124,7 @@ class WMPanelActorControl extends Panel
 	public func void rotateActor(Vector axis)
 		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
 		if actor != null
-			var Matrix matrix = Matrix.newFromQuaternion(actor.getOrientation())
-			actor.setOrientation(actor.getOrientation() * Quaternion.newFromAxis(\
-				matrix.transformNormal(axis), -SessionSettings.get().getManualRotationStep()))
+			ECBAMovementHelper.getInstanceIn(actor).rotate(axis, -SessionSettings.get().getManualRotationStep())
 		end
 	end
 	
