@@ -36,18 +36,23 @@ pin Dragengine.Scenery
 class WMPPMotionTransfer extends Panel
 	protected var WMPPanelTweaking pPanelTweaking
 	protected var MotionTransfer pMotionTransfer
+	protected var DefaultTextModel pModelTypeName
+	protected var Panel pPanelForm
 	
 	
 	
 	/** Create window. */
 	public func new(WMPPanelTweaking panelTweaking) super(FormLayout.new(true, 10, 2))
 		pPanelTweaking = panelTweaking
+		pModelTypeName = DefaultTextModel.new()
 	end
 	
 	/** Dispose of window. */
 	public func void dispose()
 		super.dispose()
+		pModelTypeName = null
 		pMotionTransfer = null
+		pPanelForm = null
 		pPanelTweaking = null
 	end
 	
@@ -81,5 +86,21 @@ class WMPPMotionTransfer extends Panel
 	
 	/** Tweaking changed. */
 	public func void onTweaked()
+	end
+	
+	/** Create window content. */
+	protected func void createBaseContent(String helpTopic)
+		setLayout(FlowLayout.new(LayoutAxis.y, 5))
+		
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.first), block Panel p
+			p.addWidget(Label.new(pModelTypeName, "Label.FormCaption"))
+			
+			if not helpTopic.empty()
+				p.addWidget(HelpButton.new(helpTopic))
+			end
+		end))
+		
+		pPanelForm = Panel.new(FormLayout.new(true, 10, 2))
+		addWidget(pPanelForm)
 	end
 end
