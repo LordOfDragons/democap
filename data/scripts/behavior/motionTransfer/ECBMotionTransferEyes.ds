@@ -74,12 +74,16 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 		private var float pCenterVertical
 		private var float pAdjustRotationHorizontal
 		private var float pAdjustRotationVertical
+		private var float pLookAtDistance
 		private var AnimatorController pControllerRightHorizontal
 		private var AnimatorController pControllerRightVertical
 		private var AnimatorController pControllerLeftHorizontal
 		private var AnimatorController pControllerLeftVertical
 		private var AnimatorController pControllerViewHorizontal
 		private var AnimatorController pControllerViewVertical
+		private var AnimatorController pControllerLookAtPosition
+		private var AnimatorController pControllerLookAtRotation
+		private var Component pComponent
 		
 		
 		
@@ -116,6 +120,13 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			pControllerViewHorizontal = actorAnimated.getControllerNamed(pECBehavior.getControllerNameViewHorizontal())
 			pControllerViewVertical = actorAnimated.getControllerNamed(pECBehavior.getControllerNameViewVertical())
 			
+			if not transfer.getLookAtBone().empty()
+				pControllerLookAtPosition = actorAnimated.getControllerNamed(pECBehavior.getControllerNameLookAtPosition())
+				pControllerLookAtRotation = actorAnimated.getControllerNamed(pECBehavior.getControllerNameLookAtRotation())
+			end
+			
+			pComponent = actorAnimated.getComponent().getComponent()
+			
 			// right eye limit factors
 			if pControllerRightHorizontal != null
 				var float lower = pControllerRightHorizontal.getLower()
@@ -149,6 +160,9 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			// adjustments
 			pAdjustRotationHorizontal = transfer.getAdjustRotationHorizontal()
 			pAdjustRotationVertical = transfer.getAdjustRotationVertical()
+			
+			// look-at
+			pLookAtDistance = transfer.getLookAtDistance()
 			
 			// add listener
 			pMoCapAnimator.addListener(UpdateControllers.new(this))
@@ -205,6 +219,16 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			return pControllerViewVertical
 		end
 		
+		/** Animator controller look-at position. */
+		public func AnimatorController getControllerLookAtPosition()
+			return pControllerLookAtPosition
+		end
+		
+		/** Animator controller look-at rotation. */
+		public func AnimatorController getControllerLookAtRotation()
+			return pControllerLookAtRotation
+		end
+		
 		
 		
 		/** Update controllers. */
@@ -217,6 +241,7 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			var MotionTransferEyes transfer = pECBehavior.getTransfer()
 			pAdjustRotationHorizontal = transfer.getAdjustRotationHorizontal()
 			pAdjustRotationVertical = transfer.getAdjustRotationVertical()
+			pLookAtDistance = transfer.getLookAtDistance()
 			
 			// eye tracker device returns as position a virtual position near the users eyes and
 			// acts as origin of the gaze. the orientation represents the direction of the gaze.
@@ -224,7 +249,8 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 			// matrix formed by the orientation.
 			//
 			// for the purpose of motion capturing we use only the orientation
-			var Vector rotation = pSlotTracker.getMatrixComponent().getEulerAngles()
+			var Matrix matrixEyes = pSlotTracker.getMatrixComponent()
+			var Vector rotation = matrixEyes.getEulerAngles()
 			var float eyeHorizontal = rotation.getY() - pCenterHorizontal + pAdjustRotationHorizontal
 			var float eyeVertical = rotation.getX() - pCenterVertical + pAdjustRotationVertical
 			
@@ -243,7 +269,7 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 				pControllerRightHorizontal.setValue(horizontal * pLimitEyeRightScaleH + pLimitEyeRightOffsetH)
 				pControllerRightVertical.setValue(vertical * pLimitEyeRightScaleV + pLimitEyeRightOffsetV)
 			end
-
+			
 			// limit left eye rotation
 			if pControllerLeftHorizontal != null
 				var float horizontal = (eyeHorizontal - pLimitEyeLeftOffsetH) / pLimitEyeLeftScaleH
@@ -259,11 +285,20 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 				pControllerLeftHorizontal.setValue(horizontal * pLimitEyeLeftScaleH + pLimitEyeLeftOffsetH)
 				pControllerLeftVertical.setValue(vertical * pLimitEyeLeftScaleV + pLimitEyeLeftOffsetV)
 			end
-
+			
 			// view rotation
 			if pControllerViewHorizontal != null
 				pControllerViewHorizontal.setValue(eyeHorizontal)
 				pControllerViewVertical.setValue(eyeVertical)
+			end
+			
+			// look-at
+			if pControllerLookAtPosition != null
+				pControllerLookAtPosition.setVector(matrixEyes * Vector.new(0, 0, pLookAtDistance))
+			end
+			
+			if pControllerLookAtRotation != null
+				pControllerLookAtRotation.setRotation(rotation)
 			end
 		end
 	end
@@ -280,6 +315,8 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 	private var String pControllerNameLeftVertical
 	private var String pControllerNameViewHorizontal
 	private var String pControllerNameViewVertical
+	private var String pControllerNameLookAtPosition
+	private var String pControllerNameLookAtRotation
 	
 	
 	
@@ -305,6 +342,8 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 		pControllerNameLeftVertical = transfer.getName() + ".leftVertical"
 		pControllerNameViewHorizontal = transfer.getName() + ".viewHorizontal"
 		pControllerNameViewVertical = transfer.getName() + ".viewVertical"
+		pControllerNameLookAtPosition = transfer.getName() + ".lookAtPosition"
+		pControllerNameLookAtRotation = transfer.getName() + ".lookAtRotation"
 		
 		eclass.addBehavior(this)
 	end
@@ -367,6 +406,16 @@ class ECBMotionTransferEyes extends DefaultECBehavior
 	/** Animator controller name view vertical. */
 	public func String getControllerNameViewVertical()
 		return pControllerNameViewVertical
+	end
+	
+	/** Animator controller name look-at position. */
+	public func String getControllerNameLookAtPosition()
+		return pControllerNameLookAtPosition
+	end
+	
+	/** Animator controller name look-at rotation. */
+	public func String getControllerNameLookAtRotation()
+		return pControllerNameLookAtRotation
 	end
 	
 	

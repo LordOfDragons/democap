@@ -42,6 +42,9 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 	private var DefaultTextModel pModelTextLeftBone
 	private var SharedListModel pModelListViewBone
 	private var DefaultTextModel pModelTextViewBone
+	private var SharedListModel pModelListLookAtBone
+	private var DefaultTextModel pModelTextLookAtBone
+	private var DefaultTextModel pModelLookAtDistance
 	private var EditVector pEditRightRotation
 	private var EditVector pEditLeftRotation
 	private var EditVector pEditViewRotation
@@ -74,6 +77,11 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		pModelListViewBone.setAutoSelect(false)
 		pModelTextViewBone = DefaultTextModel.new()
 		
+		pModelListLookAtBone = SharedListModel.new(window.getModelBones())
+		pModelListLookAtBone.setAutoSelect(false)
+		pModelTextLookAtBone = DefaultTextModel.new()
+		pModelLookAtDistance = DefaultTextModel.new()
+		
 		pModelLimitIn = DefaultTextModel.new()
 		pModelLimitOut = DefaultTextModel.new()
 		pModelLimitUp = DefaultTextModel.new()
@@ -101,6 +109,10 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		pModelListViewBone = null
 		pModelTextViewBone = null
 		
+		pModelListLookAtBone = null
+		pModelTextLookAtBone = null
+		pModelLookAtDistance = null
+		
 		pEditRightRotation = null
 		pEditLeftRotation = null
 		pEditViewRotation = null
@@ -127,6 +139,8 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 				pModelTextRightBone.setText(mt.getRightBone())
 				pModelTextLeftBone.setText(mt.getLeftBone())
 				pModelTextViewBone.setText(mt.getViewBone())
+				pModelTextLookAtBone.setText(mt.getLookAtBone())
+				pModelLookAtDistance.setText(mt.getLookAtDistance().toString())
 				pEditRightRotation.setVector(mt.getRightRotation())
 				pEditLeftRotation.setVector(mt.getLeftRotation())
 				pEditViewRotation.setVector(mt.getViewRotation())
@@ -142,6 +156,8 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 				pModelTextRightBone.setText("")
 				pModelTextLeftBone.setText("")
 				pModelTextViewBone.setText("")
+				pModelTextLookAtBone.setText("")
+				pModelLookAtDistance.setText("")
 				pEditRightRotation.setVector(Vector.new())
 				pEditLeftRotation.setVector(Vector.new())
 				pEditViewRotation.setVector(Vector.new())
@@ -168,6 +184,8 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		mt.setRightBone(pModelTextRightBone.getText())
 		mt.setLeftBone(pModelTextLeftBone.getText())
 		mt.setViewBone(pModelTextViewBone.getText())
+		mt.setLookAtBone(pModelTextLookAtBone.getText())
+		mt.setLookAtDistance(pModelLookAtDistance.getText().toFloat())
 		mt.setRightRotation(pEditRightRotation.getVector())
 		mt.setLeftRotation(pEditLeftRotation.getVector())
 		mt.setViewRotation(pEditViewRotation.getVector())
@@ -275,6 +293,26 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(pEditViewRotation)
 		
 		CPECoordinateSystem.new(preview, null, null, label, pEditViewRotation, comboBox, null, false)
+		
+		// look-at bone
+		labelBone = Label.new("Look-At Bone:", "Label.FormCaption")
+		pPanelForm.addWidget(labelBone)
+		
+		comboBox = ComboBox.new(pModelListLookAtBone, DefaultComboBoxEditor.new(pModelTextLookAtBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("Look-at bone (point character is looking at)")
+		pPanelForm.addWidget(comboBox)
+		
+		CPEBone.new(preview, labelBone, comboBox)
+		
+		// look-at distance
+		pPanelForm.addWidget(Label.new("Look-At Distance:", "Label.FormCaption"))
+		
+		textField = TextField.new(pModelLookAtDistance, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("Distance to place look-at point at")
+		pPanelForm.addWidget(textField)
 		
 		// limit in
 		pPanelForm.addWidget(Label.new("Limit In Angle:", "Label.FormCaption"))
