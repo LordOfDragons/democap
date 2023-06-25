@@ -559,7 +559,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		
 		// add guide rule
-		if slotGuide != null and slotGuide.isDeviceAttached()
+		var bool useGuide = slotGuide != null and slotGuide.isDeviceAttached()
+		
+		if useGuide
 			pADControllerGuideRotation = ADController.new()
 			pADControllerGuideRotation.setName(behavior.getControllerNameGuideRotation())
 			adef.addController(pADControllerGuideRotation)
@@ -594,9 +596,25 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkTipOrientation))
 		
 		pADRuleIK.addBone(pTipBone)
-		if not pBaseBone.equals(pTipBone)
-			pADRuleIK.addBone(pBaseBone)
-		end
+		/*
+		if useGuide and not pGuideBone.empty()
+			var int index = pCalibrateBones.indexOf(pGuideBone)
+			var String guideChainBase
+			
+			if index > 0
+				guideChainBase = pCalibrateBones.getAt(index - 1) cast String
+			end
+			
+			if guideChainBase != null and not guideChainBase.equals(pTipBone)
+				pADRuleIK.addBone(guideChainBase)
+			end
+			
+		else
+		*/
+			if not pBaseBone.equals(pTipBone)
+				pADRuleIK.addBone(pBaseBone)
+			end
+// 		end
 		
 		adef.addRule(pADRuleIK)
 		
@@ -803,7 +821,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 				// actor arm reach parameter matches tracker target not target bone
 				if slotTip != null
 					// matrix = bone * transform^-1 * (ref * slot^1) * (target * ref^-1)
-					posTip = (pTipTracker.getOffsetMatrix() * slotTip.getTargetMatrix()).getPosition()
+					posTip = config.characterToComponent(\
+						(pTipTracker.getOffsetMatrix() * slotTip.getTargetMatrix()).getPosition())
 				end
 				
 				// along Z direction this is always 1.
@@ -829,8 +848,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 				var Vector posRotate = posBase.absolute()
 				var Vector tipFront, tipDown
-				var float rotateFront = 40
-				var float rotateDown = 40
+				var float rotateFront = 0 //40
+				var float rotateDown = 0 //40
 				
 				if indexGuide != -1 and indexGuide != indexBase
 					posRotate = component.boneGetMatrix(indexGuide).getPosition().absolute()
@@ -847,7 +866,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 				var float actorReach = actorShoulderReach + actorArmReach
 				
 				if pTipTracker.getRealSlot() != null
-					actorReach = config.characterToComponent((pTipTracker.getTransformMatrix()\
+					actorReach = config.characterToComponent((pTipTracker./*getTransformMatrix*/ getOffsetMatrix()\
 						* pTipTracker.getRealSlot().getCalibrateMatrix()).getPosition()).absolute().getX()
 					actorArmReach = actorReach - actorShoulderReach
 				end
@@ -868,11 +887,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 				pCalibrateReachScaleDown = tip.getLength() / pCalibrateReach
 				
 				// store direction specific scale
-				pCalibrateReachScaleDirection = Vector.new(1, pCalibrateReachScaleDown,\
-					pCalibrateReachScaleFront).compMultiply(pReachScaling)
+				pCalibrateReachScaleDirection = Vector.new(pCalibrateReachScaleFront,\
+					pCalibrateReachScaleDown, 1).compMultiply(pReachScaling)
 				
-				pCalibrateReachScaleDirectionBack = Vector.new(1, pCalibrateReachScaleDown,\
-					pCalibrateReachScaleFront).compMultiply(pReachScalingBack)
+				pCalibrateReachScaleDirectionBack = Vector.new(pCalibrateReachScaleFront,\
+					pCalibrateReachScaleDown, 1).compMultiply(pReachScalingBack)
 				
 				pCalibrateCanTweakReachScale = true
 				
