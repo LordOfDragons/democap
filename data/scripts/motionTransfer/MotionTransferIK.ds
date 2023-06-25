@@ -855,9 +855,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 					posRotate = component.boneGetMatrix(indexGuide).getPosition().absolute()
 				end
 				
+				var float reachBasePos = posBase.absolute().getX()
 				var float reachRotateTip = (posTip.absolute() - posRotate).getLength()
 				var float reachBaseRotate = (posRotate - posBase.absolute()).getLength()  // can be 0
-				//var float offsetBase = posBase.absolute().getX()
 				var Vector tip, actorTip
 				
 				// reach scaling
@@ -866,13 +866,13 @@ class MotionTransferIK extends DefaultMotionTransfer
 				var float actorReach = actorShoulderReach + actorArmReach
 				
 				if pTipTracker.getRealSlot() != null
-					actorReach = config.characterToComponent((pTipTracker./*getTransformMatrix*/ getOffsetMatrix()\
+					actorReach = config.characterToComponent((pTipTracker.getOffsetMatrix()\
 						* pTipTracker.getRealSlot().getCalibrateMatrix()).getPosition()).absolute().getX()
 					actorArmReach = actorReach - actorShoulderReach
 				end
 				
 				pCalibrateReach = reachBaseRotate + reachRotateTip
-				pCalibrateReachScale = pCalibrateReach / actorReach
+				pCalibrateReachScale = pCalibrateReach / (actorReach - reachBasePos)
 				
 				// front, back
 				tip = Vector.new(reachBaseRotate * DEMath.cos(rotateFront),\
