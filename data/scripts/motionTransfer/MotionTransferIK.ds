@@ -121,6 +121,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var float pCalibrateReachScaleFront
 	private var float pCalibrateReachScaleDown
 	private var bool pCalibrateCanTweakReachScale
+	private var String pCalibratePreRotateBone
 	
 	
 	
@@ -155,6 +156,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateTwistAxes = Array.new()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
 		pCalibrateReachRotation = Vector.new()
+		pCalibratePreRotateBone = ""
 	end
 	
 	/** Create copy of motion transfer. */
@@ -188,6 +190,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateTwistAxes = Array.new(transfer.pCalibrateTwistAxes)
 		pCalibrateTwistBoneAxisRotation = transfer.pCalibrateTwistBoneAxisRotation
 		pCalibrateReachRotation = transfer.pCalibrateReachRotation
+		pCalibratePreRotateBone = transfer.pCalibratePreRotateBone
 	end
 	
 	
@@ -442,6 +445,10 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pCalibrateReachRotation
 	end
 	
+	public func String getCalibratePreRotateBone()
+		return pCalibratePreRotateBone
+	end
+	
 	
 	
 	/** Init element clas. */
@@ -578,6 +585,51 @@ class MotionTransferIK extends DefaultMotionTransfer
 			pADRuleGuide.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkGuideRotation))
 			pADRuleGuide.addBone(pGuideBone)
 			adef.addRule(pADRuleGuide)
+		end
+		
+		
+		
+		// add pre-rotation rule
+		if not pCalibratePreRotateBone.empty()
+			var ModifiedRig.Bone bonePreRotate = modifyRig.addBone("preRotate")
+			
+			var ADController controller = ADController.new()
+			controller.setName(behavior.getControllerNamePreRotate())
+			controller.setMinimum(-180)
+			controller.setMaximum(180)
+			adef.addController(controller)
+			
+			var ADLink link = ADLink.new()
+			link.setController(controller)
+			adef.addLink(link)
+			
+			// set rotator bone position to match guide bone position
+			var ADRuleInverseKinematic ruleAlign = ADRuleInverseKinematic.new()
+			ruleAlign.setName(getName() + ".preRotate")
+			ruleAlign.setSolverBone(guideBone)
+			ruleAlign.setUseSolverBone(true)
+			ruleAlign.addBone(bonePreRotate.name)
+			adef.addRule(ruleAlign)
+			
+			// set rotator bone orientation to match controller vector
+			ruleAlign = ADRuleInverseKinematic.new()
+			ruleAlign.setName(getName() + ".preRotate")
+			ruleAlign.setAdjustPosition(false)
+			ruleAlign.setAdjustOrientation(true)
+			ruleAlign.addBone(bonePreRotate.name)
+			ruleAlign.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, link))
+			adef.addRule(ruleAlign)
+			
+			// rotate pre-rotate bone using rotator bone Z-axis and controller value as angle
+			var ADRuleBoneTransformator ruleRotate = ADRuleBoneTransformator.new()
+			ruleRotate.setName(getName() + ".preRotate")
+			ruleRotate.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+			ruleRotate.setTargetBone(bonePreRotate.name)
+			ruleRotate.setMinimumRotation(Vector.new(0, 0, -180))
+			ruleRotate.setMaximumRotation(Vector.new(0, 0, 180))
+			ruleRotate.addBone(guideBone)
+			ruleRotate.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+			adef.addRule(ruleRotate)
 		end
 		
 		
@@ -772,6 +824,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateReachScaleDown = 0
 		pCalibrateCanTweakReachScale = false
 		pCalibrateMatrixRelocateTip = Matrix.new()
+		pCalibratePreRotateBone = ""
 	end
 	
 	/** Calibrate character. */
@@ -792,13 +845,36 @@ class MotionTransferIK extends DefaultMotionTransfer
 			guideBone = baseBone
 		end
 		
+		// prepare tracker slots
 		pTipTracker.resolveRealSlot(config)
 		pTipTracker.setTransform(config, component, pTipBone)
 		
 		pBaseTracker.resolveRealSlot(config)
 		pBaseTracker.setTransform(config, component, guideBone)
 		
-		// calculate reach of IK chain to avoid over stretching
+		// get tracker slots. has to come after resolving tracker slots
+		var CharacterTrackerSlot slotGuide
+		if not pGuideTracker.getSlot().empty()
+			slotGuide = config.getTrackerSlots().getNamed(pGuideTracker.getSlot())
+		end
+		
+		var bool useGuide = slotGuide != null and slotGuide.isDeviceAttached()
+		
+		// pre-rotate bone is the guide bone if no tracker is attached to the guide slot or
+		// the bone after the guide bone if a tracker is attached
+		if useGuide
+			if guideBone.equals(pTipBone)
+				pCalibratePreRotateBone = ""
+				
+			else
+				pCalibratePreRotateBone = pCalibrateBones.getAt(pCalibrateBones.indexOf(guideBone) - 1) cast String
+			end
+			
+		else
+			pCalibratePreRotateBone = guideBone
+		end
+		
+		// find bone indices
 		var int indexBase = -1, indexGuide = -1, indexTip = -1
 		if not baseBone.empty() and not pTipBone.empty()
 			indexBase = component.indexOfBoneNamed(baseBone)
@@ -806,6 +882,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			indexTip = component.indexOfBoneNamed(pTipBone)
 		end
 		
+		// calculate reach of IK chain to avoid over stretching
 		if indexBase != -1 and indexTip != -1
 			var Matrix baseMatrix = component.boneGetMatrix(indexBase)
 			var Matrix tipMatrix = component.boneGetMatrix(indexTip)
@@ -1153,6 +1230,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 			elif tagName.equals("canTweakReachScale")
 				pCalibrateCanTweakReachScale = element.getFirstCDataBool()
+				
+			elif tagName.equals("preRotateBone")
+				pCalibratePreRotateBone = element.getFirstCData()
 			end
 		end)
 	end
@@ -1210,5 +1290,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end)
 		loader.writeVector(tag, "twistBoneAxisRotation", pCalibrateTwistBoneAxisRotation)
 		tag.addDataTag("canTweakReachScale", pCalibrateCanTweakReachScale)
+		tag.addDataTag("preRotateBone", pCalibratePreRotateBone)
 	end
 end
