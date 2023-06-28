@@ -463,6 +463,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADRuleIK = null
 		pADRuleBaseIK = null
 		pADRuleRetracted = null
+
+		var Array ignoreBones = Array.new()
 		
 		if pCalibrateBones.getCount() == 0
 			return
@@ -592,6 +594,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		// add pre-rotation rule
 		if not pCalibratePreRotateBone.empty()
 			var ModifiedRig.Bone bonePreRotate = modifyRig.addBone("preRotate")
+			ignoreBones.add(bonePreRotate.name)
 			
 			var ADController controller = ADController.new()
 			controller.setName(behavior.getControllerNamePreRotate())
@@ -694,6 +697,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			// add bone to be used as rotator bone
 			var float angle = maxTwistAngle * pGuideTwistStrength
 			var ModifiedRig.Bone boneTwistAxis = modifyRig.addBone("guideTwistAxis")
+			ignoreBones.add(boneTwistAxis.name)
 			
 			var ADController controllerGuideTwistAxis = ADController.new()
 			controllerGuideTwistAxis.setName(behavior.getControllerNameGuideTwistAxis())
@@ -789,6 +793,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
 		if recordAnimation != null
 			recordAnimation.addBones(pCalibrateBones)
+			recordAnimation.addIgnoreBones(ignoreBones)
 		end
 	end
 	
