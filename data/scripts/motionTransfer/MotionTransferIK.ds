@@ -94,6 +94,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var Vector pTwistAxisRotation
 	private var float pGuideTwistStrength
 	private var bool pRelocateTip
+	private var Vector2 pBaseRotateRangeCenter
+	private var Vector2 pBaseRotateRangeMinimum
+	private var Vector2 pBaseRotateRangeMaximum
+	private var Vector2 pBaseRotateAngleMinimum
+	private var Vector2 pBaseRotateAngleMaximum
 	
 	private var ADController pADControllerTipPosition
 	private var ADController pADControllerTipOrientation
@@ -122,6 +127,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var float pCalibrateReachScaleDown
 	private var bool pCalibrateCanTweakReachScale
 	private var String pCalibratePreRotateBone
+	private var Vector pCalibrateBaseRotateRotation
+	private var String pCalibrateBaseRotateBone
 	
 	
 	
@@ -145,6 +152,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTwistAxisRotation = Vector.new()
 		pGuideTwistStrength = 0
 		pRelocateTip = false
+		pBaseRotateRangeCenter = Vector2.new()
+		pBaseRotateRangeMinimum = Vector2.new()
+		pBaseRotateRangeMaximum = Vector2.new()
+		pBaseRotateAngleMinimum = Vector2.new()
+		pBaseRotateAngleMaximum = Vector2.new()
 		pCalibrateBones = Array.new()
 		pCalibrateReach = 0.6
 		pCalibrateReachScale = 1
@@ -157,6 +169,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateTwistBoneAxisRotation = Vector.new()
 		pCalibrateReachRotation = Vector.new()
 		pCalibratePreRotateBone = ""
+		pCalibrateBaseRotateRotation = Vector.new()
+		pCalibrateBaseRotateBone = ""
 	end
 	
 	/** Create copy of motion transfer. */
@@ -178,6 +192,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTwistBoneCount = transfer.pTwistBoneCount
 		pGuideTwistStrength = transfer.pGuideTwistStrength
 		pRelocateTip = transfer.pRelocateTip
+		pBaseRotateRangeCenter = transfer.pBaseRotateRangeCenter
+		pBaseRotateRangeMinimum = transfer.pBaseRotateRangeMinimum
+		pBaseRotateRangeMaximum = transfer.pBaseRotateRangeMaximum
+		pBaseRotateAngleMinimum = transfer.pBaseRotateAngleMinimum
+		pBaseRotateAngleMaximum = transfer.pBaseRotateAngleMaximum
 		pTwistAxisRotation = transfer.pTwistAxisRotation
 		pCalibrateBones = Array.new(transfer.pCalibrateBones)
 		pCalibrateReach = transfer.pCalibrateReach
@@ -191,6 +210,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateTwistBoneAxisRotation = transfer.pCalibrateTwistBoneAxisRotation
 		pCalibrateReachRotation = transfer.pCalibrateReachRotation
 		pCalibratePreRotateBone = transfer.pCalibratePreRotateBone
+		pCalibrateBaseRotateBone = transfer.pCalibrateBaseRotateBone
+		pCalibrateBaseRotateRotation = transfer.pCalibrateBaseRotateRotation
 	end
 	
 	
@@ -390,6 +411,71 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pRelocateTip = relocate
 	end
 	
+	/** Base bone rotation range center along X and Y axis. */
+	public func Vector2 getBaseRotateRangeCenter()
+		return pBaseRotateRangeCenter
+	end
+	
+	/** Set base bone rotation range center along X and Y axis. */
+	public func void setBaseRotateRangeCenter(Vector2 range)
+		if range == null
+			throw ENullPointer.new("range")
+		end
+		pBaseRotateRangeCenter = range
+	end
+	
+	/** Base bone rotation range minimum along X and Y axis. */
+	public func Vector2 getBaseRotateRangeMinimum()
+		return pBaseRotateRangeMinimum
+	end
+	
+	/** Set base bone rotation range minimum along X and Y axis. */
+	public func void setBaseRotateRangeMinimum(Vector2 range)
+		if range == null
+			throw ENullPointer.new("range")
+		end
+		pBaseRotateRangeMinimum = range
+	end
+	
+	/** Base bone rotation range maximum along X and Y axis. */
+	public func Vector2 getBaseRotateRangeMaximum()
+		return pBaseRotateRangeMaximum
+	end
+	
+	/** Set base bone rotation range maximum along X and Y axis. */
+	public func void setBaseRotateRangeMaximum(Vector2 range)
+		if range == null
+			throw ENullPointer.new("range")
+		end
+		pBaseRotateRangeMaximum = range
+	end
+	
+	/** Base bone rotation angle minimum along X and Y axis. */
+	public func Vector2 getBaseRotateAngleMinimum()
+		return pBaseRotateAngleMinimum
+	end
+	
+	/** Set base bone rotation angle minimum along X and Y axis. */
+	public func void setBaseRotateAngleMinimum(Vector2 angle)
+		if angle == null
+			throw ENullPointer.new("angle")
+		end
+		pBaseRotateAngleMinimum = angle
+	end
+	
+	/** Base bone rotation angle maximum along X and Y axis. */
+	public func Vector2 getBaseRotateAngleMaximum()
+		return pBaseRotateAngleMaximum
+	end
+	
+	/** Set base bone rotation angle maximum along X and Y axis. */
+	public func void setBaseRotateAngleMaximum(Vector2 angle)
+		if angle == null
+			throw ENullPointer.new("angle")
+		end
+		pBaseRotateAngleMaximum = angle
+	end
+	
 	
 	
 	/** Animator definition rule or null. */
@@ -567,6 +653,87 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		
 		
+		// add base bone rotation rule
+		var bool useBaseRotate = not pCalibrateBaseRotateBone.empty() and not guideBone.equals(pBaseBone)
+		
+		if useBaseRotate
+			var Vector2 rc = pBaseRotateRangeCenter
+			var Vector2 rmin = pBaseRotateRangeMinimum
+			var Vector2 rmax = pBaseRotateRangeMaximum
+			var Vector2 amin = pBaseRotateAngleMinimum
+			var Vector2 amax = pBaseRotateAngleMaximum
+			
+			var ModifiedRig.Bone boneBaseRotate = modifyRig.addBone("baseRotate")
+			ignoreBones.add(boneBaseRotate.name)
+			
+			// controllers
+			var ADController controllerX = ADController.new()
+			controllerX.setName(behavior.getControllerNameBaseRotateX())
+			controllerX.setMinimum(pBaseRotateRangeMinimum.getX())
+			controllerX.setMaximum(pBaseRotateRangeMaximum.getX())
+			adef.addController(controllerX)
+			
+			var ADController controllerY = ADController.new()
+			controllerY.setName(behavior.getControllerNameBaseRotateY())
+			controllerY.setMinimum(pBaseRotateRangeMinimum.getY())
+			controllerY.setMaximum(pBaseRotateRangeMaximum.getY())
+			adef.addController(controllerY)
+			
+			// links
+			var CurveBezier curve = CurveBezier.new()
+			curve.setInterpolationMode(CurveBezierInterpolation.linear)
+			curve.addPoint(0, 0)
+			curve.addPoint(DEMath.linearStep(rc.getX(), rmin.getX(), rmax.getX()),\
+				DEMath.linearStep(0.0, amin.getX(), amax.getX()))
+			curve.addPoint(1, 1)
+			
+			var ADLink linkX = ADLink.new()
+			linkX.setController(controllerX)
+			linkX.setCurve(curve)
+			adef.addLink(linkX)
+			
+			curve = CurveBezier.new()
+			curve.setInterpolationMode(CurveBezierInterpolation.linear)
+			curve.addPoint(0, 0)
+			curve.addPoint(DEMath.linearStep(rc.getY(), rmin.getY(), rmax.getY()),\
+				DEMath.linearStep(0.0, amin.getY(), amax.getY()))
+			curve.addPoint(1, 1)
+			
+			var ADLink linkY = ADLink.new()
+			linkY.setController(controllerY)
+			linkY.setCurve(curve)
+			adef.addLink(linkY)
+			
+			// rules
+			var Matrix matrix = Matrix.newRotation(pCalibrateBaseRotateRotation)
+			
+			var ADRuleBoneTransformator rule = ADRuleBoneTransformator.new()
+			rule.setName(getName() + ".baseRotateX")
+			rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+			rule.setTargetBone(pCalibrateBaseRotateBone)
+			rule.setUseAxis(true)
+			rule.setAxis(matrix.getRightVector())
+			rule.setMinimumAngle(amin.getX())
+			rule.setMaximumAngle(amax.getX())
+			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkX))
+			rule.addBone(pBaseBone)
+			adef.addRule(rule)
+			
+			rule = ADRuleBoneTransformator.new()
+			rule.setName(getName() + ".baseRotateY")
+			rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+			rule.setTargetBone(pCalibrateBaseRotateBone)
+			rule.setUseAxis(true)
+			rule.setAxis(matrix.getUpVector())
+			rule.setMinimumAngle(amin.getY())
+			rule.setMaximumAngle(amax.getY())
+			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkY))
+			rule.addBone(pBaseBone)
+			adef.addRule(rule)
+		end
+		
+		
+		
 		// add guide rule
 		var bool useGuide = slotGuide != null and slotGuide.isDeviceAttached()
 		
@@ -666,7 +833,10 @@ class MotionTransferIK extends DefaultMotionTransfer
 			
 		else
 		*/
-			if not pBaseBone.equals(pTipBone)
+			if useBaseRotate
+				pADRuleIK.addBone(guideBone)
+				
+			elif not pBaseBone.equals(pTipBone)
 				pADRuleIK.addBone(pBaseBone)
 			end
 // 		end
@@ -830,12 +1000,15 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateCanTweakReachScale = false
 		pCalibrateMatrixRelocateTip = Matrix.new()
 		pCalibratePreRotateBone = ""
+		pCalibrateBaseRotateRotation = Vector.new()
+		pCalibrateBaseRotateBone = ""
 	end
 	
 	/** Calibrate character. */
 	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
 	BaseVRActor actor, Component component)
-		findBoneChain(component.getRig(), pTipBone, pBaseBone, pCalibrateBones)
+		var Rig rig = component.getRig()
+		findBoneChain(rig, pTipBone, pBaseBone, pCalibrateBones)
 		if pCalibrateBones.getCount() == 0
 			return
 		end
@@ -1047,11 +1220,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		if not pMoveRetracted.empty() and indexGuide != -1 and indexTip != -1
 			// create a temporary component so we can apply the move and do some measuring
 			var Component tcomponent = Component.new(component.getModel(), component.getSkin())
-			tcomponent.setRig(component.getRig())
+			tcomponent.setRig(rig)
 			
 			var CharacterAppearance appearance = config.getProfile().getAppearance()
 			var Animator tanimator = Animator.new()
-			tanimator.setRig(component.getRig())
+			tanimator.setRig(rig)
 			tanimator.setAnimation(appearance.getAnimation())
 			
 			var ARAnimation rule = ARAnimation.new()
@@ -1097,6 +1270,17 @@ class MotionTransferIK extends DefaultMotionTransfer
 		if indexBase != -1
 			pCalibrateReachRotation = (Matrix.newRotation(pTwistAxisRotation) \
 				* component.boneGetInverseMatrix(indexBase).normalize()).getEulerAngles()
+			
+			var int indexBaseParent = rig.boneGetParent(indexBase)
+			
+			if indexBaseParent != -1
+				pCalibrateBaseRotateBone = rig.boneGetName(indexBaseParent)
+				pCalibrateBaseRotateRotation = (Matrix.newRotation(pTwistAxisRotation) \
+					* component.boneGetInverseMatrix(indexBaseParent).normalize()).getEulerAngles()
+					
+			else
+				pCalibrateBaseRotateBone = ""
+			end
 		end
 	end
 	
@@ -1177,6 +1361,21 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("relocateTip")
 				setRelocateTip(element.getFirstCDataBool())
 				
+			elif tagName.equals("baseRotateRangeCenter")
+				setBaseRotateRangeCenter(loader.readVector2(element))
+				
+			elif tagName.equals("baseRotateRangeMinimum")
+				setBaseRotateRangeMinimum(loader.readVector2(element))
+				
+			elif tagName.equals("baseRotateRangeMaximum")
+				setBaseRotateRangeMaximum(loader.readVector2(element))
+				
+			elif tagName.equals("baseRotateAngleMinimum")
+				setBaseRotateAngleMinimum(loader.readVector2(element))
+				
+			elif tagName.equals("baseRotateAngleMaximum")
+				setBaseRotateAngleMaximum(loader.readVector2(element))
+				
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
 			end
@@ -1238,6 +1437,12 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 			elif tagName.equals("preRotateBone")
 				pCalibratePreRotateBone = element.getFirstCData()
+				
+			elif tagName.equals("baseRotateRotation")
+				pCalibrateBaseRotateRotation = loader.readVector(element)
+				
+			elif tagName.equals("baseRotateBone")
+				pCalibrateBaseRotateBone = element.getFirstCData()
 			end
 		end)
 	end
@@ -1270,6 +1475,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		loader.writeVector(tag, "twistAxisRotation", pTwistAxisRotation)
 		tag.addDataTag("guideTwistStrength", pGuideTwistStrength)
 		tag.addDataTag("relocateTip", pRelocateTip)
+		loader.writeVector2(tag, "baseRotateRangeCenter", pBaseRotateRangeCenter)
+		loader.writeVector2(tag, "baseRotateRangeMinimum", pBaseRotateRangeMinimum)
+		loader.writeVector2(tag, "baseRotateRangeMaximum", pBaseRotateRangeMaximum)
+		loader.writeVector2(tag, "baseRotateAngleMinimum", pBaseRotateAngleMinimum)
+		loader.writeVector2(tag, "baseRotateAngleMaximum", pBaseRotateAngleMaximum)
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
@@ -1296,5 +1506,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		loader.writeVector(tag, "twistBoneAxisRotation", pCalibrateTwistBoneAxisRotation)
 		tag.addDataTag("canTweakReachScale", pCalibrateCanTweakReachScale)
 		tag.addDataTag("preRotateBone", pCalibratePreRotateBone)
+		loader.writeVector(tag, "baseRotateRotation", pCalibrateBaseRotateRotation)
+		tag.addDataTag("baseRotateBone", pCalibrateBaseRotateBone)
 	end
 end

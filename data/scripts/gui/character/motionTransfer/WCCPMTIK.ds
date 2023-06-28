@@ -57,6 +57,11 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	private var EditVector pEditTwistAxisRotation
 	private var DefaultTextModel pModelGuideTwistStrength
 	private var DefaultToggleModel pModelRelocateTip
+	private var EditVector2 pEditBaseRotateRangeCenter
+	private var EditVector2 pEditBaseRotateRangeMinimum
+	private var EditVector2 pEditBaseRotateRangeMaximum
+	private var EditVector2 pEditBaseRotateAngleMinimum
+	private var EditVector2 pEditBaseRotateAngleMaximum
 	
 	
 	
@@ -122,6 +127,11 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pModelGuideTwistStrength = null
 		pModelRelocateTip = null
 		pEditTwistAxisRotation = null
+		pEditBaseRotateRangeCenter = null
+		pEditBaseRotateRangeMinimum = null
+		pEditBaseRotateRangeMaximum = null
+		pEditBaseRotateAngleMinimum = null
+		pEditBaseRotateAngleMaximum = null
 		super.dispose()
 	end
 	
@@ -155,6 +165,11 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pEditTwistAxisRotation.setVector(mt.getTwistAxisRotation())
 				pModelGuideTwistStrength.setText(mt.getGuideTwistStrength().toString())
 				pModelRelocateTip.setToggled(mt.getRelocateTip())
+				pEditBaseRotateRangeCenter.setVector2(mt.getBaseRotateRangeCenter())
+				pEditBaseRotateRangeMinimum.setVector2(mt.getBaseRotateRangeMinimum())
+				pEditBaseRotateRangeMaximum.setVector2(mt.getBaseRotateRangeMaximum())
+				pEditBaseRotateAngleMinimum.setVector2(mt.getBaseRotateAngleMinimum())
+				pEditBaseRotateAngleMaximum.setVector2(mt.getBaseRotateAngleMaximum())
 				
 			else
 				pModelTextTipBone.setText("")
@@ -175,6 +190,11 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pEditTwistAxisRotation.setVector(Vector.new())
 				pModelGuideTwistStrength.setText("")
 				pModelRelocateTip.setToggled(false)
+				pEditBaseRotateRangeCenter.setVector2(Vector2.new())
+				pEditBaseRotateRangeMinimum.setVector2(Vector2.new())
+				pEditBaseRotateRangeMaximum.setVector2(Vector2.new())
+				pEditBaseRotateAngleMinimum.setVector2(Vector2.new())
+				pEditBaseRotateAngleMaximum.setVector2(Vector2.new())
 			end
 		end)
 		doLayoutIfBlocked()
@@ -206,6 +226,11 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		mt.setTwistAxisRotation(pEditTwistAxisRotation.getVector())
 		mt.setGuideTwistStrength(pModelGuideTwistStrength.getText().toFloat())
 		mt.setRelocateTip(pModelRelocateTip.getToggled())
+		mt.setBaseRotateRangeCenter(pEditBaseRotateRangeCenter.getVector2())
+		mt.setBaseRotateRangeMinimum(pEditBaseRotateRangeMinimum.getVector2())
+		mt.setBaseRotateRangeMaximum(pEditBaseRotateRangeMaximum.getVector2())
+		mt.setBaseRotateAngleMinimum(pEditBaseRotateAngleMinimum.getVector2())
+		mt.setBaseRotateAngleMaximum(pEditBaseRotateAngleMaximum.getVector2())
 	end
 	
 	/** Supports motion transfer type. */
@@ -379,6 +404,65 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		checkBox = CheckBox.new(pModelAdjustPosition, "Relocate Tip")
 		checkBox.setToolTip("Relocate tip from reference position to target position. Use if characters arms are located far away.")
 		pPanelForm.addWidget(checkBox)
+		
+		// base bone rotation
+		addWidget(CollapsibleGroup.new("Base Bone Rotation", "", CollapsibleGroup.persistModel(optionPrefix + "/BaseRotate", false),\
+		FormLayout.new(true, 10, 2), block Panel p
+			// range center
+			toolTip = "Base bone rotation range center along X and Y axis. At range center applied rotation is 0."
+			
+			label = Label.new("Range Center:", "Label.FormCaption")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			pEditBaseRotateRangeCenter = EditVector2.new()
+			pEditBaseRotateRangeCenter.setToolTip(toolTip)
+			p.addWidget(pEditBaseRotateRangeCenter)
+			
+			// range minimum
+			toolTip = "Base bone rotation range minimum along X and Y axis. At range minimum applied rotation is minimum angle."
+			
+			label = Label.new("Range Minimum:", "Label.FormCaption")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			pEditBaseRotateRangeMinimum = EditVector2.new()
+			pEditBaseRotateRangeMinimum.setToolTip(toolTip)
+			p.addWidget(pEditBaseRotateRangeMinimum)
+			
+			// range maximum
+			toolTip = "Base bone rotation range maximum along X and Y axis. At range maximum applied rotation is maximum angle."
+			
+			label = Label.new("Range Maximum:", "Label.FormCaption")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			pEditBaseRotateRangeMaximum = EditVector2.new()
+			pEditBaseRotateRangeMaximum.setToolTip(toolTip)
+			p.addWidget(pEditBaseRotateRangeMaximum)
+			
+			// angle minimum
+			toolTip = "Base bone rotation minimum angle along X and Y axis. At range minimum applied rotation is minimum angle."
+			
+			label = Label.new("Angle Minimum:", "Label.FormCaption")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			pEditBaseRotateAngleMinimum = EditVector2.new()
+			pEditBaseRotateAngleMinimum.setToolTip(toolTip)
+			p.addWidget(pEditBaseRotateAngleMinimum)
+			
+			// angle maximum
+			toolTip = "Base bone rotation maximum angle along X and Y axis. At range maximum applied rotation is maximum angle."
+			
+			label = Label.new("Angle Maximum:", "Label.FormCaption")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			pEditBaseRotateAngleMaximum = EditVector2.new()
+			pEditBaseRotateAngleMaximum.setToolTip(toolTip)
+			p.addWidget(pEditBaseRotateAngleMaximum)
+		end))
 	end
 	
 	/** Motion transfer changed. */

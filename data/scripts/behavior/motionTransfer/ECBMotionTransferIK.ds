@@ -47,7 +47,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			end
 			
 			public func int requiredPhaseCount(ECBMoCapAnimator.Instance instance)
-				return 3
+				return 4
 			end
 			
 			public func void updateControllers(ECBMoCapAnimator.Instance instance, float elapsed, int phase)
@@ -60,6 +60,9 @@ class ECBMotionTransferIK extends DefaultECBehavior
 					
 				case 2
 					pInstance.updateControllersPhase3()
+					
+				case 3
+					pInstance.updateControllersPhase4()
 				end
 			end
 		end
@@ -79,6 +82,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var AnimatorController pControllerRetracted
 		private var AnimatorController pControllerBlend
 		private var AnimatorController pControllerPreRotate
+		private var AnimatorController pControllerBaseRotateX
+		private var AnimatorController pControllerBaseRotateY
 		private var Matrix pTransformTip
 		private var Quaternion pTransformTipQuat
 		private var Matrix pTransformGuide
@@ -98,6 +103,11 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var bool pEnableRelocateTip
 		private var bool pEnableTwist
 		private var Matrix pMatrixAdjustSlotComponent
+		private var Vector2 pBaseRotateRangeCenter
+		private var Vector2 pBaseRotateRangeMinimum
+		private var Vector2 pBaseRotateRangeMaximum
+		
+		private var Matrix pTargetMatrix
 		
 		
 		
@@ -128,6 +138,10 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				pSlotGuide = ecbehavior.getSlotGuide().instance(element)
 				pTransformGuide = transfer.getGuideTracker().getTransformMatrix()
 			end
+			
+			pBaseRotateRangeCenter = transfer.getBaseRotateRangeCenter()
+			pBaseRotateRangeMinimum = transfer.getBaseRotateRangeMinimum()
+			pBaseRotateRangeMaximum = transfer.getBaseRotateRangeMaximum()
 		end
 		
 		/** Dispose of instance. */
@@ -156,6 +170,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pControllerGuideTwistAxis = actorAnimated.getControllerNamed(pECBehavior.getControllerNameGuideTwistAxis())
 			pControllerBlend = actorAnimated.getControllerNamed(pECBehavior.getControllerNameBlend())
 			pControllerPreRotate = actorAnimated.getControllerNamed(pECBehavior.getControllerNamePreRotate())
+			pControllerBaseRotateX = actorAnimated.getControllerNamed(pECBehavior.getControllerNameBaseRotateX())
+			pControllerBaseRotateY = actorAnimated.getControllerNamed(pECBehavior.getControllerNameBaseRotateY())
 			
 			pTwistBone = -1
 			if not transfer.getTipBone().empty()
@@ -216,6 +232,10 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pScaleReach = transfer.getCalibrateReachScaleDirection() * transfer.getCalibrateReachScale()
 			pScaleReachBack = transfer.getCalibrateReachScaleDirectionBack() * transfer.getCalibrateReachScale()
 			
+			// target matrix
+			pTargetMatrix = pSlotTip.getTrackerSlot().getConfiguration().\
+				characterToComponent(pTransformTip * pSlotTip.getMatrixCharacter())
+			
 			// reset controllers and disable IK to get base pose for next phase
 			if pControllerBlend != null
 				pControllerBlend.setValue(0)
@@ -227,9 +247,19 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				pControllerPreRotate.setValue(0)
 				pControllerPreRotate.setVector(Vector.new())
 			end
+			if pControllerBaseRotateX != null
+				pControllerBaseRotateX.setValue(0)
+			end
+			if pControllerBaseRotateY != null
+				pControllerBaseRotateY.setValue(0)
+			end
 		end
 		
 		public func void updateControllersPhase2()
+			updateControllerBaseRotate()
+		end
+		
+		public func void updateControllersPhase3()
 			if pControllerBlend != null
 				pControllerBlend.setValue(1)
 			end
@@ -239,8 +269,29 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			updateControllerGuide()
 		end
 		
-		public func void updateControllersPhase3()
+		public func void updateControllersPhase4()
 			updateControllersTwist()
+		end
+		
+		protected func void updateControllerBaseRotate()
+			if pControllerBaseRotateX == null or pControllerBaseRotateY == null or pBaseBone == -1
+				return
+			end
+			
+			var Matrix targetMatrix = pTargetMatrix
+			if pEnableRelocateTip
+				targetMatrix = targetMatrix * pMatrixRelocateTip * pComponent.boneGetMatrix(pBaseBone)
+			end
+			
+			var Matrix reachMatrix = pReachMatrix * pComponent.boneGetMatrix(pBaseBone)
+			var Vector targetPos = reachMatrix.getInverse() * targetMatrix.getPosition()
+			if targetPos.getLength() < 0.01
+				return
+			end
+			
+			pControllerBaseRotateY.setValue(-DEMath.atan2(targetPos.getX(), targetPos.getZ()))
+			pControllerBaseRotateX.setValue(DEMath.atan2(targetPos.getY(),\
+				Vector2.new(targetPos.getX(), targetPos.getZ()).getLength()))
 		end
 		
 		protected func void updateControllerPreRotate()
@@ -248,9 +299,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				return
 			end
 			
-			var CharacterConfiguration config = pSlotTip.getTrackerSlot().getConfiguration()
-			
-			var Matrix targetMatrix = config.characterToComponent(pTransformTip * pSlotTip.getMatrixCharacter())
+			var Matrix targetMatrix = pTargetMatrix
 			if pEnableRelocateTip
 				targetMatrix = targetMatrix * pMatrixRelocateTip * pComponent.boneGetMatrix(pBaseBone)
 			end
@@ -283,10 +332,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				return
 			end
 			
-			var CharacterConfiguration config = pSlotTip.getTrackerSlot().getConfiguration()
-			
-			var Matrix matrix = config.characterToComponent(pTransformTip * pSlotTip.getMatrixCharacter())
-			
+			var Matrix matrix = pTargetMatrix
 			if pEnableRelocateTip
 				matrix = matrix * pMatrixRelocateTip * pComponent.boneGetMatrix(pBaseBone)
 			end
@@ -421,6 +467,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	private var String pControllerNameRetracted
 	private var String pControllerNameBlend
 	private var String pControllerNamePreRotate
+	private var String pControllerNameBaseRotateX
+	private var String pControllerNameBaseRotateY
 	
 	
 	
@@ -452,6 +500,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		pControllerNameRetracted = transfer.getName() + ".retracted"
 		pControllerNameBlend = transfer.getName() + ".blend"
 		pControllerNamePreRotate = transfer.getName() + ".preRotate"
+		pControllerNameBaseRotateX = transfer.getName() + ".baseRotateX"
+		pControllerNameBaseRotateY = transfer.getName() + ".baseRotateY"
 		
 		eclass.addBehavior(this)
 	end
@@ -493,44 +543,45 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		return pSlotGuide
 	end
 	
-	/** Animator controller name target position. */
+	/** Animator controller name. */
 	public func String getControllerNameTipPosition()
 		return pControllerNameTipPosition
 	end
 	
-	/** Animator controller name target orientation. */
 	public func String getControllerNameTipOrientation()
 		return pControllerNameTipOrientation
 	end
 	
-	/** Animator controller name guide rotation. */
 	public func String getControllerNameGuideRotation()
 		return pControllerNameGuideRotation
 	end
 	
-	/** Animator controller name twist. */
 	public func String getControllerNameTwist()
 		return pControllerNameTwist
 	end
 	
-	/** Animator controller name guide twist axis. */
 	public func String getControllerNameGuideTwistAxis()
 		return pControllerNameGuideTwistAxis
 	end
 	
-	/** Animator controller name retracted. */
 	public func String getControllerNameRetracted()
 		return pControllerNameRetracted
 	end
 	
-	/** Animator controller name blend. */
 	public func String getControllerNameBlend()
 		return pControllerNameBlend
 	end
 	
-	/** Animator controller name pre-rotate. */
 	public func String getControllerNamePreRotate()
 		return pControllerNamePreRotate
+	end
+	
+	public func String getControllerNameBaseRotateX()
+		return pControllerNameBaseRotateX
+	end
+	
+	public func String getControllerNameBaseRotateY()
+		return pControllerNameBaseRotateY
 	end
 	
 	
