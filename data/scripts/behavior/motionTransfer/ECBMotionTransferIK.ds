@@ -106,6 +106,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var Vector2 pBaseRotateRangeCenter
 		private var Vector2 pBaseRotateRangeMinimum
 		private var Vector2 pBaseRotateRangeMaximum
+		private var float pReach
 		
 		private var Matrix pTargetMatrix
 		
@@ -142,6 +143,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pBaseRotateRangeCenter = transfer.getBaseRotateRangeCenter()
 			pBaseRotateRangeMinimum = transfer.getBaseRotateRangeMinimum()
 			pBaseRotateRangeMaximum = transfer.getBaseRotateRangeMaximum()
+			pReach = transfer.getCalibrateReach()
 		end
 		
 		/** Dispose of instance. */
@@ -289,9 +291,21 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				return
 			end
 			
-			pControllerBaseRotateY.setValue(-DEMath.atan2(targetPos.getX(), targetPos.getZ()))
-			pControllerBaseRotateX.setValue(DEMath.atan2(targetPos.getY(),\
-				Vector2.new(targetPos.getX(), targetPos.getZ()).getLength()))
+			var float angleX = DEMath.atan2(targetPos.getY(),\
+				Vector2.new(targetPos.getX(), targetPos.getZ()).getLength())
+			var float angleY = -DEMath.atan2(targetPos.getX(), targetPos.getZ())
+			
+			var Vector targetPosAbs = targetPos.absolute()
+			var Vector reach = pScaleReach.largest(pScaleReachBack) * pReach
+			
+			var float factorX = DEMath.linearStep(targetPosAbs.getX(), 0.0, reach.getX())
+			factorX = 1.0 - (factorX * factorX)
+			
+			var float factorY = DEMath.smoothStep(targetPosAbs.getY(), 0.0, reach.getY())
+			factorY = 1.0 - (factorY * factorY)
+			
+			pControllerBaseRotateX.setValue(angleX * factorX)
+			pControllerBaseRotateY.setValue(angleY * factorY)
 		end
 		
 		protected func void updateControllerPreRotate()

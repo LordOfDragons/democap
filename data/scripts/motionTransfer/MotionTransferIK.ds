@@ -125,6 +125,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var Vector pCalibrateTwistBoneAxisRotation
 	private var float pCalibrateReachScaleFront
 	private var float pCalibrateReachScaleDown
+	private var float pCalibrateReachScaleUp
 	private var bool pCalibrateCanTweakReachScale
 	private var String pCalibratePreRotateBone
 	private var Vector pCalibrateBaseRotateRotation
@@ -666,6 +667,16 @@ class MotionTransferIK extends DefaultMotionTransfer
 			var ModifiedRig.Bone boneBaseRotate = modifyRig.addBone("baseRotate")
 			ignoreBones.add(boneBaseRotate.name)
 			
+			// find bone to rotate back
+			var String boneRotateBack = pGuideBone
+			
+			if boneRotateBack.empty()
+				var int index = pCalibrateBones.indexOf(pBaseBone)
+				if index > 0
+					boneRotateBack = pCalibrateBones.getAt(index - 1) cast String
+				end
+			end
+			
 			// controllers
 			var ADController controllerX = ADController.new()
 			controllerX.setName(behavior.getControllerNameBaseRotateX())
@@ -704,10 +715,27 @@ class MotionTransferIK extends DefaultMotionTransfer
 			linkY.setCurve(curve)
 			adef.addLink(linkY)
 			
-			// rules
+			// add rules. rotate the base bone by the rotation angle and the guide bone by
+			// the inverse rotation angle. this ensures the guide bone retains the orientation
+			// it had before the base rotation
 			var Matrix matrix = Matrix.newRotation(pCalibrateBaseRotateRotation)
+			var ADRuleBoneTransformator rule
 			
-			var ADRuleBoneTransformator rule = ADRuleBoneTransformator.new()
+			if not boneRotateBack.empty()
+				rule = ADRuleBoneTransformator.new()
+				rule.setName(getName() + ".baseRotateXBack")
+				rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+				rule.setTargetBone(pCalibrateBaseRotateBone)
+				rule.setUseAxis(true)
+				rule.setAxis(matrix.getRightVector())
+				rule.setMinimumAngle(-amin.getX())
+				rule.setMaximumAngle(-amax.getX())
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkX))
+				rule.addBone(boneRotateBack)
+				adef.addRule(rule)
+			end
+			
+			rule = ADRuleBoneTransformator.new()
 			rule.setName(getName() + ".baseRotateX")
 			rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
 			rule.setTargetBone(pCalibrateBaseRotateBone)
@@ -718,6 +746,20 @@ class MotionTransferIK extends DefaultMotionTransfer
 			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkX))
 			rule.addBone(pBaseBone)
 			adef.addRule(rule)
+			
+			if not boneRotateBack.empty()
+				rule = ADRuleBoneTransformator.new()
+				rule.setName(getName() + ".baseRotateYBack")
+				rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+				rule.setTargetBone(pCalibrateBaseRotateBone)
+				rule.setUseAxis(true)
+				rule.setAxis(matrix.getUpVector())
+				rule.setMinimumAngle(-amin.getY())
+				rule.setMaximumAngle(-amax.getY())
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkY))
+				rule.addBone(boneRotateBack)
+				adef.addRule(rule)
+			end
 			
 			rule = ADRuleBoneTransformator.new()
 			rule.setName(getName() + ".baseRotateY")
@@ -997,6 +1039,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateReachRotation = Vector.new()
 		pCalibrateReachScaleFront = 0
 		pCalibrateReachScaleDown = 0
+		pCalibrateReachScaleUp = 0
 		pCalibrateCanTweakReachScale = false
 		pCalibrateMatrixRelocateTip = Matrix.new()
 		pCalibratePreRotateBone = ""
@@ -1103,8 +1146,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 				var Vector posRotate = posBase.absolute()
 				var Vector tipFront, tipDown
-				var float rotateFront = 0 //40
-				var float rotateDown = 0 //40
 				
 				if indexGuide != -1 and indexGuide != indexBase
 					posRotate = component.boneGetMatrix(indexGuide).getPosition().absolute()
@@ -1114,6 +1155,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 				var float reachRotateTip = (posTip.absolute() - posRotate).getLength()
 				var float reachBaseRotate = (posRotate - posBase.absolute()).getLength()  // can be 0
 				var Vector tip, actorTip
+				var float rotateAngle
 				
 				// reach scaling
 				var float actorShoulderReach = config.actorToComponent(actorProfile.getShoulderWidth() / 2)
@@ -1130,20 +1172,35 @@ class MotionTransferIK extends DefaultMotionTransfer
 				pCalibrateReachScale = pCalibrateReach / (actorReach - reachBasePos)
 				
 				// front, back
-				tip = Vector.new(reachBaseRotate * DEMath.cos(rotateFront),\
-					0, reachRotateTip + reachBaseRotate * DEMath.sin(rotateFront))
+				rotateAngle = pBaseRotateAngleMaximum.getY()
+				tip = Vector.new(reachBaseRotate * DEMath.cos(rotateAngle),\
+					0, reachRotateTip + reachBaseRotate * DEMath.sin(rotateAngle))
+				actorTip = Vector.new(actorShoulderReach - reachBasePos, 0, actorArmReach)
 				
+// 				pCalibrateReachScaleFront = tip.getLength() / (actorTip.getLength() * pCalibrateReachScale)
 				pCalibrateReachScaleFront = tip.getLength() / pCalibrateReach
 				
-				// down, up
-				tip = Vector.new(reachBaseRotate * DEMath.cos(rotateDown),\
-					-(reachRotateTip + reachBaseRotate * DEMath.sin(rotateDown)), 0)
+				// down
+				rotateAngle = pBaseRotateAngleMinimum.getX()
+				tip = Vector.new(reachBaseRotate * DEMath.cos(rotateAngle),\
+					reachRotateTip + reachBaseRotate * DEMath.sin(rotateAngle), 0)
+				actorTip = Vector.new(actorShoulderReach - reachBasePos, -actorArmReach, 0)
 				
+// 				pCalibrateReachScaleDown = tip.getLength() / (actorTip.getLength() * pCalibrateReachScale)
 				pCalibrateReachScaleDown = tip.getLength() / pCalibrateReach
+				
+				// up
+				rotateAngle = pBaseRotateAngleMaximum.getX()
+				tip = Vector.new(reachBaseRotate * DEMath.cos(rotateAngle),\
+					reachRotateTip + reachBaseRotate * DEMath.sin(rotateAngle), 0)
+				actorTip = Vector.new(actorShoulderReach - reachBasePos, actorArmReach, 0)
+				
+// 				pCalibrateReachScaleUp = tip.getLength() / (actorTip.getLength() * pCalibrateReachScale)
+				pCalibrateReachScaleUp = tip.getLength() / pCalibrateReach
 				
 				// store direction specific scale
 				pCalibrateReachScaleDirection = Vector.new(pCalibrateReachScaleFront,\
-					pCalibrateReachScaleDown, 1).compMultiply(pReachScaling)
+					pCalibrateReachScaleUp, 1).compMultiply(pReachScaling)
 				
 				pCalibrateReachScaleDirectionBack = Vector.new(pCalibrateReachScaleFront,\
 					pCalibrateReachScaleDown, 1).compMultiply(pReachScalingBack)
@@ -1157,6 +1214,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 				pCalibrateReachScale = 1
 				pCalibrateReachScaleFront = 1
 				pCalibrateReachScaleDown = 1
+				pCalibrateReachScaleUp = 1
 				pCalibrateReachScaleDirection = Vector.new(1, 1, 1)
 				pCalibrateReachScaleDirectionBack = Vector.new(1, 1, 1)
 				
@@ -1165,6 +1223,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 				pCalibrateReachScale = 1
 				pCalibrateReachScaleFront = 1
 				pCalibrateReachScaleDown = 1
+				pCalibrateReachScaleUp = 1
 				pCalibrateReachScaleDirection = Vector.new(1, 1, 1)
 				pCalibrateReachScaleDirectionBack = Vector.new(1, 1, 1)
 			end
@@ -1288,10 +1347,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		if pCalibrateCanTweakReachScale
 			select pActorReach
 			case ActorReach.arm
-				pCalibrateReachScaleDirection = Vector.new(1, pCalibrateReachScaleDown,\
-					pCalibrateReachScaleFront).compMultiply(pReachScaling)
-				pCalibrateReachScaleDirectionBack = Vector.new(1, pCalibrateReachScaleDown,\
-					pCalibrateReachScaleFront).compMultiply(pReachScalingBack)
+				pCalibrateReachScaleDirection = Vector.new(pCalibrateReachScaleFront,\
+					pCalibrateReachScaleUp, 1).compMultiply(pReachScaling)
+				
+				pCalibrateReachScaleDirectionBack = Vector.new(pCalibrateReachScaleFront,\
+					pCalibrateReachScaleDown, 1).compMultiply(pReachScalingBack)
 			end
 		end
 	end
@@ -1402,6 +1462,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("reachScaleDown")
 				pCalibrateReachScaleDown = element.getFirstCDataFloat()
 				
+			elif tagName.equals("reachScaleUp")
+				pCalibrateReachScaleUp = element.getFirstCDataFloat()
+				
 			elif tagName.equals("reachRange")
 				pCalibrateReachRange = element.getFirstCDataFloat()
 				
@@ -1490,6 +1553,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		loader.writeVector(tag, "reachScaleDirectionBack", pCalibrateReachScaleDirectionBack)
 		tag.addDataTag("reachScaleFront", pCalibrateReachScaleFront)
 		tag.addDataTag("reachScaleDown", pCalibrateReachScaleDown)
+		tag.addDataTag("reachScaleUp", pCalibrateReachScaleUp)
 		tag.addDataTag("reachRange", pCalibrateReachRange)
 		loader.writeVector(tag, "reachRotation", pCalibrateReachRotation)
 		GameApp.getGameApp().getLoadCharacterProfile().writeMatrix(tag, "matrixRelocateTip", pCalibrateMatrixRelocateTip)
