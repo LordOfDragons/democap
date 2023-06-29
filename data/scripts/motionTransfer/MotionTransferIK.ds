@@ -1154,8 +1154,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 				var float reachBasePos = posBase.absolute().getX()
 				var float reachRotateTip = (posTip.absolute() - posRotate).getLength()
 				var float reachBaseRotate = (posRotate - posBase.absolute()).getLength()  // can be 0
-				var Vector tip, actorTip
-				var float rotateAngle
+				var float tip, actorTip
 				
 				// reach scaling
 				var float actorShoulderReach = config.actorToComponent(actorProfile.getShoulderWidth() / 2)
@@ -1170,33 +1169,34 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 				pCalibrateReach = reachBaseRotate + reachRotateTip
 				pCalibrateReachScale = pCalibrateReach / (actorReach - reachBasePos)
+					GameApp.getGameApp().getConsole().addMessage("ActorReach ar=" + actorReach + " aar=" + actorArmReach\
+						+ " cr=" + pCalibrateReach + " (rbr=" + reachBaseRotate + " rrt=" + reachRotateTip + " rbp=" + reachBasePos +")"\
+						+ " rs=" + pCalibrateReachScale)
 				
 				// front, back
-				rotateAngle = pBaseRotateAngleMaximum.getY()
-				tip = Vector.new(reachBaseRotate * DEMath.cos(rotateAngle),\
-					0, reachRotateTip + reachBaseRotate * DEMath.sin(rotateAngle))
-				actorTip = Vector.new(actorShoulderReach - reachBasePos, 0, actorArmReach)
+				tip = reachRotateTip + reachBaseRotate * DEMath.sin(DEMath.fabs(pBaseRotateAngleMaximum.getY()))
+				actorTip = actorArmReach
 				
-// 				pCalibrateReachScaleFront = tip.getLength() / (actorTip.getLength() * pCalibrateReachScale)
-				pCalibrateReachScaleFront = tip.getLength() / pCalibrateReach
+				pCalibrateReachScaleFront = (tip / actorTip) / pCalibrateReachScale
+// 				pCalibrateReachScaleFront = tip / pCalibrateReach
 				
 				// down
-				rotateAngle = pBaseRotateAngleMinimum.getX()
-				tip = Vector.new(reachBaseRotate * DEMath.cos(rotateAngle),\
-					reachRotateTip + reachBaseRotate * DEMath.sin(rotateAngle), 0)
-				actorTip = Vector.new(actorShoulderReach - reachBasePos, -actorArmReach, 0)
+				tip = reachRotateTip + reachBaseRotate * DEMath.sin(DEMath.fabs(pBaseRotateAngleMinimum.getX()))
+				actorTip = actorArmReach
 				
-// 				pCalibrateReachScaleDown = tip.getLength() / (actorTip.getLength() * pCalibrateReachScale)
-				pCalibrateReachScaleDown = tip.getLength() / pCalibrateReach
+				pCalibrateReachScaleDown = (tip / actorTip) / pCalibrateReachScale
+// 				pCalibrateReachScaleDown = tip / pCalibrateReach
+					GameApp.getGameApp().getConsole().addMessage("Down tip=" + tip + " atip="\
+						+ actorTip + "(" + (actorTip * pCalibrateReachScale) + ")")
 				
 				// up
-				rotateAngle = pBaseRotateAngleMaximum.getX()
-				tip = Vector.new(reachBaseRotate * DEMath.cos(rotateAngle),\
-					reachRotateTip + reachBaseRotate * DEMath.sin(rotateAngle), 0)
-				actorTip = Vector.new(actorShoulderReach - reachBasePos, actorArmReach, 0)
+				tip = reachRotateTip + reachBaseRotate * DEMath.sin(DEMath.fabs(pBaseRotateAngleMaximum.getX()))
+				actorTip = actorArmReach
 				
-// 				pCalibrateReachScaleUp = tip.getLength() / (actorTip.getLength() * pCalibrateReachScale)
-				pCalibrateReachScaleUp = tip.getLength() / pCalibrateReach
+				pCalibrateReachScaleUp = (tip / actorTip) / pCalibrateReachScale
+// 				pCalibrateReachScaleUp = tip / pCalibrateReach
+					GameApp.getGameApp().getConsole().addMessage("Up tip=" + tip + " atip="\
+						+ actorTip + "(" + (actorTip * pCalibrateReachScale) + ")")
 				
 				// store direction specific scale
 				pCalibrateReachScaleDirection = Vector.new(pCalibrateReachScaleFront,\
@@ -1327,7 +1327,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end
 		
 		if indexBase != -1
-			pCalibrateReachRotation = (Matrix.newRotation(pTwistAxisRotation) \
+			pCalibrateReachRotation = (Matrix.newRotation(pTwistAxisRotation)\
 				* component.boneGetInverseMatrix(indexBase).normalize()).getEulerAngles()
 			
 			var int indexBaseParent = rig.boneGetParent(indexBase)
@@ -1336,10 +1336,14 @@ class MotionTransferIK extends DefaultMotionTransfer
 				pCalibrateBaseRotateBone = rig.boneGetName(indexBaseParent)
 				pCalibrateBaseRotateRotation = (Matrix.newRotation(pTwistAxisRotation) \
 					* component.boneGetInverseMatrix(indexBaseParent).normalize()).getEulerAngles()
-					
+				
 			else
 				pCalibrateBaseRotateBone = ""
+				pCalibrateBaseRotateRotation = Vector.new()
 			end
+			
+		else
+			pCalibrateReachRotation = pTwistAxisRotation
 		end
 	end
 	
