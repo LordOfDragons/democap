@@ -1,0 +1,206 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Actors
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Utils
+
+
+class ECBADebugActor extends DefaultECBehavior
+	class Instance extends DefaultECBehaviorInstance
+		enum Shapes
+			chest
+			shoulderRight
+			handRight
+			shoulderLeft
+			handLeft
+			lineChestShoulderRight
+			lineShoulderHandRight
+			lineChestShoulderLeft
+			lineShoulderHandLeft
+		end
+		
+		
+		private var bool pEnable
+		private var DebugDrawer pDebugDrawer
+		
+		
+		public func new(BehaviorElement element) super(element)
+			pEnable = GameApp.getGameApp().getSettings().getBoolAt("Debug/Actor/Enable", false)
+			
+			setRequiresThink(pEnable)
+		end
+		
+		public func void dispose()
+			super.dispose()
+		end
+		
+		public func void init(StubElement stub)
+			if pEnable
+				initDebugDrawer()
+			end
+		end
+		
+		
+		public func void postThink(float elapsed)
+			updateDebugDrawer()
+		end
+		
+		public func void addToGameWorld()
+			if pDebugDrawer != null
+				getElement().getGameWorld().getWorld().addDebugDrawer(pDebugDrawer)
+			end
+		end
+		
+		public func void removeFromGameWorld()
+			if pDebugDrawer != null
+				getElement().getGameWorld().getWorld().removeDebugDrawer(pDebugDrawer)
+			end
+		end
+		
+		private func void initDebugDrawer()
+			pDebugDrawer = DebugDrawer.new()
+			pDebugDrawer.setXRay(true)
+			pDebugDrawer.setShapeCount(Shapes.all().getCount())
+			
+			var float scaleSpot = 0.025
+			var ShapeList shapes
+			var int i
+			
+			shapes = ShapeList.new()
+			//shapes.addSphere(Vector.new(), scaleSpot * 0.5)
+			shapes.addBox(Vector.new(), Vector.new(scaleSpot * 1, scaleSpot * 0.05, scaleSpot * 0.05))
+			shapes.addBox(Vector.new(), Vector.new(scaleSpot * 0.05, scaleSpot * 1, scaleSpot * 0.05))
+			shapes.addBox(Vector.new(), Vector.new(scaleSpot * 0.05, scaleSpot * 0.05, scaleSpot * 1))
+			
+			for i = 0 to 5
+				pDebugDrawer.shapeSetShapes(i, shapes)
+				pDebugDrawer.shapeSetEdgeColor(i, Color.new(Color.red, 0.9))
+				pDebugDrawer.shapeSetFillColor(i, Color.new(Color.red, 0.1))
+			end
+			
+			shapes = ShapeList.new()
+			shapes.addBox(Vector.new(), Vector.new(1, 1, 1))
+			
+			for i = 0 to 4
+				pDebugDrawer.shapeSetShapes(5 + i, shapes)
+				pDebugDrawer.shapeSetEdgeColor(5 + i, Color.new(Color.blue, 1))
+				pDebugDrawer.shapeSetFillColor(5 + i, Color.new(Color.blue, 0.1))
+				pDebugDrawer.shapeSetScale(5 + i, Vector.new(0.002, 0.002, 0.002))
+			end
+		end
+		
+		private func void updateDebugDrawer()
+			if pDebugDrawer == null
+				return
+			end
+			
+			var BehaviorElement element = getElement()
+			var ECBCharacterConfiguration.Instance behaviorCharacter = ECBCharacterConfiguration.getInstanceIn(element)
+			if behaviorCharacter == null
+				return
+			end
+			
+			var CharacterConfiguration config = ECBCharacterConfiguration.getInstanceIn(element).getCharacter()
+			var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
+			var Matrix matCalib = config.getMatrixCalibrateInverse()
+			
+			var ECBTrackerSlot.Instance slotRightHand = element.findInstance(block ECBTrackerSlot.Instance each
+				return each.getECBehavior().getTrackerSlot().getType() == CharacterTrackerSlot.Type.rightHandController
+			end) cast ECBTrackerSlot.Instance
+			
+			var ECBTrackerSlot.Instance slotLeftHand = element.findInstance(block ECBTrackerSlot.Instance each
+				return each.getECBehavior().getTrackerSlot().getType() == CharacterTrackerSlot.Type.leftHandController
+			end) cast ECBTrackerSlot.Instance
+			
+			var Vector posRightHand = Vector.new()
+			if slotRightHand != null
+				//posRightHand = config.actorToCharacter(slotRightHand.getECBehavior().getTrackerSlot().getPosition())
+				posRightHand = slotRightHand.getMatrixCharacter().getPosition()
+			end
+			
+			var Vector posLeftHand = Vector.new()
+			if slotLeftHand != null
+				//posLeftHand = config.actorToCharacter(slotLeftHand.getECBehavior().getTrackerSlot().getPosition())
+				posLeftHand = slotLeftHand.getMatrixCharacter().getPosition()
+			end
+			
+			var Vector posChest = config.actorToCharacter(Vector.new(0, actorProfile.getShoulderLevel(), 0))
+			var Vector posRightShoulder = config.actorToCharacter(Vector.new(actorProfile.getShoulderWidth() / 2, actorProfile.getShoulderLevel(), 0))
+			var Vector posLeftShoulder = config.actorToCharacter(Vector.new(-actorProfile.getShoulderWidth() / 2, actorProfile.getShoulderLevel(), 0))
+			
+			var DMatrix matrix = config.getMatrixCalibrateInverse().toDMatrix() * element.getElementMatrix().normalize()
+			var BehaviorElement vrmirror = GameApp.getGameApp().getWorldSpawnCharacter().getMirrorLarge()
+			if vrmirror.getVisible()
+				var DMatrix m = vrmirror.getElementMatrix()
+				matrix = matrix * m.getInverse() * DMatrix.newScaling(DVector.new(1, 1, -1)) * m
+			end
+			var Matrix m = matrix.toMatrix()
+			
+			pDebugDrawer.shapeSetPosition(Shapes.chest.order(), m * posChest)
+			pDebugDrawer.shapeSetPosition(Shapes.shoulderRight.order(), m * posRightShoulder)
+			pDebugDrawer.shapeSetPosition(Shapes.handRight.order(), m * posRightHand)
+			pDebugDrawer.shapeSetPosition(Shapes.shoulderLeft.order(), m * posLeftShoulder)
+			pDebugDrawer.shapeSetPosition(Shapes.handLeft.order(), m * posLeftHand)
+			
+			updateLine(Shapes.lineChestShoulderRight.order(), m * posChest, m * posRightShoulder)
+			updateLine(Shapes.lineShoulderHandRight.order(), m * posRightShoulder, m * posRightHand)
+			updateLine(Shapes.lineChestShoulderLeft.order(), m * posChest, m * posLeftShoulder)
+			updateLine(Shapes.lineShoulderHandLeft.order(), m * posLeftShoulder, m * posLeftHand)
+			
+// 			GameApp.getGameApp().getConsole().addMessage("DEBUG rhp=" + posRightHand + " lhp=" + posLeftHand + " cp=" + posChest)
+		end
+		
+		private func void updateLine(int index, Vector fromPos, Vector toPos)
+			pDebugDrawer.shapeSetPosition(index, (fromPos + toPos) / 2)
+			
+			var float length = (toPos - fromPos).getLength()
+			pDebugDrawer.shapeSetScale(index, Vector.new(0.002, 0.002, length / 2))
+			
+			if length > 0.001
+				var Vector axis = (toPos - fromPos).normalize()
+				if DEMath.fabs(axis * Vector.new(0, 1, 0)) < 0.9
+					pDebugDrawer.shapeSetOrientation(index, Matrix.newVU(axis, Vector.new(0, 1, 0)).toQuaternion())
+				else
+					pDebugDrawer.shapeSetOrientation(index, Matrix.newVU(axis, Vector.new(0, 0, 1)).toQuaternion())
+				end
+				
+			else
+				pDebugDrawer.shapeSetOrientation(index, Quaternion.new())
+			end
+		end
+	end
+	
+	
+	public func new(BehaviorElementClass eclass) super(eclass)
+		eclass.addBehavior(this)
+	end
+	
+	public func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(element)
+	end
+end
