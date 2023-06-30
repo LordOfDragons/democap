@@ -78,6 +78,7 @@ class WMPanelSettings extends Panel
 		var Label label
 		var String toolTip
 		var Button button
+		var TextField textField
 		
 		setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
@@ -147,6 +148,39 @@ class WMPanelSettings extends Panel
 			checkBox.setToolTip("Automatically export captured animations to file named "\
 				+ "<scene>/<stage direction>/<object>/<animation>.*")
 			p.addWidget(checkBox)
+		end))
+		
+		addWidget(Panel.new(GridLayout.new(2, 0, 5), block Panel p
+			var DefaultTextModel modelEstimated = GameApp.getGameApp().getWorldSpawnCharacter().getEstimatedFloorOffset()
+			
+			p.addWidget(Panel.new(BorderLayout.new(2), block Panel p2
+				toolTip = "Floor offset in meters of the VR playspace. Recalibrate character if changed."
+				label = Label.new("Floor Offset:", "Label.FormCaption.SingleLine")
+				label.setToolTip(toolTip)
+				p2.addWidget(label, BorderLayout.Area.left)
+				
+				textField = TextField.new(sessionSettings.getModelFloorOffset(), 4)
+				textField.setToolTip(toolTip)
+				textField.setValidator(SimpleTextValidator.new(12, SimpleTextValidator.CharacterClass.number))
+				p2.addWidget(textField, BorderLayout.Area.content)
+				
+				button = Button.new("<", BlockActionListener.new(block ActionEvent event
+					sessionSettings.getModelFloorOffset().setText(modelEstimated.getText())
+				end))
+				button.setToolTip("Use estimated floor offset as floor offset")
+				p2.addWidget(button, BorderLayout.Area.right)
+			end))
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 5, FlowLayout.Stretch.last), block Panel p2
+				toolTip = "Floor offset estimated during the last calibration"
+				label = Label.new("Estimated:", "Label.FormCaption.SingleLine")
+				label.setToolTip(toolTip)
+				p2.addWidget(label)
+				
+				textField = TextField.new(modelEstimated, 4, true)
+				textField.setToolTip(toolTip)
+				p2.addWidget(textField)
+			end))
 		end))
 		
 		addWidget(WMPPanelView.new(this))
