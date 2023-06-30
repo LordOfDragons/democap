@@ -240,6 +240,7 @@ public class SessionSettings
 	private var DefaultToggleModel pModelFullBright
 	private var DefaultToggleModel pModelUseEyeGazeTracking
 	private var DefaultToggleModel pModelUseFacialTracking
+	private var DefaultTextModel pModelFloorOffset
 	
 	private var DefaultListModel pModelHudCamera
 	private var DefaultToggleModel pModelShowVRControllers
@@ -300,6 +301,9 @@ public class SessionSettings
 		pModelFullBright = DefaultToggleModel.new(s.getBoolAt("FullBright", false))
 		pModelFullBright.addListener(SaveToggleModelChanged.new("FullBright"))
 		pModelFullBright.addListener(ToggleFullBright.new())
+		
+		pModelFloorOffset = DefaultTextModel.new(s.getStringAt("FloorOffset", "0"))
+		pModelFloorOffset.addListener(SaveTextModelChanged.new("FloorOffset"))
 		
 		pModelHudCamera = DefaultListModel.new()
 		pModelHudCamera.add(null)
@@ -418,6 +422,26 @@ public class SessionSettings
 	/** Full bright model. */
 	public func DefaultToggleModel getModelFullBright()
 		return pModelFullBright
+	end
+	
+	/** Model floor offset. */
+	public func DefaultTextModel getModelFloorOffset()
+		return pModelFloorOffset
+	end
+	
+	/** Floor offset. */
+	public func float getFloorOffset()
+		return pModelFloorOffset.getText().toFloat()
+	end
+	
+	/** Floor offset vector. */
+	public func Vector getFloorOffsetVector()
+		return Vector.new(0, getFloorOffset(), 0)
+	end
+	
+	/** Floor offset matrix. */
+	public func Matrix getFloorOffsetMatrix()
+		return Matrix.newTranslation(0, getFloorOffset(), 0)
 	end
 	
 	

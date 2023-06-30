@@ -100,6 +100,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 		private var Vector pCalibrationPosition
 		private var Quaternion pCalibrationOrientation
 		private var int pCalibrationCounter
+		private var Matrix pMatrixPoseOffset
 		
 		
 		
@@ -114,6 +115,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 			pReferenceMatrix = Matrix.new()
 			pComponentMatrix = Matrix.new()
 			pAttachDetachListener = AttachDetachListener.new(this)
+			pMatrixPoseOffset = Matrix.new()
 			
 			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
 			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
@@ -131,6 +133,8 @@ class ECBTrackerSlot extends DefaultECBehavior
 		
 		/** Init behavior instance. */
 		public func void init(StubElement stub)
+			pMatrixPoseOffset = GameApp.getGameApp().getSessionSettings().getFloorOffsetMatrix()
+			
 			initSmoothing()
 			
 			pControllerPosition = pActorAnimated.getControllerNamed(pECBehavior.getControllerNamePosition())
@@ -414,9 +418,12 @@ class ECBTrackerSlot extends DefaultECBehavior
 		
 		/** Begin calibration. */
 		public func void beginCalibration()
+			pMatrixPoseOffset = GameApp.getGameApp().getSessionSettings().getFloorOffsetMatrix()
+			
 			pCalibrationPosition = Vector.new()
 			pCalibrationOrientation = Quaternion.new()
 			pCalibrationCounter = 0
+			
 			findInputDevice()
 		end
 		
@@ -426,7 +433,8 @@ class ECBTrackerSlot extends DefaultECBehavior
 				return
 			end
 			
-			pCalibrationPosition = pCalibrationPosition + pInputDevice.getDevicePosePosition()
+			pCalibrationPosition = pCalibrationPosition\
+				+ (pMatrixPoseOffset * pInputDevice.getDevicePosePosition())
 			pCalibrationOrientation = pCalibrationOrientation + pInputDevice.getDevicePoseOrientation()
 			pCalibrationCounter++
 		end
@@ -492,6 +500,8 @@ class ECBTrackerSlot extends DefaultECBehavior
 			var CharacterTrackerSlot slot = pECBehavior.getTrackerSlot()
 			var CharacterConfiguration config = slot.getConfiguration()
 			
+			pMatrixPoseOffset = GameApp.getGameApp().getSessionSettings().getFloorOffsetMatrix()
+			
 			// some notes:
 			// - pComponentMatrix is the real VR device location in VR playspace
 			// - pReferenceMatrix is the reference slot location in character space
@@ -506,11 +516,11 @@ class ECBTrackerSlot extends DefaultECBehavior
 						pComponentMatrix = Matrix.newWorld(pCalibrationPosition, pCalibrationOrientation)
 						
 					else
-						pComponentMatrix = pInputDevice.getDevicePoseMatrix()
+						pComponentMatrix = pInputDevice.getDevicePoseMatrix() * pMatrixPoseOffset
 					end
 					
 				else
-					pComponentMatrix = applySmoothing(pInputDevice.getDevicePoseMatrix())
+					pComponentMatrix = applySmoothing(pInputDevice.getDevicePoseMatrix() * pMatrixPoseOffset)
 				end
 				pMatrix = config.actorToCharacter(pComponentMatrix * config.getMatrixCalibrate())
 				
@@ -592,7 +602,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 			
 			pSmoothSlot = SmoothSlotWMM.new()
 			pSmoothSlot.setStrength(SessionSettings.get().getSmoothSlotStrength())
-			pSmoothSlot.init(pInputDevice.getDevicePoseMatrix())
+			pSmoothSlot.init(pInputDevice.getDevicePoseMatrix() * pMatrixPoseOffset)
 		end
 		
 		/** Apply smoothing if present. */

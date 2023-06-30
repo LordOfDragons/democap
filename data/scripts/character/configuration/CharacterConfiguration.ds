@@ -648,6 +648,7 @@ class CharacterConfiguration
 		// after the calibation finishes we do the real calibration with the collected data
 		var PlayspaceCalibrator calibrator = PlayspaceCalibrator.new(this, actorProfile, actor)
 		if calibrator.calibrate()
+			calibrator.logParams()
 			assignInputDevices(actorProfile)
 		end
 		
@@ -685,6 +686,7 @@ class CharacterConfiguration
 			return
 		end
 		
+		calibrator.logParams()
 		setCalibrateScale(calibrator.getScale())
 		setMatrixCalibrate(calibrator.getCalibrateMatrix())
 		
@@ -734,13 +736,15 @@ class CharacterConfiguration
 	
 	/** Find closest slot to input devices and return input device found for slot. */
 	public func InputDevice findSlotInputDevice(CharacterTrackerSlot slot)
+		var Vector offset = GameApp.getGameApp().getSessionSettings().getFloorOffsetVector()
+		
 		return GameApp.getGameApp().getBindingManager().findDevice(block InputDevice device
 			select device.getType()
 			case InputDeviceType.vrHMD, InputDeviceType.vrEyeTracker,\
 				 InputDeviceType.vrLeftHand, InputDeviceType.vrRightHand,\
 				 InputDeviceType.vrTracker
 				return pTrackerSlots.bestMatching(device.getType(),\
-					pMatrixCalibrate * device.getDevicePosePosition()) == slot
+					pMatrixCalibrate * device.getDevicePosePosition() + offset) == slot
 				
 			else
 				return false
@@ -752,6 +756,7 @@ class CharacterConfiguration
 	
 	/** Assign input devices to closest slot with matching type. */
 	protected func void assignInputDevices(ActorProfile actorProfile)
+		var Vector offset = GameApp.getGameApp().getSessionSettings().getFloorOffsetVector()
 		var BindingManager bindings = GameApp.getGameApp().getBindingManager()
 		
 		// clear all assignments
@@ -768,19 +773,19 @@ class CharacterConfiguration
 			case InputDeviceType.vrHMD, InputDeviceType.vrEyeTracker,\
 			  	 InputDeviceType.vrLeftHand, InputDeviceType.vrRightHand,\
 				 InputDeviceType.vrTracker
-				var CharacterTrackerSlot slot = pTrackerSlots.bestMatching(\
-					device.getType(), pMatrixCalibrate * device.getDevicePosePosition())
+				var CharacterTrackerSlot slot = pTrackerSlots.bestMatching(device.getType(),\
+					pMatrixCalibrate * device.getDevicePosePosition() + offset)
 				
 				if slot != null
 					slot.setInputDeviceID(device.getID())
 					console.addMessage("- {} ({}) {}: Assign to slot '{}'".format(\
 						Array.newWith(device.getID(), device.getType().name(),\
-							device.getDevicePosePosition(), slot.getName())))
+							device.getDevicePosePosition() + offset, slot.getName())))
 					
 				else
 					console.addMessage("- {} ({}) {}: Not assigned".format(\
 						Array.newWith(device.getID(), device.getType().name(),\
-							device.getDevicePosePosition())))
+							device.getDevicePosePosition() + offset)))
 				end
 			end
 		end)

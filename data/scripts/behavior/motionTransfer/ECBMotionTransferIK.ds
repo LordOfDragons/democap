@@ -292,9 +292,9 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			var Matrix reachMatrix = pReachMatrix * pComponent.boneGetMatrix(pBaseBone)
 			
 			pReachRelativeTarget = reachMatrix.getInverse() * pReachTargetPosition
-					if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
-						GameApp.getGameApp().getConsole().addMessage("IK tp=" + pReachTargetPosition + " tir=" + pReachRelativeTarget)
-					end
+// 			if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
+// 				GameApp.getGameApp().getConsole().addMessage("IK tp=" + pReachTargetPosition + " tir=" + pReachRelativeTarget)
+// 			end
 			
 			if pEnableScaleReach
 				pReachRelativeTarget = pReachRelativeTarget.compMultiply(pScaleReach).combine(\
@@ -303,16 +303,16 @@ class ECBMotionTransferIK extends DefaultECBehavior
 					pReachRelativeTarget.getY() > 0,\
 					pReachRelativeTarget.getZ() > 0)
 				
-						if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
-							GameApp.getGameApp().getConsole().addMessage("IK2 tir=" + pReachRelativeTarget\
-								+ " pos=" + pReachRelativeTarget.compMultiply(pScaleReach)\
-								+ " neg=" + pReachRelativeTarget.compMultiply(pScaleReachBack))
-						end
+// 				if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
+// 					GameApp.getGameApp().getConsole().addMessage("IK2 tir=" + pReachRelativeTarget\
+// 						+ " pos=" + pReachRelativeTarget.compMultiply(pScaleReach)\
+// 						+ " neg=" + pReachRelativeTarget.compMultiply(pScaleReachBack))
+// 				end
 				
 				pReachTargetPosition = reachMatrix * pReachRelativeTarget
-						if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
-							GameApp.getGameApp().getConsole().addMessage("IK3 tp=" + pReachTargetPosition)
-						end
+// 				if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
+// 					GameApp.getGameApp().getConsole().addMessage("IK3 tp=" + pReachTargetPosition)
+// 				end
 				
 				pRetractedLength = pReachRelativeTarget.getLength()
 			end
@@ -331,11 +331,13 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			var Vector targetPosAbs = pReachRelativeTarget.absolute()
 			var Vector reach = pScaleReach.largest(pScaleReachBack) * pReach
 			
-			var float factorX = DEMath.linearStep(targetPosAbs.getX(), 0.0, reach.getX())
-			factorX = 1.0 - (factorX * factorX)
+			var float factorX = DEMath.smoothStep(targetPosAbs.getX(), 0.0, reach.getX(), 1.0, 0.0)
+// 			var float factorX = DEMath.linearStep(targetPosAbs.getX(), 0.0, reach.getX())
+// 			factorX = 1.0 - (factorX * factorX)
 			
-			var float factorY = DEMath.smoothStep(targetPosAbs.getY(), 0.0, reach.getY())
-			factorY = 1.0 - (factorY * factorY)
+			var float factorY = DEMath.smoothStep(targetPosAbs.getY(), 0.0, reach.getY(), 1.0, 0.0)
+// 			var float factorY = DEMath.linearStep(targetPosAbs.getY(), 0.0, reach.getY())
+// 			factorY = 1.0 - (factorY * factorY)
 			
 			pControllerBaseRotateX.setValue(angleX * factorX)
 			pControllerBaseRotateY.setValue(angleY * factorY)
@@ -420,9 +422,6 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			var float rotation = (orientation.slerp(Quaternion.new(), factor)).getEulerAngles().getZ() / factor
 			
 			pControllerTwist.setValue(rotation)
-			
-//			GameApp.getGameApp().getConsole().addMessage("Phase2 " + pECBehavior.getTransfer().getName() \
-//				+ " " + pControllerTwist.getValue() + " " + pComponent.boneGetName(pTwistBone))
 			
 			if pControllerGuideTwistAxis != null and pTipBone != -1 and pGuideBone != -1
 				var Vector axis = pComponent.boneGetMatrix(pTipBone).getPosition()\

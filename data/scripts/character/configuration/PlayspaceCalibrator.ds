@@ -37,13 +37,18 @@ class PlayspaceCalibrator
 	
 	protected var CharacterTrackerSlots pSlots
 	
+	protected var float pShoulderLevelCharacter
+	protected var float pShoulderLevelActor
 	protected var float pScale
 	protected var Matrix pMatrixHmd
 	protected var Matrix pMatrixHandRight
 	protected var Matrix pMatrixHandLeft
 	protected var CharacterTrackerSlot pSlotHeadTracker
+	protected var InputDevice pDeviceHeadTracker
 	protected var bool pUseHeadTracker
 	protected var Matrix pCalibrateMatrix
+	protected var float pShoulderLevel
+	protected var float pFloorOffset
 	
 	
 	
@@ -68,6 +73,11 @@ class PlayspaceCalibrator
 		return pCalibrateMatrix
 	end
 	
+	/** Floor offset. */
+	public func float getFloorOffset()
+		return pFloorOffset
+	end
+	
 	
 	
 	/** Calibrate playspace. */
@@ -85,8 +95,43 @@ class PlayspaceCalibrator
 		if not pUseHeadTracker
 			calcHmdCalibrateMatrix()
 		end
+		estimateFloorOffset()
 		
 		return true
+	end
+	
+	/** Log calibration parameters. */
+	public func void logParams()
+		var Console c = GameApp.getApp().getConsole()
+		var String logPrefix = "Calibrator: "
+		
+		c.addMessage(logPrefix + "actorScale=" + pScale + " (shoulder-level character="\
+			+ pShoulderLevelCharacter + " actor=" + pShoulderLevelActor + ")")
+		
+		var String prefixHead
+		var Vector posHead
+		
+		if pUseHeadTracker
+			prefixHead = "headTracker"
+			posHead = pDeviceHeadTracker.getDevicePosePosition()
+			
+		else
+			prefixHead = "headHmd"
+			posHead = pMatrixHmd.getPosition()
+		end
+		
+		c.addMessage(logPrefix + "playspace position:"\
+			+ " " + prefixHead + "=" + posHead\
+			+ " handRight=" + pMatrixHandRight.getPosition()\
+			+ " handLeft=" + pMatrixHandLeft.getPosition())
+		
+		c.addMessage(logPrefix + "calibrated position:"\
+			+ " " + prefixHead + "=" + pCalibrateMatrix * posHead\
+			+ " handRight=" + pCalibrateMatrix * pMatrixHandRight.getPosition()\
+			+ " handLeft=" + pCalibrateMatrix * pMatrixHandLeft.getPosition())
+		
+		c.addMessage(logPrefix + "floorOffset=" + pFloorOffset\
+			+ " (shoulderLevel=" + pShoulderLevel + ")")
 	end
 	
 	
@@ -100,7 +145,10 @@ class PlayspaceCalibrator
 		// too small shoulder level compared to characters where the shoulder level is
 		// measured all the way to the ground. for these reasons actors are required to
 		// have their shoulder level measured to get precise results matching characters
-		pScale = pCharacter.getProfile().getShoulderLevel() / pActorProfile.getShoulderLevel()
+		pShoulderLevelCharacter = pCharacter.getProfile().getShoulderLevel()
+		pShoulderLevelActor = pActorProfile.getShoulderLevel()
+		
+		pScale = pShoulderLevelCharacter / pShoulderLevelActor
 	end
 	
 	protected func void findBaseMatrices()
@@ -166,7 +214,8 @@ class PlayspaceCalibrator
 		
 		pCalibrateMatrix = Matrix.newTranslation(-centerBody) * Matrix.newRotationY(-turnBody)
 		
-		pUseHeadTracker = pCharacter.findSlotInputDevice(pSlotHeadTracker) != null
+		pDeviceHeadTracker = pCharacter.findSlotInputDevice(pSlotHeadTracker)
+		pUseHeadTracker = pDeviceHeadTracker != null
 	end
 	
 	protected func void calcHmdCalibrateMatrix()
@@ -185,5 +234,13 @@ class PlayspaceCalibrator
 		var float turnBody = turnHMD
 		
 		pCalibrateMatrix = Matrix.newTranslation(-centerBody) * Matrix.newRotationY(-turnBody)
+	end
+	
+	protected func void estimateFloorOffset()
+		var float levelRightHand = pMatrixHandRight.getPosition().getY()
+		var float levelLeftHand = pMatrixHandLeft.getPosition().getY()
+		
+		pShoulderLevel = (levelRightHand + levelLeftHand) / 2
+		pFloorOffset = pShoulderLevel - pShoulderLevelActor
 	end
 end
