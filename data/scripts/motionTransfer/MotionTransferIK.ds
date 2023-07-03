@@ -82,6 +82,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var MotionTransferTracker pTipTracker
 	private var MotionTransferTracker pGuideTracker
 	private var MotionTransferTracker pBaseTracker
+	private var MotionTransferTracker pRelocateTracker
 	private var ActorReach pActorReach
 	private var float pReachLimit
 	private var Vector pReachScaling
@@ -141,6 +142,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTipTracker = MotionTransferTracker.new()
 		pGuideTracker = MotionTransferTracker.new()
 		pBaseTracker = MotionTransferTracker.new()
+		pRelocateTracker = MotionTransferTracker.new()
 		pActorReach = ActorReach.none
 		pReachLimit = 1
 		pReachScaling = Vector.new(1, 1, 1)
@@ -182,6 +184,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTipTracker = MotionTransferTracker.new(transfer.pTipTracker)
 		pGuideTracker = MotionTransferTracker.new(transfer.pGuideTracker)
 		pBaseTracker = MotionTransferTracker.new(transfer.pBaseTracker)
+		pRelocateTracker = MotionTransferTracker.new(transfer.pRelocateTracker)
 		pActorReach = transfer.pActorReach
 		pReachLimit = transfer.pReachLimit
 		pReachScaling = transfer.pReachScaling
@@ -266,9 +269,14 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pGuideTracker
 	end
 	
-	/** Reach tracker. */
+	/** Base tracker. */
 	public func MotionTransferTracker getBaseTracker()
 		return pBaseTracker
+	end
+	
+	/** Relocate tracker. */
+	public func MotionTransferTracker getRelocateTracker()
+		return pRelocateTracker
 	end
 	
 	/** Actor reach to use to scale reach length. */
@@ -536,6 +544,10 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pCalibratePreRotateBone
 	end
 	
+	public func String getCalibrateBaseRotateBone()
+		return pCalibrateBaseRotateBone
+	end
+	
 	
 	
 	/** Init element clas. */
@@ -561,7 +573,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		var ECBMotionTransferIK behavior = ECBMotionTransferIK.new(eclass, this)
 		
 		// add rules
-		var CharacterTrackerSlot slotTip, slotGuide, slotReach
+		var CharacterTrackerSlot slotTip, slotGuide, slotReach, slotRelocate
 		if not pTipTracker.getSlot().empty()
 			slotTip = config.getTrackerSlots().getNamed(pTipTracker.getSlot())
 		end
@@ -570,6 +582,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end
 		if not pBaseTracker.getSlot().empty()
 			slotReach = config.getTrackerSlots().getNamed(pBaseTracker.getSlot())
+		end
+		if not pRelocateTracker.getSlot().empty()
+			slotRelocate = config.getTrackerSlots().getNamed(pRelocateTracker.getSlot())
 		end
 		
 		var int boneCount = pCalibrateBones.getCount()
@@ -1026,6 +1041,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTipTracker.resetTransform()
 		pGuideTracker.resetTransform()
 		pBaseTracker.resetTransform()
+		pRelocateTracker.resetTransform()
 		
 		pCalibrateReach = 0.6
 		pCalibrateReachScale = 1
@@ -1073,6 +1089,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBaseTracker.resolveRealSlot(config)
 		pBaseTracker.setTransform(config, component, guideBone)
 		
+		pRelocateTracker.resolveRealSlot(config)
+		pRelocateTracker.setTransform(config, component, "")
+		
 		// get tracker slots. has to come after resolving tracker slots
 		var CharacterTrackerSlot slotGuide
 		if not pGuideTracker.getSlot().empty()
@@ -1104,12 +1123,13 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end
 		
 		// calculate reach of IK chain to avoid over stretching
+		var CharacterTrackerSlot slotBase = pBaseTracker.getRealSlot()
+		var CharacterTrackerSlot slotTip = pTipTracker.getRealSlot()
+		var CharacterTrackerSlot slotRelocate = pRelocateTracker.getRealSlot()
+		
 		if indexBase != -1 and indexTip != -1
 			var Matrix baseMatrix = component.boneGetMatrix(indexBase)
 			var Matrix tipMatrix = component.boneGetMatrix(indexTip)
-			
-			var CharacterTrackerSlot slotBase = pBaseTracker.getRealSlot()
-			var CharacterTrackerSlot slotTip = pTipTracker.getRealSlot()
 			
 			var Vector posBase = baseMatrix.getPosition()
 			var Vector posTip = tipMatrix.getPosition()
@@ -1229,31 +1249,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 				pCalibrateReachScaleDirectionBack = Vector.new(1, 1, 1)
 			end
 			
-			if slotTip != null and pRelocateTip
-				var Matrix matrixBase = component.boneGetMatrix(indexBase)
-				var Matrix matrixBaseInv = component.boneGetInverseMatrix(indexBase)
-				var Vector positionTarget = config.characterToComponent(slotTip.getTargetPosition())
-				var Vector positionReference = config.characterToComponent(slotTip.getCalibrateReferenceMatrix().getPosition())
-				
-				var Vector targetInBase = matrixBaseInv * positionTarget
-				var Vector referenceInBase = matrixBaseInv * positionReference
-				
-				var Vector normalTargetInbase = targetInBase.normalize()
-				var Vector projReferenceInBase = normalTargetInbase * (normalTargetInbase * referenceInBase)
-				
-				var Vector projReference = matrixBase.transformNormal(projReferenceInBase)
-				
-				var Vector pivot = positionReference - projReference
-				
-				pCalibrateMatrixRelocateTip = Matrix.newTranslation(-pivot) * matrixBaseInv.getRotation()
-				
-			else
-				pCalibrateMatrixRelocateTip = Matrix.new()
-				//pCalibrateReachScale = 1
-				//pCalibrateGuideTrackAxis = ARTrackToAxis.posZ
-				//pCalibrateGuideUpAxis = ARTrackToAxis.posY
-			end
-			
 			// reach range is only used if base tracker is set
 			if slotBase != null
 				pCalibrateReachRange = pCalibrateReach
@@ -1334,17 +1329,34 @@ class MotionTransferIK extends DefaultMotionTransfer
 			var int indexBaseParent = rig.boneGetParent(indexBase)
 			
 			if indexBaseParent != -1
+				var Matrix matrixBaseInv = component.boneGetInverseMatrix(indexBaseParent)
+				
 				pCalibrateBaseRotateBone = rig.boneGetName(indexBaseParent)
 				pCalibrateBaseRotateRotation = (Matrix.newRotation(pTwistAxisRotation) \
-					* component.boneGetInverseMatrix(indexBaseParent).normalize()).getEulerAngles()
+					* matrixBaseInv.normalize()).getEulerAngles()
+				
+				if pRelocateTip and slotTip != null and slotRelocate != null
+					var Vector positionTarget = matrixBaseInv * config.characterToComponent(slotTip.getTargetPosition())
+					var Matrix matrixAxis = Matrix.newRotation(pCalibrateBaseRotateRotation)
+					var Vector axis = matrixAxis.getViewVector()
+					var Vector axisTarget = axis * (axis * positionTarget)
+					var Vector baseTargetPosition = positionTarget - axisTarget
+					
+					pCalibrateMatrixRelocateTip = matrixAxis * Matrix.newTranslation(baseTargetPosition)
+					
+				else
+					pCalibrateMatrixRelocateTip = Matrix.new()
+				end
 				
 			else
 				pCalibrateBaseRotateBone = ""
 				pCalibrateBaseRotateRotation = Vector.new()
+				pCalibrateMatrixRelocateTip = Matrix.new()
 			end
 			
 		else
 			pCalibrateReachRotation = pTwistAxisRotation
+			pCalibrateMatrixRelocateTip = Matrix.new()
 		end
 	end
 	
@@ -1389,6 +1401,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 			elif tagName.equals("baseTracker")
 				pBaseTracker.load(loader, element)
+				
+			elif tagName.equals("relocateTracker")
+				pRelocateTracker.load(loader, element)
 				
 			elif tagName.equals("actorReach")
 				setActorReach(ActorReach.named(element.getFirstCData()))
@@ -1491,6 +1506,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("baseTracker")
 				pBaseTracker.loadCalibrated(loader, element)
 				
+			elif tagName.equals("relocateTracker")
+				pRelocateTracker.loadCalibrated(loader, element)
+				
 			elif tagName.equals("reachRetracted")
 				pCalibrateReachRetracted = element.getFirstCDataFloat()
 				
@@ -1520,6 +1538,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTipTracker.resolveRealSlot(config)
 		pGuideTracker.resolveRealSlot(config)
 		pBaseTracker.resolveRealSlot(config)
+		pRelocateTracker.resolveRealSlot(config)
 	end
 	
 	/** Save to XML. */
@@ -1531,6 +1550,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTipTracker.save(loader, tag.addTag("tipTracker"))
 		pGuideTracker.save(loader, tag.addTag("guideTracker"))
 		pBaseTracker.save(loader, tag.addTag("baseTracker"))
+		pRelocateTracker.save(loader, tag.addTag("relocateTracker"))
 		tag.addDataTag("actorReach", pActorReach.name())
 		tag.addDataTag("reachLimit", pReachLimit)
 		loader.writeVector(tag, "reachScaling", pReachScaling)
@@ -1568,6 +1588,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTipTracker.saveCalibrated(loader, tag.addTag("tipTracker"))
 		pGuideTracker.saveCalibrated(loader, tag.addTag("guideTracker"))
 		pBaseTracker.saveCalibrated(loader, tag.addTag("baseTracker"))
+		pRelocateTracker.saveCalibrated(loader, tag.addTag("relocateTracker"))
 		tag.addDataTag("reachRetracted", pCalibrateReachRetracted)
 		pCalibrateTwistAxes.forEach(block Vector each
 			loader.writeVector(tag, "twistAxis", each)

@@ -43,6 +43,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	private var WCCPMTTracker pEditTrackerTip
 	private var WCCPMTTracker pEditTrackerGuide
 	private var WCCPMTTracker pEditTrackerBase
+	private var WCCPMTTracker pEditTrackerRelocate
 	private var DefaultListModel pModelActorReach
 	private var DefaultTextModel pModelReachLimit
 	private var EditVector pEditReachScaling
@@ -114,6 +115,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pEditTrackerGuide = null
 		pEditTrackerBase.setTracker(null)
 		pEditTrackerBase = null
+		pEditTrackerRelocate = null
 		pModelActorReach = null
 		pModelReachLimit = null
 		pEditReachScaling = null
@@ -153,6 +155,8 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pEditTrackerGuide.loadValues()
 				pEditTrackerBase.setTracker(mt.getBaseTracker())
 				pEditTrackerBase.loadValues()
+				pEditTrackerRelocate.setTracker(mt.getRelocateTracker())
+				pEditTrackerRelocate.loadValues()
 				pModelActorReach.setSelected(pModelActorReach.indexOf(mt.getActorReach()))
 				pModelReachLimit.setText(mt.getReachLimit().toString())
 				pEditReachScaling.setVector(mt.getReachScaling())
@@ -178,6 +182,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pEditTrackerTip.setTracker(null)
 				pEditTrackerGuide.setTracker(null)
 				pEditTrackerBase.setTracker(null)
+				pEditTrackerRelocate.setTracker(null)
 				pModelActorReach.setSelected(pModelActorReach.indexOf(MotionTransferIK.ActorReach.none))
 				pModelReachLimit.setText("")
 				pEditReachScaling.setVector(Vector.new(1, 1, 1))
@@ -214,6 +219,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pEditTrackerTip.saveValues()
 		pEditTrackerGuide.saveValues()
 		pEditTrackerBase.saveValues()
+		pEditTrackerRelocate.saveValues()
 		mt.setActorReach(pModelActorReach.getAt(pModelActorReach.getSelected()) cast MotionTransferIK.ActorReach)
 		mt.setReachLimit(pModelReachLimit.getText().toFloat())
 		mt.setReachScaling(pEditReachScaling.getVector())
@@ -293,6 +299,9 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		
 		pEditTrackerBase = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/BaseTracker", this, "Base Tracker", false)
 		addWidget(pEditTrackerBase)
+		
+		pEditTrackerRelocate = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/RelocateTracker", this, "Relocate Tracker", false)
+		addWidget(pEditTrackerRelocate)
 		
 		// actor reach
 		pPanelForm.addWidget(Label.new("Actor Reach:", "Label.FormCaption"))
@@ -475,6 +484,9 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		end
 		if pEditTrackerBase != null
 			pEditTrackerBase.setTracker(null)
+		end
+		if pEditTrackerRelocate != null
+			pEditTrackerRelocate.setTracker(null)
 		end
 	end
 end

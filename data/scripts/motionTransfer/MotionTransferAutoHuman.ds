@@ -580,8 +580,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegLeft.getGuideTracker().resolveRealSlot(config)
 		pTransferArmRight.getTipTracker().resolveRealSlot(config)
 		pTransferArmRight.getGuideTracker().resolveRealSlot(config)
+		pTransferArmRight.getRelocateTracker().resolveRealSlot(config)
 		pTransferArmLeft.getTipTracker().resolveRealSlot(config)
 		pTransferArmLeft.getGuideTracker().resolveRealSlot(config)
+		pTransferArmLeft.getRelocateTracker().resolveRealSlot(config)
 		pTransferNeck.getBaseTracker().resolveRealSlot(config)
 		
 		var bool hasSlotWaist = hasSlot(pTransferWaist.getTracker(), CharacterTrackerSlot.Type.waist)
@@ -863,6 +865,19 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmRight.getGuideTracker().setOffsetPosition(Vector.new())
 		pTransferArmRight.getGuideTracker().setOffsetRotation(Vector.new())
 		
+		var Vector actorShoulderPosition = Vector.new(0, config.actorToCharacter(actorProfile.getShoulderLevel()), 0)
+		
+		var CharacterTrackerSlot slotRelocate = pTransferArmRight.getRelocateTracker().getRealSlot()
+		var Matrix matrixRelocate = Matrix.newRT(Vector.new(0, -90, 0), actorShoulderPosition) // same rotation as twist axis
+		
+		if slotRelocate != null
+			matrixRelocate = matrixRelocate * slotRelocate.getTargetMatrix().getInverse()
+		end
+		
+		pTransferArmRight.getRelocateTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		pTransferArmRight.getRelocateTracker().setOffsetPosition(matrixRelocate.getPosition())
+		pTransferArmRight.getRelocateTracker().setOffsetRotation(matrixRelocate.getEulerAngles())
+		
 		
 		
 		// left arm. separate guide bone is used if chain has at least 4 bones:
@@ -913,6 +928,17 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
 		pTransferArmLeft.getGuideTracker().setOffsetPosition(Vector.new())
 		pTransferArmLeft.getGuideTracker().setOffsetRotation(Vector.new())
+		
+		slotRelocate = pTransferArmLeft.getRelocateTracker().getRealSlot()
+		matrixRelocate = Matrix.newRT(Vector.new(0, 90, 0), actorShoulderPosition) // same rotation as twist axis
+		
+		if slotRelocate != null
+			matrixRelocate = matrixRelocate * slotRelocate.getTargetMatrix().getInverse()
+		end
+		
+		pTransferArmLeft.getRelocateTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		pTransferArmLeft.getRelocateTracker().setOffsetPosition(matrixRelocate.getPosition())
+		pTransferArmLeft.getRelocateTracker().setOffsetRotation(matrixRelocate.getEulerAngles())
 		
 		
 		
@@ -1293,10 +1319,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmRight.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightHandController))
 		pTransferArmRight.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightElbow))
 		pTransferArmRight.getBaseTracker().setSlot(armSlotBase)
+		pTransferArmRight.getRelocateTracker().setSlot(armSlotBase)
 		
 		pTransferArmLeft.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftHandController))
 		pTransferArmLeft.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.leftElbow))
 		pTransferArmLeft.getBaseTracker().setSlot(armSlotBase)
+		pTransferArmLeft.getRelocateTracker().setSlot(armSlotBase)
 		
 		pTransferLegRight.getTipTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightFoot))
 		pTransferLegRight.getGuideTracker().setSlot(firstSlotWithType(config, CharacterTrackerSlot.Type.rightKnee))
