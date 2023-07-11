@@ -114,6 +114,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var Matrix pTargetMatrix
 		private var Vector pReachTargetPosition, pReachRelativeTarget, pReachTargetRotation
 		private var float pRetractedLength
+		private var bool pReachScaleX, pReachScaleY, pReachScaleZ
 		
 		
 		
@@ -268,6 +269,10 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				pControllerPreRotate.setValue(0)
 				pControllerPreRotate.setVector(Vector.new())
 			end
+			if pControllerGuideRotation != null
+				pControllerGuideRotation.setValue(0)
+				pControllerGuideRotation.setRotation(Vector.new())
+			end
 			if pControllerBaseRotateX != null
 				pControllerBaseRotateX.setValue(0)
 			end
@@ -279,6 +284,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		public func void updateControllersPhase2()
 			prepareReach()
 			updateControllerBaseRotate()
+			updateControllerGuide()
 		end
 		
 		public func void updateControllersPhase3()
@@ -288,7 +294,6 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			
 			updateControllerPreRotate()
 			updateControllerIK()
-			updateControllerGuide()
 		end
 		
 		public func void updateControllersPhase4()
@@ -325,11 +330,13 @@ class ECBMotionTransferIK extends DefaultECBehavior
 // 			end
 			
 			if pEnableScaleReach
+				pReachScaleX = pReachRelativeTarget.getX() > 0
+				pReachScaleY = pReachRelativeTarget.getY() > 0
+				pReachScaleZ = pReachRelativeTarget.getZ() > 0
+				
 				pReachRelativeTarget = pReachRelativeTarget.compMultiply(pScaleReach).combine(\
 					pReachRelativeTarget.compMultiply(pScaleReachBack),\
-					pReachRelativeTarget.getX() > 0,\
-					pReachRelativeTarget.getY() > 0,\
-					pReachRelativeTarget.getZ() > 0)
+					pReachScaleX, pReachScaleY, pReachScaleZ)
 				
 // 				if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
 // 					GameApp.getGameApp().getConsole().addMessage("IK2 tir=" + pReachRelativeTarget\
@@ -424,15 +431,19 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			end
 			
 			if pControllerGuideRotation != null
-				// NOTE actually this is not fully correct. the rotation is affected by
-				//      reach scaling if the direction scaling is not uniform. doing this
-				//      would require to calculate the rotation matrix then apply a scale
-				//      matrix using the direction scaling. the view and up vector can
-				//      be obtained and normalized. this can be used to calculate a new
-				//      coordinate system which is then the new rotation. the difference
-				//      is neglectable for reach scalings close to 1 but become noticable
-				//      for large reach scaling differences
-				pControllerGuideRotation.setRotation((pTransformGuide * pSlotGuide.getMatrixCharacter()).getEulerAngles())
+				var Matrix matrix = pTransformGuide * pSlotGuide.getMatrixCharacter()
+				
+				if pEnableScaleReach
+					var Matrix reachMatrix = pReachMatrix * pComponent.boneGetMatrix(pBaseBone)
+					
+					matrix = matrix * reachMatrix.getInverse()\
+						* Matrix.newScaling(pScaleReach.combine(pScaleReachBack,\
+							pReachScaleX, pReachScaleY, pReachScaleZ))\
+						* reachMatrix
+				end
+				
+				pControllerGuideRotation.setRotation(matrix.normalize().getEulerAngles())
+				pControllerGuideRotation.setValue(1)
 			end
 		end
 		
