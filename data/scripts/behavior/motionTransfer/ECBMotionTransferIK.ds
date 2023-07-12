@@ -78,6 +78,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var AnimatorController pControllerTipPosition
 		private var AnimatorController pControllerTipOrientation
 		private var AnimatorController pControllerGuideRotation
+		private var AnimatorController pControllerGuideBend
 		private var AnimatorController pControllerTwist
 		private var AnimatorController pControllerGuideTwistAxis
 		private var AnimatorController pControllerRetracted
@@ -180,6 +181,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pControllerTipPosition = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTipPosition())
 			pControllerTipOrientation = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTipOrientation())
 			pControllerGuideRotation = actorAnimated.getControllerNamed(pECBehavior.getControllerNameGuideRotation())
+			pControllerGuideBend = actorAnimated.getControllerNamed(pECBehavior.getControllerNameGuideBend())
 			pControllerRetracted = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRetracted())
 			pControllerTwist = actorAnimated.getControllerNamed(pECBehavior.getControllerNameTwist())
 			pControllerGuideTwistAxis = actorAnimated.getControllerNamed(pECBehavior.getControllerNameGuideTwistAxis())
@@ -289,6 +291,9 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				pControllerGuideRotation.setValue(0)
 				pControllerGuideRotation.setRotation(Vector.new())
 			end
+			if pControllerGuideBend != null
+				pControllerGuideBend.setValue(0)
+			end
 			if pControllerBaseRotateX != null
 				pControllerBaseRotateX.setValue(0)
 			end
@@ -301,6 +306,10 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			prepareReach()
 			updateControllerBaseRotate()
 			updateControllerGuide()
+			
+			if pControllerGuideBend != null
+				pControllerGuideBend.setValue(1)
+			end
 		end
 		
 		public func void updateControllersPhase3()
@@ -564,6 +573,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	private var String pControllerNameTipPosition
 	private var String pControllerNameTipOrientation
 	private var String pControllerNameGuideRotation
+	private var String pControllerNameGuideBend
 	private var String pControllerNameTwist
 	private var String pControllerNameGuideTwistAxis
 	private var String pControllerNameRetracted
@@ -600,6 +610,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		pControllerNameTipPosition = transfer.getName() + ".targetPosition"
 		pControllerNameTipOrientation = transfer.getName() + ".targetOrientation"
 		pControllerNameGuideRotation = transfer.getName() + ".guideRotation"
+		pControllerNameGuideBend = transfer.getName() + ".guideBend"
 		pControllerNameTwist = transfer.getName() + ".twist"
 		pControllerNameGuideTwistAxis = transfer.getName() + ".guideTwistAxis"
 		pControllerNameRetracted = transfer.getName() + ".retracted"
@@ -665,6 +676,10 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	
 	public func String getControllerNameGuideRotation()
 		return pControllerNameGuideRotation
+	end
+	
+	public func String getControllerNameGuideBend()
+		return pControllerNameGuideBend
 	end
 	
 	public func String getControllerNameTwist()

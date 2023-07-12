@@ -100,6 +100,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var Vector2 pBaseRotateRangeMaximum
 	private var Vector2 pBaseRotateAngleMinimum
 	private var Vector2 pBaseRotateAngleMaximum
+	private var Vector pGuideBendAxisRotation
 	
 	private var ADController pADControllerTipPosition
 	private var ADController pADControllerTipOrientation
@@ -131,6 +132,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var String pCalibratePreRotateBone
 	private var Vector pCalibrateBaseRotateRotation
 	private var String pCalibrateBaseRotateBone
+	private var Vector pCalibrateGuideRotationTarget
 	
 	
 	
@@ -160,6 +162,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBaseRotateRangeMaximum = Vector2.new()
 		pBaseRotateAngleMinimum = Vector2.new()
 		pBaseRotateAngleMaximum = Vector2.new()
+		pGuideBendAxisRotation = Vector.new()
 		pCalibrateBones = Array.new()
 		pCalibrateReach = 0.6
 		pCalibrateReachScale = 1
@@ -174,6 +177,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibratePreRotateBone = ""
 		pCalibrateBaseRotateRotation = Vector.new()
 		pCalibrateBaseRotateBone = ""
+		pCalibrateGuideRotationTarget = Vector.new()
 	end
 	
 	/** Create copy of motion transfer. */
@@ -196,12 +200,13 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pTwistBoneCount = transfer.pTwistBoneCount
 		pGuideTwistStrength = transfer.pGuideTwistStrength
 		pRelocateTip = transfer.pRelocateTip
+		pTwistAxisRotation = transfer.pTwistAxisRotation
 		pBaseRotateRangeCenter = transfer.pBaseRotateRangeCenter
 		pBaseRotateRangeMinimum = transfer.pBaseRotateRangeMinimum
 		pBaseRotateRangeMaximum = transfer.pBaseRotateRangeMaximum
 		pBaseRotateAngleMinimum = transfer.pBaseRotateAngleMinimum
 		pBaseRotateAngleMaximum = transfer.pBaseRotateAngleMaximum
-		pTwistAxisRotation = transfer.pTwistAxisRotation
+		pGuideBendAxisRotation = transfer.pGuideBendAxisRotation
 		pCalibrateBones = Array.new(transfer.pCalibrateBones)
 		pCalibrateReach = transfer.pCalibrateReach
 		pCalibrateReachScale = transfer.pCalibrateReachScale
@@ -216,6 +221,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibratePreRotateBone = transfer.pCalibratePreRotateBone
 		pCalibrateBaseRotateBone = transfer.pCalibrateBaseRotateBone
 		pCalibrateBaseRotateRotation = transfer.pCalibrateBaseRotateRotation
+		pCalibrateGuideRotationTarget = transfer.pCalibrateGuideRotationTarget
 	end
 	
 	
@@ -483,6 +489,19 @@ class MotionTransferIK extends DefaultMotionTransfer
 			throw ENullPointer.new("angle")
 		end
 		pBaseRotateAngleMaximum = angle
+	end
+	
+	/** Rotation of guide bend axis. */
+	public func Vector getGuideBendAxisRotation()
+		return pGuideBendAxisRotation
+	end
+	
+	/** Set rotation of guide bend axis. */
+	public func void setGuideBendAxisRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pGuideBendAxisRotation = rotation
 	end
 	
 	
@@ -861,6 +880,49 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		
 		
+		// add guide bend rule. fixes the problem of pre-rotate used with guide potentially
+		// ending up in straigh arm pose which is a problem for IK calculation. the solution
+		// is to always apply two countering rotations on the guide and pre-rotate bone to
+		// force the arm to be bend. if the arm is fully retracted this countering rotations
+		// can result in the lower arm to rotate past the upper arm but the IK calculation
+		// will pull them apart again so this should not be a real problem
+		if useGuide and not pCalibratePreRotateBone.empty() and not pCalibratePreRotateBone.equals(pGuideBone)
+			var float angle = 10
+			
+			var ADController controller = ADController.new()
+			controller.setName(behavior.getControllerNameGuideBend())
+			adef.addController(controller)
+			
+			var ADLink link = ADLink.new()
+			link.setController(controller)
+			adef.addLink(link)
+			
+			var ADRuleBoneTransformator rule = ADRuleBoneTransformator.new()
+			rule.setName(getName() + ".guideBend")
+			rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+			rule.setTargetBone(pGuideBone)
+			rule.setUseAxis(true)
+			rule.setAxis(pCalibrateGuideRotationTarget)
+			rule.setMinimumAngle(-angle)
+			rule.setMaximumAngle(-angle)
+			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.blendFactor, link))
+			rule.addBone(pCalibratePreRotateBone)
+			adef.addRule(rule)
+			
+			rule = ADRuleBoneTransformator.new()
+			rule.setName(getName() + ".guideBend")
+			rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+			rule.setUseAxis(true)
+			rule.setAxis(pCalibrateGuideRotationTarget)
+			rule.setMinimumAngle(angle)
+			rule.setMaximumAngle(angle)
+			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.blendFactor, link))
+			rule.addBone(pGuideBone)
+			adef.addRule(rule)
+		end
+		
+		
+		
 		// add IK rule
 		pADRuleIK = ADRuleInverseKinematic.new()
 		pADRuleIK.setName(getName())
@@ -1061,6 +1123,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibratePreRotateBone = ""
 		pCalibrateBaseRotateRotation = Vector.new()
 		pCalibrateBaseRotateBone = ""
+		pCalibrateGuideRotationTarget = Vector.new()
 	end
 	
 	/** Calibrate character. */
@@ -1271,6 +1334,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pGuideTracker.resolveRealSlot(config)
 		pGuideTracker.setTransform(config, component, guideBone)
 		
+		if useGuide and indexGuide != -1
+			pCalibrateGuideRotationTarget = component.boneGetMatrix(indexGuide).transformNormal(\
+				Matrix.newRotation(pGuideBendAxisRotation).getViewVector())
+		end
+		
 		// calculate retracted reach if used
 		if not pMoveRetracted.empty() and indexGuide != -1 and indexTip != -1
 			// create a temporary component so we can apply the move and do some measuring
@@ -1460,6 +1528,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("baseRotateAngleMaximum")
 				setBaseRotateAngleMaximum(loader.readVector2(element))
 				
+			elif tagName.equals("guideBendAxisRotation")
+				setGuideBendAxisRotation(loader.readVector(element))
+				
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
 			end
@@ -1533,6 +1604,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 			elif tagName.equals("baseRotateBone")
 				pCalibrateBaseRotateBone = element.getFirstCData()
+				
+			elif tagName.equals("guideRotationTarget")
+				pCalibrateGuideRotationTarget = loader.readVector(element)
 			end
 		end)
 	end
@@ -1572,6 +1646,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		loader.writeVector2(tag, "baseRotateRangeMaximum", pBaseRotateRangeMaximum)
 		loader.writeVector2(tag, "baseRotateAngleMinimum", pBaseRotateAngleMinimum)
 		loader.writeVector2(tag, "baseRotateAngleMaximum", pBaseRotateAngleMaximum)
+		loader.writeVector(tag, "guideBendAxisRotation", pGuideBendAxisRotation)
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
@@ -1602,5 +1677,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		tag.addDataTag("preRotateBone", pCalibratePreRotateBone)
 		loader.writeVector(tag, "baseRotateRotation", pCalibrateBaseRotateRotation)
 		tag.addDataTag("baseRotateBone", pCalibrateBaseRotateBone)
+		loader.writeVector(tag, "guideRotationTarget", pCalibrateGuideRotationTarget)
 	end
 end

@@ -63,6 +63,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	private var EditVector2 pEditBaseRotateRangeMaximum
 	private var EditVector2 pEditBaseRotateAngleMinimum
 	private var EditVector2 pEditBaseRotateAngleMaximum
+	private var EditVector pEditGuideBendAxisRotation
 	
 	
 	
@@ -134,6 +135,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pEditBaseRotateRangeMaximum = null
 		pEditBaseRotateAngleMinimum = null
 		pEditBaseRotateAngleMaximum = null
+		pEditGuideBendAxisRotation = null
 		super.dispose()
 	end
 	
@@ -174,6 +176,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pEditBaseRotateRangeMaximum.setVector2(mt.getBaseRotateRangeMaximum())
 				pEditBaseRotateAngleMinimum.setVector2(mt.getBaseRotateAngleMinimum())
 				pEditBaseRotateAngleMaximum.setVector2(mt.getBaseRotateAngleMaximum())
+				pEditGuideBendAxisRotation.setVector(mt.getGuideBendAxisRotation())
 				
 			else
 				pModelTextTipBone.setText("")
@@ -200,6 +203,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pEditBaseRotateRangeMaximum.setVector2(Vector2.new())
 				pEditBaseRotateAngleMinimum.setVector2(Vector2.new())
 				pEditBaseRotateAngleMaximum.setVector2(Vector2.new())
+				pEditGuideBendAxisRotation.setVector(Vector.new())
 			end
 		end)
 		doLayoutIfBlocked()
@@ -237,6 +241,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		mt.setBaseRotateRangeMaximum(pEditBaseRotateRangeMaximum.getVector2())
 		mt.setBaseRotateAngleMinimum(pEditBaseRotateAngleMinimum.getVector2())
 		mt.setBaseRotateAngleMaximum(pEditBaseRotateAngleMaximum.getVector2())
+		mt.setGuideBendAxisRotation(pEditGuideBendAxisRotation.getVector())
 	end
 	
 	/** Supports motion transfer type. */
@@ -249,7 +254,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	/** Create window content. */
 	protected func void createContent(DefaultListModel modelTrackerSlotNames, String optionPrefix)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
-		var ComboBox comboBox, comboBoxTip, comboBoxBase
+		var ComboBox comboBox, comboBoxTip, comboBoxBase, comboBoxGuide
 		var Label label, labelTip, labelBase
 		var TextField textField
 		var Button button
@@ -283,12 +288,12 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		label = Label.new("Guide Bone:", "Label.FormCaption")
 		pPanelForm.addWidget(label)
 		
-		comboBox = ComboBox.new(pModelListGuideBone, DefaultComboBoxEditor.new(pModelTextGuideBone))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Guide of bone chain. This is the bone near the base of the chain to point at the guide tracker.")
-		pPanelForm.addWidget(comboBox)
+		comboBoxGuide = ComboBox.new(pModelListGuideBone, DefaultComboBoxEditor.new(pModelTextGuideBone))
+		comboBoxGuide.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxGuide.setToolTip("Guide of bone chain. This is the bone near the base of the chain to point at the guide tracker.")
+		pPanelForm.addWidget(comboBoxGuide)
 		
-		CPEBone.new(preview, label, comboBox)
+		CPEBone.new(preview, label, comboBoxGuide)
 		
 		// trackers
 		pEditTrackerTip = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/TipTracker", this, "Tip Tracker", false)
@@ -406,6 +411,16 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("Percentage of Tip Bone twist relative to Base Bone to apply to guide bone.")
 		pPanelForm.addWidget(textField)
+		
+		// guide bend axis rotation
+		label = Label.new("Guide Bend Axis Rotation:", "Label.FormCaption")
+		pPanelForm.addWidget(label)
+		
+		pEditGuideBendAxisRotation = EditVector.new()
+		pEditGuideBendAxisRotation.setToolTip("Rotation of guide bend axis. IK chain is bend by rotating around Z-Axis counter clock wise (from X-Axis to Y-Axis).")
+		pPanelForm.addWidget(pEditGuideBendAxisRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditGuideBendAxisRotation, comboBoxGuide, null, true)
 		
 		// relocate tip
 		pPanelForm.addWidget(Label.new(""))
