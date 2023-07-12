@@ -109,7 +109,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var Vector2 pBaseRotateRangeCenter
 		private var Vector2 pBaseRotateRangeMinimum
 		private var Vector2 pBaseRotateRangeMaximum
-		private var float pReach
+		private var Vector pBaseRotateReach
 		
 		private var Matrix pTargetMatrix
 		private var Vector pReachTargetPosition, pReachRelativeTarget, pReachTargetRotation
@@ -155,7 +155,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pBaseRotateRangeCenter = transfer.getBaseRotateRangeCenter()
 			pBaseRotateRangeMinimum = transfer.getBaseRotateRangeMinimum()
 			pBaseRotateRangeMaximum = transfer.getBaseRotateRangeMaximum()
-			pReach = transfer.getCalibrateReach()
+			pBaseRotateReach = transfer.getCalibrateReachScaleDirection().largest(\
+				transfer.getCalibrateReachScaleDirectionBack()) * transfer.getCalibrateReach()
 		end
 		
 		/** Dispose of instance. */
@@ -361,17 +362,22 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			
 			var float angleX = DEMath.atan2(pReachRelativeTarget.getY(),\
 				Vector2.new(pReachRelativeTarget.getX(), pReachRelativeTarget.getZ()).getLength())
+			
 			var float angleY = -DEMath.atan2(pReachRelativeTarget.getX(), pReachRelativeTarget.getZ())
 			
-			var Vector targetPosAbs = pReachRelativeTarget.absolute()
-			var Vector reach = pScaleReach.largest(pScaleReachBack) * pReach
+			// the shift by 30 degrees deals with the problem of wrapping the arm around the
+			// body to the other side. in this situation the hand can slightly reach behind
+			// the back incorrectly being considered held backwards
+			angleY = DEMath.normalize(angleY + 30, -180.0, 180.0) - 30
 			
-			var float factorX = DEMath.smoothStep(targetPosAbs.getX(), 0.0, reach.getX(), 1.0, 0.0)
-// 			var float factorX = DEMath.linearStep(targetPosAbs.getX(), 0.0, reach.getX())
+			var Vector targetPosAbs = pReachRelativeTarget.absolute()
+			
+			var float factorX = DEMath.smoothStep(targetPosAbs.getX(), 0.0, pBaseRotateReach.getX(), 1.0, 0.0)
+// 			var float factorX = DEMath.linearStep(targetPosAbs.getX(), 0.0, pBaseRotateReach.getX())
 // 			factorX = 1.0 - (factorX * factorX)
 			
-			var float factorY = DEMath.smoothStep(targetPosAbs.getY(), 0.0, reach.getY(), 1.0, 0.0)
-// 			var float factorY = DEMath.linearStep(targetPosAbs.getY(), 0.0, reach.getY())
+			var float factorY = DEMath.smoothStep(targetPosAbs.getY(), 0.0, pBaseRotateReach.getY(), 1.0, 0.0)
+// 			var float factorY = DEMath.linearStep(targetPosAbs.getY(), 0.0, pBaseRotateReach.getY())
 // 			factorY = 1.0 - (factorY * factorY)
 			
 			pControllerBaseRotateX.setValue(angleX * factorX)
