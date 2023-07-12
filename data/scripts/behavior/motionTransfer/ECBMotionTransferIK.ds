@@ -111,10 +111,12 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		private var Vector2 pBaseRotateRangeMaximum
 		private var Vector pBaseRotateReach
 		
-		private var Matrix pTargetMatrix
+		private var Matrix pTargetMatrix, pGuideMatrix
 		private var Vector pReachTargetPosition, pReachRelativeTarget, pReachTargetRotation
+		private var Vector pReachRelativeGuide
 		private var float pRetractedLength
 		private var bool pReachScaleX, pReachScaleY, pReachScaleZ
+		private var bool pReachGuideScaleX, pReachGuideScaleY, pReachGuideScaleZ
 		
 		
 		
@@ -155,8 +157,6 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pBaseRotateRangeCenter = transfer.getBaseRotateRangeCenter()
 			pBaseRotateRangeMinimum = transfer.getBaseRotateRangeMinimum()
 			pBaseRotateRangeMaximum = transfer.getBaseRotateRangeMaximum()
-			pBaseRotateReach = transfer.getCalibrateReachScaleDirection().largest(\
-				transfer.getCalibrateReachScaleDirectionBack()) * transfer.getCalibrateReach()
 		end
 		
 		/** Dispose of instance. */
@@ -255,9 +255,24 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pScaleReach = transfer.getCalibrateReachScaleDirection() * transfer.getCalibrateReachScale()
 			pScaleReachBack = transfer.getCalibrateReachScaleDirectionBack() * transfer.getCalibrateReachScale()
 			
+			if pControllerBaseRotateX != null
+				pBaseRotateReach = transfer.getCalibrateReachScaleDirection().largest(\
+					transfer.getCalibrateReachScaleDirectionBack()) * transfer.getCalibrateReach()
+				
+				if pControllerGuideRotation != null and pSlotGuide != null
+					pBaseRotateReach = pBaseRotateReach * 0.5 // elbow slot is usually 50% along arm
+				end
+			end
+			
 			// target matrix
 			pTargetMatrix = pSlotTip.getTrackerSlot().getConfiguration().\
 				characterToComponent(pTransformTip * pSlotTip.getMatrixCharacter())
+			
+			// guide matrix
+			if pSlotGuide != null
+				pGuideMatrix = pSlotGuide.getTrackerSlot().getConfiguration().\
+					characterToComponent(pTransformGuide * pSlotGuide.getMatrixCharacter())
+			end
 			
 			// reset controllers and disable IK to get base pose for next phase
 			if pControllerBlend != null
@@ -304,12 +319,18 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		
 		protected func void prepareReach()
 			var Matrix matrix = pTargetMatrix
+			var Matrix matrixGuide = pGuideMatrix
+			
 			if pEnableRelocateTip and pBaseRotateBone != -1
 				var Matrix matrixRelocate = pSlotRelocate.getTrackerSlot().getConfiguration().\
 					characterToComponent(pTransformRelocate * pSlotRelocate.getMatrixCharacter())
 				var Matrix matrixBone = pMatrixRelocateTip * pComponent.boneGetMatrix(pBaseRotateBone)
 				
 				matrix = matrix * matrixRelocate.getInverse() * matrixBone
+				
+				if matrixGuide != null
+					matrixGuide = matrixGuide * matrixRelocate.getInverse() * matrixBone
+				end
 // 					if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
 // 						GameApp.getGameApp().getConsole().addMessage(\
 // 							"IK tp=" + (pTargetMatrix * matrixRelocate.getInverse()).getPosition()\
@@ -326,6 +347,10 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			var Matrix reachMatrix = pReachMatrix * pComponent.boneGetMatrix(pBaseBone)
 			
 			pReachRelativeTarget = reachMatrix.getInverse() * pReachTargetPosition
+			
+			if matrixGuide != null
+				pReachRelativeGuide = reachMatrix.getInverse() * matrixGuide.getPosition()
+			end
 // 			if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
 // 				GameApp.getGameApp().getConsole().addMessage("IK tp=" + pReachTargetPosition + " tir=" + pReachRelativeTarget)
 // 			end
@@ -351,33 +376,48 @@ class ECBMotionTransferIK extends DefaultECBehavior
 // 				end
 				
 				pRetractedLength = pReachRelativeTarget.getLength()
+				
+				if matrixGuide != null
+					pReachGuideScaleX = pReachRelativeGuide.getX() > 0
+					pReachGuideScaleY = pReachRelativeGuide.getY() > 0
+					pReachGuideScaleZ = pReachRelativeGuide.getZ() > 0
+					
+					pReachRelativeGuide = pReachRelativeGuide.compMultiply(pScaleReach).combine(\
+						pReachRelativeGuide.compMultiply(pScaleReachBack),\
+						pReachGuideScaleX, pReachGuideScaleY, pReachGuideScaleZ)
+				end
 			end
 		end
 		
 		protected func void updateControllerBaseRotate()
-			if pControllerBaseRotateX == null or pControllerBaseRotateY == null\
-			or pBaseBone == -1 or pReachRelativeTarget.getLength() < 0.01
+			if pControllerBaseRotateX == null or pControllerBaseRotateY == null or pBaseBone == -1
 				return
 			end
 			
-			var float angleX = DEMath.atan2(pReachRelativeTarget.getY(),\
-				Vector2.new(pReachRelativeTarget.getX(), pReachRelativeTarget.getZ()).getLength())
+			var Vector target = pReachRelativeTarget
 			
-			var float angleY = -DEMath.atan2(pReachRelativeTarget.getX(), pReachRelativeTarget.getZ())
+			if pReachRelativeGuide != null and pControllerGuideRotation != null
+				target = pReachRelativeGuide
+				
+			else
+				target = pReachRelativeTarget
+			end
 			
-			// the shift by 30 degrees deals with the problem of wrapping the arm around the
-			// body to the other side. in this situation the hand can slightly reach behind
-			// the back incorrectly being considered held backwards
-			angleY = DEMath.normalize(angleY + 30, -180.0, 180.0) - 30
+			if target.getLength() < 0.01
+				return
+			end
 			
-			var Vector targetPosAbs = pReachRelativeTarget.absolute()
+			var float angleX = DEMath.atan2(target.getY(), Vector2.new(target.getX(), target.getZ()).getLength())
+			var float angleY = -DEMath.atan2(target.getX(), target.getZ())
 			
-			var float factorX = DEMath.smoothStep(targetPosAbs.getX(), 0.0, pBaseRotateReach.getX(), 1.0, 0.0)
-// 			var float factorX = DEMath.linearStep(targetPosAbs.getX(), 0.0, pBaseRotateReach.getX())
+			var Vector targetAbs = target.absolute()
+			
+			var float factorX = DEMath.smoothStep(targetAbs.getX(), 0.0, pBaseRotateReach.getX(), 1.0, 0.0)
+// 			var float factorX = DEMath.linearStep(targetAbs.getX(), 0.0, pBaseRotateReach.getX())
 // 			factorX = 1.0 - (factorX * factorX)
 			
-			var float factorY = DEMath.smoothStep(targetPosAbs.getY(), 0.0, pBaseRotateReach.getY(), 1.0, 0.0)
-// 			var float factorY = DEMath.linearStep(targetPosAbs.getY(), 0.0, pBaseRotateReach.getY())
+			var float factorY = DEMath.smoothStep(targetAbs.getY(), 0.0, pBaseRotateReach.getY(), 1.0, 0.0)
+// 			var float factorY = DEMath.linearStep(targetAbs.getY(), 0.0, pBaseRotateReach.getY())
 // 			factorY = 1.0 - (factorY * factorY)
 			
 			pControllerBaseRotateX.setValue(angleX * factorX)
@@ -437,15 +477,19 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			end
 			
 			if pControllerGuideRotation != null
-				var Matrix matrix = pTransformGuide * pSlotGuide.getMatrixCharacter()
+				var Matrix matrix = pGuideMatrix
 				
 				if pEnableScaleReach
 					var Matrix reachMatrix = pReachMatrix * pComponent.boneGetMatrix(pBaseBone)
 					
-					matrix = matrix * reachMatrix.getInverse()\
-						* Matrix.newScaling(pScaleReach.combine(pScaleReachBack,\
-							pReachScaleX, pReachScaleY, pReachScaleZ))\
-						* reachMatrix
+					matrix = matrix * reachMatrix.getInverse()
+					
+					var Vector relativeGuide = matrix.getPosition()
+					var bool scaleX = relativeGuide.getX() > 0
+					var bool scaleY = relativeGuide.getY() > 0
+					var bool scaleZ = relativeGuide.getZ() > 0
+					
+					matrix = matrix * Matrix.newScaling(pScaleReach.combine(pScaleReachBack, scaleX, scaleY, scaleZ)) * reachMatrix
 				end
 				
 				pControllerGuideRotation.setRotation(matrix.normalize().getEulerAngles())
