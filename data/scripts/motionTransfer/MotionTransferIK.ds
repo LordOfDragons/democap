@@ -133,6 +133,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var Vector pCalibrateBaseRotateRotation
 	private var String pCalibrateBaseRotateBone
 	private var Vector pCalibrateGuideRotationTarget
+	private var Vector pCalibrateGuideBaseTarget
 	
 	
 	
@@ -178,6 +179,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateBaseRotateRotation = Vector.new()
 		pCalibrateBaseRotateBone = ""
 		pCalibrateGuideRotationTarget = Vector.new()
+		pCalibrateGuideBaseTarget = Vector.new()
 	end
 	
 	/** Create copy of motion transfer. */
@@ -222,6 +224,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateBaseRotateBone = transfer.pCalibrateBaseRotateBone
 		pCalibrateBaseRotateRotation = transfer.pCalibrateBaseRotateRotation
 		pCalibrateGuideRotationTarget = transfer.pCalibrateGuideRotationTarget
+		pCalibrateGuideBaseTarget = transfer.pCalibrateGuideBaseTarget
 	end
 	
 	
@@ -567,6 +570,11 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pCalibrateBaseRotateBone
 	end
 	
+	/** Calibrate guide base target. */
+	public func Vector getCalibrateGuideBaseTarget()
+		return pCalibrateGuideBaseTarget
+	end
+
 	
 	
 	/** Init element clas. */
@@ -887,7 +895,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		// can result in the lower arm to rotate past the upper arm but the IK calculation
 		// will pull them apart again so this should not be a real problem
 		if useGuide and not pCalibratePreRotateBone.empty() and not pCalibratePreRotateBone.equals(pGuideBone)
-			var float angle = 10
+			var float angle = 5
 			
 			var ADController controller = ADController.new()
 			controller.setName(behavior.getControllerNameGuideBend())
@@ -1124,6 +1132,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateBaseRotateRotation = Vector.new()
 		pCalibrateBaseRotateBone = ""
 		pCalibrateGuideRotationTarget = Vector.new()
+		pCalibrateGuideBaseTarget = Vector.new()
 	end
 	
 	/** Calibrate character. */
@@ -1178,11 +1187,12 @@ class MotionTransferIK extends DefaultMotionTransfer
 		end
 		
 		// find bone indices
-		var int indexBase = -1, indexGuide = -1, indexTip = -1
+		var int indexBase = -1, indexGuide = -1, indexTip = -1, indexPreRotate = -1
 		if not baseBone.empty() and not pTipBone.empty()
 			indexBase = component.indexOfBoneNamed(baseBone)
 			indexGuide = component.indexOfBoneNamed(guideBone)
 			indexTip = component.indexOfBoneNamed(pTipBone)
+			indexPreRotate = component.indexOfBoneNamed(pCalibratePreRotateBone)
 		end
 		
 		// calculate reach of IK chain to avoid over stretching
@@ -1335,8 +1345,12 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pGuideTracker.setTransform(config, component, guideBone)
 		
 		if useGuide and indexGuide != -1
-			pCalibrateGuideRotationTarget = component.boneGetMatrix(indexGuide).transformNormal(\
-				Matrix.newRotation(pGuideBendAxisRotation).getViewVector())
+			var Matrix matrix = component.boneGetMatrix(indexGuide)
+			pCalibrateGuideRotationTarget = Matrix.newRotation(pGuideBendAxisRotation).getViewVector()
+			
+			if indexPreRotate != -1
+				pCalibrateGuideBaseTarget = (component.boneGetMatrix(indexPreRotate) * matrix.getInverse()).getPosition()
+			end
 		end
 		
 		// calculate retracted reach if used
@@ -1607,6 +1621,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 			elif tagName.equals("guideRotationTarget")
 				pCalibrateGuideRotationTarget = loader.readVector(element)
+
+			elif tagName.equals("guideBaseTarget")
+				pCalibrateGuideBaseTarget = loader.readVector(element)
 			end
 		end)
 	end
@@ -1678,5 +1695,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		loader.writeVector(tag, "baseRotateRotation", pCalibrateBaseRotateRotation)
 		tag.addDataTag("baseRotateBone", pCalibrateBaseRotateBone)
 		loader.writeVector(tag, "guideRotationTarget", pCalibrateGuideRotationTarget)
+		loader.writeVector(tag, "guideBaseTarget", pCalibrateGuideBaseTarget)
 	end
 end
