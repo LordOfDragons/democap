@@ -104,12 +104,10 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	private var ADController pADControllerTipPosition
 	private var ADController pADControllerTipOrientation
-	private var ADController pADControllerGuideRotation
 	private var ADController pADControllerTwist
 	private var ADController pADControllerRetracted
 	private var ADController pADControllerBlend
 	
-	private var ADRuleInverseKinematic pADRuleGuide
 	private var ADRuleInverseKinematic pADRuleIK
 	private var ADRuleAnimation pADRuleBaseIK
 	private var ADRuleAnimation pADRuleRetracted
@@ -514,10 +512,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pADRuleIK
 	end
 	
-	public func ADRuleInverseKinematic getADRuleGuide()
-		return pADRuleGuide
-	end
-	
 	public func ADRuleAnimation getADRuleBaseIK()
 		return pADRuleBaseIK
 	end
@@ -581,11 +575,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
 		pADControllerTipPosition = null
 		pADControllerTipOrientation = null
-		pADControllerGuideRotation = null
 		pADControllerRetracted = null
 		pADControllerTwist = null
 		pADControllerBlend = null
-		pADRuleGuide = null
 		pADRuleIK = null
 		pADRuleBaseIK = null
 		pADRuleRetracted = null
@@ -623,10 +615,12 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		var String guideBone = pGuideBone.empty() if pBaseBone else pGuideBone
 		
+		var bool useGuide = slotGuide != null and slotGuide.isDeviceAttached()
+		
 		
 		
 		// add base IK rules
-		if not pMoveBaseIK.empty()
+		if not pMoveBaseIK.empty() and not useGuide
 			pADRuleBaseIK = ADRuleAnimation.new()
 			pADRuleBaseIK.setName(getName() + ".baseIK")
 			pADRuleBaseIK.setMoveName(pMoveBaseIK)
@@ -819,25 +813,23 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		
 		// add guide rule
-		var bool useGuide = slotGuide != null and slotGuide.isDeviceAttached()
-		
 		if useGuide
-			pADControllerGuideRotation = ADController.new()
-			pADControllerGuideRotation.setName(behavior.getControllerNameGuideRotation())
-			adef.addController(pADControllerGuideRotation)
+			var ADController controller = ADController.new()
+			controller.setName(behavior.getControllerNameGuideRotation())
+			adef.addController(controller)
 			
-			var ADLink linkGuideRotation = ADLink.new()
-			linkGuideRotation.setController(pADControllerGuideRotation)
-			adef.addLink(linkGuideRotation)
+			var ADLink link = ADLink.new()
+			link.setController(controller)
+			adef.addLink(link)
 			
-			pADRuleGuide = ADRuleInverseKinematic.new()
-			pADRuleGuide.setName(getName())
-			pADRuleGuide.setAdjustPosition(false)
-			pADRuleGuide.setAdjustOrientation(true)
-			pADRuleGuide.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.blendFactor, linkGuideRotation))
-			pADRuleGuide.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkGuideRotation))
-			pADRuleGuide.addBone(pGuideBone)
-			adef.addRule(pADRuleGuide)
+			var ADRuleInverseKinematic rule = ADRuleInverseKinematic.new()
+			rule.setName(getName())
+			rule.setAdjustPosition(false)
+			rule.setAdjustOrientation(true)
+			rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.blendFactor, link))
+			rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, link))
+			rule.addBone(pGuideBone)
+			adef.addRule(rule)
 		end
 		
 		
@@ -1098,12 +1090,10 @@ class MotionTransferIK extends DefaultMotionTransfer
 	public func void resetCalibration()
 		pADControllerTipPosition = null
 		pADControllerTipOrientation = null
-		pADControllerGuideRotation = null
 		pADControllerTwist = null
 		pADControllerRetracted = null
 		pADControllerBlend = null
 		
-		pADRuleGuide = null
 		pADRuleIK = null
 		pADRuleBaseIK = null
 		pADRuleRetracted = null
@@ -1350,6 +1340,8 @@ class MotionTransferIK extends DefaultMotionTransfer
 			
 			if indexPreRotate != -1
 				pCalibrateGuideBaseTarget = (component.boneGetMatrix(indexPreRotate) * matrix.getInverse()).getPosition()
+
+				pGuideTracker.setTransformTrackTo(config, component, guideBone, pCalibrateGuideBaseTarget)
 			end
 		end
 		

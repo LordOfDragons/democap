@@ -362,7 +362,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			if matrixGuide != null
 				pReachGuideRotation = matrixGuide.getEulerAngles()
 				matrixGuide = matrixGuide * reachMatrix.getInverse()
-				pReachRelativeGuide = matrixGuide * pGuideBaseTarget
+				pReachRelativeGuide = matrixGuide.getPosition()
 			end
 // 			if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
 // 				GameApp.getGameApp().getConsole().addMessage("IK tp=" + pReachTargetPosition + " tir=" + pReachRelativeTarget)
@@ -395,14 +395,27 @@ class ECBMotionTransferIK extends DefaultECBehavior
 					pReachGuideScaleY = pReachRelativeGuide.getY() > 0
 					pReachGuideScaleZ = pReachRelativeGuide.getZ() > 0
 					
+					var Vector orgTarget = pReachRelativeGuide
+
 					pReachRelativeGuide = pReachRelativeGuide.compMultiply(pScaleReach).combine(\
 						pReachRelativeGuide.compMultiply(pScaleReachBack),\
 						pReachGuideScaleX, pReachGuideScaleY, pReachGuideScaleZ)
 					
-					matrixGuide = matrixGuide * Matrix.newScaling(pScaleReach.combine(pScaleReachBack,\
-						pReachGuideScaleX, pReachGuideScaleY, pReachGuideScaleZ))
-					matrixGuide = matrixGuide.normalize() * reachMatrix
-					pReachGuideRotation = matrixGuide.getEulerAngles()
+					if not orgTarget.isZero() and not pReachRelativeGuide.isZero()
+						orgTarget = orgTarget.normalize()
+						var Vector newTarget = pReachRelativeGuide.normalize()
+
+						var Vector rotationAxis = orgTarget % newTarget
+						if rotationAxis.getLength() > 0.001 // too low explodes the calculation
+								GameApp.getGameApp().getConsole().addMessage("DEBUG " + pECBehavior.getTransfer().getName() + " org=" + orgTarget + " sca=" + newTarget\
+									+ " axis=" + rotationAxis.normalize() + " ang=" + (-DEMath.acos(orgTarget * newTarget)))
+							matrixGuide = matrixGuide * Matrix.newRotationAxis(\
+								rotationAxis.normalize(), -DEMath.acos(orgTarget * newTarget))
+							
+							matrixGuide = matrixGuide * reachMatrix
+							pReachGuideRotation = matrixGuide.normalize().getEulerAngles()
+						end
+					end
 				end
 			end
 		end
