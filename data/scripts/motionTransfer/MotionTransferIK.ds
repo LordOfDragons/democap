@@ -132,6 +132,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	private var String pCalibrateBaseRotateBone
 	private var Vector pCalibrateGuideRotationTarget
 	private var Vector pCalibrateGuideBaseTarget
+	private var float pCalibrateBaseRotateReachFactor
 	
 	
 	
@@ -178,6 +179,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateBaseRotateBone = ""
 		pCalibrateGuideRotationTarget = Vector.new()
 		pCalibrateGuideBaseTarget = Vector.new()
+		pCalibrateBaseRotateReachFactor = 1
 	end
 	
 	/** Create copy of motion transfer. */
@@ -223,6 +225,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateBaseRotateRotation = transfer.pCalibrateBaseRotateRotation
 		pCalibrateGuideRotationTarget = transfer.pCalibrateGuideRotationTarget
 		pCalibrateGuideBaseTarget = transfer.pCalibrateGuideBaseTarget
+		pCalibrateBaseRotateReachFactor = transfer.pCalibrateBaseRotateReachFactor
 	end
 	
 	
@@ -569,6 +572,10 @@ class MotionTransferIK extends DefaultMotionTransfer
 		return pCalibrateGuideBaseTarget
 	end
 
+	public func float getCalibrateBaseRotateReachFactor()
+		return pCalibrateBaseRotateReachFactor
+	end
+
 	
 	
 	/** Init element clas. */
@@ -620,7 +627,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		
 		// add base IK rules
-		if not pMoveBaseIK.empty() and not useGuide
+		if not pMoveBaseIK.empty()
 			pADRuleBaseIK = ADRuleAnimation.new()
 			pADRuleBaseIK.setName(getName() + ".baseIK")
 			pADRuleBaseIK.setMoveName(pMoveBaseIK)
@@ -835,7 +842,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		
 		// add pre-rotation rule
-		if not pCalibratePreRotateBone.empty()
+		if not pCalibratePreRotateBone.empty() and not useGuide
 			var ModifiedRig.Bone bonePreRotate = modifyRig.addBone("preRotate")
 			ignoreBones.add(bonePreRotate.name)
 			
@@ -886,7 +893,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		// force the arm to be bend. if the arm is fully retracted this countering rotations
 		// can result in the lower arm to rotate past the upper arm but the IK calculation
 		// will pull them apart again so this should not be a real problem
-		if useGuide and not pCalibratePreRotateBone.empty() and not pCalibratePreRotateBone.equals(pGuideBone)
+		if useGuide and not pCalibratePreRotateBone.empty() and not pCalibratePreRotateBone.equals(pGuideBone) and false
 			var float angle = 5
 			
 			var ADController controller = ADController.new()
@@ -937,28 +944,12 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADRuleIK.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, linkTipOrientation))
 		
 		pADRuleIK.addBone(pTipBone)
-		/*
-		if useGuide and not pGuideBone.empty()
-			var int index = pCalibrateBones.indexOf(pGuideBone)
-			var String guideChainBase
+		if useBaseRotate
+			pADRuleIK.addBone(guideBone)
 			
-			if index > 0
-				guideChainBase = pCalibrateBones.getAt(index - 1) cast String
-			end
-			
-			if guideChainBase != null and not guideChainBase.equals(pTipBone)
-				pADRuleIK.addBone(guideChainBase)
-			end
-			
-		else
-		*/
-			if useBaseRotate
-				pADRuleIK.addBone(guideBone)
-				
-			elif not pBaseBone.equals(pTipBone)
-				pADRuleIK.addBone(pBaseBone)
-			end
-// 		end
+		elif not pBaseBone.equals(pTipBone)
+			pADRuleIK.addBone(pBaseBone)
+		end
 		
 		adef.addRule(pADRuleIK)
 		
@@ -1123,6 +1114,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pCalibrateBaseRotateBone = ""
 		pCalibrateGuideRotationTarget = Vector.new()
 		pCalibrateGuideBaseTarget = Vector.new()
+		pCalibrateBaseRotateReachFactor = 1
 	end
 	
 	/** Calibrate character. */
@@ -1244,9 +1236,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 				var float actorArmReach = config.actorToComponent(actorProfile.getArmLength())
 				var float actorReach = actorShoulderReach + actorArmReach
 				
-				if pTipTracker.getRealSlot() != null
+				if slotTip != null
 					actorReach = config.characterToComponent((pTipTracker.getOffsetMatrix()\
-						* pTipTracker.getRealSlot().getCalibrateMatrix()).getPosition()).absolute().getX()
+						* slotTip.getCalibrateMatrix()).getPosition()).absolute().getX()
 					actorArmReach = actorReach - actorShoulderReach
 				end
 				
@@ -1330,11 +1322,13 @@ class MotionTransferIK extends DefaultMotionTransfer
 			pCalibrateMatrixRelocateTip = Matrix.new()
 		end
 		
+		pCalibrateBaseRotateReachFactor = pCalibrateReach
+
 		// calibrate guide tracker. has to come after reach scaling since it uses this value
 		pGuideTracker.resolveRealSlot(config)
 		pGuideTracker.setTransform(config, component, guideBone)
 		
-		if useGuide and indexGuide != -1
+		if useGuide and indexGuide != -1 and indexBase != -1
 			var Matrix matrix = component.boneGetMatrix(indexGuide)
 			pCalibrateGuideRotationTarget = Matrix.newRotation(pGuideBendAxisRotation).getViewVector()
 			
@@ -1342,8 +1336,17 @@ class MotionTransferIK extends DefaultMotionTransfer
 				pCalibrateGuideBaseTarget = (component.boneGetMatrix(indexPreRotate) * matrix.getInverse()).getPosition()
 
 				pGuideTracker.setTransformTrackTo(config, component, guideBone, pCalibrateGuideBaseTarget)
+
+				var Vector posTarget = config.characterToComponent(\
+					(slotGuide.getOffsetMatrix() * slotGuide.getTargetMatrix()).getPosition())
+				var Vector posBase = component.boneGetMatrix(indexBase).getPosition()
+				var float reach = (posTarget - posBase).getLength()
+				
+				pCalibrateBaseRotateReachFactor = reach / pCalibrateReach
 			end
 		end
+		
+		pCalibrateBaseRotateReachFactor *= 0.95 // a bit less helps
 		
 		// calculate retracted reach if used
 		if not pMoveRetracted.empty() and indexGuide != -1 and indexTip != -1
@@ -1616,6 +1619,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 
 			elif tagName.equals("guideBaseTarget")
 				pCalibrateGuideBaseTarget = loader.readVector(element)
+				
+			elif tagName.equals("baseRotateReachFactor")
+				pCalibrateBaseRotateReachFactor = element.getFirstCDataFloat()
 			end
 		end)
 	end
@@ -1688,5 +1694,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		tag.addDataTag("baseRotateBone", pCalibrateBaseRotateBone)
 		loader.writeVector(tag, "guideRotationTarget", pCalibrateGuideRotationTarget)
 		loader.writeVector(tag, "guideBaseTarget", pCalibrateGuideBaseTarget)
+		tag.addDataTag("baseRotateReachFactor", pCalibrateBaseRotateReachFactor)
 	end
 end

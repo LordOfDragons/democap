@@ -261,11 +261,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			
 			if pControllerBaseRotateX != null
 				pBaseRotateReach = transfer.getCalibrateReachScaleDirection().largest(\
-					transfer.getCalibrateReachScaleDirectionBack()) * transfer.getCalibrateReach()
-				
-				if pControllerGuideRotation != null and pSlotGuide != null
-					pBaseRotateReach = pBaseRotateReach * 0.5 // elbow slot is usually 50% along arm
-				end
+					transfer.getCalibrateReachScaleDirectionBack()) * transfer.getCalibrateReach()\
+						* transfer.getCalibrateBaseRotateReachFactor()
 			end
 			
 			// target matrix
@@ -407,8 +404,10 @@ class ECBMotionTransferIK extends DefaultECBehavior
 
 						var Vector rotationAxis = orgTarget % newTarget
 						if rotationAxis.getLength() > 0.001 // too low explodes the calculation
-								GameApp.getGameApp().getConsole().addMessage("DEBUG " + pECBehavior.getTransfer().getName() + " org=" + orgTarget + " sca=" + newTarget\
+								/*
+								GameApp.getGameApp().getConsole().addMessage(pECBehavior.getTransfer().getName() + " org=" + orgTarget + " sca=" + newTarget\
 									+ " axis=" + rotationAxis.normalize() + " ang=" + (-DEMath.acos(orgTarget * newTarget)))
+								*/
 							matrixGuide = matrixGuide * Matrix.newRotationAxis(\
 								rotationAxis.normalize(), -DEMath.acos(orgTarget * newTarget))
 							
@@ -451,9 +450,12 @@ class ECBMotionTransferIK extends DefaultECBehavior
 // 			var float factorY = DEMath.linearStep(targetAbs.getY(), 0.0, pBaseRotateReach.getY())
 // 			factorY = 1.0 - (factorY * factorY)
 			
+			/*
 			GameApp.getGameApp().getConsole().addMessage(pECBehavior.getTransfer().getName() + ": t=" + target\
 				+ " ax=" + angleX + " ay=" + angleY + " fx=" + factorX + " fy=" + factorY\
-				+ " P=" + pGuideMatrix.getPosition())
+				+ " P=" + pGuideMatrix.getPosition() + " brr=" + pBaseRotateReach + " ta=" + targetAbs)
+			*/
+
 			pControllerBaseRotateX.setValue(angleX * factorX)
 			pControllerBaseRotateY.setValue(angleY * factorY)
 		end
