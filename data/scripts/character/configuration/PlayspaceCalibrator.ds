@@ -94,6 +94,7 @@ class PlayspaceCalibrator
 		detectHeadTracker()
 		if not pUseHeadTracker
 			calcHmdCalibrateMatrix()
+			adjustCalibrateMatrixHands()
 		end
 		estimateFloorOffset()
 		
@@ -232,8 +233,22 @@ class PlayspaceCalibrator
 		
 		var Vector centerBody = posNeck.compSelect(true, false, true)
 		var float turnBody = turnHMD
-		
+
 		pCalibrateMatrix = Matrix.newTranslation(-centerBody) * Matrix.newRotationY(-turnBody)
+	end
+
+	protected func void adjustCalibrateMatrixHands()
+		// using the HMD as base to center the body works in general but has a slight error
+		// of up to 5cm where one hand is slightly further away from the calculated center
+		// than the other. it is better to have a slight error in the HMD position than
+		// in the hand position. for this reason an offset is applied to make sure the hands
+		// are exactly the same distance from the body center
+		var Vector rightHandPos = (pMatrixHandRight * pCalibrateMatrix).getPosition()
+		var Vector leftHandPos = (pMatrixHandLeft * pCalibrateMatrix).getPosition()
+		
+		var float handOffset = (leftHandPos.getX() + rightHandPos.getX()) / 2
+		
+		pCalibrateMatrix = Matrix.newTranslation(-handOffset, 0, 0) * pCalibrateMatrix
 	end
 	
 	protected func void estimateFloorOffset()
