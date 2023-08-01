@@ -316,7 +316,13 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				pControllerBlend.setValue(1)
 			end
 			
-			updateControllerPreRotate()
+			if pControllerGuideRotation != null
+				updateControllerPreRotateGuide()
+				
+			else
+				updateControllerPreRotate()
+			end
+
 			updateControllerIK()
 		end
 		
@@ -487,6 +493,46 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pControllerPreRotate.setValue(-DEMath.acos(tipVector * targetVector))
 		end
 		
+		protected func void updateControllerPreRotateGuide()
+			// if no tracker device is used to drive the guide bone the pre-rotation takes care to rotate
+			// the base bone to line up the tip with the tip tracking device. if the base ik move is
+			// properly created this creates a slightly bend bone chain which the IK can work with well.
+			// in the case of having a guide bone the base bone is in the final position but the following
+			// bone towards the tip is bend according to the base ik move. if the actor stretches his arm
+			// or leg fully this causes the IK calculation potentially lines up the following bone with
+			// the guide bone ending up in a singularity case. this depends on the IK algorithm. as a
+			// counter measure for this the guide bone is rotated back by using the following bone position
+			// as target and the chain tip position. this way a similar bend bone situation is produced
+			// as without tracker device while still respecting the orientation obtained from the tracker
+			if pControllerPreRotate == null or pPreRotateBone == -1 or pGuideBone == -1 or pTipBone == -1
+				return
+			end
+			
+			var Vector targetPos = pComponent.boneGetMatrix(pPreRotateBone).getPosition()
+			var Vector basePos = pComponent.boneGetMatrix(pGuideBone).getPosition()
+			var Vector tipPos = pComponent.boneGetMatrix(pTipBone).getPosition()
+			
+			var Vector tipVector = tipPos - basePos
+			var Vector targetVector = targetPos - basePos
+			
+			if tipVector.isZero() or targetVector.isZero()
+				return
+			end
+			
+			tipVector = tipVector.normalize()
+			targetVector = targetVector.normalize()
+			
+			var Vector rotationAxis = tipVector % targetVector
+			if rotationAxis.getLength() < 0.001 // too low explodes the calculation
+				return
+			end
+			
+			pControllerPreRotate.setRotation(Matrix.newVU(rotationAxis, tipVector).getEulerAngles())
+			
+			var float angle = -DEMath.acos(tipVector * targetVector)
+			pControllerPreRotate.setValue(angle > 0 if 20 else -20)
+		end
+
 		protected func void updateControllerIK()
 			if pControllerTipPosition == null or pControllerTipOrientation == null or pSlotTip == null or pBaseBone == -1
 				return

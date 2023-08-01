@@ -842,7 +842,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		
 		// add pre-rotation rule
-		if not pCalibratePreRotateBone.empty() and not useGuide
+		if not pCalibratePreRotateBone.empty()
+			var String boneName = useGuide if pGuideBone else pCalibratePreRotateBone
+
 			var ModifiedRig.Bone bonePreRotate = modifyRig.addBone("preRotate")
 			ignoreBones.add(bonePreRotate.name)
 			
@@ -859,7 +861,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			// set rotator bone position to match pre rotate bone position
 			var ADRuleInverseKinematic ruleAlign = ADRuleInverseKinematic.new()
 			ruleAlign.setName(getName() + ".preRotate")
-			ruleAlign.setSolverBone(pCalibratePreRotateBone)
+			ruleAlign.setSolverBone(boneName)
 			ruleAlign.setUseSolverBone(true)
 			ruleAlign.addBone(bonePreRotate.name)
 			adef.addRule(ruleAlign)
@@ -880,7 +882,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			ruleRotate.setTargetBone(bonePreRotate.name)
 			ruleRotate.setMinimumRotation(Vector.new(0, 0, -180))
 			ruleRotate.setMaximumRotation(Vector.new(0, 0, 180))
-			ruleRotate.addBone(pCalibratePreRotateBone)
+			ruleRotate.addBone(boneName)
 			ruleRotate.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
 			adef.addRule(ruleRotate)
 		end
