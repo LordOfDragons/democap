@@ -479,6 +479,77 @@ class CharacterAnimation
 		setPathMeta(characterAnimation.pPathMeta)
 	end
 	
+	/** Import character animation. */
+	public func void import(Project project, String pathDemca)
+		var File directoryOut = project.getDataDirectory()
+		var File directoryIn = File.new(pathDemca).getParent()
+		if directoryIn == null
+			throw EInvalidParam.new("path has no parent")
+		end
+		
+		var EasyXML documentSource = EasyXML.new(pathDemca)
+		if documentSource.hasParseFailed()
+			GameApp.getGameApp().getConsole().addMessage(documentSource.getParseLog())
+			throw EInvalidParam.new("parsing document failed")
+		end
+		
+		var EasyXML document = EasyXML.new()
+		var EasyXMLElement root = document.getRootElement()
+		root.setTagName(documentSource.getRootElement().getTagName())
+		cleanXmlTag(root, documentSource.getRootElement())
+		
+		var Project.AnimationPath path = project.nextAnimationPath()
+		var String tagPath
+		
+		root.forEachTag(block EasyXMLElement tag, String tagName
+			if tagName.equals("capturedAnimation")
+				tag.forEachTag(block EasyXMLElement tag2, String tagName2
+					if tagName2.equals("pathAnimation")
+						FileWriter.new((directoryOut + path.getPath()).getPath()).writeData(\
+							FileReader.new((directoryIn + tag2.getFirstCData()).getPath()))
+						setPath(path.getPath())
+						tag2.getElementAt(0).setCDataContent(path.getPath())
+					end
+				end)
+				
+			elif tagName.equals("capturedAnimationDevices")
+				tag.forEachTag(block EasyXMLElement tag2, String tagName2
+					if tagName2.equals("pathAnimation")
+						FileWriter.new((directoryOut + path.getPathDevices()).getPath()).writeData(\
+							FileReader.new((directoryIn + tag2.getFirstCData()).getPath()))
+						setPathDevices(path.getPathDevices())
+						tag2.getElementAt(0).setCDataContent(path.getPathDevices())
+						
+					elif tagName2.equals("pathRig")
+						FileWriter.new((directoryOut + path.getPathDevicesRig()).getPath()).writeData(\
+							FileReader.new((directoryIn + tag2.getFirstCData()).getPath()))
+						setPathDevicesRig(path.getPathDevicesRig())
+						tag2.getElementAt(0).setCDataContent(path.getPathDevicesRig())
+					end
+				end)
+				
+			elif tagName.equals("capturedAnimationObject")
+				tag.forEachTag(block EasyXMLElement tag2, String tagName2
+					if tagName2.equals("pathAnimation")
+						FileWriter.new((directoryOut + path.getPathObject()).getPath()).writeData(\
+							FileReader.new((directoryIn + tag2.getFirstCData()).getPath()))
+						setPathObject(path.getPathObject())
+						tag2.getElementAt(0).setCDataContent(path.getPathObject())
+						
+					elif tagName2.equals("pathRig")
+						FileWriter.new((directoryOut + path.getPathObjectRig()).getPath()).writeData(\
+							FileReader.new((directoryIn + tag2.getFirstCData()).getPath()))
+						setPathObjectRig(path.getPathObjectRig())
+						tag2.getElementAt(0).setCDataContent(path.getPathObjectRig())
+					end
+				end)
+			end
+		end)
+		
+		document.writeToFile(FileWriter.new((directoryOut + path.getPathMeta()).getPath()), false)
+		setPathMeta(path.getPathMeta())
+	end
+	
 	/** Export character animation. */
 	public func void export(Project project, String name)
 		var Project.AnimationPath path = project.exportAnimationPath(name, "deanim", "derig")
@@ -523,7 +594,6 @@ class CharacterAnimation
 			if tagName.equals("capturedAnimation")
 				tag.forEachTag(block EasyXMLElement tag2, String tagName2
 					if tagName2.equals("pathAnimation")
-						//tag2.getElementAt(0).setCDataContent(path.getPath())
 						tag2.getElementAt(0).setCDataContent(File.new(path.getPath()).getComponentAt(-1))
 					end
 				end)
@@ -531,11 +601,9 @@ class CharacterAnimation
 			elif tagName.equals("capturedAnimationDevices")
 				tag.forEachTag(block EasyXMLElement tag2, String tagName2
 					if tagName2.equals("pathAnimation")
-						//tag2.getElementAt(0).setCDataContent(path.getPathDevices())
 						tag2.getElementAt(0).setCDataContent(File.new(path.getPathDevices()).getComponentAt(-1))
 						
 					elif tagName2.equals("pathRig")
-						//tag2.getElementAt(0).setCDataContent(path.getPathDevicesRig())
 						tag2.getElementAt(0).setCDataContent(File.new(path.getPathDevicesRig()).getComponentAt(-1))
 					end
 				end)
@@ -543,11 +611,9 @@ class CharacterAnimation
 			elif tagName.equals("capturedAnimationObject")
 				tag.forEachTag(block EasyXMLElement tag2, String tagName2
 					if tagName2.equals("pathAnimation")
-						//tag2.getElementAt(0).setCDataContent(path.getPathObject())
 						tag2.getElementAt(0).setCDataContent(File.new(path.getPathObject()).getComponentAt(-1))
 						
 					elif tagName2.equals("pathRig")
-						//tag2.getElementAt(0).setCDataContent(path.getPathObjectRig())
 						tag2.getElementAt(0).setCDataContent(File.new(path.getPathObjectRig()).getComponentAt(-1))
 					end
 				end)

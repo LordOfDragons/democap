@@ -61,33 +61,41 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		public func bool initStub(StubElement stub, Window window)
 			var BehaviorElementClass eclass = stub.getClass() cast BehaviorElementClass
 			var ECBCapturedAnimations capturedAnimations = ECBCapturedAnimations.getBehaviorIn(eclass)
-			var ECBehaviorComponent component = ECBehaviorComponent.getBehaviorIn(eclass)
 			
-			// find actor and character profile to use
-			var GameApp app = GameApp.getGameApp()
-			var ActorProfile actorProfile = app.getActiveActorProfile()
-			var CharacterConfiguration configuration = app.getWorldSpawnCharacter().getCharacter()
-			
-			if actorProfile == null or configuration == null
-				if window != null
-					WindowDialog.message(window, "Add Scene Object",\
-						"Activate Character Configuration first", null, null, null)
+			select capturedAnimations.captureTarget.getEnumeration(stub) cast CaptureTarget
+			case CaptureTarget.character
+				// find actor and character profile to use
+				var GameApp app = GameApp.getGameApp()
+				var ActorProfile actorProfile = app.getActiveActorProfile()
+				var CharacterConfiguration configuration = app.getWorldSpawnCharacter().getCharacter()
+				var ECBehaviorComponent component = ECBehaviorComponent.getBehaviorIn(eclass)
+				
+				if actorProfile != null and configuration != null
+					stub.setPropertyValueFor(capturedAnimations.actorProfile.getName(), actorProfile.getName())
+					stub.setPropertyValueFor(capturedAnimations.characterProfile.getName(), configuration.getProfile().getName())
+					
+					// update stub with appearance information
+					var CharacterAppearance appearance = configuration.getProfile().getAppearance()
+					stub.setPropertyValueFor(component.getComponent().getModel().getName(), appearance.getPathModel())
+					stub.setPropertyValueFor(component.getComponent().getSkin().getName(), appearance.getPathSkin())
+					stub.setPropertyValueFor(component.getComponent().getRig().getName(), appearance.getPathRig())
+					
+					// set initial scaling to match configuration scaling
+					var float scaling = configuration.componentScaling()
+					stub.setScaling(Vector.new(scaling, scaling, scaling))
+					
+				else
+					var String apName = capturedAnimations.actorProfile.getValueOrNull(stub)
+					var String cpName = capturedAnimations.characterProfile.getValueOrNull(stub)
+					
+					if apName == null or cpName == null
+						if window != null
+							WindowDialog.message(window, "Scene Object", "Activate Character Configuration first", null, null, null)
+						end
+						return false
+					end
 				end
-				return false
 			end
-			
-			stub.setPropertyValueFor(capturedAnimations.actorProfile.getName(), actorProfile.getName())
-			stub.setPropertyValueFor(capturedAnimations.characterProfile.getName(), configuration.getProfile().getName())
-			
-			// update stub with appearance information
-			var CharacterAppearance appearance = configuration.getProfile().getAppearance()
-			stub.setPropertyValueFor(component.getComponent().getModel().getName(), appearance.getPathModel())
-			stub.setPropertyValueFor(component.getComponent().getSkin().getName(), appearance.getPathSkin())
-			stub.setPropertyValueFor(component.getComponent().getRig().getName(), appearance.getPathRig())
-			
-			// set initial scaling to match configuration scaling
-			var float scaling = configuration.componentScaling()
-			stub.setScaling(Vector.new(scaling, scaling, scaling))
 			
 			return true
 		end

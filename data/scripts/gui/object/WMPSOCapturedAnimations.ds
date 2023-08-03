@@ -167,6 +167,12 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			item.setToolTip("Export animation")
 			menu.addWidget(item)
 			
+			item = MenuItemCommand.new("Import animation...", BlockActionListener.new(block ActionEvent event
+				pPanel.importAnimation()
+			end))
+			item.setToolTip("Import animation")
+			menu.addWidget(item)
+			
 			item = MenuItemCommand.new("Browse exported...", BlockActionListener.new(block ActionEvent event
 				pPanel.browseExportedAnimations()
 			end))
@@ -454,6 +460,52 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			if result != null and not result.empty()
 				pAnimation.export(project, result)
 			end
+		end))
+	end
+	
+	/** Import animation. */
+	public func void importAnimation()
+		var Project project = GameApp.getGameApp().getProject()
+		if pAnimation == null or project == null
+			return
+		end
+		
+		DialogFileSelect.showOpenFile(getWindow(), "Import Animation",\
+			Array.newWith(FileExtension.new("DEMoCap Capture", Array.newWith("*.demca"), ".demca")),\
+			File.new(GameApp.getGameApp().getPathCaptureAnimations(), "capture.demca").getPath(),\
+			WindowDialog.BlockResultListener.new(block String result
+				if result == null or result.empty()
+					return null
+				end
+				
+				var CharacterAnimation animation
+				try
+					animation = CharacterAnimation.new(pAnimation.getName())
+					animation.import(project, result)
+					
+					var String characterImp = animation.getCharacterProfile(project)
+					var String characterCur = pBehaviorCapturedAnimations.getCharacterProfile()
+					if characterImp.equals(characterCur)
+						pAnimation.assign(animation)
+						pAnimation.loadAnimation(project)
+						pBehaviorCapturedAnimations.getAnimations().notifyAnimationChanged(pAnimation)
+						GameApp.getGameApp().getPlaybackScene().updatePlaytime()
+						project.save()
+						
+					else
+						WindowDialog.message(getWindow(), "Import Animation",\
+							"Imported animation does not match character. Expected '{}' is '{}'".format(\
+							Array.newWith(characterCur, characterImp)), null, null, null)
+					end
+					
+				catch Exception e
+					if animation != null
+						animation.dispose()
+					end
+					
+					GameApp.getGameApp().getConsole().addError("Failed importing animation", e)
+					WindowDialog.message(getWindow(), "Import Animation", "Failed importing animation:\n" + e, null, null, null)
+				end
 		end))
 	end
 	
