@@ -34,18 +34,18 @@ pin Dragengine.Utils
  * Scene objects can be motion captured characters and props.
  */
 class Scene
-	private var String pName
-	private var String pPathWorld
-	private var StageDirections pStageDirections
-	private var MemoryFile pSaveState
-	private var FileUsageManager pFileUsage
-	private var SafeArray pListeners
-	private var bool pEnableWorldPersistency
+	var String pName
+	var String pPathWorld
+	var StageDirections pStageDirections
+	var MemoryFile pSaveState
+	var FileUsageManager pFileUsage
+	var SafeArray pListeners
+	var bool pEnableWorldPersistency
 	
 	
 	
 	/** Create actor. */
-	public func new(String name)
+	func new(String name)
 		pPathWorld = "/content/worlds/default.deworld"
 		pStageDirections = StageDirections.new()
 		pFileUsage = FileUsageManager.new()
@@ -54,7 +54,7 @@ class Scene
 	end
 	
 	/** Create copy of actor. */
-	public func new(String name, Scene scene)
+	func new(String name, Scene scene)
 		pPathWorld = scene.pPathWorld
 		pStageDirections = StageDirections.new(scene.pStageDirections)
 		pFileUsage = FileUsageManager.new(scene.pFileUsage)
@@ -68,7 +68,7 @@ class Scene
 	end
 	
 	/** Load scene. */
-	public func new(PersistencyEnvironment env, FileReader reader)
+	func new(PersistencyEnvironment env, FileReader reader)
 		pStageDirections = StageDirections.new()
 		pFileUsage = FileUsageManager.new()
 		pListeners = SafeArray.new()
@@ -121,7 +121,7 @@ class Scene
 	end
 	
 	/** Dispose of scene. */
-	public func void dispose()
+	func void dispose()
 		pListeners.removeAll()
 		
 		if pStageDirections != null
@@ -138,12 +138,12 @@ class Scene
 	
 	
 	/** Name. */
-	public func String getName()
+	func String getName()
 		return pName
 	end
 	
 	/** Set name. */
-	public func void setName(String name)
+	func void setName(String name)
 		if name.equals(pName)
 			return
 		end
@@ -159,12 +159,12 @@ class Scene
 	end
 	
 	/** Path to world file. */
-	public func String getPathWorld()
+	func String getPathWorld()
 		return pPathWorld
 	end
 	
 	/** Set path to world file. */
-	public func void setPathWorld(String path)
+	func void setPathWorld(String path)
 		if path == null
 			throw ENullPointer.new("path")
 		end
@@ -173,36 +173,36 @@ class Scene
 	end
 	
 	/** Save state or null. */
-	public func MemoryFile getSaveState()
+	func MemoryFile getSaveState()
 		return pSaveState
 	end
 	
 	/** File usage. */
-	public func FileUsageManager getFileUsage()
+	func FileUsageManager getFileUsage()
 		return pFileUsage
 	end
 	
 	/** Enable game world persistency. */
-	public func bool getEnableWorldPersistency()
+	func bool getEnableWorldPersistency()
 		return pEnableWorldPersistency
 	end
 	
 	
 	
 	/** Stage directions. */
-	public func StageDirections getStageDirections()
+	func StageDirections getStageDirections()
 		return pStageDirections
 	end
 	
 	/** Notify listeners stage directions added or removed. */
-	public func void notifyStageDirectionsChanged()
+	func void notifyStageDirectionsChanged()
 		pListeners.forEach(block SceneListener each
 			each.stageDirectionsChanged(this)
 		end)
 	end
 	
 	/** Notify listeners stage direction name changed. */
-	public func void notifyStageDirectionNameChanged(StageDirection stageDirection)
+	func void notifyStageDirectionNameChanged(StageDirection stageDirection)
 		var int index = pStageDirections.getModel().indexOf(stageDirection)
 		pStageDirections.getModel().notifyContentChanged(index, index)
 		
@@ -212,7 +212,7 @@ class Scene
 	end
 	
 	/** Notify listeners stage direction content changed. */
-	public func void notifyStageDirectionContentChanged(StageDirection stageDirection)
+	func void notifyStageDirectionContentChanged(StageDirection stageDirection)
 		var int index = pStageDirections.getModel().indexOf(stageDirection)
 		pStageDirections.getModel().notifyContentChanged(index, index)
 		
@@ -224,13 +224,13 @@ class Scene
 	
 	
 	/** Load world. */
-	public func void loadWorld(Project project)
+	func void loadWorld(Project project)
 		GameApp.getGameApp().startLoadGameWorld(StartGame.new(\
 			GameApp.getGameApp().getWindowGameWorld(), project, this))
 	end
 	
 	/** Save state. */
-	public func void saveWorld(GameWorld gameWorld)
+	func void saveWorld(GameWorld gameWorld)
 		if gameWorld == null
 			pSaveState = null
 			return
@@ -267,14 +267,14 @@ class Scene
 	end
 	
 	/** Drop save state. */
-	public func void dropSaveState()
+	func void dropSaveState()
 		pSaveState = null
 	end
 	
 	
 	
 	/** Add listener. */
-	public func void addListener(SceneListener listener)
+	func void addListener(SceneListener listener)
 		if listener == null
 			throw ENullPointer.new("listener")
 		end
@@ -282,47 +282,47 @@ class Scene
 	end
 	
 	/** Remove listener. */
-	public func void removeListener(SceneListener listener)
+	func void removeListener(SceneListener listener)
 		pListeners.remove(listener)
 	end
 	
 	/** Notify listeners scene object added to game world. */
-	public func void notifyObjectAdded(ECBSceneObject.Instance object)
+	func void notifyObjectAdded(ECBSceneObject.Instance object)
 		pListeners.forEach(block SceneListener each
 			each.objectAdded(this, object)
 		end)
 	end
 	
 	/** Notify listeners scene object removed to game world. */
-	public func void notifyObjectRemoved(ECBSceneObject.Instance object)
+	func void notifyObjectRemoved(ECBSceneObject.Instance object)
 		pListeners.forEach(block SceneListener each
 			each.objectRemoved(this, object)
 		end)
 	end
 	
 	/** Notify listeners all scene objects removed to game world. */
-	public func void notifyAllObjectsRemoved()
+	func void notifyAllObjectsRemoved()
 		pListeners.forEach(block SceneListener each
 			each.allObjectsRemoved(this)
 		end)
 	end
 	
 	/** Notify listeners scene object name changed. */
-	public func void notifyObjectNameChanged(ECBSceneObject.Instance object)
+	func void notifyObjectNameChanged(ECBSceneObject.Instance object)
 		pListeners.forEach(block SceneListener each
 			each.objectNameChanged(this, object)
 		end)
 	end
 	
 	/** Notify listeners scene object geometry changed. */
-	public func void notifyObjectGeometryChanged(ECBSceneObject.Instance object)
+	func void notifyObjectGeometryChanged(ECBSceneObject.Instance object)
 		pListeners.forEach(block SceneListener each
 			each.objectGeometryChanged(this, object)
 		end)
 	end
 	
 	/** Notify listeners scene object parameter changed. */
-	public func void notifyObjectParameterChanged(ECBSceneObject.Instance object)
+	func void notifyObjectParameterChanged(ECBSceneObject.Instance object)
 		pListeners.forEach(block SceneListener each
 			each.objectParameterChanged(this, object)
 		end)
@@ -331,7 +331,7 @@ class Scene
 	
 	
 	/** Write scene to file. */
-	public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+	func void writeToFile(PersistencyEnvironment env, FileWriter writer)
 		if env.getPersistency().getDebugEnableCanaryValue()
 			writer.writeString(Persistency.debugCanaryValue_BEGIN)
 		end
@@ -370,7 +370,7 @@ class Scene
 	
 	
 	/** Compare scene for sorting. */
-	public func int compare(Object obj)
+	func int compare(Object obj)
 		if obj castable Scene
 			return pName.compare((obj cast Scene).pName)
 		end
@@ -378,7 +378,7 @@ class Scene
 	end
 	
 	/** String representation. Returns name. */
-	public func String toString()
+	func String toString()
 		return pName
 	end
 end

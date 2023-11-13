@@ -44,18 +44,18 @@ class WMPanelProject extends Panel
 		protected var WMPanelProject pPanel
 		protected var Array pWidgets
 		
-		public func new(WMPanelProject panel, Array widgets)
+		func new(WMPanelProject panel, Array widgets)
 			pPanel = panel
 			pWidgets = widgets
 		end
 		
-		public func void onWidgetShown(WidgetEvent event)
+		func void onWidgetShown(WidgetEvent event)
 			pPanel.setEnableObjectUpdates(pWidgets.find(block Widget each
 				return not each.getVisible()
 			end) == null)
 		end
 		
-		public func void onWidgetHidden(WidgetEvent event)
+		func void onWidgetHidden(WidgetEvent event)
 			pPanel.setEnableObjectUpdates(false)
 		end
 	end
@@ -64,23 +64,23 @@ class WMPanelProject extends Panel
 	class GameChangedListener extends DefaultGameListener
 		protected var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void projectChanged(GameApp app)
+		func void projectChanged(GameApp app)
 			pPanel.setProject(app.getProject())
 		end
 		
-		public func void sceneChanged(GameApp app)
+		func void sceneChanged(GameApp app)
 			pPanel.setScene(app.getScene())
 		end
 		
-		public func void gameWorldChanged(GameApp app)
+		func void gameWorldChanged(GameApp app)
 			pPanel.updateModelObjects()
 		end
 		
-		public func void savedAnimationsChanged(GameApp app)
+		func void savedAnimationsChanged(GameApp app)
 			pPanel.updateSavedAnimations()
 		end
 	end
@@ -91,11 +91,11 @@ class WMPanelProject extends Panel
 	class ProjectPopupAction extends DefaultActionListener
 		protected var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void onAction(ActionEvent event)
+		func void onAction(ActionEvent event)
 			var Widget widget = event.getSource() cast Widget
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
@@ -131,30 +131,30 @@ class WMPanelProject extends Panel
 	class ScenesChangedListener extends DefaultScenesListener
 		protected var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void sceneAdded(Scenes scenes, Scene scene)
+		func void sceneAdded(Scenes scenes, Scene scene)
 			pPanel.updateModelScenes()
 		end
 		
-		public func void sceneRemoved(Scenes scenes, Scene scene)
+		func void sceneRemoved(Scenes scenes, Scene scene)
 			pPanel.updateModelScenes()
 		end
 		
-		public func void allScenesRemoved(Scenes scenes)
+		func void allScenesRemoved(Scenes scenes)
 			pPanel.updateModelScenes()
 		end
 	end
 	
 	/** Scene list element renderer. */
 	class SceneListElementRenderer extends DefaultListElementRenderer
-		public func new()
+		func new()
 			setDefaultMinimumSize(Point.new(50, 10))
 		end
 		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
 			var String text = ""
 			if element != null
 				text = (element cast Scene).getName()
@@ -167,15 +167,15 @@ class WMPanelProject extends Panel
 	class SelectScene extends DefaultListModelListener
 		protected var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+		func void contentChanged(ListModel model, int fromIndex, int toIndex)
 			selectionChanged(model)
 		end
 		
-		public func void selectionChanged(ListModel model)
+		func void selectionChanged(ListModel model)
 			if not pPanel.preventUpdate
 				var int index = model.getSelected()
 				if index != -1
@@ -194,35 +194,35 @@ class WMPanelProject extends Panel
 		protected var ECBSceneObject.Instance pUpdateModelObjectName
 		protected var bool pUpdateObject
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void sceneNameChanged(Scene scene)
+		func void sceneNameChanged(Scene scene)
 			pUpdateModelScenes = true
 			pStartTimer()
 		end
 		
-		public func void objectAdded(Scene scene, ECBSceneObject.Instance object)
+		func void objectAdded(Scene scene, ECBSceneObject.Instance object)
 			pUpdateModelObjects = true
 			pUpdateModelObjectName = null
 			pStartTimer()
 		end
 		
-		public func void objectRemoved(Scene scene, ECBSceneObject.Instance object)
+		func void objectRemoved(Scene scene, ECBSceneObject.Instance object)
 			pUpdateModelObjects = true
 			pUpdateModelObjectName = null
 			pStartTimer()
 		end
 		
-		public func void allObjectsRemoved(Scene scene)
+		func void allObjectsRemoved(Scene scene)
 			pUpdateModelObjects = true
 			pUpdateModelObjectName = null
 			pUpdateObject = false
 			pStartTimer()
 		end
 		
-		public func void objectNameChanged(Scene scene, ECBSceneObject.Instance object)
+		func void objectNameChanged(Scene scene, ECBSceneObject.Instance object)
 			if pUpdateModelObjectName == null
 				pUpdateModelObjectName = object
 			else
@@ -232,14 +232,14 @@ class WMPanelProject extends Panel
 			pStartTimer()
 		end
 		
-		public func void objectGeometryChanged(Scene scene, ECBSceneObject.Instance object)
+		func void objectGeometryChanged(Scene scene, ECBSceneObject.Instance object)
 			if object == pPanel.getObject()
 				pUpdateObject = true
 				pStartTimer()
 			end
 		end
 		
-		public func void objectParameterChanged(Scene scene, ECBSceneObject.Instance object)
+		func void objectParameterChanged(Scene scene, ECBSceneObject.Instance object)
 			if object == pPanel.getObject()
 				pUpdateObject = true
 				pStartTimer()
@@ -281,11 +281,11 @@ class WMPanelProject extends Panel
 	class ScenePopupAction extends DefaultActionListener
 		protected var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void onAction(ActionEvent event)
+		func void onAction(ActionEvent event)
 			var Widget widget = event.getSource() cast Widget
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
@@ -319,16 +319,34 @@ class WMPanelProject extends Panel
 	
 	/** Loadable world list element renderer. */
 	class LoadableWorldRenderer extends DefaultListElementRenderer
-		public func new()
+		func new()
+			setDesignerSelector("Label.ListRenderer.WorldSelection")
 			setDefaultMinimumSize(Point.new(50, 10))
 		end
 		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
-			var String text = ""
-			if element != null
-				text = (element cast LoadableWorld).getName()
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var LoadableWorld loadableWorld = element cast LoadableWorld
+			var Label label = renderer cast Label
+			var String selector = getDesignerSelector()
+			
+			if selected
+				selector = selector + ".Selected"
 			end
-			super.updateRenderer(listBox, renderer, text, selected, focused)
+			if loadableWorld != null
+				var Project project = GameApp.getGameApp().getProject()
+				if project == null or not project.getDataDirectory().isParentOf(loadableWorld.getPath())
+					selector = selector + ".Global"
+				end
+			end
+			
+			label.setDesignerSelector(selector)
+			
+			if loadableWorld == null
+				label.setText(String.new(' ', 20))
+				
+			else
+				label.setText(loadableWorld.getName())
+			end
 		end
 	end
 	
@@ -336,19 +354,19 @@ class WMPanelProject extends Panel
 	class ListenLoadableWorlds extends DefaultLoadableWorldsListener
 		protected var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void worldAdded(LoadableWorlds worlds, LoadableWorld world)
+		func void worldAdded(LoadableWorlds worlds, LoadableWorld world)
 			pPanel.updateModelLoadableWorlds()
 		end
 		
-		public func void worldRemoved(LoadableWorlds worlds, LoadableWorld world)
+		func void worldRemoved(LoadableWorlds worlds, LoadableWorld world)
 			pPanel.updateModelLoadableWorlds()
 		end
 		
-		public func void allWorldsRemoved(LoadableWorlds worlds)
+		func void allWorldsRemoved(LoadableWorlds worlds)
 			pPanel.updateModelLoadableWorlds()
 		end
 	end
@@ -357,11 +375,11 @@ class WMPanelProject extends Panel
 	class LoadableWorldPopupAction extends DefaultActionListener
 		protected var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void onAction(ActionEvent event)
+		func void onAction(ActionEvent event)
 			var Widget widget = event.getSource() cast Widget
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
@@ -387,12 +405,12 @@ class WMPanelProject extends Panel
 	class SavedAnimationRenderer extends DefaultListElementRenderer
 		protected var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 			setDefaultMinimumSize(Point.new(50, 10))
 		end
 		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
 			var String text = ""
 			if element != null
 				var CharacterAnimation animation = element cast CharacterAnimation
@@ -410,11 +428,11 @@ class WMPanelProject extends Panel
 	class SavedAnimationPopupAction extends DefaultActionListener
 		protected var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void onAction(ActionEvent event)
+		func void onAction(ActionEvent event)
 			var Widget widget = event.getSource() cast Widget
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
@@ -458,11 +476,11 @@ class WMPanelProject extends Panel
 	
 	/** Object element renderer. */
 	class ObjectElementRenderer extends DefaultListElementRenderer
-		public func new()
+		func new()
 			setDefaultMinimumSize(Point.new(80, 20))
 		end
 		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
 			var String text = ""
 			if element != null
 				text = (element cast ECBSceneObject.Instance).getDisplayName()
@@ -478,15 +496,15 @@ class WMPanelProject extends Panel
 	class SelectObject extends DefaultListModelListener
 		protected var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+		func void contentChanged(ListModel model, int fromIndex, int toIndex)
 			selectionChanged(model)
 		end
 		
-		public func void selectionChanged(ListModel model)
+		func void selectionChanged(ListModel model)
 			if pPanel.preventUpdateObjects
 				return
 			end
@@ -494,7 +512,10 @@ class WMPanelProject extends Panel
 			var ECBSelectable.Instance selectable
 			var int index = model.getSelected()
 			if index != -1
-				selectable = ECBSelectable.getInstanceIn((model.getAt(index) cast ECBSceneObject.Instance).getElement())
+				var ECBSceneObject.Instance sceneObject = model.getAt(index) cast ECBSceneObject.Instance
+				if sceneObject != null
+					selectable = ECBSelectable.getInstanceIn(sceneObject.getElement())
+				end
 			end
 			GameApp.getGameApp().getSelectionTracker().setElement(selectable)
 		end
@@ -505,11 +526,11 @@ class WMPanelProject extends Panel
 		protected var WMPanelProject pPanel
 		protected var TimerBlock pTimer
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void selectedElementChanged(ECBSelectable.Tracker tracker)
+		func void selectedElementChanged(ECBSelectable.Tracker tracker)
 			pStartTimer()
 		end
 		
@@ -527,13 +548,13 @@ class WMPanelProject extends Panel
 	
 	/** Object popup menu. */
 	class ObjectPopupAction extends DefaultActionListener
-		private var WMPanelProject pPanel
+		var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void onAction(ActionEvent event)
+		func void onAction(ActionEvent event)
 			var Widget widget = event.getSource() cast Widget
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
@@ -606,15 +627,15 @@ class WMPanelProject extends Panel
 	class SelectParent extends DefaultListModelListener
 		protected var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+		func void contentChanged(ListModel model, int fromIndex, int toIndex)
 			selectionChanged(model)
 		end
 		
-		public func void selectionChanged(ListModel model)
+		func void selectionChanged(ListModel model)
 			if pPanel.preventUpdateObjects
 				return
 			end
@@ -648,13 +669,13 @@ class WMPanelProject extends Panel
 	end
 	
 	class ParentPopupAction extends DefaultActionListener
-		private var WMPanelProject pPanel
+		var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel)
+		func new(WMPanelProject panel)
 			pPanel = panel
 		end
 		
-		public func void onAction(ActionEvent event)
+		func void onAction(ActionEvent event)
 			var Widget widget = event.getSource() cast Widget
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
@@ -678,15 +699,15 @@ class WMPanelProject extends Panel
 	
 	/** Object position changed. */
 	class ObjectPositionChanged implements ActionListener
-		private var WMPanelProject pPanel
-		private var EditVector pEditVector
+		var WMPanelProject pPanel
+		var EditVector pEditVector
 		
-		public func new(WMPanelProject panel, EditVector editVector)
+		func new(WMPanelProject panel, EditVector editVector)
 			pPanel = panel
 			pEditVector = editVector
 		end
 		
-		public func void onAction(ActionEvent event)
+		func void onAction(ActionEvent event)
 			var ECBSceneObject.Instance object = pPanel.getObject()
 			if object != null and not pEditVector.isEqualTo(object.getElement().getPosition().toVector())
 				ECBShowInteractHandles.directMoveObjectTo(object.getElement(), DVector.new(pEditVector.getVector()))
@@ -696,15 +717,15 @@ class WMPanelProject extends Panel
 	
 	/** Object rotation changed. */
 	class ObjectRotationChanged implements ActionListener
-		private var WMPanelProject pPanel
-		private var EditVector pEditVector
+		var WMPanelProject pPanel
+		var EditVector pEditVector
 		
-		public func new(WMPanelProject panel, EditVector editVector)
+		func new(WMPanelProject panel, EditVector editVector)
 			pPanel = panel
 			pEditVector = editVector
 		end
 		
-		public func void onAction(ActionEvent event)
+		func void onAction(ActionEvent event)
 			var ECBSceneObject.Instance object = pPanel.getObject()
 			if object != null and not pEditVector.isEqualTo(object.getElement().getOrientation().getEulerAngles())
 				ECBShowInteractHandles.directRotateObjectTo(object.getElement(), Quaternion.newFromEuler(pEditVector.getVector()))
@@ -714,15 +735,15 @@ class WMPanelProject extends Panel
 	
 	/** Object class help button. */
 	class ObjectHelpButton extends Button
-		private var WMPanelProject pPanel
+		var WMPanelProject pPanel
 		
-		public func new(WMPanelProject panel) super("?")
+		func new(WMPanelProject panel) super("?")
 			pPanel = panel
 			setDesignerSelector("Button.Help")
 			setToolTip("Show help webpage")
 		end
 		
-		public func void fireAction(int modifiers)
+		func void fireAction(int modifiers)
 			super.fireAction(modifiers)
 			
 			var ECBSceneObject.Instance object = pPanel.getObject()
@@ -769,7 +790,7 @@ class WMPanelProject extends Panel
 	
 	
 	/** Create panel. */
-	public func new(bool inVR, String prefixUIOptions)
+	func new(bool inVR, String prefixUIOptions)
 		pInVR = inVR
 		pPrefixUIOptions = prefixUIOptions + "/WMPanelProject"
 		pEnableObjectUpdates = true
@@ -815,7 +836,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Dispose of widget. */
-	public func void dispose()
+	func void dispose()
 		pDisposing = true
 		
 		var GameApp app = GameApp.getGameApp()
@@ -861,25 +882,25 @@ class WMPanelProject extends Panel
 	
 	
 	/** Shown in VR. */
-	public func bool getInVR()
+	func bool getInVR()
 		return pInVR
 	end
 	
 	/** UI Option Prefix. */
-	public func String getPrefixUIOptions()
+	func String getPrefixUIOptions()
 		return pPrefixUIOptions
 	end
 	
 	/** Scene objects model. */
-	public func DefaultListModel getModelObjects()
+	func DefaultListModel getModelObjects()
 		return pModelObjects
 	end
 	
-	public func bool getEnableObjectUpdates()
+	func bool getEnableObjectUpdates()
 		return pEnableObjectUpdates
 	end
 	
-	public func void setEnableObjectUpdates(bool enable)
+	func void setEnableObjectUpdates(bool enable)
 		if enable == pEnableObjectUpdates
 			return
 		end
@@ -897,12 +918,12 @@ class WMPanelProject extends Panel
 	
 	
 	/** Active project or null. */
-	public func Project getProject()
+	func Project getProject()
 		return pProject
 	end
 	
 	/** Set active project or null. */
-	public func void setProject(Project project)
+	func void setProject(Project project)
 		if project == pProject
 			return
 		end
@@ -930,7 +951,7 @@ class WMPanelProject extends Panel
 	
 	
 	/** Create new project. */
-	public func void newProject()
+	func void newProject()
 		if pProject == null
 			return
 		end
@@ -964,7 +985,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Open project. */
-	public func void openProject()
+	func void openProject()
 		if pProject == null
 			return
 		end
@@ -990,14 +1011,14 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Save project. */
-	public func void saveProject()
+	func void saveProject()
 		if pProject != null
 			pProject.save()
 		end
 	end
 	
 	/** Browse project data in overlay directory. */
-	public func void browseProjectData()
+	func void browseProjectData()
 		if pProject == null
 			return
 		end
@@ -1017,7 +1038,7 @@ class WMPanelProject extends Panel
 	
 	
 	/** Update scenes model. */
-	public func void updateModelScenes()
+	func void updateModelScenes()
 		var Array content = Array.new()
 		if GameApp.getGameApp().getProject() != null
 			content = GameApp.getGameApp().getProject().getScenes().toArray().sorted(block Scene a, Scene b
@@ -1040,21 +1061,21 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Select scene. */
-	public func void selectScene()
+	func void selectScene()
 		pModelScenes.setSelected(pModelScenes.indexOf(GameApp.getGameApp().getScene()))
 	end
 	
 	/** Active scene or null. */
-	public func Scene getScene()
+	func Scene getScene()
 		return pScene
 	end
 	
 	/** Set active scene or null. */
-	public func void setScene(Scene scene)
+	func void setScene(Scene scene)
 		setScene(scene, false)
 	end
 	
-	public func void setScene(Scene scene, bool noLoad)
+	func void setScene(Scene scene, bool noLoad)
 		if scene == pScene
 			return
 		end
@@ -1084,7 +1105,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Add scene. */
-	public func void addScene()
+	func void addScene()
 		var LoadableWorld world = getLoadableWorld()
 		if world == null
 			return
@@ -1110,7 +1131,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Duplicate scene. */
-	public func void duplicateScene()
+	func void duplicateScene()
 		if pScene == null
 			return
 		end
@@ -1134,7 +1155,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Remove scene. */
-	public func void removeScene()
+	func void removeScene()
 		if pScene == null
 			return
 		end
@@ -1166,7 +1187,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Rename scene. */
-	public func void renameScene()
+	func void renameScene()
 		if pScene == null
 			return
 		end
@@ -1190,7 +1211,7 @@ class WMPanelProject extends Panel
 	
 	
 	/** Selected loadable world or null. */
-	public func LoadableWorld getLoadableWorld()
+	func LoadableWorld getLoadableWorld()
 		if pModelLoadableWorlds.getSelected() == -1
 			return null
 		end
@@ -1198,7 +1219,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Update loadable worlds model. */
-	public func void updateModelLoadableWorlds()
+	func void updateModelLoadableWorlds()
 		var LoadableWorld world = getLoadableWorld()
 		
 		pModelLoadableWorlds.setContent(GameApp.getGameApp().getLoadableWorlds().toArray().sorted())
@@ -1211,12 +1232,12 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Browse loadable worlds in overlay directory. */
-	public func void browseLoadableWorlds()
-		FileSystem.browseOverlay(GameApp.getGameApp().getLoadableWorlds().getDirectory())
+	func void browseLoadableWorlds()
+		FileSystem.browseConfig(GameApp.getGameApp().getProject().getWorldsDirectory().getPath())
 	end
 	
 	/** Activate world. */
-	public func void activateWorld()
+	func void activateWorld()
 		var GameApp app = GameApp.getGameApp()
 		var LoadableWorld world = getLoadableWorld()
 		if pScene == null or world == null or app.getGameWorldLoader() != null
@@ -1240,7 +1261,7 @@ class WMPanelProject extends Panel
 	
 	
 	/** Selected saved animation or null. */
-	public func CharacterAnimation getSavedAnimation()
+	func CharacterAnimation getSavedAnimation()
 		if pModelSavedAnimations.getSelected() == -1
 			return null
 		end
@@ -1248,7 +1269,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Rename saved animation. */
-	public func void renameSavedAnimation()
+	func void renameSavedAnimation()
 		var CharacterAnimation savedAnimation = getSavedAnimation()
 		if pProject == null or savedAnimation == null
 			return
@@ -1273,7 +1294,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Load saved animation. */
-	public func void loadSavedAnimation()
+	func void loadSavedAnimation()
 		var CharacterAnimation savedAnimation = getSavedAnimation()
 		if pObject == null or pProject == null or savedAnimation == null
 			return
@@ -1310,7 +1331,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Update saved animations model. */
-	public func void updateSavedAnimations()
+	func void updateSavedAnimations()
 		var CharacterAnimation savedAnimation = getSavedAnimation()
 		
 		if pProject != null
@@ -1324,7 +1345,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Remove saved animation. */
-	public func void removeSavedAnimation()
+	func void removeSavedAnimation()
 		var CharacterAnimation savedAnimation = getSavedAnimation()
 		if savedAnimation == null or pProject == null
 			return
@@ -1343,7 +1364,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Export saved animation. */
-	public func void exportSavedAnimation()
+	func void exportSavedAnimation()
 		var CharacterAnimation savedAnimation = getSavedAnimation()
 		if savedAnimation == null or pProject == null
 			return
@@ -1358,7 +1379,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Browse exported animations directory. */
-	public func void browseExportedAnimations()
+	func void browseExportedAnimations()
 		if pProject != null
 			pProject.browseExportedAnimations()
 		end
@@ -1367,12 +1388,12 @@ class WMPanelProject extends Panel
 	
 	
 	/** Selected object or null. */
-	public func ECBSceneObject.Instance getObject()
+	func ECBSceneObject.Instance getObject()
 		return pObject
 	end
 	
 	/** Set selected object or null. */
-	public func void setObject(ECBSceneObject.Instance object)
+	func void setObject(ECBSceneObject.Instance object)
 		if object == pObject
 			return
 		end
@@ -1408,7 +1429,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Get selected scene object from tracker. */
-	public func ECBSceneObject.Instance getTrackerSelectedObject()
+	func ECBSceneObject.Instance getTrackerSelectedObject()
 		var ECBSelectable.Tracker tracker = GameApp.getGameApp().getSelectionTracker()
 		if tracker.getElement() != null
 			return ECBSceneObject.getInstanceIn(tracker.getElement().getElement())
@@ -1417,7 +1438,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Select object from tracker. */
-	public func void selectObjectFromTracker()
+	func void selectObjectFromTracker()
 		if not pEnableObjectUpdates
 			return
 		end
@@ -1435,7 +1456,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Update objects model. */
-	public func void updateModelObjects()
+	func void updateModelObjects()
 		if pModelObjects == null
 			return // dispose protection
 		end
@@ -1474,7 +1495,7 @@ class WMPanelProject extends Panel
 		setObject(selection)
 	end
 	
-	public func void updateModelObjectName(ECBSceneObject.Instance object)
+	func void updateModelObjectName(ECBSceneObject.Instance object)
 		if pModelObjects == null or pModelParent == null
 			return // dispose protection
 		end
@@ -1493,7 +1514,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Update object. */
-	public func void updateObject()
+	func void updateObject()
 		runWhileBlockingLayout(block
 			if pObject != null
 				var BehaviorElement element = pObject.getElement()
@@ -1528,7 +1549,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Add object. */
-	public func void addObject()
+	func void addObject()
 		if pScene == null
 			return
 		end
@@ -1581,7 +1602,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Duplicate object. */
-	public func void duplicateObject()
+	func void duplicateObject()
 		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
 		if pObject == null or pScene == null or gameWorld == null
 			return
@@ -1602,7 +1623,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Copy object. */
-	public func void copyObject()
+	func void copyObject()
 		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
 		if pObject == null or pScene == null or gameWorld == null
 			return
@@ -1620,7 +1641,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Cut object. */
-	public func void cutObject()
+	func void cutObject()
 		if pObject == null
 			return
 		end
@@ -1646,7 +1667,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Paste object. */
-	public func void pasteObject()
+	func void pasteObject()
 		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
 		if pScene == null or gameWorld == null or getClipboard().isEmpty()
 			return
@@ -1662,7 +1683,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Remove object. */
-	public func void removeObject()
+	func void removeObject()
 		if pObject == null
 			return
 		end
@@ -1686,7 +1707,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Rename object. */
-	public func void renameObject()
+	func void renameObject()
 		if pObject == null
 			return
 		end
@@ -1701,7 +1722,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Change object class. */
-	public func void changeObjectClass()
+	func void changeObjectClass()
 		if pScene == null or pObject == null
 			return
 		end
@@ -1798,7 +1819,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Browse objects in overlay directory. */
-	public func void browseObjects()
+	func void browseObjects()
 		FileSystem.browseOverlay(GameApp.getGameApp().getPathObjects())
 	end
 	
@@ -1809,12 +1830,12 @@ class WMPanelProject extends Panel
 		public var DVector position
 		public var float bestDistance
 		
-		public func new(BehaviorElement object)
+		func new(BehaviorElement object)
 			this.object = object
 			position = object.getPosition()
 		end
 		
-		public func void visitBehaviorElement(BehaviorElement element)
+		func void visitBehaviorElement(BehaviorElement element)
 			if element == object
 				return
 			end
@@ -1833,7 +1854,7 @@ class WMPanelProject extends Panel
 		end
 	end
 	
-	public func void objectAttachClosest()
+	func void objectAttachClosest()
 		if pObject == null
 			return
 		end
@@ -1848,7 +1869,7 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Detach object. */
-	public func void objectDetach()
+	func void objectDetach()
 		if pObject == null
 			return
 		end
@@ -1865,28 +1886,28 @@ class WMPanelProject extends Panel
 	end
 	
 	/** Move object. */
-	public func void moveObject(DVector direction)
+	func void moveObject(DVector direction)
 		if pObject != null
 			ECBShowInteractHandles.directMoveObject(pObject.getElement(), direction)
 		end
 	end
 	
 	/** Move object. */
-	public func void moveObjectTo(DVector position)
+	func void moveObjectTo(DVector position)
 		if pObject != null
 			ECBShowInteractHandles.directMoveObjectTo(pObject.getElement(), position)
 		end
 	end
 	
 	/** Rotate object. */
-	public func void rotateObject(Vector axis)
+	func void rotateObject(Vector axis)
 		if pObject != null
 			ECBShowInteractHandles.directRotateObject(pObject.getElement(), axis)
 		end
 	end
 	
 	/** Rotate object. */
-	public func void rotateObjectTo(Quaternion orientation)
+	func void rotateObjectTo(Quaternion orientation)
 		if pObject != null
 			ECBShowInteractHandles.directRotateObjectTo(pObject.getElement(), orientation)
 		end
@@ -1895,7 +1916,7 @@ class WMPanelProject extends Panel
 	
 	
 	/** Behavior panel matching prefix UI options value or null. */
-	public func WMPPanelSceneObject getBehaviorPanelWith(String prefix)
+	func WMPPanelSceneObject getBehaviorPanelWith(String prefix)
 		return pPanelBehaviors.findWidget(block WMPPanelSceneObject each
 			return each.getPrefixUIOptions().equals(prefix)
 		end) cast WMPPanelSceneObject
@@ -1904,7 +1925,7 @@ class WMPanelProject extends Panel
 	
 	
 	/** Element stub changed. */
-	public func void elementStubChanged()
+	func void elementStubChanged()
 		var BehaviorElement element = pObject.getElement()
 		var GameWorld gameWorld = element.getGameWorld()
 		

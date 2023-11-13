@@ -31,14 +31,14 @@ pin Dragengine.Utils
  * as files of type "*.demccp" .
  */
 class CharacterProfiles
-	private var String pDirectory
-	private var Array pProfiles
-	private var Array pListeners
+	var String pDirectory
+	var Array pProfiles
+	var Array pListeners
 	
 	
 	
 	/** Create character list. */
-	public func new(String directory)
+	func new(String directory)
 		if directory == null
 			throw ENullPointer.new("directory")
 		end
@@ -49,7 +49,7 @@ class CharacterProfiles
 	end
 	
 	/** Dispose of list. */
-	public func void dispose()
+	func void dispose()
 		pListeners.removeAll()
 		removeAll()
 	end
@@ -57,36 +57,36 @@ class CharacterProfiles
 	
 	
 	/** Directory to save character profiles to. */
-	public func String getDirectory()
+	func String getDirectory()
 		return pDirectory
 	end
 	
 	
 	
 	/** Count of profiles. */
-	public func int getCount()
+	func int getCount()
 		return pProfiles.getCount()
 	end
 	
 	/** Named profile is present. */
-	public func bool hasNamed(String name)
+	func bool hasNamed(String name)
 		return getNamed(name) != null
 	end
 	
 	/** Profile at index. */
-	public func CharacterProfile getAt(int index)
+	func CharacterProfile getAt(int index)
 		return pProfiles.getAt(index) cast CharacterProfile
 	end
 	
 	/** Named profile or null if absent. */
-	public func CharacterProfile getNamed(String name)
+	func CharacterProfile getNamed(String name)
 		return pProfiles.find(block CharacterProfile each
 			return each.getName().compareNoCase(name) == 0
 		end) cast CharacterProfile
 	end
 	
 	/** Add profile. Throws exception if named profile is present. */
-	public func void add(CharacterProfile profile)
+	func void add(CharacterProfile profile)
 		if hasNamed(profile.getName())
 			throw EInvalidParam.new("named profile is present: " + profile.getName())
 		end
@@ -98,7 +98,7 @@ class CharacterProfiles
 	end
 	
 	/** Remove profile. Throws exception if named profile is absent. */
-	public func void remove(CharacterProfile profile)
+	func void remove(CharacterProfile profile)
 		pProfiles.remove(profile)
 		
 		pListeners.forEach(block CharacterProfilesListener each
@@ -109,7 +109,7 @@ class CharacterProfiles
 	end
 	
 	/** Remove all profiles. */
-	public func void removeAll()
+	func void removeAll()
 		pProfiles.forEach(block CharacterProfile each
 			each.dispose()
 		end)
@@ -123,7 +123,7 @@ class CharacterProfiles
 	/**
 	 * Visit profiles with block. Block receives as only argument CharacterProfile.
 	 */
-	public func void forEach(Block ablock)
+	func void forEach(Block ablock)
 		pProfiles.forEach(ablock)
 	end
 	
@@ -132,28 +132,29 @@ class CharacterProfiles
 	 * has to return true to include or false to exclude profile.
 	 * Returns Array of CharacterProfile.
 	 */
-	public func Array collect(Block ablock)
+	func Array collect(Block ablock)
 		return pProfiles.collect(ablock)
 	end
 	
 	/** List of profiles as Array of CharacterProfile. */
-	public func Array toArray()
+	func Array toArray()
 		return Array.new(pProfiles)
 	end
 	
 	
 	
 	/** Load characters from directory (*.dmcc). */
-	public func void loadAll()
-		var LoadCharacterProfile loader = GameApp.getGameApp().getLoadCharacterProfile()
-		var Console console = GameApp.getGameApp().getConsole()
+	func void loadAll()
+		var GameApp app = GameApp.getGameApp()
+		var LoadCharacterProfile loader = app.getLoadCharacterProfile()
+		var Console console = app.getConsole()
 		
 		console.addMessage("Load character profiles...")
 		
 		FileSystem.searchFiles(pDirectory, true, block String each, FileType type
 			if type == FileType.file and FileSystem.pathMatchesPattern(File.new(each).getName(), "*.demccp")
 				try
-					add(loader.load(each))
+					add(loader.load(each, false))
 					
 				catch Exception e
 					console.addError("Failed loading character profile: " + each, e)
@@ -163,32 +164,43 @@ class CharacterProfiles
 			return true
 		end)
 		
+		var Project project = app.getProject()
+		if project != null
+			FileSystem.searchFiles(project.getCharactersDirectory().toString(), true, block String each, FileType type
+				if type == FileType.file and FileSystem.pathMatchesPattern(File.new(each).getName(), "*.demccp")
+					try
+						add(loader.load(each, true))
+						
+					catch Exception e
+						console.addError("Failed loading character profile: " + each, e)
+						return true
+					end
+				end
+				return true
+			end)
+		end
+		
 		pListeners.forEach(block CharacterProfilesListener each
 			each.loadingCharactersFinished(this)
 		end)
 	end
 	
 	/** Reload characters from directory (*.dmcc). */
-	public func void reloadAll()
+	func void reloadAll()
 		removeAll()
 		loadAll()
 	end
 	
 	/** Save characters to directory (*.dmcc). */
-	public func void saveAll()
+	func void saveAll()
 		var LoadCharacterProfile loader = GameApp.getGameApp().getLoadCharacterProfile()
-		var Console console = GameApp.getGameApp().getConsole()
-		var File basePath = File.new(pDirectory)
 		
 		pProfiles.forEach(block CharacterProfile each
-			var String filename = each.getName() + ".demccp"
-			
-			filename = (basePath + filename).getPath()
 			try
-				loader.save(filename, each)
+				loader.save(each.getPathProfile(), each)
 				
 			catch Exception e
-				console.addError("Failed saving character profile: " + each.getName(), e)
+				GameApp.getGameApp().getConsole().addError("Failed saving character profile: " + each.getName(), e)
 			end
 		end)
 	end
@@ -196,7 +208,7 @@ class CharacterProfiles
 	
 	
 	/** Add listener. */
-	public func void addListener(CharacterProfilesListener listener)
+	func void addListener(CharacterProfilesListener listener)
 		if listener == null
 			throw ENullPointer.new("listener")
 		end
@@ -204,7 +216,7 @@ class CharacterProfiles
 	end
 	
 	/** Remove listener. */
-	public func void removeListener(CharacterProfilesListener listener)
+	func void removeListener(CharacterProfilesListener listener)
 		pListeners.remove(listener)
 	end
 end

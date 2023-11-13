@@ -32,21 +32,21 @@ class FileUsageManager
 	
 	
 	
-	private var File pDataDirectory
-	private var Dictionary pFileUsage
-	private var FileUsageManager pParent
-	private var bool pDeleteFiles
-	private var bool pLocked
+	var File pDataDirectory
+	var Dictionary pFileUsage
+	var FileUsageManager pParent
+	var bool pDeleteFiles
+	var bool pLocked
 	
 	
 	
 	/** Create file usage manager. */
-	public func new()
+	func new()
 		pFileUsage = Dictionary.new()
 	end
 	
 	/** Create copy of file usage manager. */
-	public func new(FileUsageManager manager)
+	func new(FileUsageManager manager)
 		pDataDirectory = manager.pDataDirectory
 		pFileUsage = Dictionary.new(manager.pFileUsage)
 		pDeleteFiles = manager.pDeleteFiles
@@ -55,7 +55,7 @@ class FileUsageManager
 	
 	
 	/** Data directory. */
-	public func File getDataDirectory()
+	func File getDataDirectory()
 		if pDataDirectory == null
 			return pParent.getDataDirectory()
 		end
@@ -63,27 +63,27 @@ class FileUsageManager
 	end
 	
 	/** Set data directory. */
-	public func void setDataDirectory(File directory)
+	func void setDataDirectory(File directory)
 		pDataDirectory = directory
 	end
 	
 	/** Delete files if reaching 0 usage count. */
-	public func void setDeleteFiles(bool deleteFiles)
+	func void setDeleteFiles(bool deleteFiles)
 		pDeleteFiles = deleteFiles
 	end
 	
 	/** Lock manager. */
-	public func void setLocked(bool locked)
+	func void setLocked(bool locked)
 		pLocked = locked
 	end
 	
 	/** Parent or null. */
-	public func FileUsageManager getParent()
+	func FileUsageManager getParent()
 		return pParent
 	end
 	
 	/** Set parent or null. */
-	public func void setParent(FileUsageManager parent)
+	func void setParent(FileUsageManager parent)
 		if parent == pParent
 			return
 		end
@@ -100,27 +100,28 @@ class FileUsageManager
 			pFileUsage.forEach(block String key, int value
 				parent.addFileUsage(key, value)
 			end)
+			removeZeroUsageFiles()
 		end
 	end
 	
 	
 	
 	/** Get file usage. */
-	public func int getFileUsage(String file)
+	func int getFileUsage(String file)
 		return pFileUsage.getAt(file, 0) cast int
 	end
 	
 	/** Add file usage. */
-	public func void addFileUsage(String file)
+	func void addFileUsage(String file)
 		addFileUsage(file, 1)
 	end
 	
-	public func void addFileUsage(String file, int count)
+	func void addFileUsage(String file, int count)
 		if file == null
 			throw ENullPointer.new("file")
 		end
-		if count < 1
-			throw EInvalidParam.new("count < 1")
+		if count < 0
+			throw EInvalidParam.new("count < 0")
 		end
 		if pLocked
 			return
@@ -134,16 +135,16 @@ class FileUsageManager
 	end
 	
 	/** Remove file usage. */
-	public func void removeFileUsage(String file)
+	func void removeFileUsage(String file)
 		removeFileUsage(file, 1)
 	end
 	
-	public func void removeFileUsage(String file, int count)
+	func void removeFileUsage(String file, int count)
 		if file == null
 			throw ENullPointer.new("file")
 		end
-		if count < 1
-			throw EInvalidParam.new("count < 1")
+		if count < 0
+			throw EInvalidParam.new("count < 0")
 		end
 		if pLocked
 			return
@@ -157,12 +158,24 @@ class FileUsageManager
 			count = usage
 		end
 		
-		usage -= count
+		pFileUsage.setAt(file, usage - count)
 		
-		if usage > 0
-			pFileUsage.setAt(file, usage)
-			
-		else
+		if pParent != null
+			pParent.removeFileUsage(file, count)
+		end
+	end
+	
+	/** Remove files with 0 usage. */
+	func void removeZeroUsageFiles()
+		var Array files = Array.new()
+		
+		pFileUsage.forEach(block String file, int usage
+			if usage == 0
+				files.add(file)
+			end
+		end)
+		
+		files.forEach(block String file
 			pFileUsage.remove(file)
 			
 			if pDeleteFiles
@@ -171,24 +184,22 @@ class FileUsageManager
 				end
 				var String path = File.new(getDataDirectory(), file).getPath()
 				
-				try
-					FileSystem.deleteFile(path)
-					
-				catch Exception e
-					GameApp.getGameApp().getConsole().addError("Failed deleting 0 usage file: " + path, e)
+				if FileSystem.existsFile(path)
+					try
+						FileSystem.deleteFile(path)
+						
+					catch Exception e
+						GameApp.getGameApp().getConsole().addError("Failed deleting 0 usage file: " + path, e)
+					end
 				end
 			end
-		end
-		
-		if pParent != null
-			pParent.removeFileUsage(file, count)
-		end
+		end)
 	end
 	
 	
 	
 	/** Read from file. */
-	public func void readFromFile(FileReader reader)
+	func void readFromFile(FileReader reader)
 		var int i, count = reader.readUInt()
 		var String key
 		
@@ -201,7 +212,7 @@ class FileUsageManager
 	end
 	
 	/** Write to file. */
-	public func void writeToFile(FileWriter writer)
+	func void writeToFile(FileWriter writer)
 		writer.writeUInt(pFileUsage.getCount())
 		pFileUsage.forEach(block String key, int value
 			writer.writeString8(key)
@@ -212,7 +223,7 @@ class FileUsageManager
 	
 	
 	/** Log. */
-	public func void log(Console console, String info)
+	func void log(Console console, String info)
 		console.addMessage("FileUsageManager: " + info)
 		pFileUsage.forEach(block String key, int value
 			console.addMessage("- " + key + ": " + value)

@@ -47,22 +47,23 @@ class CharacterProfile
 	
 	
 	
-	private var String pName
-	private var CharacterAppearance pAppearance
-	private var CharacterConfigurations pConfigurations
-	private var String pOriginBone
-	private var String pTeleportBone
-	private var float pShoulderLevel
-	private var String pPreviewMove
-	private var BoneAxis pBoneAxis
-	private var float pScale
+	var String pName
+	var CharacterAppearance pAppearance
+	var CharacterConfigurations pConfigurations
+	var String pOriginBone
+	var String pTeleportBone
+	var float pShoulderLevel
+	var String pPreviewMove
+	var BoneAxis pBoneAxis
+	var float pScale
+	var bool pIsProject
 	
-	private var Array pListeners
+	var Array pListeners
 	
 	
 	
 	/** Create character. */
-	public func new(String name)
+	func new(String name)
 		setName(name)
 		
 		pAppearance = CharacterAppearance.new()
@@ -78,7 +79,7 @@ class CharacterProfile
 	end
 	
 	/** Create copy of character. */
-	public func new(String name, CharacterProfile profile)
+	func new(String name, CharacterProfile profile)
 		setName(name)
 		
 		pAppearance = CharacterAppearance.new(profile.pAppearance)
@@ -94,12 +95,13 @@ class CharacterProfile
 		pPreviewMove = profile.pPreviewMove
 		pBoneAxis = profile.pBoneAxis
 		pScale = profile.pScale
+		pIsProject = profile.pIsProject
 		
 		pListeners = Array.new()
 	end
 	
 	/** Dispose of character profile. */
-	public func void dispose()
+	func void dispose()
 		pListeners.removeAll()
 		if pConfigurations != null
 			pConfigurations.dispose()
@@ -109,12 +111,12 @@ class CharacterProfile
 	
 	
 	/** Name of character profile. */
-	public func String getName()
+	func String getName()
 		return pName
 	end
 	
 	/** Set name of character profile. */
-	public func void setName(String name)
+	func void setName(String name)
 		if name == null
 			throw ENullPointer.new("name")
 		end
@@ -126,22 +128,22 @@ class CharacterProfile
 	end
 	
 	/** Appearance. */
-	public func CharacterAppearance getAppearance()
+	func CharacterAppearance getAppearance()
 		return pAppearance
 	end
 	
 	/** Configurations. */
-	public func CharacterConfigurations getConfigurations()
+	func CharacterConfigurations getConfigurations()
 		return pConfigurations
 	end
 	
 	/** Origin bone. */
-	public func String getOriginBone()
+	func String getOriginBone()
 		return pOriginBone
 	end
 	
 	/** Set origin bone. */
-	public func void setOriginBone(String bone)
+	func void setOriginBone(String bone)
 		if bone == null
 			throw ENullPointer.new("bone")
 		end
@@ -149,12 +151,12 @@ class CharacterProfile
 	end
 	
 	/** Teleport bone. */
-	public func String getTeleportBone()
+	func String getTeleportBone()
 		return pTeleportBone
 	end
 	
 	/** Set teleport bone. */
-	public func void setTeleportBone(String bone)
+	func void setTeleportBone(String bone)
 		if bone == null
 			throw ENullPointer.new("bone")
 		end
@@ -162,22 +164,22 @@ class CharacterProfile
 	end
 	
 	/** Shoulder level in meters. */
-	public func float getShoulderLevel()
+	func float getShoulderLevel()
 		return pShoulderLevel
 	end
 	
 	/** Set shoulder level in meters. */
-	public func void setShoulderLevel(float level)
+	func void setShoulderLevel(float level)
 		pShoulderLevel = DEMath.max(level, 0.1)
 	end
 	
 	/** Preview move or empty string. */
-	public func String getPreviewMove()
+	func String getPreviewMove()
 		return pPreviewMove
 	end
 	
 	/** Set preview move or empty string. */
-	public func void setPreviewMove(String move)
+	func void setPreviewMove(String move)
 		if move == null
 			throw ENullPointer.new("move")
 		end
@@ -185,51 +187,66 @@ class CharacterProfile
 	end
 	
 	/** Major bone axis. Used to adjust orientation to match Z-axis. */
-	public func BoneAxis getBoneAxis()
+	func BoneAxis getBoneAxis()
 		return pBoneAxis
 	end
 	
 	/** Set major bone axis. Used to adjust orientation to match Z-axis. */
-	public func void setBoneAxis(BoneAxis boneAxis)
+	func void setBoneAxis(BoneAxis boneAxis)
 		pBoneAxis = boneAxis
 	end
 	
 	/** Scale to apply to adjust for models not using 1m as unit scale. */
-	public func float getScale()
+	func float getScale()
 		return pScale
 	end
 	
 	/** Set scale to apply to adjust for models not using 1m as unit scale. */
-	public func void setScale(float scale)
+	func void setScale(float scale)
 		pScale = DEMath.max(scale, 0.001)
+	end
+	
+	/** Character is project character. */
+	func bool getIsProject()
+		return pIsProject
+	end
+	
+	/** Set if character is project character. */
+	func void setIsProject(bool isProject)
+		pIsProject = isProject
 	end
 	
 	
 	
 	/** Start loading resources. */
-	public func void preloadResources()
+	func void preloadResources()
 		CharacterAppearanceLoader.new(this).preload()
 	end
 	
 	/** Load resources now. */
-	public func void loadResourcesSync()
+	func void loadResourcesSync()
 		CharacterAppearanceLoader.new(this).loadSync()
 	end
 	
 	
 	
 	/** Character profile path. */
-	public func String getPathProfile()
-		return (File.new(GameApp.getGameApp().getCharacterProfiles().getDirectory()) + (pName + ".demccp")).getPath()
+	func String getPathProfile()
+		if pIsProject
+			return (GameApp.getGameApp().getProject().getCharactersDirectory() + (pName + ".demccp")).getPath()
+			
+		else
+			return (File.new(GameApp.getGameApp().getCharacterProfiles().getDirectory()) + (pName + ".demccp")).getPath()
+		end
 	end
 	
 	/** Save character. */
-	public func void save()
+	func void save()
 		GameApp.getGameApp().getLoadCharacterProfile().save(getPathProfile(), this)
 	end
 	
 	/** Delete actor. */
-	public func void delete()
+	func void delete()
 		if FileSystem.existsFile(getPathProfile())
 			FileSystem.deleteFile(getPathProfile())
 		end
@@ -238,7 +255,7 @@ class CharacterProfile
 	
 	
 	/** Bone axis rotation. */
-	static public func Vector boneAxisRotation(BoneAxis axis)
+	static func Vector boneAxisRotation(BoneAxis axis)
 		select axis
 		case BoneAxis.x
 			return Vector.new(0, -90, -90)
@@ -266,7 +283,7 @@ class CharacterProfile
 	
 	
 	/** Add listener. */
-	public func void addListener(CharacterListener listener)
+	func void addListener(CharacterListener listener)
 		if listener == null
 			throw ENullPointer.new("listener")
 		end
@@ -274,19 +291,19 @@ class CharacterProfile
 	end
 	
 	/** Remove listener. */
-	public func void removeListener(CharacterListener listener)
+	func void removeListener(CharacterListener listener)
 		pListeners.remove(listener)
 	end
 	
 	/** Notify listeners character has been calibrated. */
-	public func void notifyCalibrated(CharacterConfiguration config)
+	func void notifyCalibrated(CharacterConfiguration config)
 		pListeners.forEach(block CharacterListener each
 			each.calibrated(this, config)
 		end)
 	end
 	
 	/** Notify listeners character has been reset. */
-	public func void notifyReset(CharacterConfiguration config, bool calibrating)
+	func void notifyReset(CharacterConfiguration config, bool calibrating)
 		pListeners.forEach(block CharacterListener each
 			each.reset(this, config, calibrating)
 		end)
@@ -295,7 +312,7 @@ class CharacterProfile
 	
 	
 	/** Compare character profile for sorting. */
-	public func int compare(Object obj)
+	func int compare(Object obj)
 		if obj castable CharacterProfile
 			return pName.compare((obj cast CharacterProfile).pName)
 		end
@@ -303,7 +320,7 @@ class CharacterProfile
 	end
 	
 	/** String representation. Returns name. */
-	public func String toString()
+	func String toString()
 		return pName
 	end
 end

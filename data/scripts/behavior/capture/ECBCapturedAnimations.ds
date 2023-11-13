@@ -34,7 +34,7 @@ pin Dragengine.Utils
 /**
  * Behavior adding captured animation support to owner element.
  */
-class ECBCapturedAnimations extends DefaultECBehavior
+class ECBCapturedAnimations extends DefaultECBehavior implements BehaviorPrepareStub
 	/** Listener for behavior instance events. */
 	interface Listener
 		/** Record changed. */
@@ -44,21 +44,21 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	/** Default implementation of behavior instance listener. */
 	class DefaultListener implements Listener
 		/** Create default listener. */
-		public func new()
+		func new()
 		end
 		
 		/** Record changed. */
-		public func void recordChanged(Instance instance)
+		func void recordChanged(Instance instance)
 		end
 	end
 	
 	/** Create scene object stub initializer to initialize from activet character. */
 	class InitActiveCharacterSOStub implements ECBSceneObject.SceneObjectStubInitializer
-		public func new()
+		func new()
 		end
 		
 		/** Init scene object stub element. */
-		public func bool initStub(StubElement stub, Window window)
+		func bool initStub(StubElement stub, Window window)
 			var BehaviorElementClass eclass = stub.getClass() cast BehaviorElementClass
 			var ECBCapturedAnimations capturedAnimations = ECBCapturedAnimations.getBehaviorIn(eclass)
 			
@@ -115,15 +115,15 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		class PlaybackSceneChanged extends PlaybackScene.DefaultListener
 			protected var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void timeChanged(PlaybackScene playbackScene, float time)
+			func void timeChanged(PlaybackScene playbackScene, float time)
 				pInstance.updateControllers()
 			end
 			
-			public func float maxPlaytime(PlaybackScene playbackScene)
+			func float maxPlaytime(PlaybackScene playbackScene)
 				return pInstance.getPlaytime()
 			end
 		end
@@ -132,32 +132,32 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		class AnimationsChanged extends DefaultCharacterAnimationsListener
 			protected var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void animationAdded(CharacterAnimations animations, CharacterAnimation animation)
+			func void animationAdded(CharacterAnimations animations, CharacterAnimation animation)
 				pInstance.rebuildAnimator()
 			end
 			
-			public func void animationRemoved(CharacterAnimations animations, CharacterAnimation animation)
+			func void animationRemoved(CharacterAnimations animations, CharacterAnimation animation)
 				pInstance.rebuildAnimator()
 			end
 			
-			public func void animationChanged(CharacterAnimations animations, CharacterAnimation animation)
+			func void animationChanged(CharacterAnimations animations, CharacterAnimation animation)
 				pInstance.rebuildAnimator()
 			end
 			
-			public func void allAnimationsRemoved(CharacterAnimations animations)
+			func void allAnimationsRemoved(CharacterAnimations animations)
 				pInstance.rebuildAnimator()
 			end
 		end
 		
 		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
-			public func new(Instance instance) super(instance, "ECBCapturedAnimations")
+			func new(Instance instance) super(instance, "ECBCapturedAnimations")
 			end
 			
-			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+			func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
 				return Gui.WMPSOCapturedAnimations.new(panelProject, getId())
 			end
 		end
@@ -185,7 +185,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBCapturedAnimations ecbehavior, BehaviorElement element) super(element)
+		func new(ECBCapturedAnimations ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pAnimatorInstances = Array.new()
 			pPlaybackControllers = Array.new()
@@ -204,7 +204,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		end
 		
 		/** Init behavior instance. */
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			pActorProfile = pECBehavior.actorProfile.getValue(stub)
 			pCharacterProfile = pECBehavior.characterProfile.getValue(stub)
 			pCaptureTarget = pECBehavior.captureTarget.getEnumeration() cast CaptureTarget
@@ -220,7 +220,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		end
 		
 		/** Dispose of behavior instance. */
-		public func void dispose()
+		func void dispose()
 			if pAnimations != null
 				pAnimations.dispose()
 				pAnimations = null
@@ -237,36 +237,36 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		
 		
 		/** Behavior. */
-		public func ECBCapturedAnimations getECBehavior()
+		func ECBCapturedAnimations getECBehavior()
 			return pECBehavior
 		end
 		
 		/** Component behavior instance. */
-		public func ECBehaviorComponent.Instance getComponent()
+		func ECBehaviorComponent.Instance getComponent()
 			return pComponent
 		end
 		
 		/** Actor profile name. */
-		public func String getActorProfile()
+		func String getActorProfile()
 			return pActorProfile
 		end
 		
 		/** Character profile name. */
-		public func String getCharacterProfile()
+		func String getCharacterProfile()
 			return pCharacterProfile
 		end
 		
 		/** Capture target. */
-		public func CaptureTarget getCaptureTarget()
+		func CaptureTarget getCaptureTarget()
 			return pCaptureTarget
 		end
 		
 		/** Record. */
-		public func bool getRecord()
+		func bool getRecord()
 			return pRecord
 		end
 		
-		public func void setRecord(bool record)
+		func void setRecord(bool record)
 			if record == pRecord
 				return
 			end
@@ -280,11 +280,11 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		end
 		
 		/** Record object. */
-		public func bool getRecordObject()
+		func bool getRecordObject()
 			return pRecordObject
 		end
 		
-		public func void setRecordObject(bool record)
+		func void setRecordObject(bool record)
 			if record == pRecordObject
 				return
 			end
@@ -298,26 +298,26 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		end
 		
 		/** Name for new animations. */
-		public func String getAnimationName()
+		func String getAnimationName()
 			return pAnimationName
 		end
 		
 		
 		
 		/** Animations. */
-		public func CharacterAnimations getAnimations()
+		func CharacterAnimations getAnimations()
 			return pAnimations
 		end
 		
 		/** Maximum playtime in seconds of all animations. */
-		public func float getPlaytime()
+		func float getPlaytime()
 			return pPlaytime
 		end
 		
 		
 		
 		/** Rebuild animator. */
-		public func void rebuildAnimator()
+		func void rebuildAnimator()
 			pPlaybackControllers.removeAll()
 			pAnimatorInstances.removeAll()
 			pPlaytime = 0
@@ -335,7 +335,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		end
 		
 		/** Disable active character animation playback. */
-		public func void disableActiveAnimationPlayback()
+		func void disableActiveAnimationPlayback()
 			var CharacterAnimation canimation = pAnimations.getActive()
 			if canimation == null
 				return
@@ -356,7 +356,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		end
 		
 		/** Update controllers. */
-		public func void updateControllers()
+		func void updateControllers()
 			var float time = GameApp.getGameApp().getPlaybackScene().getTime()
 			pPlaybackControllers.forEach(block AnimatorController each
 				each.setValue(time)
@@ -364,7 +364,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		end
 		
 		/** Apply animators. */
-		public func void applyAnimators()
+		func void applyAnimators()
 			pAnimatorInstances.forEach(block AnimatorInstance each
 				each.apply()
 			end)
@@ -388,7 +388,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		
 		
 		/** Add listener. */
-		public func void addListener(Listener listener)
+		func void addListener(Listener listener)
 			if listener == null
 				throw ENullPointer.new("listener")
 			end
@@ -396,14 +396,14 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		end
 		
 		/** Remove listener. */
-		public func void removeListener(Listener listener)
+		func void removeListener(Listener listener)
 			pListeners.remove(listener)
 		end
 		
 		
 		
 		/** Add to game world. Ensure animation instance are prepared. */
-		public func void addToGameWorld()
+		func void addToGameWorld()
 			var GameApp app = GameApp.getGameApp()
 			
 			var Project project = app.getProject()
@@ -420,12 +420,12 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		end
 		
 		/** Remove from game world. */
-		public func void removeFromGameWorld()
+		func void removeFromGameWorld()
 			GameApp.getGameApp().getPlaybackScene().removeListener(pPlaybackSceneChanged)
 		end
 		
 		/** Frame update. */
-		public func void think(float elapsed)
+		func void think(float elapsed)
 			applyAnimators()
 		end
 		
@@ -568,7 +568,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		
 		
 		/** Read from file. */
-		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+		func void readFromFile(PersistencyEnvironment env, FileReader reader)
 			select reader.readByte()
 			case 0
 				readFromFileBase(env, reader)
@@ -604,7 +604,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		end
 		
 		/** Write to file. */
-		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+		func void writeToFile(PersistencyEnvironment env, FileWriter writer)
 			writer.writeByte(1) // version
 			
 			var PersistencyFlags flags = PersistencyFlags.new(2)
@@ -638,7 +638,7 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
 	ECBehaviorComponent component, ECBehaviorCollider collider) super(eclass)
 		var String prefix = "capturedAnimations."
 		
@@ -646,29 +646,19 @@ class ECBCapturedAnimations extends DefaultECBehavior
 		pComponent = component
 		pCollider = collider
 		
-		actorProfile = ECPString.new(prefix + "actorProfile", "")
-		eclass.addProperty(actorProfile)
-		
-		characterProfile = ECPString.new(prefix + "characterProfile", "")
-		eclass.addProperty(characterProfile)
-		
-		captureTarget = ECPEnumeration.new(prefix + "captureTarget", CaptureTarget.all(), CaptureTarget.object)
-		eclass.addProperty(captureTarget)
-		
-		record = ECPBoolean.new(prefix + "record", false)
-		eclass.addProperty(record)
-		
-		recordObject = ECPBoolean.new(prefix + "recordObject", false)
-		eclass.addProperty(recordObject)
-		
-		animationName = ECPString.new(prefix + "animationName", "Object")
-		eclass.addProperty(animationName)
+		eclass.addProperty(actorProfile = ECPString.new(prefix + "actorProfile", ""))
+		eclass.addProperty(characterProfile = ECPString.new(prefix + "characterProfile", ""))
+		eclass.addProperty(captureTarget = ECPEnumeration.new(prefix + "captureTarget", CaptureTarget.all(), CaptureTarget.object))
+		eclass.addProperty(record = ECPBoolean.new(prefix + "record", false))
+		eclass.addProperty(recordObject = ECPBoolean.new(prefix + "recordObject", false))
+		eclass.addProperty(animationName = ECPString.new(prefix + "animationName", "Object"))
 		
 		eclass.addBehavior(this)
+		eclass.addPrepareStubBehavior(this)
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		behaviorGuiPanels = null
 		pComponent = null
 		pCollider = null
@@ -678,33 +668,33 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	
 	
 	/** Component behavior. */
-	public func ECBehaviorComponent getComponent()
+	func ECBehaviorComponent getComponent()
 		return pComponent
 	end
 	
 	/** Collider behavior. */
-	public func ECBehaviorCollider getCollider()
+	func ECBehaviorCollider getCollider()
 		return pCollider
 	end
 	
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance(BehaviorElement element)
+	func Instance instance(BehaviorElement element)
 		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
 	end
 	
 	
 	
 	/** Get instance for element or null. */
-	static public func Instance getInstanceIn(BehaviorElement element)
+	static func Instance getInstanceIn(BehaviorElement element)
 		return element.findInstance(block Instance each
 			return true
 		end) cast Instance
 	end
 	
 	/** Get behavior in element class or null if absent. */
-	static public func ECBCapturedAnimations getBehaviorIn(BehaviorElementClass eclass)
+	static func ECBCapturedAnimations getBehaviorIn(BehaviorElementClass eclass)
 		return eclass.findBehavior(block ECBCapturedAnimations each
 			return true
 		end) cast ECBCapturedAnimations
@@ -713,7 +703,54 @@ class ECBCapturedAnimations extends DefaultECBehavior
 	
 	
 	/** Create behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
+	end
+	
+	
+	
+	/**
+	 * \brief Prepare stub.
+	 * 
+	 * Called by BehaviorElementClass.createAndAddElement() with loading set to false and
+	 * BehaviorElementClass.loadAndAddElement() with loading set to true.
+	 */
+	func void prepareStub(StubElement stub, GameWorld gameWorld, bool loading)
+		if loading
+			loadingUpdatePath(stub)
+		end
+	end
+	
+	/** Update path from captured character or object. */
+	func void loadingUpdatePath(StubElement stub)
+		var GameApp app = GameApp.getGameApp()
+		
+		var String profileName = stub.getPropertyValueFor(characterProfile.getName(), null)
+		if profileName != null
+			var CharacterProfile profile = app.getCharacterProfiles().getNamed(profileName)
+			if profile != null
+				// update stub with appearance information
+				var CharacterAppearance appearance = profile.getAppearance()
+				stub.setPropertyValueFor(pComponent.getComponent().getModel().getName(), appearance.getPathModel())
+				stub.setPropertyValueFor(pComponent.getComponent().getSkin().getName(), appearance.getPathSkin())
+				stub.setPropertyValueFor(pComponent.getComponent().getRig().getName(), appearance.getPathRig())
+			end
+		end
+		
+		// verify file is still present. if not replace it. prevents problems in certain migration cases
+		var String path = stub.getPropertyValueFor(pComponent.getComponent().getModel().getName(), null)
+		if path != null and not FileSystem.existsFile(path)
+			stub.setPropertyValueFor(pComponent.getComponent().getModel().getName(), "/content/models/unknownObject/object.demodel")
+		end
+		
+		path = stub.getPropertyValueFor(pComponent.getComponent().getSkin().getName(), null)
+		if path != null and not FileSystem.existsFile(path)
+			stub.setPropertyValueFor(pComponent.getComponent().getSkin().getName(), "/content/models/unknownObject/object.deskin")
+		end
+		
+		path = stub.getPropertyValueFor(pComponent.getComponent().getRig().getName(), null)
+		if path != null and not FileSystem.existsFile(path)
+			stub.setPropertyValueFor(pComponent.getComponent().getRig().getName(), "/content/models/unknownObject/object.derig")
+		end
 	end
 end

@@ -37,10 +37,10 @@ pin Dragengine.Scenery
 class WMPanelCharacter extends Panel
 	/** Actor profile list element renderer. */
 	class ActorProfileRenderer extends DefaultListElementRenderer
-		public func new()
+		func new()
 		end
 		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
 			var String text = String.new(' ', 20)
 			if element != null
 				text = (element cast ActorProfile).getName()
@@ -53,15 +53,15 @@ class WMPanelCharacter extends Panel
 	class ActorProfileSelection extends DefaultListModelListener
 		protected var WMPanelCharacter pWindow
 		
-		public func new(WMPanelCharacter window)
+		func new(WMPanelCharacter window)
 			pWindow = window
 		end
 		
-		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+		func void contentChanged(ListModel model, int fromIndex, int toIndex)
 			selectionChanged(model)
 		end
 		
-		public func void selectionChanged(ListModel model)
+		func void selectionChanged(ListModel model)
 			var int index = model.getSelected()
 			if index != -1
 				pWindow.setActorProfile(model.getAt(index) cast ActorProfile)
@@ -74,15 +74,30 @@ class WMPanelCharacter extends Panel
 	
 	/** Character profile list element renderer. */
 	class CharacterProfileRenderer extends DefaultListElementRenderer
-		public func new()
+		func new()
+			setDesignerSelector("Label.ListRenderer.CharacterSelection")
 		end
 		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
-			var String text = String.new(' ', 20)
-			if element != null
-				text = (element cast CharacterProfile).getName()
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var CharacterProfile profile = element cast CharacterProfile
+			var Label label = renderer cast Label
+			var String selector = getDesignerSelector()
+			
+			if selected
+				selector = selector + ".Selected"
 			end
-			super.updateRenderer(listBox, renderer, text, selected, focused)
+			if profile != null and not profile.getIsProject()
+				selector = selector + ".Global"
+			end
+			
+			label.setDesignerSelector(selector)
+			
+			if profile == null
+				label.setText(String.new(' ', 20))
+				
+			else
+				label.setText(profile.getName())
+			end
 		end
 	end
 	
@@ -90,16 +105,16 @@ class WMPanelCharacter extends Panel
 	class CharacterProfileSelection extends DefaultListModelListener
 		protected var WMPanelCharacter pWindow
 		
-		public func new(WMPanelCharacter window)
+		func new(WMPanelCharacter window)
 			pWindow = window
 		end
 		
-		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+		func void contentChanged(ListModel model, int fromIndex, int toIndex)
 			pWindow.updateCharacterConfigurations()
 			selectionChanged(model)
 		end
 		
-		public func void selectionChanged(ListModel model)
+		func void selectionChanged(ListModel model)
 			var int index = model.getSelected()
 			if index != -1
 				pWindow.setCharacterProfile(model.getAt(index) cast CharacterProfile)
@@ -112,10 +127,10 @@ class WMPanelCharacter extends Panel
 	
 	/** Character configuration list element renderer. */
 	class CharacterConfigurationRenderer extends DefaultListElementRenderer
-		public func new()
+		func new()
 		end
 		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
 			var String text = String.new(' ', 20)
 			if element != null
 				text = (element cast CharacterConfiguration).getName()
@@ -128,15 +143,15 @@ class WMPanelCharacter extends Panel
 	class CharacterConfigurationSelection extends DefaultListModelListener
 		protected var WMPanelCharacter pWindow
 		
-		public func new(WMPanelCharacter window)
+		func new(WMPanelCharacter window)
 			pWindow = window
 		end
 		
-		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+		func void contentChanged(ListModel model, int fromIndex, int toIndex)
 			selectionChanged(model)
 		end
 		
-		public func void selectionChanged(ListModel model)
+		func void selectionChanged(ListModel model)
 			var int index = model.getSelected()
 			if index != -1
 				pWindow.setCharacterConfiguration(model.getAt(index) cast CharacterConfiguration)
@@ -151,19 +166,19 @@ class WMPanelCharacter extends Panel
 	class ListenActorProfiles extends DefaultActorProfilesListener
 		protected var WMPanelCharacter pWindow
 		
-		public func new(WMPanelCharacter window)
+		func new(WMPanelCharacter window)
 			pWindow = window
 		end
 		
-		public func void profileAdded(ActorProfiles profiles, ActorProfile profile)
+		func void profileAdded(ActorProfiles profiles, ActorProfile profile)
 			pWindow.updateActorProfiles()
 		end
 		
-		public func void profileRemoved(ActorProfiles profiles, ActorProfile profile)
+		func void profileRemoved(ActorProfiles profiles, ActorProfile profile)
 			pWindow.updateActorProfiles()
 		end
 		
-		public func void allProfilesRemoved(ActorProfiles profiles)
+		func void allProfilesRemoved(ActorProfiles profiles)
 			pWindow.updateActorProfiles()
 		end
 	end
@@ -172,23 +187,23 @@ class WMPanelCharacter extends Panel
 	class ListenCharacterProfiles extends DefaultCharacterProfilesListener
 		protected var WMPanelCharacter pWindow
 		
-		public func new(WMPanelCharacter window)
+		func new(WMPanelCharacter window)
 			pWindow = window
 		end
 		
-		public func void profileAdded(CharacterProfiles profiles, CharacterProfile profile)
+		func void profileAdded(CharacterProfiles profiles, CharacterProfile profile)
 			pWindow.updateCharacterProfiles()
 		end
 		
-		public func void profileRemoved(CharacterProfiles profiles, CharacterProfile profile)
+		func void profileRemoved(CharacterProfiles profiles, CharacterProfile profile)
 			pWindow.updateCharacterProfiles()
 		end
 		
-		public func void allProfilesRemoved(CharacterProfiles profiles)
+		func void allProfilesRemoved(CharacterProfiles profiles)
 			pWindow.updateCharacterProfiles()
 		end
 		
-		public func void loadingCharactersFinished(CharacterProfiles profiles)
+		func void loadingCharactersFinished(CharacterProfiles profiles)
 			pWindow.onLoadingCharactersFinished()
 		end
 	end
@@ -197,19 +212,19 @@ class WMPanelCharacter extends Panel
 	class ListenCharacterConfigurations extends DefaultCharacterConfigurationsListener
 		protected var WMPanelCharacter pWindow
 		
-		public func new(WMPanelCharacter window)
+		func new(WMPanelCharacter window)
 			pWindow = window
 		end
 		
-		public func void configurationAdded(CharacterConfigurations configurations, CharacterConfiguration configuration)
+		func void configurationAdded(CharacterConfigurations configurations, CharacterConfiguration configuration)
 			pWindow.updateCharacterConfigurations()
 		end
 		
-		public func void configurationRemoved(CharacterConfigurations configurations, CharacterConfiguration configuration)
+		func void configurationRemoved(CharacterConfigurations configurations, CharacterConfiguration configuration)
 			pWindow.updateCharacterConfigurations()
 		end
 		
-		public func void allConfigurationsRemoved(CharacterConfigurations configurations)
+		func void allConfigurationsRemoved(CharacterConfigurations configurations)
 			pWindow.updateCharacterConfigurations()
 		end
 	end
@@ -218,11 +233,11 @@ class WMPanelCharacter extends Panel
 	class ActorProfilePopupAction extends DefaultActionListener
 		private var WMPanelCharacter pPanel
 		
-		public func new(WMPanelCharacter panel)
+		func new(WMPanelCharacter panel)
 			pPanel = panel
 		end
 		
-		public func void onAction(ActionEvent event)
+		func void onAction(ActionEvent event)
 			var Widget widget = event.getSource() cast Widget
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
@@ -258,17 +273,21 @@ class WMPanelCharacter extends Panel
 	class CharacterProfilePopupAction extends DefaultActionListener
 		private var WMPanelCharacter pPanel
 		
-		public func new(WMPanelCharacter panel)
+		func new(WMPanelCharacter panel)
 			pPanel = panel
 		end
 		
-		public func void onAction(ActionEvent event)
+		func void onAction(ActionEvent event)
 			var Widget widget = event.getSource() cast Widget
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
 			
 			menu.addWidget(MenuItemCommand.new("Add Character...", BlockActionListener.new(block ActionEvent event
-				pPanel.addCharacterProfile()
+				pPanel.addCharacterProfile(true)
+			end)))
+			
+			menu.addWidget(MenuItemCommand.new("Add Global Character...", BlockActionListener.new(block ActionEvent event
+				pPanel.addCharacterProfile(false)
 			end)))
 			
 			menu.addWidget(MenuItemCommand.new("Duplicate Character...", BlockActionListener.new(block ActionEvent event
@@ -302,11 +321,11 @@ class WMPanelCharacter extends Panel
 	class CharacterConfigurationPopupAction extends DefaultActionListener
 		private var WMPanelCharacter pPanel
 		
-		public func new(WMPanelCharacter panel)
+		func new(WMPanelCharacter panel)
 			pPanel = panel
 		end
 		
-		public func void onAction(ActionEvent event)
+		func void onAction(ActionEvent event)
 			var Widget widget = event.getSource() cast Widget
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
@@ -348,7 +367,7 @@ class WMPanelCharacter extends Panel
 	
 	
 	/** Create character panel. */
-	public func new(bool inVR, String prefixUIOptions)
+	func new(bool inVR, String prefixUIOptions)
 		pInVR = inVR
 		pPrefixUIOptions = prefixUIOptions + "/WMPanelCharacter"
 		
@@ -373,7 +392,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Dispose of widget. */
-	public func void dispose()
+	func void dispose()
 		setCharacterProfile(null)
 		setActorProfile(null)
 		
@@ -388,16 +407,16 @@ class WMPanelCharacter extends Panel
 	
 	
 	/** Shown in VR. */
-	public func bool getInVR()
+	func bool getInVR()
 		return pInVR
 	end
 	
-	public func String getPrefixUIOptions()
+	func String getPrefixUIOptions()
 		return pPrefixUIOptions
 	end
 	
 	/** After startup finished. */
-	public func void onLoadingCharactersFinished()
+	func void onLoadingCharactersFinished()
 		if pModelCharacterProfiles.getCount() > 0
 			pModelCharacterProfiles.setSelected(0)
 		end
@@ -406,12 +425,12 @@ class WMPanelCharacter extends Panel
 	
 	
 	/** Selected actor profile or null. */
-	public func ActorProfile getActorProfile()
+	func ActorProfile getActorProfile()
 		return pActorProfile
 	end
 	
 	/** Set selected actor profile or null. */
-	public func void setActorProfile(ActorProfile profile)
+	func void setActorProfile(ActorProfile profile)
 		if profile == pActorProfile
 			return
 		end
@@ -420,7 +439,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Update actor profiles model. */
-	public func void updateActorProfiles()
+	func void updateActorProfiles()
 		var ActorProfile profile = pActorProfile
 		
 		pModelActorProfiles.setContent(GameApp.getGameApp().getActorProfiles().toArray().sorted())
@@ -433,7 +452,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Add actor profile. */
-	public func void addActorProfile()
+	func void addActorProfile()
 		WindowDialog.input(getWindow(), "Add Actor Profile", "Profile Name:", null, "Actor",\
 			null, null, WindowDialog.BlockResultListener.new(block String result
 				if result != null
@@ -455,7 +474,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Duplicate actor profile. */
-	public func void duplicateActorProfile()
+	func void duplicateActorProfile()
 		if pActorProfile == null
 			return
 		end
@@ -482,7 +501,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Remove actor profile. */
-	public func void removeActorProfile()
+	func void removeActorProfile()
 		if pActorProfile == null
 			return
 		end
@@ -501,7 +520,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Edit actor profile. */
-	public func void editActorProfile()
+	func void editActorProfile()
 		if pActorProfile == null
 			return
 		end
@@ -513,25 +532,28 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Browse actor profiles in overlay directory. */
-	public func void browseActorProfiles()
+	func void browseActorProfiles()
 		FileSystem.browseConfig(GameApp.getGameApp().getActorProfiles().getDirectory())
 	end
 	
 	
 	
 	/** Selected character profile or null. */
-	public func CharacterProfile getCharacterProfile()
+	func CharacterProfile getCharacterProfile()
 		return pCharacterProfile
 	end
 	
 	/** Set selected character profile or null. */
-	public func void setCharacterProfile(CharacterProfile profile)
+	func void setCharacterProfile(CharacterProfile profile)
 		if profile == pCharacterProfile
 			return
 		end
 		
 		if pCharacterProfile != null
-			pCharacterProfile.getConfigurations().removeListener(pListenCharacterConfigurations)
+			try
+				pCharacterProfile.getConfigurations().removeListener(pListenCharacterConfigurations)
+			catch Exception e
+			end
 		end
 		
 		pCharacterProfile = profile
@@ -544,7 +566,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Update character profiles model. */
-	public func void updateCharacterProfiles()
+	func void updateCharacterProfiles()
 		var CharacterProfile profile = pCharacterProfile
 		
 		pModelCharacterProfiles.setContent(GameApp.getGameApp().getCharacterProfiles().toArray().sorted())
@@ -556,7 +578,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Add character profile. */
-	public func void addCharacterProfile()
+	func void addCharacterProfile(bool inProject)
 		WindowDialog.input(getWindow(), "Add Character Profile", "Profile Name:", null, "Character",\
 			null, null, WindowDialog.BlockResultListener.new(block String result
 				if result != null
@@ -568,6 +590,7 @@ class WMPanelCharacter extends Panel
 						
 					else
 						var CharacterProfile profile = CharacterProfile.new(result)
+						profile.setIsProject(inProject)
 						profile.save()
 						profiles.add(profile)
 						pModelCharacterProfiles.setSelected(pModelCharacterProfiles.indexOf(profile))
@@ -578,7 +601,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Duplicate character profile. */
-	public func void duplicateCharacterProfile()
+	func void duplicateCharacterProfile()
 		if pCharacterProfile == null
 			return
 		end
@@ -605,7 +628,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Remove character profile. */
-	public func void removeCharacterProfile()
+	func void removeCharacterProfile()
 		if pCharacterProfile == null
 			return
 		end
@@ -624,7 +647,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Edit character profile. */
-	public func void editCharacterProfile()
+	func void editCharacterProfile()
 		if pCharacterProfile != null
 			WindowCharacterProfile.new(getWindow(), pInVR, pCharacterProfile,\
 				WindowDialog.BlockResultListener.new(block bool accepted
@@ -634,24 +657,24 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Browse character profiles in overlay directory. */
-	public func void browseCharacterProfiles()
-		FileSystem.browseConfig(GameApp.getGameApp().getCharacterProfiles().getDirectory())
+	func void browseCharacterProfiles()
+		FileSystem.browseConfig(GameApp.getGameApp().getProject().getCharactersDirectory().toString())
 	end
 	
 	/** Browse character models in overlay directory. */
-	public func void browseCharacterModels()
+	func void browseCharacterModels()
 		FileSystem.browseOverlay("/content/models/characters")
 	end
 	
 	
 	
 	/** Selected character configuration or null. */
-	public func CharacterConfiguration getCharacterConfiguration()
+	func CharacterConfiguration getCharacterConfiguration()
 		return pCharacterConfiguration
 	end
 	
 	/** Set selected character configuration or null. */
-	public func void setCharacterConfiguration(CharacterConfiguration configuration)
+	func void setCharacterConfiguration(CharacterConfiguration configuration)
 		if configuration == pCharacterConfiguration
 			return
 		end
@@ -660,7 +683,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Selected character configuration or null. */
-	public func CharacterConfiguration getSelectedCharacterConfiguration()
+	func CharacterConfiguration getSelectedCharacterConfiguration()
 		var int index = pModelCharacterConfigurations.getSelected()
 		if index != -1
 			return pModelCharacterConfigurations.getAt(index) cast CharacterConfiguration
@@ -669,7 +692,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Update character configurations model. */
-	public func void updateCharacterConfigurations()
+	func void updateCharacterConfigurations()
 		var CharacterConfiguration selected = getSelectedCharacterConfiguration()
 		
 		if pCharacterProfile != null
@@ -686,7 +709,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Add character configuration. */
-	public func void addCharacterConfiguration()
+	func void addCharacterConfiguration()
 		if pCharacterProfile == null
 			return
 		end
@@ -712,7 +735,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Duplicate character configuration. */
-	public func void duplicateCharacterConfiguration()
+	func void duplicateCharacterConfiguration()
 		if pCharacterConfiguration == null or pCharacterProfile == null
 			return
 		end
@@ -740,7 +763,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Remove character configuration. */
-	public func void removeCharacterConfiguration()
+	func void removeCharacterConfiguration()
 		if pCharacterConfiguration == null or pCharacterProfile == null
 			return
 		end
@@ -759,7 +782,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Edit character configuration. */
-	public func void editCharacterConfiguration()
+	func void editCharacterConfiguration()
 		if pCharacterConfiguration != null and pCharacterProfile !=  null
 			WindowCharacterConfiguration.new(getWindow(), pInVR, pCharacterConfiguration,\
 				WindowDialog.BlockResultListener.new(block bool accepted
@@ -769,7 +792,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Activate selected character configuration if present. */
-	public func void activateCharacterConfiguration()
+	func void activateCharacterConfiguration()
 		if pActorProfile == null
 			WindowDialog.message(getWindow(), "Activate Configuration", "No actor selected", null, null, null)
 			return
@@ -784,12 +807,12 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Deactivate character configuration if present. */
-	public func void deactivateCharacterConfiguration()
+	func void deactivateCharacterConfiguration()
 		GameApp.getGameApp().getWorldSpawnCharacter().setCharacter(null)
 	end
 	
 	/** Calibrate character. */
-	public func void calibrateCharacter()
+	func void calibrateCharacter()
 		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
 		if actor == null
 			return
@@ -802,7 +825,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Recalibrate character. */
-	public func void recalibrateCharacter()
+	func void recalibrateCharacter()
 		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
 		if actor == null
 			return
@@ -827,7 +850,7 @@ class WMPanelCharacter extends Panel
 	end
 	
 	/** Reset character. */
-	public func void resetCharacter()
+	func void resetCharacter()
 		var WorldSpawnCharacter wsc = GameApp.getGameApp().getWorldSpawnCharacter()
 		var CharacterConfiguration character = wsc.getCharacter()
 		if character == null or not character.isCalibrated() or not character.hasElementClass()

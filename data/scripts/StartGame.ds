@@ -44,7 +44,7 @@ class StartGame extends WindowGameWorld.Loader
 		pProject = project
 		pScene = scene
 		
-		setPathWorld(scene.getPathWorld())
+		setPathWorld(File.absolutePath(scene.getPathWorld(), project.getDataDirectory().toString()).getPath())
 		
 		// load initial data from save state
 		if scene.getSaveState() != null
@@ -92,6 +92,34 @@ class StartGame extends WindowGameWorld.Loader
 	/** Create game world. */
 	protected func GameWorld createGameWorld()
 		return MoCapGameWorld.new(pProject, pScene)
+	end
+	
+	/** Extend base class implementation to remap path. */
+	protected func void worldStoreNextIDAndRemapEntry()
+		super.worldStoreNextIDAndRemapEntry()
+		remapPropertyPath()
+	end
+	
+	/** Relap properties with path inside. */
+	protected func void remapPropertyPath()
+		var String remapPath = getStubWorld().getPropertyValueFor("democap.remapPropertyPath", "")
+		if remapPath.empty()
+			return
+		end
+		
+		var File basePath = File.new(getPathWorld()).getParent()
+		var int remapPathCut = remapPath.getLength()
+		var String value
+		
+		getStubWorld().forEachElement(block StubElement stub
+			stub.getPropertyKeys().forEach(block String key
+				value = stub.getPropertyValueFor(key, null)
+				
+				if value.startsWith(remapPath)
+					stub.setPropertyValueFor(key, (basePath + value.substring(remapPathCut)).toString())
+				end
+			end)
+		end)
 	end
 	
 	/** Loading world finished successfully. */
