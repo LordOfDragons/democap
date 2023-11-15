@@ -60,35 +60,35 @@ class PlaybackScene
 	/** Default listener implementation. */
 	class DefaultListener implements Listener
 		/** Create listener. */
-		public func new()
+		func new()
 		end
 		
 		/** Start playback. */
-		public func void startPlayback(PlaybackScene playbackScene)
+		func void startPlayback(PlaybackScene playbackScene)
 		end
 		
 		/** Stop playback. */
-		public func void stopPlayback(PlaybackScene playbackScene)
+		func void stopPlayback(PlaybackScene playbackScene)
 		end
 		
 		/** Pause playback. */
-		public func void pausePlayback(PlaybackScene playbackScene)
+		func void pausePlayback(PlaybackScene playbackScene)
 		end
 		
 		/** Playback update. */
-		public func void timeChanged(PlaybackScene playbackScene, float time)
+		func void timeChanged(PlaybackScene playbackScene, float time)
 		end
 		
 		/** Playtime changed. */
-		public func void playtimeChanged(PlaybackScene playbackScene, float playtime)
+		func void playtimeChanged(PlaybackScene playbackScene, float playtime)
 		end
 		
 		/** Speed changed. */
-		public func void speedChanged(PlaybackScene playbackScene, float speed)
+		func void speedChanged(PlaybackScene playbackScene, float speed)
 		end
 		
 		/** Maximum playtime. */
-		public func float maxPlaytime(PlaybackScene playbackScene)
+		func float maxPlaytime(PlaybackScene playbackScene)
 			return 0
 		end
 	end
@@ -102,17 +102,17 @@ class PlaybackScene
 	
 	
 	
-	private var float pPlaytime
-	private var float pTime
-	private var State pState
-	private var float pSpeed
-	private var Array pListeners
-	private var bool pBackwards
+	var float pPlaytime
+	var float pTime
+	var State pState
+	var float pSpeed
+	var Array pListeners
+	var bool pBackwards
 	
 	
 	
 	/** Create instance. */
-	public func new()
+	func new()
 		pListeners = Array.new()
 		pPlaytime = 0
 		pTime = 0
@@ -124,17 +124,17 @@ class PlaybackScene
 	
 	
 	/** Play time in seconds. */
-	public func float getPlaytime()
+	func float getPlaytime()
 		return pPlaytime
 	end
 	
 	/** Current playback time in seconds. */
-	public func float getTime()
+	func float getTime()
 		return pTime
 	end
 	
 	/** Set current playback time in seconds. */
-	public func void setTime(float time)
+	func void setTime(float time)
 		pTime = DEMath.clamp(time, 0.0, pPlaytime)
 		
 		pListeners.forEach(block Listener each
@@ -143,17 +143,17 @@ class PlaybackScene
 	end
 	
 	/** Playback state. */
-	public func State getState()
+	func State getState()
 		return pState
 	end
 	
 	/** Play speed. */
-	public func float getSpeed()
+	func float getSpeed()
 		return pSpeed
 	end
 	
 	/** Set play speed. */
-	public func void setSpeed(float speed)
+	func void setSpeed(float speed)
 		var float speed = DEMath.clamp(speed, 0.05, 20.0)
 		if DEMath.fabs(speed - pSpeed) < 0.01
 			return
@@ -167,29 +167,29 @@ class PlaybackScene
 	end
 	
 	/** Play backwards. */
-	public func bool getBackwards()
+	func bool getBackwards()
 		return pBackwards
 	end
 	
 	
 	
 	/** Stopped. */
-	public func bool isStopped()
+	func bool isStopped()
 		return pState == State.stopped
 	end
 	
 	/** Playing back. */
-	public func bool isPlaying()
+	func bool isPlaying()
 		return pState == State.playing
 	end
 	
 	/** Paused. */
-	public func bool isPaused()
+	func bool isPaused()
 		return pState == State.paused
 	end
 	
 	/** Start playback if stopped or paused. */
-	public func void play(bool backwards)
+	func void play(bool backwards)
 		if pState == State.playing and backwards == pBackwards
 			return
 		end
@@ -203,7 +203,7 @@ class PlaybackScene
 	end
 	
 	/** Pause playback if playing. */
-	public func void pause()
+	func void pause()
 		if pState != State.playing
 			return
 		end
@@ -216,7 +216,7 @@ class PlaybackScene
 	end
 	
 	/** Stop playback if playing or paused and rewinds to the beginning. */
-	public func void stop()
+	func void stop()
 		if pState == State.stopped
 			return
 		end
@@ -231,7 +231,7 @@ class PlaybackScene
 	end
 	
 	/** Rewind to beginning. */
-	public func void rewind()
+	func void rewind()
 		if pTime == 0
 			return
 		end
@@ -240,7 +240,7 @@ class PlaybackScene
 	end
 	
 	/** Forward to end. */
-	public func void forwardEnd()
+	func void forwardEnd()
 		if pTime == pPlaytime
 			return
 		end
@@ -255,19 +255,19 @@ class PlaybackScene
 	
 	
 	/** Add listener. */
-	public func void addListener(Listener listener)
+	func void addListener(Listener listener)
 		pListeners.add(listener)
 	end
 	
 	/** Remove listener. */
-	public func void removeListener(Listener listener)
+	func void removeListener(Listener listener)
 		pListeners.remove(listener)
 	end
 	
 	
 	
 	/** Frame update. */
-	public func void update(float elapsed)
+	func void update(float elapsed)
 		if pState != State.playing
 			return
 		end
@@ -289,7 +289,7 @@ class PlaybackScene
 	end
 	
 	/** Update playtime. */
-	public func void updatePlaytime()
+	func void updatePlaytime()
 		var float playtime = pListeners.inject(0.0, block float result, Listener listener
 			return DEMath.max(result, listener.maxPlaytime(this))
 		end) cast float

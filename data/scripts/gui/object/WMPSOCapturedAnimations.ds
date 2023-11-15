@@ -42,11 +42,11 @@ pin Dragengine.XML
 class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	/** Animation element renderer. */
 	class AnimationElementRenderer extends DefaultListElementRenderer
-		public func new()
+		func new()
 			setDefaultMinimumSize(Point.new(80, 20))
 		end
 		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
 			var String text = ""
 			if element != null
 				text = (element cast CharacterAnimation).getName()
@@ -59,33 +59,33 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	class AnimationsChangedListener extends DefaultCharacterAnimationsListener
 		protected var WMPSOCapturedAnimations pPanel
 		
-		public func new(WMPSOCapturedAnimations panel)
+		func new(WMPSOCapturedAnimations panel)
 			pPanel = panel
 		end
 		
-		public func void animationAdded(CharacterAnimations animations, CharacterAnimation animation)
+		func void animationAdded(CharacterAnimations animations, CharacterAnimation animation)
 			pPanel.updateModelAnimations()
 		end
 		
-		public func void animationRemoved(CharacterAnimations animations, CharacterAnimation animation)
+		func void animationRemoved(CharacterAnimations animations, CharacterAnimation animation)
 			pPanel.updateModelAnimations()
 		end
 		
-		public func void animationNameChanged(CharacterAnimations animations, CharacterAnimation animation)
+		func void animationNameChanged(CharacterAnimations animations, CharacterAnimation animation)
 			pPanel.updateModelAnimationName(animation)
 		end
 		
-		public func void animationChanged(CharacterAnimations animations, CharacterAnimation animation)
+		func void animationChanged(CharacterAnimations animations, CharacterAnimation animation)
 			if animation == pPanel.getAnimation()
 				pPanel.updateAnimation()
 			end
 		end
 		
-		public func void allAnimationsRemoved(CharacterAnimations animations)
+		func void allAnimationsRemoved(CharacterAnimations animations)
 			pPanel.updateModelAnimations()
 		end
 		
-		public func void activeAnimationChanged(CharacterAnimations animations)
+		func void activeAnimationChanged(CharacterAnimations animations)
 			pPanel.setAnimation(animations.getActive())
 		end
 	end
@@ -94,15 +94,15 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	class SelectedAnimationChanged extends DefaultListModelListener
 		protected var WMPSOCapturedAnimations pPanel
 		
-		public func new(WMPSOCapturedAnimations panel)
+		func new(WMPSOCapturedAnimations panel)
 			pPanel = panel
 		end
 		
-		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+		func void contentChanged(ListModel model, int fromIndex, int toIndex)
 			selectionChanged(model)
 		end
 		
-		public func void selectionChanged(ListModel model)
+		func void selectionChanged(ListModel model)
 			if pPanel.preventSelectAnimation
 				return
 			end
@@ -122,11 +122,11 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	class AnimationPopupAction extends DefaultActionListener
 		protected var WMPSOCapturedAnimations pPanel
 		
-		public func new(WMPSOCapturedAnimations panel)
+		func new(WMPSOCapturedAnimations panel)
 			pPanel = panel
 		end
 		
-		public func void onAction(ActionEvent event)
+		func void onAction(ActionEvent event)
 			var Widget widget = event.getSource() cast Widget
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
@@ -188,11 +188,11 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	class ToggleRecord extends DefaultToggleModelListener
 		protected var WMPSOCapturedAnimations pPanel
 		
-		public func new(WMPSOCapturedAnimations panel)
+		func new(WMPSOCapturedAnimations panel)
 			pPanel = panel
 		end
 		
-		public func void toggledChanged(ToggleModel model)
+		func void toggledChanged(ToggleModel model)
 			pPanel.getBehaviorCapturedAnimations().setRecord(model.getToggled())
 		end
 	end
@@ -200,11 +200,11 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	class ToggleRecordObject extends DefaultToggleModelListener
 		protected var WMPSOCapturedAnimations pPanel
 		
-		public func new(WMPSOCapturedAnimations panel)
+		func new(WMPSOCapturedAnimations panel)
 			pPanel = panel
 		end
 		
-		public func void toggledChanged(ToggleModel model)
+		func void toggledChanged(ToggleModel model)
 			pPanel.getBehaviorCapturedAnimations().setRecordObject(model.getToggled())
 		end
 	end
@@ -213,12 +213,12 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		protected var DefaultToggleModel pModelRecord
 		protected var DefaultToggleModel pModelRecordObject
 		
-		public func new(DefaultToggleModel modelRecord, DefaultToggleModel modelRecordObject)
+		func new(DefaultToggleModel modelRecord, DefaultToggleModel modelRecordObject)
 			pModelRecord = modelRecord
 			pModelRecordObject = modelRecordObject
 		end
 		
-		public func void recordChanged(ECBCapturedAnimations.Instance instance)
+		func void recordChanged(ECBCapturedAnimations.Instance instance)
 			pModelRecord.setToggled(instance.getRecord())
 			pModelRecordObject.setToggled(instance.getRecordObject())
 		end
@@ -239,7 +239,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	
 	
 	/** Create panel. */
-	public func new(WMPanelProject panelProject, String bgpTypeId) super(panelProject, bgpTypeId,\
+	func new(WMPanelProject panelProject, String bgpTypeId) super(panelProject, bgpTypeId,\
 	"", "Captured Animations", "WMPSOCapturedAnimations", "ppob_capturedanimations")
 		pModelAnimations = DefaultListModel.new()
 		pModelAnimationInfo = DefaultTextModel.new("")
@@ -259,7 +259,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	end
 	
 	/** Dispose of widget. */
-	public func void dispose()
+	func void dispose()
 		setBehavior(null)
 		
 		pAnimationsChangedListener = null
@@ -276,12 +276,12 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	
 	
 	/** CapturedAnimations behavior. */
-	public func ECBCapturedAnimations.Instance getBehaviorCapturedAnimations()
+	func ECBCapturedAnimations.Instance getBehaviorCapturedAnimations()
 		return pBehaviorCapturedAnimations
 	end
 	
 	/** Update behavior. */
-	public func void updateBehavior()
+	func void updateBehavior()
 		if pBehaviorCapturedAnimations == null
 			return
 		end
@@ -298,7 +298,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	
 	
 	/** Update animations model. */
-	public func void updateModelAnimations()
+	func void updateModelAnimations()
 		preventSelectAnimation = true
 		pModelAnimations.setContent(pBehaviorCapturedAnimations.getAnimations().toArray())
 		
@@ -307,7 +307,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		pBehaviorCapturedAnimations.getAnimations().setActive(pAnimation)
 	end
 	
-	public func void updateModelAnimationName(CharacterAnimation animation)
+	func void updateModelAnimationName(CharacterAnimation animation)
 		var int index = pModelAnimations.indexOf(animation)
 		if index != -1
 			pModelAnimations.notifyElementChanged(index)
@@ -315,12 +315,12 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	end
 	
 	/** Animation or null. */
-	public func CharacterAnimation getAnimation()
+	func CharacterAnimation getAnimation()
 		return pAnimation
 	end
 	
 	/** Set animation or null. */
-	public func void setAnimation(CharacterAnimation animation)
+	func void setAnimation(CharacterAnimation animation)
 		if animation == pAnimation
 			return
 		end
@@ -330,7 +330,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	end
 	
 	/** Update animation. */
-	public func void updateAnimation()
+	func void updateAnimation()
 		runWhileBlockingLayout(block
 			var Animation animation
 			var Animation animationObject
@@ -358,7 +358,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	end
 	
 	/** Add animation. */
-	public func void addAnimation()
+	func void addAnimation()
 		WindowDialog.input(getWindow(), "Add Animation", "Name:", null,\
 			pBehaviorCapturedAnimations.getAnimationName(),\
 			WindowDialog.ButtonConfiguration.new("Add Animation"),\
@@ -379,7 +379,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	end
 	
 	/** Remove animation. */
-	public func void removeAnimation()
+	func void removeAnimation()
 		if pAnimation == null
 			return
 		end
@@ -396,7 +396,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	end
 	
 	/** Rename animation. */
-	public func void renameAnimation()
+	func void renameAnimation()
 		if pAnimation == null
 			return
 		end
@@ -413,7 +413,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	end
 	
 	/** Clear animation. */
-	public func void clearAnimation()
+	func void clearAnimation()
 		if pAnimation == null or (pAnimation.getAnimation() == null and pAnimation.getAnimationObject() == null)
 			return
 		end
@@ -423,7 +423,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	end
 	
 	/** Save animation. */
-	public func void saveAnimation()
+	func void saveAnimation()
 		if pAnimation == null or (pAnimation.getAnimation() == null and pAnimation.getAnimationObject() == null)
 			return
 		end
@@ -449,7 +449,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	end
 	
 	/** Export animation. */
-	public func void exportAnimation()
+	func void exportAnimation()
 		var Project project = GameApp.getGameApp().getProject()
 		if pAnimation == null or project == null
 			return
@@ -464,7 +464,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	end
 	
 	/** Import animation. */
-	public func void importAnimation()
+	func void importAnimation()
 		var Project project = GameApp.getGameApp().getProject()
 		if pAnimation == null or project == null
 			return
@@ -510,7 +510,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	end
 	
 	/** Browse exported animations directory. */
-	public func void browseExportedAnimations()
+	func void browseExportedAnimations()
 		var Project project = GameApp.getGameApp().getProject()
 		if project != null
 			project.browseExportedAnimations()

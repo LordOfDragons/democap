@@ -46,20 +46,20 @@ class ECBMoCapAnimator extends DefaultECBehavior
 	/** Default implementation of behavior instance listener. */
 	class DefaultListener implements Listener
 		/** Create default listener. */
-		public func new()
+		func new()
 		end
 		
 		/** Count of required phases. */
-		public func int requiredPhaseCount(Instance instance)
+		func int requiredPhaseCount(Instance instance)
 			return 1
 		end
 		
 		/** Update controllers if required. */
-		public func void updateControllers(Instance instance, float elapsed, int phase)
+		func void updateControllers(Instance instance, float elapsed, int phase)
 		end
 		
 		/** Animation has been applied. */
-		public func void animationApplied(Instance instance)
+		func void animationApplied(Instance instance)
 		end
 	end
 	
@@ -67,17 +67,17 @@ class ECBMoCapAnimator extends DefaultECBehavior
 	class Instance extends DefaultECBehaviorInstance
 		/** Animator applied. */
 		class MultiPhaseAnimation extends ECBehaviorActorAnimated.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void updateControllers(ECBehaviorActorAnimated.Instance instance, float elapsed)
+			func void updateControllers(ECBehaviorActorAnimated.Instance instance, float elapsed)
 				pInstance.updateControllers(elapsed)
 			end
 			
-			public func void animationApplied(ECBehaviorActorAnimated.Instance instance)
+			func void animationApplied(ECBehaviorActorAnimated.Instance instance)
 				pInstance.animationApplied()
 			end
 		end
@@ -87,14 +87,14 @@ class ECBMoCapAnimator extends DefaultECBehavior
 		protected var ECBMoCapAnimator pECBehavior
 		protected var ECBehaviorActorAnimated.Instance pActorAnimated
 		
-		private var int pRequiredPhaseCount
-		private var float pElapsedControllerTime
-		private var Array pListeners
+		var int pRequiredPhaseCount
+		var float pElapsedControllerTime
+		var Array pListeners
 		
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBMoCapAnimator ecbehavior, BehaviorElement element) super(element)
+		func new(ECBMoCapAnimator ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			
 			pRequiredPhaseCount = 1
@@ -103,14 +103,14 @@ class ECBMoCapAnimator extends DefaultECBehavior
 		end
 		
 		/** Dispose of behavior instance. */
-		public func void dispose()
+		func void dispose()
 			pListeners = null
 			
 			super.dispose()
 		end
 		
 		/** Init behavior instance. */
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			var Animator animator = pECBehavior.getAnimator()
 			animator.setRig(pActorAnimated.getComponent().getComponent().getRig())
 			animator.setAnimation(pECBehavior.getAnimation().getAnimation())
@@ -121,24 +121,24 @@ class ECBMoCapAnimator extends DefaultECBehavior
 		
 		
 		/** Behavior. */
-		public func ECBMoCapAnimator getECBehavior()
+		func ECBMoCapAnimator getECBehavior()
 			return pECBehavior
 		end
 		
 		/** Actor animated behavior. */
-		public func ECBehaviorActorAnimated.Instance getActorAnimated()
+		func ECBehaviorActorAnimated.Instance getActorAnimated()
 			return pActorAnimated
 		end
 		
 		/** Required phase count. */
-		public func int getRequiredPhaseCount()
+		func int getRequiredPhaseCount()
 			return pRequiredPhaseCount
 		end
 		
 		
 		
 		/** Add listener. */
-		public func void addListener(Listener listener)
+		func void addListener(Listener listener)
 			if listener == null
 				throw EInvalidParam.new()
 			end
@@ -146,12 +146,12 @@ class ECBMoCapAnimator extends DefaultECBehavior
 		end
 		
 		/** Remove listener. */
-		public func void removeListener(Listener listener)
+		func void removeListener(Listener listener)
 			pListeners.remove(listener)
 		end
 		
 		/** Notify listeners controllers have changed. */
-		public func void notifyControllersChanged(float elapsed, int phase)
+		func void notifyControllersChanged(float elapsed, int phase)
 			if pActorAnimated.getAnimator() == null
 				return // reset calibration
 			end
@@ -164,7 +164,7 @@ class ECBMoCapAnimator extends DefaultECBehavior
 		
 		
 		/** Internal use. */
-		public func void updateControllers(float elapsed)
+		func void updateControllers(float elapsed)
 			if pActorAnimated.getAnimator() == null
 				return // reset calibration
 			end
@@ -182,7 +182,7 @@ class ECBMoCapAnimator extends DefaultECBehavior
 			end)
 		end
 		
-		public func void animationApplied()
+		func void animationApplied()
 			if pActorAnimated.getAnimator() == null
 				return // reset calibration
 			end
@@ -218,7 +218,7 @@ class ECBMoCapAnimator extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BaseVRActorClass eclass) super(eclass)
+	func new(BaseVRActorClass eclass) super(eclass)
 		pActorAnimated = eclass.getActorAnimated()
 		
 		pAnimation = ECPAnimation.new("mocapAnimation.animation")
@@ -228,7 +228,7 @@ class ECBMoCapAnimator extends DefaultECBehavior
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		pActorAnimated = null
 		super.dispose()
 	end
@@ -236,41 +236,41 @@ class ECBMoCapAnimator extends DefaultECBehavior
 	
 	
 	/** Actor animated behavior. */
-	public func ECBehaviorActorAnimated getActorAnimated()
+	func ECBehaviorActorAnimated getActorAnimated()
 		return pActorAnimated
 	end
 	
 	/** Animation. */
-	public func ECPAnimation getAnimation()
+	func ECPAnimation getAnimation()
 		return pAnimation
 	end
 	
 	/** Animator. */
-	public func Animator getAnimator()
+	func Animator getAnimator()
 		return pAnimator
 	end
 	
 	/** Set animator. */
-	public func void setAnimator(Animator animator)
+	func void setAnimator(Animator animator)
 		pAnimator = animator
 	end
 	
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance(BehaviorElement element)
+	func Instance instance(BehaviorElement element)
 		return element.getInstanceAt(this.getInstanceIndex()) cast Instance
 	end
 	
 	/** Get behavior in element class or null if absent. */
-	static public func ECBMoCapAnimator getBehaviorIn(BehaviorElementClass eclass)
+	static func ECBMoCapAnimator getBehaviorIn(BehaviorElementClass eclass)
 		return eclass.findBehavior(block ECBMoCapAnimator each
 			return true
 		end) cast ECBMoCapAnimator
 	end
 	
 	/** Get instance with slot name in element or null if absent. */
-	static public func Instance getInstanceIn(BehaviorElement element)
+	static func Instance getInstanceIn(BehaviorElement element)
 		return element.findInstance(block Instance each
 			return true
 		end) cast Instance
@@ -279,7 +279,7 @@ class ECBMoCapAnimator extends DefaultECBehavior
 	
 	
 	/** Create behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

@@ -40,39 +40,39 @@ pin Dragengine.XML
 class MotionTransferSlot extends DefaultMotionTransfer
 	/** Factory. */
 	class Factory implements MotionTransferFactory
-		public func new()
+		func new()
 		end
 		
-		public func String factoryID()
+		func String factoryID()
 			return "slot"
 		end
 		
-		public func MotionTransfer createMotionTransfer()
+		func MotionTransfer createMotionTransfer()
 			return MotionTransferSlot.new(factoryID())
 		end
 		
-		public func String displayName()
+		func String displayName()
 			return "Copy Slot State"
 		end
 	end
 	
 	
 	
-	private var String pTarget
-	private var MotionTransferTracker pSource
-	private var Vector pScaleRotation
+	var String pTarget
+	var MotionTransferTracker pSource
+	var Vector pScaleRotation
 	
 	
 	
 	/** Create motion transfer. */
-	public func new(String factoryID) super(factoryID)
+	func new(String factoryID) super(factoryID)
 		pTarget = ""
 		pSource = MotionTransferTracker.new()
 		pScaleRotation = Vector.new(1, 1, 1)
 	end
 	
 	/** Create copy of motion transfer. */
-	public func new(MotionTransferSlot transfer) super(transfer)
+	func new(MotionTransferSlot transfer) super(transfer)
 		pTarget = transfer.pTarget
 		pSource = MotionTransferTracker.new(transfer.pSource)
 		pScaleRotation = transfer.pScaleRotation
@@ -81,12 +81,12 @@ class MotionTransferSlot extends DefaultMotionTransfer
 	
 	
 	/** Target slot. */
-	public func String getTarget()
+	func String getTarget()
 		return pTarget
 	end
 	
 	/** Set target slot. */
-	public func void setTarget(String slot)
+	func void setTarget(String slot)
 		if slot == null
 			throw ENullPointer.new("slot")
 		end
@@ -94,17 +94,17 @@ class MotionTransferSlot extends DefaultMotionTransfer
 	end
 	
 	/** Source slot. */
-	public func MotionTransferTracker getSource()
+	func MotionTransferTracker getSource()
 		return pSource
 	end
 	
 	/** Scale transformed rotation. */
-	public func Vector getScaleRotation()
+	func Vector getScaleRotation()
 		return pScaleRotation
 	end
 	
 	/** Set scaling to apply to transformed rotation. */
-	public func void setScaleRotation(Vector scale)
+	func void setScaleRotation(Vector scale)
 		if scale == null
 			throw ENullPointer.new("scale")
 		end
@@ -114,29 +114,29 @@ class MotionTransferSlot extends DefaultMotionTransfer
 	
 	
 	/** Init element clas. */
-	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
+	func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
 		ECBMotionTransferSlot.new(eclass, this)
 	end
 	
 	/** Reset calibration. */
-	public func void resetCalibration()
+	func void resetCalibration()
 		pSource.resetTransform()
 	end
 	
 	/** Calibrate character. */
-	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
+	func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
 	BaseVRActor actor, Component component)
 		pSource.resolveRealSlot(config)
 		pSource.setTransform(config, component, "")
 	end
 	
 	/** Create copy of motion transfer. */
-	public func MotionTransfer createCopy()
+	func MotionTransfer createCopy()
 		return MotionTransferSlot.new(this)
 	end
 	
 	/** Load from XML. */
-	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+	func void load(BaseXmlLoader loader, EasyXMLElement root)
 		root.forEachTag(block EasyXMLElement element, String tagName
 			if tagName.equals("name")
 				setName(element.getFirstCData())
@@ -165,12 +165,12 @@ class MotionTransferSlot extends DefaultMotionTransfer
 	end
 	
 	/** Post load initialize. */
-	public func void postLoadInit(CharacterConfiguration config)
+	func void postLoadInit(CharacterConfiguration config)
 		pSource.resolveRealSlot(config)
 	end
 	
 	/** Save to XML. */
-	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+	func void save(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("name", getName())
 		tag.addDataTag("target", pTarget)
 		pSource.save(loader, tag.addTag("source"))

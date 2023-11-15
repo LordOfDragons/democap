@@ -34,7 +34,7 @@ pin Dragengine.Scenery
  * get the player tracking for free.
  */
 class VRCameraDirector extends PlayerControlledActorCameraDirector
-	private var ECBehaviorVRHMD.Instance pHMD
+	var ECBehaviorVRHMD.Instance pHMD
 	
 	protected var ECBCharacterConfiguration.Instance character
 	protected var ECBehaviorComponent.Instance component
@@ -48,20 +48,20 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	
 	
 	/** Create director. */
-	public func new()
+	func new()
 		setLayerMask(LayerMask.newWith(BaseGameApp.WorldLayerBit.default, GameApp.WorldLayerBit.remoteView))
 		setEnableGI(SessionSettings.get().getModelCameraEnableGI().getToggled())
 	end
 	
 	/** Camera director has been activated. */
-	public func void activate()
+	func void activate()
 		super.activate()
 		VRSystem.setCamera(pVRCamera)
 		pStallProtection = null
 	end
 	
 	/** Camera director has been deactivated. */
-	public func void deactivate()
+	func void deactivate()
 		pStallProtection = null
 		VRSystem.setCamera(null)
 		super.deactivate()
@@ -90,7 +90,7 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	end
 	
 	/** Set camera. */
-	public func void setCamera(Camera camera)
+	func void setCamera(Camera camera)
 		super.setCamera(camera)
 		
 		if camera != null
@@ -99,7 +99,7 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	end
 	
 	/** Set VR camera. */
-	public func void setVRCamera(Camera camera)
+	func void setVRCamera(Camera camera)
 		pVRCamera = camera
 		
 		if camera != null
@@ -108,7 +108,7 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	end
 	
 	/** Update camera. */
-	public func void updateCamera(float elapsed)
+	func void updateCamera(float elapsed)
 		// update stalling protection timer
 		pStallProtectionTimer += elapsed
 		
@@ -142,13 +142,13 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	end
 	
 	/** Calculate camera matrix. Has to ignore element in contrary to VR camera matrix. */
-	public func DMatrix getCameraMatrix()
+	func DMatrix getCameraMatrix()
 		return getLocalMatrix() * DMatrix.newTranslation(0, 0, -getDistance()) \
 			* DMatrix.newRotation(-getElevation(), getAzimuth(), 0) * DMatrix.newTranslation(getPivot())
 	end
 	
 	/** Calculate VR camera matrix */
-	public func DMatrix getVRCameraMatrix()
+	func DMatrix getVRCameraMatrix()
 		if pHMD == null or pHMD.isDetached() or pHMD.getElement() == null
 			return DMatrix.newWorld(pVRCamera.getPosition(), pVRCamera.getOrientation())
 		end
@@ -214,7 +214,7 @@ class VRCameraDirector extends PlayerControlledActorCameraDirector
 	end
 
 	/** Unscaled actor space HMD matrix. */
-	public func DMatrix getHMDMatrix()
+	func DMatrix getHMDMatrix()
 		return pHMD.getMatrixPlayspace().toDMatrix() * pHMD.getVRPlayspace().getMatrix().normalize()
 	end
 end

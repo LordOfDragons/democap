@@ -26,7 +26,7 @@ pin Dragengine.Networking
 /**
  * DEMoCap Networking connected client.
  */
-public class DNConnection implements ConnectionListener
+class DNConnection implements ConnectionListener
 	class Features
 		static fixed public var int enableVertexPositionSets = 0h1
 	end
@@ -43,17 +43,17 @@ public class DNConnection implements ConnectionListener
 	end
 	
 	
-	private var DNServer pServer
-	private var Connection pConnection
-	private var bool pConnected
-	private var int pEnabledFeatures
-	private var String pName
-	private var int pNextFrameNumber
-	private var bool pUseVertexPositionSets
+	var DNServer pServer
+	var Connection pConnection
+	var bool pConnected
+	var int pEnabledFeatures
+	var String pName
+	var int pNextFrameNumber
+	var bool pUseVertexPositionSets
 	
 	
 	/** Create server. */
-	public func new(DNServer server, Connection connection)
+	func new(DNServer server, Connection connection)
 		pServer = server
 		pConnection = connection
 		connection.setConnectionListener(this)
@@ -61,7 +61,7 @@ public class DNConnection implements ConnectionListener
 	end
 	
 	/** Disconnect. */
-	public func void disconnect()
+	func void disconnect()
 		pConnection.disconnect()
 		
 		if pConnection != null
@@ -72,17 +72,17 @@ public class DNConnection implements ConnectionListener
 	end
 	
 	/** Connected. */
-	public func bool getConnected()
+	func bool getConnected()
 		return pConnected
 	end
 	
 	/** Name. */
-	public func String getName()
+	func String getName()
 		return pName
 	end
 	
 	/** Remote address. */
-	public func String getRemoteAddress()
+	func String getRemoteAddress()
 		if pConnection != null
 			return pConnection.getRemoteAddress()
 		end
@@ -91,20 +91,20 @@ public class DNConnection implements ConnectionListener
 	
 	
 	/** Next frame number. Rolls over at 16-bit. */
-	public func int nextFrameNumber()
+	func int nextFrameNumber()
 		var int frameNumber = pNextFrameNumber
 		pNextFrameNumber = (pNextFrameNumber + 1) & 0hffff
 		return frameNumber
 	end
 	
 	/** Vertex position sets are enabled. */
-	public func bool useVertexPositionSets()
+	func bool useVertexPositionSets()
 		return pUseVertexPositionSets
 	end
 	
 	
 	/** Link server states to client. */
-	public func void linkServerStates()
+	func void linkServerStates()
 		var NetworkMessage message
 		var FileWriter writer
 		
@@ -117,7 +117,7 @@ public class DNConnection implements ConnectionListener
 	end
 	
 	/** Send capture bone layout message. */
-	public func void sendCaptureBoneLayout(DNCaptureBoneLayout layout)
+	func void sendCaptureBoneLayout(DNCaptureBoneLayout layout)
 		if not pConnected
 			return
 		end
@@ -144,7 +144,7 @@ public class DNConnection implements ConnectionListener
 	end
 	
 	/** Send capture frame message. */
-	public func void sendCaptureFrame(DNCaptureFrame frame)
+	func void sendCaptureFrame(DNCaptureFrame frame)
 		if not pConnected
 			return
 		end
@@ -173,18 +173,18 @@ public class DNConnection implements ConnectionListener
 	
 	
 	/** Connection closed. */
-	public func void connectionClosed()
+	func void connectionClosed()
 		pConnection.setConnectionListener(null)
 		pConnection = null
 		pServer.removeConnection(this)
 	end
 	
 	/** Message progress. */
-	public func void messageProgress(int bytesReceived)
+	func void messageProgress(int bytesReceived)
 	end
 	
 	/** Message received. */
-	public func void messageReceived(NetworkMessage message)
+	func void messageReceived(NetworkMessage message)
 		if not pConnected
 			var FileReader reader = message.getReader()
 			if reader.readByte() == MessageCode.connectRequest
@@ -204,7 +204,7 @@ public class DNConnection implements ConnectionListener
 	end
 	
 	/** Link state. */
-	public func bool linkState(NetworkState state, NetworkMessage message)
+	func bool linkState(NetworkState state, NetworkMessage message)
 		if not pConnected
 			return false
 		end

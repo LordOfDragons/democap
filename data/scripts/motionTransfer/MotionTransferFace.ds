@@ -40,66 +40,66 @@ pin Dragengine.XML
 class MotionTransferFace extends DefaultMotionTransfer
 	/** Factory. */
 	class Factory implements MotionTransferFactory
-		public func new()
+		func new()
 		end
 		
-		public func String factoryID()
+		func String factoryID()
 			return "face"
 		end
 		
-		public func MotionTransfer createMotionTransfer()
+		func MotionTransfer createMotionTransfer()
 			return MotionTransferFace.new(factoryID())
 		end
 		
-		public func String displayName()
+		func String displayName()
 			return "Face"
 		end
 	end
 	
 	/** Expression information. */
 	class ExpressionInfo
-		private var int pExpression
-		private var String pId
-		private var String pName
-		private var String pDescription
+		var int pExpression
+		var String pId
+		var String pName
+		var String pDescription
 		
-		public func new(int expression, String id, String name, String description)
+		func new(int expression, String id, String name, String description)
 			pExpression = expression
 			pId = id
 			pName = name
 			pDescription = description
 		end
 		
-		public func int getExpression()
+		func int getExpression()
 			return pExpression
 		end
 		
-		public func String getId()
+		func String getId()
 			return pId
 		end
 		
-		public func String getName()
+		func String getName()
 			return pName
 		end
 		
-		public func String getDescription()
+		func String getDescription()
 			return pDescription
 		end
 	end
 	
 	
 	
-	private var Array pExpressionsVPS
+	var Array pExpressionsVPS
 	
-	private var Array pADControllersVPS
-	private var Array pADRulesExpression
+	var Array pADControllersVPS
+	var Array pADRulesExpression
 	
 	public static fixed var Array expressionInfos = pInitExpressionInfos()
 	
 	
 	
 	/** Create motion transfer. */
-	public func new(String factoryID) super(factoryID)
+	func new(String factoryID) super(factoryID)
 		var int count = expressionInfos.getCount()
 		pExpressionsVPS = Array.new(count, "")
 		pADControllersVPS = Array.new(count, null)
@@ -107,7 +107,7 @@ class MotionTransferFace extends DefaultMotionTransfer
 	end
 	
 	/** Create copy of motion transfer. */
-	public func new(MotionTransferFace transfer) super(transfer)
+	func new(MotionTransferFace transfer) super(transfer)
 		var int count = expressionInfos.getCount()
 		pExpressionsVPS = Array.new(transfer.pExpressionsVPS)
 		pADControllersVPS = Array.new(count, null)
@@ -117,12 +117,12 @@ class MotionTransferFace extends DefaultMotionTransfer
 	
 	
 	/** Vertex position set name for expression (InputDeviceFaceExpression). */
-	public func String getExpressionVPSAt(int expression)
+	func String getExpressionVPSAt(int expression)
 		return pExpressionsVPS.getAt(expression) cast String
 	end
 	
 	/** Set vertex position set name for expression (InputDeviceFaceExpression). */
-	public func void setExpressionVPSAt(int expression, String name)
+	func void setExpressionVPSAt(int expression, String name)
 		if name == null
 			throw ENullPointer.new("name")
 		end
@@ -132,14 +132,14 @@ class MotionTransferFace extends DefaultMotionTransfer
 	
 	
 	/** Animator definition rule for expression or null. */
-	public func ADRule getADRuleExpressionAt(int expression)
+	func ADRule getADRuleExpressionAt(int expression)
 		return pADRulesExpression.getAt(expression) cast ADRule
 	end
 	
 	
 	
 	/** Reset calibration. */
-	public func void resetCalibration()
+	func void resetCalibration()
 		var int i, count = expressionInfos.getCount()
 		for i = 0 to count
 			pADControllersVPS.setAt(i, null)
@@ -148,7 +148,7 @@ class MotionTransferFace extends DefaultMotionTransfer
 	end
 	
 	/** Init element clas. */
-	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
+	func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
 		var int i, count = expressionInfos.getCount()
 		for i = 0 to count
 			pADControllersVPS.setAt(i, null)
@@ -211,12 +211,12 @@ class MotionTransferFace extends DefaultMotionTransfer
 	end
 	
 	/** Create copy of motion transfer. */
-	public func MotionTransfer createCopy()
+	func MotionTransfer createCopy()
 		return MotionTransferFace.new(this)
 	end
 	
 	/** Load from XML. */
-	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+	func void load(BaseXmlLoader loader, EasyXMLElement root)
 		root.forEachTag(block EasyXMLElement element, String tagName
 			if tagName.equals("name")
 				setName(element.getFirstCData())
@@ -234,7 +234,7 @@ class MotionTransferFace extends DefaultMotionTransfer
 	end
 	
 	/** Save to XML. */
-	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+	func void save(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("name", getName())
 		
 		expressionInfos.forEach(block ExpressionInfo each

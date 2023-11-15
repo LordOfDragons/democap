@@ -39,13 +39,13 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 		public var Collider collider
 		public var int bone
 		
-		public func new(BehaviorElement element, Collider collider, int bone)
+		func new(BehaviorElement element, Collider collider, int bone)
 			this.element = element
 			this.collider = collider
 			this.bone = bone
 		end
 		
-		public func DVector getCenter()
+		func DVector getCenter()
 			if bone != -1
 				var ColliderRig colliderRig = collider cast ColliderRig
 				return colliderRig.boneGetMatrix(bone)\
@@ -69,13 +69,13 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class CollectTouchObjects implements ColliderListener
-			private var Array pObjects
+			var Array pObjects
 			
-			public func new(Array objects)
+			func new(Array objects)
 				pObjects = objects
 			end
 			
-			public func void collisionResponse(Collider owner, CollisionInfo info)
+			func void collisionResponse(Collider owner, CollisionInfo info)
 				var Collider collider = info.getCollider()
 				if collider == null or collider.getResponseType() != CollisionResponse.dynamic
 					return
@@ -106,25 +106,25 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 				end
 			end
 			
-			public func void colliderChanged(Collider owner)
+			func void colliderChanged(Collider owner)
 			end
 			
-			public func bool canHitCollider(Collider owner, Collider collider)
+			func bool canHitCollider(Collider owner, Collider collider)
 				return true
 			end
 		end
 		
 		
-		private var ECBAPhysicsToucher pECBehavior
-		private var ECBehaviorVRHand.Instance pVRHand
-		private var ColliderVolume pTouchCollider
-		private var Array pTouchObjects
-		private var bool pDirtyTouchObjects
-		private var CollectTouchObjects pCollectTouchObjects
+		var ECBAPhysicsToucher pECBehavior
+		var ECBehaviorVRHand.Instance pVRHand
+		var ColliderVolume pTouchCollider
+		var Array pTouchObjects
+		var bool pDirtyTouchObjects
+		var CollectTouchObjects pCollectTouchObjects
 		
 		
 		
-		public func new(ECBAPhysicsToucher ecbehavior, BehaviorElement element) super(element)
+		func new(ECBAPhysicsToucher ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pTouchObjects = Array.new()
 			pDirtyTouchObjects = true
@@ -132,14 +132,14 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 			setRequiresThink(true)
 		end
 		
-		public func void dispose()
+		func void dispose()
 			pTouchObjects = null
 			pVRHand = null
 			
 			super.dispose()
 		end
 		
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			pVRHand = pECBehavior.vrHand.instance(getElement())
 			pTouchCollider = createTouchCollider(stub)
 			
@@ -164,11 +164,11 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 		
 		
 		
-		public func ECBAPhysicsToucher getECBehavior()
+		func ECBAPhysicsToucher getECBehavior()
 			return pECBehavior
 		end
 		
-		public func ECBehaviorVRHand.Instance getVRHand()
+		func ECBehaviorVRHand.Instance getVRHand()
 			return pVRHand
 		end
 		
@@ -178,7 +178,7 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 		 * Get touching objects as array of TouchObject. Array is cached with the
 		 * cached array cleared during postThink().
 		 */
-		public func Array getTouchingObjects()
+		func Array getTouchingObjects()
 			if pDirtyTouchObjects
 				pTouchObjects.removeAll()
 				getElement().getGameWorld().getWorld().colliderHits(pTouchCollider, pCollectTouchObjects)
@@ -193,7 +193,7 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 		 * 
 		 * Block is called with signature (TouchObject object) or (int index, TouchObject object).
 		 */
-		public func void forEachTouchingObject(Block ablock)
+		func void forEachTouchingObject(Block ablock)
 			getTouchingObjects().forEach(ablock)
 		end
 		
@@ -205,12 +205,12 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 		 * 
 		 * Returns null if no matching touching object is found.
 		 */
-		public func TouchObject findTouchingObject(Block ablock)
+		func TouchObject findTouchingObject(Block ablock)
 			return getTouchingObjects().find(ablock) cast TouchObject
 		end
 		
 		/** Closest touched object closest or null if not found. */
-		public func TouchObject closestTouchingObject()
+		func TouchObject closestTouchingObject()
 			if pTouchCollider == null
 				return null
 			end
@@ -224,7 +224,7 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 		 * Block is called with signature (TouchObject object) and has to return
 		 * true to consider the object or false to ignore it.
 		 */
-		public func TouchObject closestTouchingObject(Block ablock)
+		func TouchObject closestTouchingObject(Block ablock)
 			if pTouchCollider == null
 				return null
 			end
@@ -232,7 +232,7 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 		end
 		
 		/** Touched object closest to position or null if not found. */
-		public func TouchObject touchingObjectClosestTo(DVector position)
+		func TouchObject touchingObjectClosestTo(DVector position)
 			var Array objects = getTouchingObjects()
 			var int i, count = objects.getCount()
 			var TouchObject closestObject, object
@@ -252,7 +252,7 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 		end
 		
 		/** Touched object closest to position or null if not found. */
-		public func TouchObject touchingObjectClosestTo(DVector position, Block ablock)
+		func TouchObject touchingObjectClosestTo(DVector position, Block ablock)
 			var Array objects = getTouchingObjects()
 			var int i, count = objects.getCount()
 			var TouchObject closestObject, object
@@ -277,7 +277,7 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 		
 		
 		
-		public func void postThink(float elapsed)
+		func void postThink(float elapsed)
 			pDirtyTouchObjects = true
 		end
 	end
@@ -292,7 +292,7 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBehaviorVRHand vrHand, String id) super(eclass, id)
+	func new(BehaviorElementClass eclass, ECBehaviorVRHand vrHand, String id) super(eclass, id)
 		var String prefix = "physicsGrabber(" + id + ")."
 		
 		this.vrHand = vrHand
@@ -315,30 +315,30 @@ class ECBAPhysicsToucher extends DefaultECBehavior
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		vrHand = null
 		super.dispose()
 	end
 	
 	
 	
-	public func Instance instance(BehaviorElement element)
+	func Instance instance(BehaviorElement element)
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
-	static public func ECBAPhysicsToucher getBehaviorIn(BehaviorElementClass eclass, String id)
+	static func ECBAPhysicsToucher getBehaviorIn(BehaviorElementClass eclass, String id)
 		return eclass.findBehavior(block ECBAPhysicsToucher each
 			return each.getID().equals(id)
 		end) cast ECBAPhysicsToucher
 	end
 	
-	static public func Instance getInstanceIn(BehaviorElement element, String id)
+	static func Instance getInstanceIn(BehaviorElement element, String id)
 		return element.findInstance(block Instance each
 			return each.getECBehavior().getID().equals(id)
 		end) cast Instance
 	end
 	
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

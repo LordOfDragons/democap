@@ -39,70 +39,70 @@ class ECBMotionTransferFace extends DefaultECBehavior
 	class Instance extends DefaultECBehaviorInstance
 		/** Controller attach/detach listener. */
 		class AttachDetachListener extends DefaultBindingManagerListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void deviceAttached(BindingManager manager, InputDevice device)
+			func void deviceAttached(BindingManager manager, InputDevice device)
 				if pInstance.getInputDevice() == null and device.getType() == InputDeviceType.vrHMD
 					pInstance.setInputDevice(device)
 				end
 			end
 			
-			public func void deviceDetached(BindingManager manager, InputDevice device)
+			func void deviceDetached(BindingManager manager, InputDevice device)
 				if pInstance.getInputDevice() == device
 					pInstance.setInputDevice(null)
 				end
 			end
 			
-			public func void devicesReloaded(BindingManager manager)
+			func void devicesReloaded(BindingManager manager)
 				pInstance.findInputDevice()
 			end
 		end
 		
 		/** Update controllers. */
 		class UpdateControllers extends ECBMoCapAnimator.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void updateControllers(ECBMoCapAnimator.Instance instance, float elapsed, int phase)
+			func void updateControllers(ECBMoCapAnimator.Instance instance, float elapsed, int phase)
 				pInstance.updateControllers()
 			end
 		end
 		
 		/** Tracked expression. */
 		class TrackExpression
-			private var int pExpression
-			private var AnimatorController pController
+			var int pExpression
+			var AnimatorController pController
 			
-			public func new(int expression, AnimatorController controller)
+			func new(int expression, AnimatorController controller)
 				pExpression = expression
 				pController = controller
 			end
 			
-			public func void update(InputDevice device)
+			func void update(InputDevice device)
 				pController.setValue(device.getDeviceFaceExpressionAt(pExpression))
 			end
 		end
 		
 		
 		
-		private var ECBMotionTransferFace pECBehavior
-		private var ECBehaviorVRPlayspace.Instance pVRPlayspace
-		private var ECBMoCapAnimator.Instance pMoCapAnimator
-		private var Array pTrackedExpressions
-		private var InputDevice pInputDevice
-		private var AttachDetachListener pAttachDetachListener
+		var ECBMotionTransferFace pECBehavior
+		var ECBehaviorVRPlayspace.Instance pVRPlayspace
+		var ECBMoCapAnimator.Instance pMoCapAnimator
+		var Array pTrackedExpressions
+		var InputDevice pInputDevice
+		var AttachDetachListener pAttachDetachListener
 		
 		
 		
 		/** Create instance. */
-		public func new(ECBMotionTransferFace ecbehavior, BehaviorElement element) super(element)
+		func new(ECBMotionTransferFace ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			
 			pTrackedExpressions = Array.new()
@@ -113,7 +113,7 @@ class ECBMotionTransferFace extends DefaultECBehavior
 		end
 		
 		/** Dispose of instance. */
-		public func void dispose()
+		func void dispose()
 			pAttachDetachListener = null
 			pVRPlayspace = null
 			pMoCapAnimator = null
@@ -123,7 +123,7 @@ class ECBMotionTransferFace extends DefaultECBehavior
 		
 		
 		/** Init behavior instance. */
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			var ECBehaviorActorAnimated.Instance actorAnimated = pMoCapAnimator.getActorAnimated()
 			var String baseControllerName = pECBehavior.getBaseControllerName()
 			var MotionTransferFace transfer = pECBehavior.getTransfer()
@@ -141,40 +141,40 @@ class ECBMotionTransferFace extends DefaultECBehavior
 		
 		
 		/** Behavior. */
-		public func ECBMotionTransferFace getECBehavior()
+		func ECBMotionTransferFace getECBehavior()
 			return pECBehavior
 		end
 		
 		/** VR Playspace. */
-		public func ECBehaviorVRPlayspace.Instance getVRPlayspace()
+		func ECBehaviorVRPlayspace.Instance getVRPlayspace()
 			return pVRPlayspace
 		end
 		
 		/** Motion capture animator. */
-		public func ECBMoCapAnimator.Instance getMoCapAnimator()
+		func ECBMoCapAnimator.Instance getMoCapAnimator()
 			return pMoCapAnimator
 		end
 		
 		/** Input device or null if detached. */
-		public func InputDevice getInputDevice()
+		func InputDevice getInputDevice()
 			return pInputDevice
 		end
 		
 		/** Set input device or null if detached. */
-		public func void setInputDevice(InputDevice device)
+		func void setInputDevice(InputDevice device)
 			pInputDevice = device
 		end
 		
 		
 		
 		/** Element has been added to game world. Start tracking device. */
-		public func void addToGameWorld()
+		func void addToGameWorld()
 			GameApp.getGameApp().getBindingManager().addListener(pAttachDetachListener)
 			findInputDevice()
 		end
 		
 		/** Element has been removed from game world. Stop tracking device. */
-		public func void removeFromGameWorld()
+		func void removeFromGameWorld()
 			GameApp.getGameApp().getBindingManager().removeListener(pAttachDetachListener)
 			setInputDevice(null)
 		end
@@ -182,7 +182,7 @@ class ECBMotionTransferFace extends DefaultECBehavior
 		
 		
 		/** Update controllers. */
-		public func void updateControllers()
+		func void updateControllers()
 			if pInputDevice == null
 				return
 			end
@@ -193,7 +193,7 @@ class ECBMotionTransferFace extends DefaultECBehavior
 		end
 		
 		/** Find input device. */
-		public func void findInputDevice()
+		func void findInputDevice()
 			setInputDevice(GameApp.getApp().getBindingManager().findDevice(block InputDevice each
 				return each.getType() == InputDeviceType.vrHMD
 			end))
@@ -202,15 +202,15 @@ class ECBMotionTransferFace extends DefaultECBehavior
 	
 	
 	
-	private var MotionTransferFace pTransfer
-	private var ECBehaviorVRPlayspace pVRPlayspace
-	private var ECBMoCapAnimator pMoCapAnimator
-	private var String pBaseControllerName
+	var MotionTransferFace pTransfer
+	var ECBehaviorVRPlayspace pVRPlayspace
+	var ECBMoCapAnimator pMoCapAnimator
+	var String pBaseControllerName
 	
 	
 	
 	/** Create behavior element class. */
-	public func new(BaseVRActorClass eclass, MotionTransferFace transfer) super(eclass, transfer.getName())
+	func new(BaseVRActorClass eclass, MotionTransferFace transfer) super(eclass, transfer.getName())
 		if transfer == null
 			throw ENullPointer.new("transfer")
 		end
@@ -228,7 +228,7 @@ class ECBMotionTransferFace extends DefaultECBehavior
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		pVRPlayspace = null
 		pTransfer = null
 		super.dispose()
@@ -237,57 +237,57 @@ class ECBMotionTransferFace extends DefaultECBehavior
 	
 	
 	/** Motion transfer. */
-	public func MotionTransferFace getTransfer()
+	func MotionTransferFace getTransfer()
 		return pTransfer
 	end
 	
 	/** VR Playspace behavior. */
-	public func ECBehaviorVRPlayspace getVRPlayspace()
+	func ECBehaviorVRPlayspace getVRPlayspace()
 		return pVRPlayspace
 	end
 	
 	/** Motion capture animator behavior. */
-	public func ECBMoCapAnimator getMoCapAnimator()
+	func ECBMoCapAnimator getMoCapAnimator()
 		return pMoCapAnimator
 	end
 	
 	/** Base animator controller name. */
-	public func String getBaseControllerName()
+	func String getBaseControllerName()
 		return pBaseControllerName
 	end
 	
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance( BehaviorElement element )
+	func Instance instance( BehaviorElement element )
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	
 	
 	/** Get behavior with slot name in element class or null if absent. */
-	static public func ECBMotionTransferFace getBehaviorIn(BehaviorElementClass eclass, String slotName)
+	static func ECBMotionTransferFace getBehaviorIn(BehaviorElementClass eclass, String slotName)
 		return eclass.findBehavior(block ECBMotionTransferFace each
 			return each.getTransfer().getName().equals(slotName)
 		end) cast ECBMotionTransferFace
 	end
 	
 	/** Get list of all behaviors in element. */
-	static public func Array getAllBehaviorsIn(BehaviorElementClass eclass)
+	static func Array getAllBehaviorsIn(BehaviorElementClass eclass)
 		return eclass.collectBehaviors(block ECBMotionTransferFace each
 			return true
 		end)
 	end
 	
 	/** Get instance with slot name in element or null if absent. */
-	static public func Instance getInstanceIn(BehaviorElement element, String slotName)
+	static func Instance getInstanceIn(BehaviorElement element, String slotName)
 		return element.findInstance(block Instance each
 			return each.getECBehavior().getTransfer().getName().equals(slotName)
 		end) cast Instance
 	end
 	
 	/** Get list of all instances in element. */
-	static public func Array getAllInstancesIn(BehaviorElement element)
+	static func Array getAllInstancesIn(BehaviorElement element)
 		return element.collectInstances(block Instance each
 			return true
 		end)
@@ -296,7 +296,7 @@ class ECBMotionTransferFace extends DefaultECBehavior
 	
 	
 	/** Create Behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

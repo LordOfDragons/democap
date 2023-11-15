@@ -36,20 +36,20 @@ pin Dragengine.Utils
 class ECBAControlDesktop extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
-		private var ECBAControlDesktop pECBehavior
-		private var ECBehaviorControlDesktop.Instance pControlDesktop
-		private var ECBehaviorVRHandPointAt.Instance pPointAt
-		private var bool pTriggerPulled
+		var ECBAControlDesktop pECBehavior
+		var ECBehaviorControlDesktop.Instance pControlDesktop
+		var ECBehaviorVRHandPointAt.Instance pPointAt
+		var bool pTriggerPulled
 		
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBAControlDesktop ecbehavior, BehaviorElement element) super(element)
+		func new(ECBAControlDesktop ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 		end
 		
 		/** Dispose of behavior instance. */
-		public func void dispose()
+		func void dispose()
 			pPointAt = null
 			pControlDesktop = null
 			super.dispose()
@@ -58,24 +58,24 @@ class ECBAControlDesktop extends DefaultECBehavior
 		
 		
 		/** Behavior instance control desktop or null. */
-		public func ECBehaviorControlDesktop.Instance getControlDesktop()
+		func ECBehaviorControlDesktop.Instance getControlDesktop()
 			return pControlDesktop
 		end
 		
 		/** Behavior instance VR Hand Point At or null. */
-		public func ECBehaviorVRHandPointAt.Instance getPointAt()
+		func ECBehaviorVRHandPointAt.Instance getPointAt()
 			return pPointAt
 		end
 		
 		/** Trigger is pulled. */
-		public func bool getTriggerPulled()
+		func bool getTriggerPulled()
 			return pTriggerPulled
 		end
 		
 		
 		
 		/** Process pointing at element. Returns true if processed. */
-		public func bool pointAt(ECBehaviorVRHandPointAt.Instance behavior)
+		func bool pointAt(ECBehaviorVRHandPointAt.Instance behavior)
 			var DVector hitPoint = behavior.getPointAtHitPoint()
 			
 			if pControlDesktop != null
@@ -117,7 +117,7 @@ class ECBAControlDesktop extends DefaultECBehavior
 		end
 		
 		/** Pull trigger on pointed at element. Returns true if processed. */
-		public func bool pointAtPull(ECBehaviorVRHandPointAt.Instance behavior)
+		func bool pointAtPull(ECBehaviorVRHandPointAt.Instance behavior)
 			if not pointAt(behavior)
 				return false
 			end
@@ -128,7 +128,7 @@ class ECBAControlDesktop extends DefaultECBehavior
 		end
 		
 		/** Release trigger on pointed at element. Returns true if processed. */
-		public func bool pointAtRelease(ECBehaviorVRHandPointAt.Instance behavior)
+		func bool pointAtRelease(ECBehaviorVRHandPointAt.Instance behavior)
 			if pControlDesktop == null or behavior != pPointAt
 				return false
 			end
@@ -142,7 +142,7 @@ class ECBAControlDesktop extends DefaultECBehavior
 		end
 		
 		/** Cancel triggering pointAtRelease if point at is present. */
-		public func void cancel()
+		func void cancel()
 			pointAtRelease(pPointAt)
 		end
 	end
@@ -150,26 +150,26 @@ class ECBAControlDesktop extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass) super(eclass)
+	func new(BehaviorElementClass eclass) super(eclass)
 		eclass.addBehavior(this)
 	end
 	
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance( BehaviorElement element )
+	func Instance instance( BehaviorElement element )
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Get instance in element or null if absent. */
-	static public func Instance getInstanceIn(BehaviorElement element)
+	static func Instance getInstanceIn(BehaviorElement element)
 		return element.findInstance(block Instance each
 			return true
 		end) cast Instance
 	end
 	
 	/** Create behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

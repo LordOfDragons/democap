@@ -49,41 +49,41 @@ pin Dragengine.XML
 class MotionTransferChild extends DefaultMotionTransfer
 	/** Factory. */
 	class Factory implements MotionTransferFactory
-		public func new()
+		func new()
 		end
 		
-		public func String factoryID()
+		func String factoryID()
 			return "child"
 		end
 		
-		public func MotionTransfer createMotionTransfer()
+		func MotionTransfer createMotionTransfer()
 			return MotionTransferChild.new(factoryID())
 		end
 		
-		public func String displayName()
+		func String displayName()
 			return "Child Coordinate System"
 		end
 	end
 	
 	
 	
-	private var String pBone
-	private var bool pAdjustPosition
-	private var MotionTransferTracker pTracker
+	var String pBone
+	var bool pAdjustPosition
+	var MotionTransferTracker pTracker
 	
-	private var ADRuleInverseKinematic pADRuleIK
+	var ADRuleInverseKinematic pADRuleIK
 	
 	
 	
 	/** Create motion transfer. */
-	public func new(String factoryID) super(factoryID)
+	func new(String factoryID) super(factoryID)
 		pBone = ""
 		pAdjustPosition = true
 		pTracker = MotionTransferTracker.new()
 	end
 	
 	/** Create copy of motion transfer. */
-	public func new(MotionTransferChild transfer) super(transfer)
+	func new(MotionTransferChild transfer) super(transfer)
 		pBone = transfer.pBone
 		pAdjustPosition = transfer.pAdjustPosition
 		pTracker = MotionTransferTracker.new(transfer.pTracker)
@@ -92,12 +92,12 @@ class MotionTransferChild extends DefaultMotionTransfer
 	
 	
 	/** Bone name. */
-	public func String getBone()
+	func String getBone()
 		return pBone
 	end
 	
 	/** Set bone name. */
-	public func void setBone(String bone)
+	func void setBone(String bone)
 		if bone == null
 			throw ENullPointer.new("bone")
 		end
@@ -105,31 +105,31 @@ class MotionTransferChild extends DefaultMotionTransfer
 	end
 	
 	/** Adjust position. */
-	public func bool getAdjustPosition()
+	func bool getAdjustPosition()
 		return pAdjustPosition
 	end
 	
 	/** Set adjust position. */
-	public func void setAdjustPosition(bool adjust)
+	func void setAdjustPosition(bool adjust)
 		pAdjustPosition = adjust
 	end
 	
 	/** Tracker. */
-	public func MotionTransferTracker getTracker()
+	func MotionTransferTracker getTracker()
 		return pTracker
 	end
 	
 	
 	
 	/** Animator definition rule or null. */
-	public func ADRuleInverseKinematic getADRuleIK()
+	func ADRuleInverseKinematic getADRuleIK()
 		return pADRuleIK
 	end
 	
 	
 	
 	/** Init element clas. */
-	public func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
+	func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
 		// no behavior required
 		
 		// add rule. requires a valid slot and bone name
@@ -160,25 +160,25 @@ class MotionTransferChild extends DefaultMotionTransfer
 	end
 	
 	/** Reset calibration. */
-	public func void resetCalibration()
+	func void resetCalibration()
 		pTracker.resetTransform()
 		pADRuleIK = null
 	end
 	
 	/** Calibrate character. */
-	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
+	func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
 	BaseVRActor actor, Component component)
 		pTracker.resolveRealSlot(config)
 		pTracker.setTransform(config, component, pBone)
 	end
 	
 	/** Create copy of motion transfer. */
-	public func MotionTransfer createCopy()
+	func MotionTransfer createCopy()
 		return MotionTransferChild.new(this)
 	end
 	
 	/** Load from XML. */
-	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+	func void load(BaseXmlLoader loader, EasyXMLElement root)
 		root.forEachTag(block EasyXMLElement element, String tagName
 			if tagName.equals("name")
 				setName(element.getFirstCData())
@@ -198,7 +198,7 @@ class MotionTransferChild extends DefaultMotionTransfer
 		end)
 	end
 	
-	public func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+	func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
 		root.forEachTag(block EasyXMLElement element, String tagName
 			if tagName.equals("tracker")
 				pTracker.loadCalibrated(loader, element)
@@ -207,12 +207,12 @@ class MotionTransferChild extends DefaultMotionTransfer
 	end
 	
 	/** Post load initialize. */
-	public func void postLoadInit(CharacterConfiguration config)
+	func void postLoadInit(CharacterConfiguration config)
 		pTracker.resolveRealSlot(config)
 	end
 	
 	/** Save to XML. */
-	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+	func void save(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("name", getName())
 		tag.addDataTag("bone", pBone)
 		tag.addDataTag("adjustPosition", pAdjustPosition)
@@ -220,7 +220,7 @@ class MotionTransferChild extends DefaultMotionTransfer
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
-	public func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+	func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
 		pTracker.saveCalibrated(loader, tag.addTag("tracker"))
 	end
 end

@@ -34,51 +34,51 @@ pin Dragengine.Scenery
 class CollapsibleGroup extends Panel implements ToggleModelListener
 	/** Clicked toggle visibility listener. */
 	class ClickedToggleVisibility extends ClickedActionListener
-		private var CollapsibleGroup pGroup
+		var CollapsibleGroup pGroup
 		
-		public func new(CollapsibleGroup group)
+		func new(CollapsibleGroup group)
 			pGroup = group
 		end
 		
-		public func void onAction()
+		func void onAction()
 			pGroup.getModel().setToggled(not pGroup.getModel().getToggled())
 		end
 	end
 	
 	/** Persist state using parameter table. */
 	class PersistStateParamTable extends DefaultToggleModelListener
-		private var String pPath
+		var String pPath
 		
-		public func new(String path)
+		func new(String path)
 			pPath = path
 		end
 		
-		public func void toggledChanged(ToggleModel model)
+		func void toggledChanged(ToggleModel model)
 			GameApp.getGameApp().getSettings().setAt(pPath, model.getToggled())
 		end
 	end
 	
 	
 	
-	private var DisplayRotatingImage pArrow
-	private var Label pLabel
-	private var ToggleModel pModel
-	private var Panel pPanelHeader
-	private var Panel pPanelContent
+	var DisplayRotatingImage pArrow
+	var Label pLabel
+	var ToggleModel pModel
+	var Panel pPanelHeader
+	var Panel pPanelContent
 	
 	
 	
 	/** Create widget. */
-	public func new(String label, String helpTopic) this(label, helpTopic, true)
+	func new(String label, String helpTopic) this(label, helpTopic, true)
 	end
 	
 	/** Create widget. */
-	public func new(String label, String helpTopic, bool toggled)\
+	func new(String label, String helpTopic, bool toggled)\
 	this(label, helpTopic, DefaultToggleModel.new(toggled))
 	end
 	
 	/** Create widget. */
-	public func new(String label, String helpTopic, ToggleModel model)
+	func new(String label, String helpTopic, ToggleModel model)
 		if label == null
 			throw ENullPointer.new("label")
 		end
@@ -118,7 +118,7 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 	end
 	
 	/** Create widget. */
-	public func new(String label, String helpTopic, Layout layout, Block addContent) this(label, helpTopic)
+	func new(String label, String helpTopic, Layout layout, Block addContent) this(label, helpTopic)
 		pPanelContent.runWhileBlockingLayout(block
 			pPanelContent.setLayout(layout)
 			addContent.run(pPanelContent)
@@ -126,7 +126,7 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 	end
 	
 	/** Create widget. */
-	public func new(String label, String helpTopic, bool toggled, Layout layout, Block addContent) this(label, helpTopic, toggled)
+	func new(String label, String helpTopic, bool toggled, Layout layout, Block addContent) this(label, helpTopic, toggled)
 		pPanelContent.runWhileBlockingLayout(block
 			pPanelContent.setLayout(layout)
 			addContent.run(pPanelContent)
@@ -134,7 +134,7 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 	end
 	
 	/** Create widget. */
-	public func new(String label, String helpTopic, ToggleModel model, Layout layout, Block addContent) this(label, helpTopic, model)
+	func new(String label, String helpTopic, ToggleModel model, Layout layout, Block addContent) this(label, helpTopic, model)
 		pPanelContent.runWhileBlockingLayout(block
 			pPanelContent.setLayout(layout)
 			addContent.run(pPanelContent)
@@ -142,12 +142,12 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 	end
 	
 	/** Create toggle model persisting to settings. */
-	static public func ToggleModel persistModel(String path)
+	static func ToggleModel persistModel(String path)
 		return persistModel(path, true)
 	end
 	
 	/** Create toggle model persisting to settings. */
-	static public func ToggleModel persistModel(String path, bool toggled)
+	static func ToggleModel persistModel(String path, bool toggled)
 		var DefaultToggleModel model = DefaultToggleModel.new(\
 			GameApp.getGameApp().getSettings().getBoolAt(path, toggled))
 		model.addListener(PersistStateParamTable.new(path))
@@ -155,7 +155,7 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 	end
 	
 	/** Dispose of window. */
-	public func void dispose()
+	func void dispose()
 		if pModel != null
 			pModel.removeListener(this)
 			pModel = null
@@ -172,22 +172,22 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 	
 	
 	/** Arrow display image. */
-	public func DisplayRotatingImage getArrow()
+	func DisplayRotatingImage getArrow()
 		return pArrow
 	end
 	
 	/** Label. */
-	public func Label getLabel()
+	func Label getLabel()
 		return pLabel
 	end
 	
 	/** Model. */
-	public func ToggleModel getModel()
+	func ToggleModel getModel()
 		return pModel
 	end
 	
 	/** Set model. */
-	public func void setModel(ToggleModel model)
+	func void setModel(ToggleModel model)
 		if model == null
 			throw ENullPointer.new("model")
 		end
@@ -203,25 +203,25 @@ class CollapsibleGroup extends Panel implements ToggleModelListener
 	end
 	
 	/** Header panel. */
-	public func Panel getPanelHeader()
+	func Panel getPanelHeader()
 		return pPanelHeader
 	end
 	
 	/** Content panel. */
-	public func Panel getPanelContent()
+	func Panel getPanelContent()
 		return pPanelContent
 	end
 	
 	
 	/** Toggle changed. Shows or hides toggle panel. */
-	public func void toggledChanged(ToggleModel model)
+	func void toggledChanged(ToggleModel model)
 		updateWidgets()
 	end
 	
 	
 	
 	/** Set designer selector. */
-	public func void setDesignerSelector(String selector)
+	func void setDesignerSelector(String selector)
 		super.setDesignerSelector(selector)
 		pPanelHeader.setDesignerSelector("Panel." + selector + ".Header")
 		pArrow.setDesignerSelector("Image." + selector)

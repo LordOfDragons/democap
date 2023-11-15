@@ -37,12 +37,12 @@ class DialogFileSelect extends WindowDialog
 		protected var DialogFileSelect pDialog
 		protected var String pDirectory
 		
-		public func new(DialogFileSelect dialog, String directory)
+		func new(DialogFileSelect dialog, String directory)
 			pDialog = dialog
 			pDirectory = directory
 		end
 		
-		public func void onAction()
+		func void onAction()
 			pDialog.setDirectory(pDirectory)
 		end
 	end
@@ -54,7 +54,7 @@ class DialogFileSelect extends WindowDialog
 		public var FileType type
 		public var Image icon
 		
-		public func new(String path, String text, FileType type, Image icon)
+		func new(String path, String text, FileType type, Image icon)
 			this.path = path
 			this.text = text
 			this.type = type
@@ -67,20 +67,20 @@ class DialogFileSelect extends WindowDialog
 		protected var DialogFileSelect pDialog
 		
 		
-		public func new(DialogFileSelect dialog)
+		func new(DialogFileSelect dialog)
 			pDialog = dialog
 			setDefaultObject(FileListEntry.new("/", String.new('X', 25), FileType.file, dialog.imageFile))
 		end
 		
 		
-		public func Widget createRenderer(ListBox listBox)
+		func Widget createRenderer(ListBox listBox)
 			return Panel.new(FlowLayout.new(LayoutAxis.x, 2, FlowLayout.Stretch.last), block Panel p
 				p.addWidget(DisplayImage.new())
 				p.addWidget(Label.new(""))
 			end )
 		end
 		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
 			var Panel panel = renderer cast Panel
 			var FileListEntry entry = element cast FileListEntry
 			var DisplayImage icon = panel.getWidget(0) cast DisplayImage
@@ -107,11 +107,11 @@ class DialogFileSelect extends WindowDialog
 	class FilePatternChangedListener extends DefaultListModelListener
 		protected var DialogFileSelect pDialog
 		
-		public func new(DialogFileSelect dialog)
+		func new(DialogFileSelect dialog)
 			pDialog = dialog
 		end
 		
-		public func void selectionChanged(ListModel listModel)
+		func void selectionChanged(ListModel listModel)
 			if listModel.getSelected() != -1
 				pDialog.updateFileListing()
 			end
@@ -122,11 +122,11 @@ class DialogFileSelect extends WindowDialog
 	class ClickedEnterDirectory extends DefaultMouseListener
 		protected var DialogFileSelect pDialog
 		
-		public func new(DialogFileSelect dialog)
+		func new(DialogFileSelect dialog)
 			pDialog = dialog
 		end
 		
-		public func void onButtonRelease(MouseEvent event)
+		func void onButtonRelease(MouseEvent event)
 			var FileListEntry entry = pDialog.getSelectedFileListEntry()
 			if entry == null
 				return
@@ -142,11 +142,11 @@ class DialogFileSelect extends WindowDialog
 	class SelectedFileListEntry extends DefaultListModelListener
 		protected var DialogFileSelect pDialog
 		
-		public func new(DialogFileSelect dialog)
+		func new(DialogFileSelect dialog)
 			pDialog = dialog
 		end
 		
-		public func void selectionChanged(ListModel listModel)
+		func void selectionChanged(ListModel listModel)
 			var FileListEntry entry = pDialog.getSelectedFileListEntry()
 			if entry == null
 				return
@@ -165,12 +165,12 @@ class DialogFileSelect extends WindowDialog
 	class DoubleClickAccept extends ClickedActionListener
 		protected var DialogFileSelect pDialog
 		
-		public func new(DialogFileSelect dialog)
+		func new(DialogFileSelect dialog)
 			pDialog = dialog
 			setMultiClickCount(2)
 		end
 		
-		public func void onAction()
+		func void onAction()
 			pDialog.accept()
 		end
 	end
@@ -191,7 +191,7 @@ class DialogFileSelect extends WindowDialog
 	
 	
 	/** Create window. */
-	public func new(Window window, String title, ResultListener listener)
+	func new(Window window, String title, ResultListener listener)
 		imageDirectory = Image.new("/content/gui/images/icon_directory_16.png")
 		imageFile = Image.new("/content/gui/images/icon_file_16.png")
 		imageBreadCrumbSeparator = Image.new("/shareddata/guithemes/modern/arrows/right_normal.png")
@@ -219,7 +219,7 @@ class DialogFileSelect extends WindowDialog
 	end
 	
 	/** Dispose of window. */
-	public func void dispose()
+	func void dispose()
 		pModelFilename = null
 		pModelPattern = null
 		pModelFiles = null
@@ -279,7 +279,7 @@ class DialogFileSelect extends WindowDialog
 	
 	
 	/** Path. */
-	public func String getPath()
+	func String getPath()
 		var String filename = pModelFilename.getText()
 		if filename.empty()
 			return ""
@@ -288,7 +288,7 @@ class DialogFileSelect extends WindowDialog
 	end
 	
 	/** Set path. */
-	public func void setPath(String path)
+	func void setPath(String path)
 		if path == null
 			throw ENullPointer.new("path")
 		end
@@ -315,12 +315,12 @@ class DialogFileSelect extends WindowDialog
 	end
 	
 	/** Directory. */
-	public func String getDirectory()
+	func String getDirectory()
 		return pDirectory
 	end
 	
 	/** Set directory. */
-	public func void setDirectory(String directory)
+	func void setDirectory(String directory)
 		if directory.equals(pDirectory)
 			return
 		end
@@ -335,12 +335,12 @@ class DialogFileSelect extends WindowDialog
 	end
 	
 	/** Filename. */
-	public func String getFilename()
+	func String getFilename()
 		return pModelFilename.getText()
 	end
 	
 	/** Set filename. */
-	public func void setFilename(String filename)
+	func void setFilename(String filename)
 		if filename == null
 			throw ENullPointer.new("filename")
 		end
@@ -349,7 +349,7 @@ class DialogFileSelect extends WindowDialog
 	end
 	
 	/** Set patterns. */
-	public func void setPatterns(Array patterns)
+	func void setPatterns(Array patterns)
 		if patterns == null
 			throw ENullPointer.new("patterns")
 		end
@@ -369,7 +369,7 @@ class DialogFileSelect extends WindowDialog
 	end
 	
 	/** Get selected pattern. */
-	public func FileExtension getSelectedPattern()
+	func FileExtension getSelectedPattern()
 		if pModelPattern.getSelected() == -1
 			return null
 		end
@@ -377,7 +377,7 @@ class DialogFileSelect extends WindowDialog
 	end
 	
 	/** Select pattern matching path. */
-	public func void selectPatternMatchingPath()
+	func void selectPatternMatchingPath()
 		var String filename = getFilename()
 		if filename.empty()
 			pModelPattern.setSelected(DEMath.min(1, pModelPattern.getCount() - 1))
@@ -397,7 +397,7 @@ class DialogFileSelect extends WindowDialog
 	end
 	
 	/** Get selected file list entry or null. */
-	public func FileListEntry getSelectedFileListEntry()
+	func FileListEntry getSelectedFileListEntry()
 		if pModelFiles.getSelected() == -1
 			return null
 		end
@@ -405,7 +405,7 @@ class DialogFileSelect extends WindowDialog
 	end
 	
 	/** Accept dialog. */
-	public func void accept()
+	func void accept()
 		var String path = getPath()
 		if path.empty()
 			return
@@ -515,7 +515,7 @@ class DialogFileSelect extends WindowDialog
 	end
 	
 	/** Update file listing. */
-	public func void updateFileListing()
+	func void updateFileListing()
 		var String pattern = getSelectedPattern().getPatternsString()
 		var Array directories = Array.new()
 		var Array files = Array.new()

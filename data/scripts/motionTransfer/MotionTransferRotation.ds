@@ -38,36 +38,36 @@ pin Dragengine.XML
 class MotionTransferRotation extends DefaultMotionTransfer
 	/** Factory. */
 	class Factory implements MotionTransferFactory
-		public func new()
+		func new()
 		end
 		
-		public func String factoryID()
+		func String factoryID()
 			return "rotation"
 		end
 		
-		public func MotionTransfer createMotionTransfer()
+		func MotionTransfer createMotionTransfer()
 			return MotionTransferRotation.new(factoryID())
 		end
 		
-		public func String displayName()
+		func String displayName()
 			return "Rotate bones"
 		end
 	end
 	
 	
 	
-	private var Array pBones
-	private var Array pCounterBones
-	private var Vector pAxisRotation
-	private var float pAngle
+	var Array pBones
+	var Array pCounterBones
+	var Vector pAxisRotation
+	var float pAngle
 	
-	private var Array pCalibrateAxes
-	private var Array pCalibrateCounterAxes
+	var Array pCalibrateAxes
+	var Array pCalibrateCounterAxes
 	
 	
 	
 	/** Create motion transfer. */
-	public func new(String factoryID) super(factoryID)
+	func new(String factoryID) super(factoryID)
 		pBones = Array.new()
 		pCounterBones = Array.new()
 		pAxisRotation = Vector.new()
@@ -77,7 +77,7 @@ class MotionTransferRotation extends DefaultMotionTransfer
 	end
 	
 	/** Create copy of motion transfer. */
-	public func new(MotionTransferRotation transfer) super(transfer)
+	func new(MotionTransferRotation transfer) super(transfer)
 		pBones = Array.new(transfer.pBones)
 		pCounterBones = Array.new(transfer.pCounterBones)
 		pAxisRotation = transfer.pAxisRotation
@@ -89,22 +89,22 @@ class MotionTransferRotation extends DefaultMotionTransfer
 	
 	
 	/** Bones as Array of String. */
-	public func Array getBones()
+	func Array getBones()
 		return pBones
 	end
 	
 	/** Counter bones as Array of String. */
-	public func Array getCounterBones()
+	func Array getCounterBones()
 		return pCounterBones
 	end
 	
 	/** Axis rotation. */
-	public func Vector getAxisRotation()
+	func Vector getAxisRotation()
 		return pAxisRotation
 	end
 	
 	/** Set axis rotation. */
-	public func void setAxisRotation(Vector rotation)
+	func void setAxisRotation(Vector rotation)
 		if rotation == null
 			throw ENullPointer.new("rotation")
 		end
@@ -112,25 +112,25 @@ class MotionTransferRotation extends DefaultMotionTransfer
 	end
 	
 	/** Angle. */
-	public func float getAngle()
+	func float getAngle()
 		return pAngle
 	end
 	
 	/** Set angle. */
-	public func void setAngle(float angle)
+	func void setAngle(float angle)
 		pAngle = angle
 	end
 	
 	
 	
 	/** Reset calibration. */
-	public func void resetCalibration()
+	func void resetCalibration()
 		pCalibrateAxes.removeAll()
 		pCalibrateCounterAxes.removeAll()
 	end
 	
 	/** Init element clas. */
-	public func void initElementClass(CharacterConfiguration config,\
+	func void initElementClass(CharacterConfiguration config,\
 	BaseVRActorClass eclass, ModifiedRig modifyRig)
 		// no behavior required
 		
@@ -176,7 +176,7 @@ class MotionTransferRotation extends DefaultMotionTransfer
 	end
 	
 	/** Calibrate character. */
-	public func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
+	func void calibrate(CharacterConfiguration config, ActorProfile actorProfile, \
 	BaseVRActor actor, Component component)
 		if pBones.getCount() == 0 and pCounterBones.getCount() == 0
 			return
@@ -216,12 +216,12 @@ class MotionTransferRotation extends DefaultMotionTransfer
 	end
 	
 	/** Create copy of motion transfer. */
-	public func MotionTransfer createCopy()
+	func MotionTransfer createCopy()
 		return MotionTransferRotation.new(this)
 	end
 	
 	/** Load from XML. */
-	public func void load(BaseXmlLoader loader, EasyXMLElement root)
+	func void load(BaseXmlLoader loader, EasyXMLElement root)
 		root.forEachTag(block EasyXMLElement element, String tagName
 			if tagName.equals("name")
 				setName(element.getFirstCData())
@@ -244,7 +244,7 @@ class MotionTransferRotation extends DefaultMotionTransfer
 		end)
 	end
 	
-	public func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+	func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
 		root.forEachTag(block EasyXMLElement element, String tagName
 			if tagName.equals("axis")
 				pCalibrateAxes.add(loader.readVector(element))
@@ -256,7 +256,7 @@ class MotionTransferRotation extends DefaultMotionTransfer
 	end
 	
 	/** Save to XML. */
-	public func void save(BaseXmlLoader loader, EasyXMLElement tag)
+	func void save(BaseXmlLoader loader, EasyXMLElement tag)
 		tag.addDataTag("name", getName())
 		pBones.forEach(block String each
 			tag.addDataTag("bone", each)
@@ -269,7 +269,7 @@ class MotionTransferRotation extends DefaultMotionTransfer
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
-	public func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+	func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
 		var LoadCharacterProfile lcp = GameApp.getGameApp().getLoadCharacterProfile()
 		
 		pCalibrateAxes.forEach(block Vector each

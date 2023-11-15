@@ -33,52 +33,52 @@ class ECBHideWhilePlaybackNotRecording extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class RecordingStateChanged extends ECBRecordAnimation.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void prepareRecording(ECBRecordAnimation.Instance instance)
+			func void prepareRecording(ECBRecordAnimation.Instance instance)
 				pInstance.updateVisibility()
 			end
 			
-			public func void stopRecording(ECBRecordAnimation.Instance instance)
+			func void stopRecording(ECBRecordAnimation.Instance instance)
 				pInstance.updateVisibility()
 			end
 		end
 		
 		class PlaybackChanged extends PlaybackScene.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void startPlayback(PlaybackScene playbackScene)
+			func void startPlayback(PlaybackScene playbackScene)
 				pInstance.updateVisibility()
 			end
 			
-			public func void stopPlayback(PlaybackScene playbackScene)
+			func void stopPlayback(PlaybackScene playbackScene)
 				pInstance.updateVisibility()
 			end
 			
-			public func void pausePlayback(PlaybackScene playbackScene)
+			func void pausePlayback(PlaybackScene playbackScene)
 				pInstance.updateVisibility()
 			end
 		end
 		
 		
 		
-		private var ECBHideWhilePlaybackNotRecording pECBehavior
-		private var ECBRecordAnimation.Instance pRecordAnimation
-		private var PlaybackChanged pPlaybackChanged
-		private var Boolean pRestoreVisibility
+		var ECBHideWhilePlaybackNotRecording pECBehavior
+		var ECBRecordAnimation.Instance pRecordAnimation
+		var PlaybackChanged pPlaybackChanged
+		var Boolean pRestoreVisibility
 		
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBHideWhilePlaybackNotRecording ecbehavior, BehaviorElement element) super(element)
+		func new(ECBHideWhilePlaybackNotRecording ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			
 			pRecordAnimation = ecbehavior.getRecordAnimation().instance(element)
@@ -86,7 +86,7 @@ class ECBHideWhilePlaybackNotRecording extends DefaultECBehavior
 		end
 		
 		/** Dispose of behavior. */
-		public func void dispose()
+		func void dispose()
 			pRecordAnimation = null
 			super.dispose()
 		end
@@ -94,7 +94,7 @@ class ECBHideWhilePlaybackNotRecording extends DefaultECBehavior
 		
 		
 		/** Update visibility. */
-		public func void updateVisibility()
+		func void updateVisibility()
 			if pRecordAnimation.isPreparingOrRecording() or GameApp.getGameApp().getPlaybackScene().isStopped()
 				show()
 				
@@ -104,7 +104,7 @@ class ECBHideWhilePlaybackNotRecording extends DefaultECBehavior
 		end
 		
 		/** Hide element. */
-		public func void hide()
+		func void hide()
 			if pRestoreVisibility != null
 				return
 			end
@@ -115,7 +115,7 @@ class ECBHideWhilePlaybackNotRecording extends DefaultECBehavior
 		end
 		
 		/** Show element. */
-		public func void show()
+		func void show()
 			if pRestoreVisibility == null
 				return
 			end
@@ -127,13 +127,13 @@ class ECBHideWhilePlaybackNotRecording extends DefaultECBehavior
 		
 		
 		/** Added to game world. */
-		public func void addToGameWorld()
+		func void addToGameWorld()
 			pPlaybackChanged = PlaybackChanged.new(this)
 			GameApp.getGameApp().getPlaybackScene().addListener(pPlaybackChanged)
 		end
 		
 		/** Remove from game world. */
-		public func void removeFromGameWorld()
+		func void removeFromGameWorld()
 			if pPlaybackChanged != null
 				GameApp.getGameApp().getPlaybackScene().removeListener(pPlaybackChanged)
 				pPlaybackChanged = null
@@ -143,38 +143,38 @@ class ECBHideWhilePlaybackNotRecording extends DefaultECBehavior
 	
 	
 	
-	private var ECBRecordAnimation pRecordAnimation
+	var ECBRecordAnimation pRecordAnimation
 	
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBRecordAnimation recordAnimation) super(eclass)
+	func new(BehaviorElementClass eclass, ECBRecordAnimation recordAnimation) super(eclass)
 		pRecordAnimation = recordAnimation
 		
 		eclass.addBehavior(this)
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		pRecordAnimation = null
 		super.dispose()
 	end
 	
 	
 	
-	public func ECBRecordAnimation getRecordAnimation()
+	func ECBRecordAnimation getRecordAnimation()
 		return pRecordAnimation
 	end
 	
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance( BehaviorElement element )
+	func Instance instance( BehaviorElement element )
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Create behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

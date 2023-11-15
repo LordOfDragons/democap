@@ -34,13 +34,13 @@ class ECBCapturedHideWhileRecording extends DefaultECBehavior
 	class Instance extends DefaultECBehaviorInstance
 		/** Attach to record animation behavior. */
 		class AttachRecordAnimation extends ECBehaviorPlayerControllable.Tracker.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void activeActorChanged(ECBehaviorPlayerControllable.Tracker tracker)
+			func void activeActorChanged(ECBehaviorPlayerControllable.Tracker tracker)
 				if tracker.getActor() != null
 					pInstance.setRecordAnimation(ECBRecordAnimation.getInstanceIn(tracker.getActor().getElement()))
 					
@@ -51,44 +51,44 @@ class ECBCapturedHideWhileRecording extends DefaultECBehavior
 		end
 		
 		class RecordingStateChanged extends ECBRecordAnimation.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void prepareRecording(ECBRecordAnimation.Instance instance)
+			func void prepareRecording(ECBRecordAnimation.Instance instance)
 				if pInstance.getCapturable().isCaptured()
 					pInstance.hide()
 				end
 			end
 			
-			public func void stopRecording(ECBRecordAnimation.Instance instance)
+			func void stopRecording(ECBRecordAnimation.Instance instance)
 				pInstance.show()
 			end
 		end
 		
 		
 		
-		private var ECBCapturedHideWhileRecording pECBehavior
-		private var ECBehaviorPlayerControllable.Instance pPlayer
-		private var ECBRecordAnimation.Instance pRecordAnimation
-		private var ECBCapturable.Instance pCapturable
-		private var AttachRecordAnimation pAttachRecordAnimation
-		private var RecordingStateChanged pRecordingStateChanged
-		private var Boolean pRestoreVisibility
+		var ECBCapturedHideWhileRecording pECBehavior
+		var ECBehaviorPlayerControllable.Instance pPlayer
+		var ECBRecordAnimation.Instance pRecordAnimation
+		var ECBCapturable.Instance pCapturable
+		var AttachRecordAnimation pAttachRecordAnimation
+		var RecordingStateChanged pRecordingStateChanged
+		var Boolean pRestoreVisibility
 		
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBCapturedHideWhileRecording ecbehavior, BehaviorElement element) super(element)
+		func new(ECBCapturedHideWhileRecording ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pCapturable = ecbehavior.getCapturable().instance(element)
 			pRecordingStateChanged = RecordingStateChanged.new(this)
 		end
 		
 		/** Dispose of behavior. */
-		public func void dispose()
+		func void dispose()
 			pRecordingStateChanged = null
 			pCapturable = null
 			super.dispose()
@@ -97,17 +97,17 @@ class ECBCapturedHideWhileRecording extends DefaultECBehavior
 		
 		
 		/** Capturable behavior instalce. */
-		public func ECBCapturable.Instance getCapturable()
+		func ECBCapturable.Instance getCapturable()
 			return pCapturable
 		end
 		
 		/** Record animation or null. */
-		public func ECBRecordAnimation.Instance getRecordAnimation()
+		func ECBRecordAnimation.Instance getRecordAnimation()
 			return pRecordAnimation
 		end
 		
 		/** Set record animation or null. */
-		public func void setRecordAnimation(ECBRecordAnimation.Instance recordAnimation)
+		func void setRecordAnimation(ECBRecordAnimation.Instance recordAnimation)
 			if recordAnimation == pRecordAnimation
 				return
 			end
@@ -134,7 +134,7 @@ class ECBCapturedHideWhileRecording extends DefaultECBehavior
 		
 		
 		/** Hide element. */
-		public func void hide()
+		func void hide()
 			if pRecordAnimation == null or pRestoreVisibility != null
 				return
 			end
@@ -147,7 +147,7 @@ class ECBCapturedHideWhileRecording extends DefaultECBehavior
 		end
 		
 		/** Show element. */
-		public func void show()
+		func void show()
 			if pRecordAnimation == null or pRestoreVisibility == null
 				return
 			end
@@ -163,14 +163,14 @@ class ECBCapturedHideWhileRecording extends DefaultECBehavior
 		
 		
 		/** Added to game world. */
-		public func void addToGameWorld()
+		func void addToGameWorld()
 			pAttachRecordAnimation = AttachRecordAnimation.new(this)
 			GameApp.getGameApp().getPlayerControlledActor().addListener(pAttachRecordAnimation)
 			pAttachRecordAnimation.activeActorChanged(GameApp.getGameApp().getPlayerControlledActor())
 		end
 		
 		/** Remove from game world. */
-		public func void removeFromGameWorld()
+		func void removeFromGameWorld()
 			setRecordAnimation(null)
 			GameApp.getGameApp().getPlayerControlledActor().removeListener(pAttachRecordAnimation)
 			pAttachRecordAnimation = null
@@ -184,7 +184,7 @@ class ECBCapturedHideWhileRecording extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBCapturable capturable) super(eclass)
+	func new(BehaviorElementClass eclass, ECBCapturable capturable) super(eclass)
 		pCapturable = capturable
 		eclass.addBehavior(this)
 	end
@@ -192,19 +192,19 @@ class ECBCapturedHideWhileRecording extends DefaultECBehavior
 	
 	
 	/** Capturable behavior. */
-	public func ECBCapturable getCapturable()
+	func ECBCapturable getCapturable()
 		return pCapturable
 	end
 	
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance( BehaviorElement element )
+	func Instance instance( BehaviorElement element )
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Create behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

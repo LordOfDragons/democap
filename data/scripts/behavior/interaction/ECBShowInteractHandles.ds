@@ -42,15 +42,15 @@ class ECBShowInteractHandles extends DefaultECBehavior
 	/** Default implementation of behavior instance listener. */
 	class DefaultListener implements Listener
 		/** Create default listener. */
-		public func new()
+		func new()
 		end
 		
 		/** Start interacting with handle. */
-		public func void startInteract(Instance instance, ECBInteractHandle.Instance handle)
+		func void startInteract(Instance instance, ECBInteractHandle.Instance handle)
 		end
 		
 		/** Stop interacting with handle. */
-		public func void stopInteract(Instance instance, ECBInteractHandle.Instance handle)
+		func void stopInteract(Instance instance, ECBInteractHandle.Instance handle)
 		end
 	end
 	
@@ -58,30 +58,30 @@ class ECBShowInteractHandles extends DefaultECBehavior
 	class Instance extends DefaultECBehaviorInstance
 		/** Show handles listener. */
 		class ShowHandlesListener extends ECBSelectable.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void selected(ECBSelectable.Instance instance)
+			func void selected(ECBSelectable.Instance instance)
 				pInstance.updateVisibility()
 			end
 			
-			public func void deselected(ECBSelectable.Instance instance)
+			func void deselected(ECBSelectable.Instance instance)
 				pInstance.updateVisibility()
 			end
 		end
 		
 		/** Attach to record animation behavior. */
 		class AttachRecordAnimation extends ECBehaviorPlayerControllable.Tracker.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void activeActorChanged(ECBehaviorPlayerControllable.Tracker tracker)
+			func void activeActorChanged(ECBehaviorPlayerControllable.Tracker tracker)
 				if tracker.getActor() != null
 					pInstance.setRecordAnimation(ECBRecordAnimation.getInstanceIn(tracker.getActor().getElement()))
 					
@@ -92,47 +92,47 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		end
 		
 		class RecordingStateChanged extends ECBRecordAnimation.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void prepareRecording(ECBRecordAnimation.Instance instance)
+			func void prepareRecording(ECBRecordAnimation.Instance instance)
 				pInstance.updateVisibility()
 			end
 			
-			public func void stopRecording(ECBRecordAnimation.Instance instance)
+			func void stopRecording(ECBRecordAnimation.Instance instance)
 				pInstance.updateVisibility()
 			end
 		end
 		
 		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
-			public func new(Instance instance) super(instance, "ECBShowInteractHandles")
+			func new(Instance instance) super(instance, "ECBShowInteractHandles")
 			end
 			
-			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+			func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
 				return Gui.WMPSOShowInteractHandles.new(panelProject, getId())
 			end
 		end
 		
 		
 		
-		private var ECBShowInteractHandles pECBehavior
-		private var ECBSelectable.Instance pSelectable
-		private var ECBRecordAnimation.Instance pRecordAnimation
-		private var AttachRecordAnimation pAttachRecordAnimation
-		private var RecordingStateChanged pRecordingStateChanged
-		private var float pHandleSize
-		private var Array pHandleClasses
-		private var Array pHandleElements
-		private var bool pVisible
-		private var Array pListeners
+		var ECBShowInteractHandles pECBehavior
+		var ECBSelectable.Instance pSelectable
+		var ECBRecordAnimation.Instance pRecordAnimation
+		var AttachRecordAnimation pAttachRecordAnimation
+		var RecordingStateChanged pRecordingStateChanged
+		var float pHandleSize
+		var Array pHandleClasses
+		var Array pHandleElements
+		var bool pVisible
+		var Array pListeners
 		
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBShowInteractHandles ecbehavior, BehaviorElement element) super(element)
+		func new(ECBShowInteractHandles ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pHandleClasses = Array.new()
 			pHandleElements = Array.new()
@@ -143,7 +143,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		end
 		
 		/** Dispose of behavior instance. */
-		public func void dispose()
+		func void dispose()
 			pHandleElements = null
 			pHandleClasses = null
 			pSelectable = null
@@ -155,7 +155,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		end
 		
 		/** Init behavior instance. */
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			pHandleSize = DEMath.max(pECBehavior.getHandleSize().getValue(stub), 0.0)
 			
 			pHandleClasses = pECBehavior.getHandleClasses().getElementClasses(\
@@ -171,24 +171,24 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		
 		
 		/** Behavior. */
-		public func ECBShowInteractHandles getECBehavior()
+		func ECBShowInteractHandles getECBehavior()
 			return pECBehavior
 		end
 		
 		/** Selectable behavior instance. */
-		public func ECBSelectable.Instance getSelectable()
+		func ECBSelectable.Instance getSelectable()
 			return pSelectable
 		end
 		
 		
 		
 		/** Handle size in meters. */
-		public func float getHandleSize()
+		func float getHandleSize()
 			return pHandleSize
 		end
 		
 		/** Set handle size in meters. */
-		public func void setHandleSize(float size)
+		func void setHandleSize(float size)
 			size = DEMath.max(size, 0.0)
 			if DEMath.fabs(size - pHandleSize) < 0.001
 				return
@@ -201,12 +201,12 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		
 		
 		/** Handles are visible. */
-		public func bool getVisible()
+		func bool getVisible()
 			return pVisible
 		end
 		
 		/** Show handles if hidden. */
-		public func void show()
+		func void show()
 			if pVisible
 				return
 			end
@@ -235,7 +235,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		end
 		
 		/** Hide handles if visible. */
-		public func void hide()
+		func void hide()
 			if not pVisible
 				return
 			end
@@ -251,12 +251,12 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		
 		
 		/** Record animation or null. */
-		public func ECBRecordAnimation.Instance getRecordAnimation()
+		func ECBRecordAnimation.Instance getRecordAnimation()
 			return pRecordAnimation
 		end
 		
 		/** Set record animation or null. */
-		public func void setRecordAnimation(ECBRecordAnimation.Instance recordAnimation)
+		func void setRecordAnimation(ECBRecordAnimation.Instance recordAnimation)
 			if recordAnimation == pRecordAnimation
 				return
 			end
@@ -279,7 +279,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		
 		
 		/** Update visibility. */
-		public func void updateVisibility()
+		func void updateVisibility()
 			var BehaviorElement element = getElement()
 			if element == null or element.getGameWorld() == null
 				return
@@ -302,7 +302,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		 * Notify listeners start interacting with handle. Handle can be null if geometry
 		 * parameters of object are adjusted numerically.
 		 */
-		public func void notifyStartInteract(ECBInteractHandle.Instance handle)
+		func void notifyStartInteract(ECBInteractHandle.Instance handle)
 			pListeners.forEach(block Listener each
 				each.startInteract(this, handle)
 			end)
@@ -312,7 +312,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		 * Notify listeners stop interacting with handle. Handle can be null if geometry
 		 * parameters of object are adjusted numerically.
 		 */
-		public func void notifyStopInteract(ECBInteractHandle.Instance handle)
+		func void notifyStopInteract(ECBInteractHandle.Instance handle)
 			if pListeners == null
 				return // dispose protection
 			end
@@ -325,7 +325,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		
 		
 		/** Add listener. */
-		public func void addListener(Listener listener)
+		func void addListener(Listener listener)
 			if listener == null
 				throw EInvalidParam.new()
 			end
@@ -333,26 +333,26 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		end
 		
 		/** Remove listener. */
-		public func void removeListener(Listener listener)
+		func void removeListener(Listener listener)
 			pListeners.remove(listener)
 		end
 		
 		
 		
 		/** State changed for example visibility. */
-		public func void stateChanged()
+		func void stateChanged()
 			updateVisibility()
 		end
 		
 		/** Added to game world. */
-		public func void addToGameWorld()
+		func void addToGameWorld()
 			pAttachRecordAnimation = AttachRecordAnimation.new(this)
 			GameApp.getGameApp().getPlayerControlledActor().addListener(pAttachRecordAnimation)
 			pAttachRecordAnimation.activeActorChanged(GameApp.getGameApp().getPlayerControlledActor())
 		end
 		
 		/** Remove from game world. */
-		public func void removeFromGameWorld()
+		func void removeFromGameWorld()
 			setRecordAnimation(null)
 			GameApp.getGameApp().getPlayerControlledActor().removeListener(pAttachRecordAnimation)
 			pAttachRecordAnimation = null
@@ -364,7 +364,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		
 		
 		/** Read behavior from file. */
-		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+		func void readFromFile(PersistencyEnvironment env, FileReader reader)
 			select reader.readByte() // version
 			case 0
 				pHandleSize = reader.readFloat()
@@ -379,7 +379,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		end
 		
 		/** Write behavior to file. */
-		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+		func void writeToFile(PersistencyEnvironment env, FileWriter writer)
 			writer.writeByte(0) // version
 			writer.writeFloat(pHandleSize)
 		end
@@ -388,14 +388,14 @@ class ECBShowInteractHandles extends DefaultECBehavior
 	
 	
 	public var ECBBehaviorGuiPanels behaviorGuiPanels
-	private var ECBSelectable pSelectable
-	private var ECPElementClassList pHandleClasses
-	private var ECPFloat pHandleSize
+	var ECBSelectable pSelectable
+	var ECPElementClassList pHandleClasses
+	var ECPFloat pHandleSize
 	
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
 	ECBSelectable selectable) super(eclass)
 		if selectable == null
 			throw ENullPointer.new("selectable")
@@ -416,7 +416,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		behaviorGuiPanels = null
 		pHandleClasses = null
 		pSelectable = null
@@ -426,17 +426,17 @@ class ECBShowInteractHandles extends DefaultECBehavior
 	
 	
 	/** Selectable behavior. */
-	public func ECBSelectable getSelectable()
+	func ECBSelectable getSelectable()
 		return pSelectable
 	end
 	
 	/** Element class list. */
-	public func ECPElementClassList getHandleClasses()
+	func ECPElementClassList getHandleClasses()
 		return pHandleClasses
 	end
 	
 	/** Base handle size. */
-	public func ECPFloat getHandleSize()
+	func ECPFloat getHandleSize()
 		return pHandleSize
 	end
 	
@@ -487,19 +487,19 @@ class ECBShowInteractHandles extends DefaultECBehavior
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance(BehaviorElement element)
+	func Instance instance(BehaviorElement element)
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Get behavior in element class or null if absent. */
-	static public func ECBShowInteractHandles getBehaviorIn(BehaviorElementClass eclass)
+	static func ECBShowInteractHandles getBehaviorIn(BehaviorElementClass eclass)
 		return eclass.findBehavior(block ECBShowInteractHandles each
 			return true
 		end) cast ECBShowInteractHandles
 	end
 	
 	/** Get instance in element or null if absent. */
-	static public func Instance getInstanceIn(BehaviorElement element)
+	static func Instance getInstanceIn(BehaviorElement element)
 		return element.findInstance(block Instance each
 			return true
 		end) cast Instance
@@ -508,7 +508,7 @@ class ECBShowInteractHandles extends DefaultECBehavior
 	
 	
 	/** Create behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

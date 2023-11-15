@@ -45,13 +45,13 @@ class ECBAMovementHelper extends DefaultECBehavior
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBAMovementHelper ecbehavior, BehaviorElement element) super(element)
+		func new(ECBAMovementHelper ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pComponent = ecbehavior.component.instance(element)
 		end
 		
 		/** Dispose of behavior instance. */
-		public func void dispose()
+		func void dispose()
 			pCharacter = null
 			super.dispose()
 		end
@@ -59,21 +59,21 @@ class ECBAMovementHelper extends DefaultECBehavior
 		
 		
 		/** Init behavior. */
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			pCharacter = ECBCharacterConfiguration.getInstanceIn(getElement())
 		end
 		
 		
 		
-		public func float getSmoothRotation()
+		func float getSmoothRotation()
 			return pSmoothRotation
 		end
 		
-		public func void addSmoothRotation(float value)
+		func void addSmoothRotation(float value)
 			pAccumSmoothRotation += value
 		end
 		
-		public func void updateSmoothRotation(float elapsed)
+		func void updateSmoothRotation(float elapsed)
 			var float adjustFactor = elapsed * 2.5
 			pSmoothRotation = pAccumSmoothRotation * DEMath.min(adjustFactor, 1.0)
 			pAccumSmoothRotation -= pSmoothRotation
@@ -82,7 +82,7 @@ class ECBAMovementHelper extends DefaultECBehavior
 		
 		
 		/** Calculate movement matrix. */
-		public func DMatrix calcMatrix()
+		func DMatrix calcMatrix()
 			var DMatrix matrixElement = getElement().getElementMatrix().normalize()
 			
 			if pCharacter == null
@@ -110,34 +110,34 @@ class ECBAMovementHelper extends DefaultECBehavior
 		
 		
 		/** Move actor. */
-		public func void move(DVector direction)
+		func void move(DVector direction)
 			getElement().setPosition(getElement().getPosition() + moveVector(direction))
 		end
 		
 		/** Move actor. */
-		public func DVector moveVector(DVector direction)
+		func DVector moveVector(DVector direction)
 			var DMatrix matrix = calcMatrix()
 			return matrix.transformNormal(direction)
 		end
 		
 		/** Rotate actor. */
-		public func void rotate(Vector axis, float angle)
+		func void rotate(Vector axis, float angle)
 			rotate(Quaternion.newFromAxis(calcMatrix().toMatrix().transformNormal(axis.normalize()), angle))
 		end
 		
 		/** Rotate actor. */
-		public func void rotate(Quaternion rotation)
+		func void rotate(Quaternion rotation)
 			var DMatrix matrix = rotateMatrix(rotation)
 			getElement().setGeometry(matrix.getPosition(), matrix.toQuaternion())
 		end
 		
 		/** Rotate actor. */
-		public func DMatrix rotateMatrix(Vector axis, float angle)
+		func DMatrix rotateMatrix(Vector axis, float angle)
 			return rotateMatrix(Quaternion.newFromAxis(calcMatrix().toMatrix().transformNormal(axis.normalize()), angle))
 		end
 		
 		/** Rotate actor. */
-		public func DMatrix rotateMatrix(Quaternion rotation)
+		func DMatrix rotateMatrix(Quaternion rotation)
 			var DMatrix matrixElement = getElement().getElementMatrix().normalize()
 			var DMatrix matrix = calcMatrix()
 			
@@ -153,13 +153,13 @@ class ECBAMovementHelper extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBehaviorComponent component) super(eclass)
+	func new(BehaviorElementClass eclass, ECBehaviorComponent component) super(eclass)
 		this.component = component
 		eclass.addBehavior(this)
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		component = null
 		super.dispose()
 	end
@@ -167,19 +167,19 @@ class ECBAMovementHelper extends DefaultECBehavior
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance(BehaviorElement element)
+	func Instance instance(BehaviorElement element)
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Get instance in element or null if absent. */
-	static public func Instance getInstanceIn(BehaviorElement element)
+	static func Instance getInstanceIn(BehaviorElement element)
 		return element.findInstance(block Instance each
 			return true
 		end) cast Instance
 	end
 	
 	/** Create behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

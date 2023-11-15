@@ -36,13 +36,13 @@ class ECBHideWhileRecording extends DefaultECBehavior
 	class Instance extends DefaultECBehaviorInstance
 		/** Attach to record animation behavior. */
 		class AttachRecordAnimation extends ECBehaviorPlayerControllable.Tracker.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void activeActorChanged(ECBehaviorPlayerControllable.Tracker tracker)
+			func void activeActorChanged(ECBehaviorPlayerControllable.Tracker tracker)
 				if tracker.getActor() != null
 					pInstance.setRecordAnimation(ECBRecordAnimation.getInstanceIn(tracker.getActor().getElement()))
 					
@@ -53,57 +53,57 @@ class ECBHideWhileRecording extends DefaultECBehavior
 		end
 		
 		class RecordingStateChanged extends ECBRecordAnimation.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void prepareRecording(ECBRecordAnimation.Instance instance)
+			func void prepareRecording(ECBRecordAnimation.Instance instance)
 				pInstance.hide()
 			end
 			
-			public func void stopRecording(ECBRecordAnimation.Instance instance)
+			func void stopRecording(ECBRecordAnimation.Instance instance)
 				pInstance.show()
 			end
 		end
 		
 		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
-			public func new(Instance instance) super(instance, "ECBHideWhileRecording")
+			func new(Instance instance) super(instance, "ECBHideWhileRecording")
 			end
 			
-			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+			func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
 				return Gui.WMPSOHideWhileRecording.new(panelProject, getId())
 			end
 		end
 		
 		
 		
-		private var ECBHideWhileRecording pECBehavior
-		private var ECBehaviorPlayerControllable.Instance pPlayer
-		private var ECBRecordAnimation.Instance pRecordAnimation
-		private var AttachRecordAnimation pAttachRecordAnimation
-		private var RecordingStateChanged pRecordingStateChanged
-		private var Boolean pRestoreVisibility
-		private var bool pEnabled
+		var ECBHideWhileRecording pECBehavior
+		var ECBehaviorPlayerControllable.Instance pPlayer
+		var ECBRecordAnimation.Instance pRecordAnimation
+		var AttachRecordAnimation pAttachRecordAnimation
+		var RecordingStateChanged pRecordingStateChanged
+		var Boolean pRestoreVisibility
+		var bool pEnabled
 		
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBHideWhileRecording ecbehavior, BehaviorElement element) super(element)
+		func new(ECBHideWhileRecording ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pEnabled = true
 			pRecordingStateChanged = RecordingStateChanged.new(this)
 		end
 		
 		/** Dispose of behavior. */
-		public func void dispose()
+		func void dispose()
 			pRecordingStateChanged = null
 			super.dispose()
 		end
 		
 		/** Init behavior instance. */
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			if pECBehavior.behaviorGuiPanels != null
 				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
 			end
@@ -112,17 +112,17 @@ class ECBHideWhileRecording extends DefaultECBehavior
 		
 		
 		/** Behavior. */
-		public func ECBHideWhileRecording getECBehavior()
+		func ECBHideWhileRecording getECBehavior()
 			return pECBehavior
 		end
 		
 		/** Record animation or null. */
-		public func ECBRecordAnimation.Instance getRecordAnimation()
+		func ECBRecordAnimation.Instance getRecordAnimation()
 			return pRecordAnimation
 		end
 		
 		/** Set record animation or null. */
-		public func void setRecordAnimation(ECBRecordAnimation.Instance recordAnimation)
+		func void setRecordAnimation(ECBRecordAnimation.Instance recordAnimation)
 			if recordAnimation == pRecordAnimation
 				return
 			end
@@ -149,12 +149,12 @@ class ECBHideWhileRecording extends DefaultECBehavior
 		
 		
 		/** Enable hiding if recording. */
-		public func bool getEnabled()
+		func bool getEnabled()
 			return pEnabled
 		end
 		
 		/** Set enable hiding if recording. */
-		public func void setEnabled(bool enabled)
+		func void setEnabled(bool enabled)
 			if enabled == pEnabled
 				return
 			end
@@ -175,7 +175,7 @@ class ECBHideWhileRecording extends DefaultECBehavior
 		
 		
 		/** Hide element. */
-		public func void hide()
+		func void hide()
 			if pRecordAnimation == null or pRestoreVisibility != null or not pEnabled
 				return
 			end
@@ -188,7 +188,7 @@ class ECBHideWhileRecording extends DefaultECBehavior
 		end
 		
 		/** Show element. */
-		public func void show()
+		func void show()
 			if pRecordAnimation == null or pRestoreVisibility == null
 				return
 			end
@@ -204,14 +204,14 @@ class ECBHideWhileRecording extends DefaultECBehavior
 		
 		
 		/** Added to game world. */
-		public func void addToGameWorld()
+		func void addToGameWorld()
 			pAttachRecordAnimation = AttachRecordAnimation.new(this)
 			GameApp.getGameApp().getPlayerControlledActor().addListener(pAttachRecordAnimation)
 			pAttachRecordAnimation.activeActorChanged(GameApp.getGameApp().getPlayerControlledActor())
 		end
 		
 		/** Remove from game world. */
-		public func void removeFromGameWorld()
+		func void removeFromGameWorld()
 			setRecordAnimation(null)
 			GameApp.getGameApp().getPlayerControlledActor().removeListener(pAttachRecordAnimation)
 			pAttachRecordAnimation = null
@@ -220,7 +220,7 @@ class ECBHideWhileRecording extends DefaultECBehavior
 		
 		
 		/** Read from file. */
-		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+		func void readFromFile(PersistencyEnvironment env, FileReader reader)
 			var int i, count
 			
 			select reader.readByte() // version
@@ -234,7 +234,7 @@ class ECBHideWhileRecording extends DefaultECBehavior
 		end
 		
 		/** Write to file. */
-		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+		func void writeToFile(PersistencyEnvironment env, FileWriter writer)
 			writer.writeByte(0) // version
 			
 			var PersistencyFlags flags = PersistencyFlags.new(1)
@@ -250,14 +250,14 @@ class ECBHideWhileRecording extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels) super(eclass)
+	func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels) super(eclass)
 		this.behaviorGuiPanels = behaviorGuiPanels
 		
 		eclass.addBehavior(this)
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		behaviorGuiPanels = null
 		super.dispose()
 	end
@@ -265,12 +265,12 @@ class ECBHideWhileRecording extends DefaultECBehavior
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance( BehaviorElement element )
+	func Instance instance( BehaviorElement element )
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Create behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

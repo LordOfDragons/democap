@@ -41,11 +41,11 @@ class ECBHideCondition extends DefaultECBehavior
 	/** Default implementation of behavior instance listener. */
 	class DefaultListener implements Listener
 		/** Create default listener. */
-		public func new()
+		func new()
 		end
 		
 		/** Hide object. */
-		public func bool hideObject(Instance instance)
+		func bool hideObject(Instance instance)
 			return false
 		end
 	end
@@ -53,77 +53,77 @@ class ECBHideCondition extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class RecordingStateChanged extends RecordScene.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void prepareRecording(RecordScene recordScene)
+			func void prepareRecording(RecordScene recordScene)
 				pInstance.updateVisibility()
 			end
 			
-			public func void stopRecording(RecordScene recordScene)
+			func void stopRecording(RecordScene recordScene)
 				pInstance.updateVisibility()
 			end
 		end
 		
 		class PlaybackChanged extends PlaybackScene.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void startPlayback(PlaybackScene playbackScene)
+			func void startPlayback(PlaybackScene playbackScene)
 				pInstance.updateVisibility()
 			end
 			
-			public func void stopPlayback(PlaybackScene playbackScene)
+			func void stopPlayback(PlaybackScene playbackScene)
 				pInstance.updateVisibility()
 			end
 			
-			public func void pausePlayback(PlaybackScene playbackScene)
+			func void pausePlayback(PlaybackScene playbackScene)
 				pInstance.updateVisibility()
 			end
 		end
 		
 		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
-			public func new(Instance instance) super(instance, "ECBHideCondition")
+			func new(Instance instance) super(instance, "ECBHideCondition")
 			end
 			
-			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+			func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
 				return Gui.WMPSOHideCondition.new(panelProject, getId())
 			end
 		end
 		
 		
 		
-		private var ECBHideCondition pECBehavior
-		private var RecordingStateChanged pRecordingStateChanged
-		private var PlaybackChanged pPlaybackChanged
-		private var Boolean pRestoreVisible
-		private var bool pLive
-		private var bool pPlayback
-		private var bool pRecord
-		private var Array pListeners
+		var ECBHideCondition pECBehavior
+		var RecordingStateChanged pRecordingStateChanged
+		var PlaybackChanged pPlaybackChanged
+		var Boolean pRestoreVisible
+		var bool pLive
+		var bool pPlayback
+		var bool pRecord
+		var Array pListeners
 		
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBHideCondition ecbehavior, BehaviorElement element) super(element)
+		func new(ECBHideCondition ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pListeners = Array.new()
 		end
 		
 		/** Dispose of behavior.  */
-		public func void dispose()
+		func void dispose()
 			pListeners = null
 			super.dispose()
 		end
 		
 		/** Init behavior from stubu. */
-		public func void init(Preloading.StubElement stub)
+		func void init(Preloading.StubElement stub)
 			pLive = pECBehavior.getLive().getValue(stub)
 			pPlayback = pECBehavior.getPlayback().getValue(stub)
 			pRecord = pECBehavior.getRecord().getValue(stub)
@@ -136,12 +136,12 @@ class ECBHideCondition extends DefaultECBehavior
 		
 		
 		/** Hide during live preview. */
-		public func bool getLive()
+		func bool getLive()
 			return pLive
 		end
 		
 		/** Set hide during live preview. */
-		public func void setLive(bool hide)
+		func void setLive(bool hide)
 			if hide == pLive
 				return
 			end
@@ -153,12 +153,12 @@ class ECBHideCondition extends DefaultECBehavior
 		end
 		
 		/** Hide during playback. */
-		public func bool getPlayback()
+		func bool getPlayback()
 			return pPlayback
 		end
 		
 		/** Set hide during playback. */
-		public func void setPlayback(bool hide)
+		func void setPlayback(bool hide)
 			if hide == pPlayback
 				return
 			end
@@ -170,12 +170,12 @@ class ECBHideCondition extends DefaultECBehavior
 		end
 		
 		/** Hide during recording. */
-		public func bool getRecord()
+		func bool getRecord()
 			return pRecord
 		end
 		
 		/** Set hide during recording. */
-		public func void setRecord(bool hide)
+		func void setRecord(bool hide)
 			if hide == pRecord
 				return
 			end
@@ -189,7 +189,7 @@ class ECBHideCondition extends DefaultECBehavior
 		
 		
 		/** Add listener. */
-		public func void addListener(Listener listener)
+		func void addListener(Listener listener)
 			if listener == null
 				throw EInvalidParam.new()
 			end
@@ -197,14 +197,14 @@ class ECBHideCondition extends DefaultECBehavior
 		end
 		
 		/** Remove listener. */
-		public func void removeListener(Listener listener)
+		func void removeListener(Listener listener)
 			pListeners.remove(listener)
 		end
 		
 		
 		
 		/** Update visibility. */
-		public func void updateVisibility()
+		func void updateVisibility()
 			var bool doHide
 			
 			if GameApp.getGameApp().getRecordScene().isStopped()
@@ -234,7 +234,7 @@ class ECBHideCondition extends DefaultECBehavior
 		
 		
 		/** Hide element. */
-		public func void hide()
+		func void hide()
 			if pRestoreVisible != null
 				return
 			end
@@ -245,7 +245,7 @@ class ECBHideCondition extends DefaultECBehavior
 		end
 		
 		/** Show element. */
-		public func void show()
+		func void show()
 			if pRestoreVisible == null
 				return
 			end
@@ -259,7 +259,7 @@ class ECBHideCondition extends DefaultECBehavior
 		
 		
 		/** Added to game world. */
-		public func void addToGameWorld()
+		func void addToGameWorld()
 			pPlaybackChanged = PlaybackChanged.new(this)
 			GameApp.getGameApp().getPlaybackScene().addListener(pPlaybackChanged)
 			
@@ -270,7 +270,7 @@ class ECBHideCondition extends DefaultECBehavior
 		end
 		
 		/** Remove from game world. */
-		public func void removeFromGameWorld()
+		func void removeFromGameWorld()
 			show()
 			
 			if pPlaybackChanged != null
@@ -287,7 +287,7 @@ class ECBHideCondition extends DefaultECBehavior
 		
 		
 		/** Read from file. */
-		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+		func void readFromFile(PersistencyEnvironment env, FileReader reader)
 			select reader.readByte()
 			case 0
 			case 1
@@ -308,7 +308,7 @@ class ECBHideCondition extends DefaultECBehavior
 		end
 		
 		/** Write to file. */
-		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+		func void writeToFile(PersistencyEnvironment env, FileWriter writer)
 			writer.writeByte(1) // version
 			
 			var PersistencyFlags flags = PersistencyFlags.new(3)
@@ -329,7 +329,7 @@ class ECBHideCondition extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels) super(eclass)
+	func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels) super(eclass)
 		var String prefix = "hideCondition."
 		
 		this.behaviorGuiPanels = behaviorGuiPanels
@@ -347,34 +347,34 @@ class ECBHideCondition extends DefaultECBehavior
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		behaviorGuiPanels = null
 		super.dispose()
 	end
 	
 	
 	
-	public func ECPBoolean getLive()
+	func ECPBoolean getLive()
 		return pLive
 	end
 	
-	public func ECPBoolean getPlayback()
+	func ECPBoolean getPlayback()
 		return pPlayback
 	end
 	
-	public func ECPBoolean getRecord()
+	func ECPBoolean getRecord()
 		return pRecord
 	end
 	
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance( BehaviorElement element )
+	func Instance instance( BehaviorElement element )
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Create behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

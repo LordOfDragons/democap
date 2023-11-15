@@ -44,7 +44,7 @@ class WidgetCharacterPreview extends Panel
 	end
 	
 	class PreviewPreloader implements ResourceListener
-		private var PreloadCounter pPreloadCounter
+		var PreloadCounter pPreloadCounter
 		
 		public var String pathModel, pathSkin, pathRig, pathAnimation
 		public var Model model
@@ -52,15 +52,15 @@ class WidgetCharacterPreview extends Panel
 		public var Rig rig
 		public var Animation animation
 		
-		public func new()
+		func new()
 			pPreloadCounter = PreloadCounter.new()
 		end
 		
-		public func bool finished()
+		func bool finished()
 			return pPreloadCounter.isZero()
 		end
 		
-		public func void preload()
+		func void preload()
 			if not pathModel.empty()
 				pPreloadCounter.increase()
 				Model.loadAsynchron(pathModel, this)
@@ -82,7 +82,7 @@ class WidgetCharacterPreview extends Panel
 			end
 		end
 		
-		public func void finishedLoading(String filename, ResourceLoaderType resourceType, Object resource)
+		func void finishedLoading(String filename, ResourceLoaderType resourceType, Object resource)
 			if resourceType == ResourceLoaderType.model and filename.equals(pathModel)
 				model = resource cast Model
 				pPreloadCounter.decrease()
@@ -104,7 +104,7 @@ class WidgetCharacterPreview extends Panel
 			end
 		end
 		
-		public func void failedLoading(String filename, ResourceLoaderType resourceType)
+		func void failedLoading(String filename, ResourceLoaderType resourceType)
 			GameApp.getGameApp().getConsole().addMessage("PreviewPreloader: Failed loading "\
 				+ resourceType.name() + " '" + filename)
 			if resourceType == ResourceLoaderType.model and filename.equals(pathModel)
@@ -123,13 +123,13 @@ class WidgetCharacterPreview extends Panel
 	end
 	
 	class ShowHelpClicked extends ClickedActionListener
-		private var Widget pWidget
+		var Widget pWidget
 		
-		public func new(Widget widget)
+		func new(Widget widget)
 			pWidget = widget
 		end
 		
-		public func void onAction()
+		func void onAction()
 			WindowDialog.message(pWidget.getWindow(), "Navigation", \
 				"Rotate Camera: Right Mouse\n" + \
 				"Pan Camera: Right Mouse + Shift\n" + \
@@ -139,29 +139,29 @@ class WidgetCharacterPreview extends Panel
 	end
 	
 	class HitResult
-		private var Object pObject
-		private var float pDistance
-		private var DVector pHitPoint
+		var Object pObject
+		var float pDistance
+		var DVector pHitPoint
 		
-		public func new(Object object, float distance, DVector hitPoint)
+		func new(Object object, float distance, DVector hitPoint)
 			pObject = object
 			pDistance = distance
 			pHitPoint = hitPoint
 		end
 		
-		public func Object getObject()
+		func Object getObject()
 			return pObject
 		end
 		
-		public func float getDistance()
+		func float getDistance()
 			return pDistance
 		end
 		
-		public func DVector getHitPoint()
+		func DVector getHitPoint()
 			return pHitPoint
 		end
 		
-		public func int compare(Object obj)
+		func int compare(Object obj)
 			if obj castable HitResult
 				return pDistance.compare((obj cast HitResult).pDistance)
 				
@@ -172,21 +172,21 @@ class WidgetCharacterPreview extends Panel
 	end
 	
 	class CollectHits implements ColliderListener
-		private var Array pHits
-		private var DVector pRayOrigin
-		private var DVector pRayDirection
+		var Array pHits
+		var DVector pRayOrigin
+		var DVector pRayDirection
 		
-		public func new(Array hits, DVector rayOrigin, Vector rayDirection)
+		func new(Array hits, DVector rayOrigin, Vector rayDirection)
 			pHits = hits
 			pRayOrigin = rayOrigin
 			pRayDirection = DVector.new(rayDirection)
 		end
 		
-		public func bool canHitCollider(Collider owner, Collider collider)
+		func bool canHitCollider(Collider owner, Collider collider)
 			return true
 		end
 		
-		public func void collisionResponse(Collider owner, CollisionInfo info)
+		func void collisionResponse(Collider owner, CollisionInfo info)
 			var Collider collider = info.getCollider()
 			if collider != null and collider.getOwner() != null
 				pHits.add(HitResult.new(collider.getOwner(), info.getDistance(),\
@@ -194,36 +194,36 @@ class WidgetCharacterPreview extends Panel
 			end
 		end
 		
-		public func void colliderChanged(Collider owner)
+		func void colliderChanged(Collider owner)
 		end
 	end
 	
 	
 	
-	private var WorldRenderer pWorldRenderer
-	private var PanelHud pPanelHud
-	private var GameWorld pGameWorld
-	private var ElementCameraDirector pCameraDirector
-	private var PreviewPreloader pPreviewPreloader
-	private var BehaviorElementClass pCharacterPreviewClass
-	private var BehaviorElement pCharacterPreview
-	private var BehaviorElement pLoadingCharacter
-	private var Array pListeners
-	private var ECBPreviewDataQuery.DataQuery pDataQuery
+	var WorldRenderer pWorldRenderer
+	var PanelHud pPanelHud
+	var GameWorld pGameWorld
+	var ElementCameraDirector pCameraDirector
+	var PreviewPreloader pPreviewPreloader
+	var BehaviorElementClass pCharacterPreviewClass
+	var BehaviorElement pCharacterPreview
+	var BehaviorElement pLoadingCharacter
+	var Array pListeners
+	var ECBPreviewDataQuery.DataQuery pDataQuery
 	
-	private var String pPathModel
-	private var String pPathSkin
-	private var String pPathRig
-	private var String pPathAnimation
-	private var Vector pBoneAxisRotation
-	private var float pScale
+	var String pPathModel
+	var String pPathSkin
+	var String pPathRig
+	var String pPathAnimation
+	var Vector pBoneAxisRotation
+	var float pScale
 	
-	private var CharacterPreviewEditor pEditor
+	var CharacterPreviewEditor pEditor
 	
 	
 	
 	/** Create widget. */
-	public func new()
+	func new()
 		pPathModel = ""
 		pPathSkin = ""
 		pPathRig = ""
@@ -244,7 +244,7 @@ class WidgetCharacterPreview extends Panel
 	end
 	
 	/** Dispose of widget. */
-	public func void dispose()
+	func void dispose()
 		pListeners = null
 		
 		setEditor(null)
@@ -274,47 +274,47 @@ class WidgetCharacterPreview extends Panel
 	
 	
 	/** Data query or null. */
-	public func ECBPreviewDataQuery.DataQuery getDataQuery()
+	func ECBPreviewDataQuery.DataQuery getDataQuery()
 		return pDataQuery
 	end
 	
 	/** Set data query or null. */
-	public func void setDataQuery(ECBPreviewDataQuery.DataQuery dataQuery)
+	func void setDataQuery(ECBPreviewDataQuery.DataQuery dataQuery)
 		pDataQuery = dataQuery
 	end
 	
 	/** Set model path. */
-	public func void setPathModel(String path)
+	func void setPathModel(String path)
 		pPathModel = path
 	end
 	
 	/** Set path skin. */
-	public func void setPathSkin(String path)
+	func void setPathSkin(String path)
 		pPathSkin = path
 	end
 	
 	/** Set path rig. */
-	public func void setPathRig(String path)
+	func void setPathRig(String path)
 		pPathRig = path
 	end
 	
 	/** Set path animation. */
-	public func void setPathAnimation(String path)
+	func void setPathAnimation(String path)
 		pPathAnimation = path
 	end
 	
 	/** Set bone orientation rotation. */
-	public func void setBoneAxisRotation(Vector rotation)
+	func void setBoneAxisRotation(Vector rotation)
 		pBoneAxisRotation = rotation
 	end
 	
 	/** Set scale. */
-	public func void setScale(float scale)
+	func void setScale(float scale)
 		pScale = scale
 	end
 	
 	/** Reload character preview. */
-	public func void reloadCharacterPreview()
+	func void reloadCharacterPreview()
 		if pCharacterPreview != null
 			pCharacterPreview.safeDispose()
 			pCharacterPreview = null
@@ -332,37 +332,37 @@ class WidgetCharacterPreview extends Panel
 	
 	
 	/** World renderer. */
-	public func WorldRenderer getWorldRenderer()
+	func WorldRenderer getWorldRenderer()
 		return pWorldRenderer
 	end
 	
 	/** Game world. */
-	public func GameWorld getGameWorld()
+	func GameWorld getGameWorld()
 		return pGameWorld
 	end
 	
 	/** Camera director. */
-	public func ElementCameraDirector getCameraDirector()
+	func ElementCameraDirector getCameraDirector()
 		return pCameraDirector
 	end
 	
 	/** Character preview element class. */
-	public func BehaviorElementClass getCharacterPreviewClass()
+	func BehaviorElementClass getCharacterPreviewClass()
 		return pCharacterPreviewClass
 	end
 	
 	/** Character preview element or null. */
-	public func BehaviorElement getCharacterPreview()
+	func BehaviorElement getCharacterPreview()
 		return pCharacterPreview
 	end
 	
 	/** Editor or null. */
-	public func CharacterPreviewEditor getEditor()
+	func CharacterPreviewEditor getEditor()
 		return pEditor
 	end
 	
 	/** Set editor or null. */
-	public func void setEditor(CharacterPreviewEditor editor)
+	func void setEditor(CharacterPreviewEditor editor)
 		if editor == pEditor
 			return
 		end
@@ -382,24 +382,24 @@ class WidgetCharacterPreview extends Panel
 	end
 	
 	/** Top most panel to add interaction listeners to. */
-	public func Panel getInteractionPanel()
+	func Panel getInteractionPanel()
 		return pPanelHud
 	end
 	
 	
 	
 	/** Ray direction. */
-	public func Vector viewRayDirection(Point point)
+	func Vector viewRayDirection(Point point)
 		return pWorldRenderer.backProject(point)
 	end
 	
 	/** Detect collisions along view direction. Stores sorted HitResult into list. */
-	public func void viewRayCollisions(Array list)
+	func void viewRayCollisions(Array list)
 		viewRayCollisions(list, getDesktop().getMouseLocation() - pWorldRenderer.getDesktopPosition())
 	end
 	
 	/** Detect collisions along view direction. Stores sorted HitResult into list. */
-	public func void viewRayCollisions(Array list, Point point)
+	func void viewRayCollisions(Array list, Point point)
 		var CollisionFilter collisionFilter = CollisionFilter.new(LayerMask.newWith(0))
 		var DVector rayOrigin = pCameraDirector.getCamera().getPosition()
 		var Vector rayDirection = pWorldRenderer.backProject(point) * 100
@@ -410,26 +410,26 @@ class WidgetCharacterPreview extends Panel
 	end
 	
 	/** Set tool tip. */
-	public func void setToolTip(Object toolTip)
+	func void setToolTip(Object toolTip)
 		pPanelHud.getCenter().setToolTip(toolTip)
 	end
 	
 	
 	
 	/** Add listener. */
-	public func void addListener(Listener listener)
+	func void addListener(Listener listener)
 		pListeners.add(listener)
 	end
 	
 	/** Remove listener. */
-	public func void removeListener(Listener listener)
+	func void removeListener(Listener listener)
 		pListeners.remove(listener)
 	end
 	
 	
 	
 	/** Frame update. */
-	public func void onFrameUpdate(float elapsed)
+	func void onFrameUpdate(float elapsed)
 		// if preloading create preview character is finished
 		if pPreviewPreloader != null and pPreviewPreloader.finished()
 			createPreviewCharacter()
@@ -460,7 +460,7 @@ class WidgetCharacterPreview extends Panel
 	 * 
 	 * Default style is "default"
 	 */
-	public func StyledTextDefinition createToolTipStyledTextDefinition()
+	func StyledTextDefinition createToolTipStyledTextDefinition()
 		var StyledTextDefinition std = StyledTextDefinition.new()
 		var GuiTheme guiTheme = getGuiTheme()
 		

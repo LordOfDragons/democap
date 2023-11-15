@@ -31,60 +31,60 @@ pin Dragengine.Utils
  * List of character tracker slots.
  */
 class CharacterTrackerSlots
-	private var Array pSlots
+	var Array pSlots
 	
 	
 	
 	/** Create tracker slot list. */
-	public func new()
+	func new()
 		pSlots = Array.new()
 	end
 	
 	/** Dispose of list. */
-	public func void dispose()
+	func void dispose()
 		removeAll()
 	end
 	
 	
 	
 	/** Count of tracker slots. */
-	public func int getCount()
+	func int getCount()
 		return pSlots.getCount()
 	end
 	
 	/** Named tracker slot is present. */
-	public func bool hasNamed(String name)
+	func bool hasNamed(String name)
 		return getNamed(name) != null
 	end
 	
 	/** Tracker slot at index or null if absent. */
-	public func CharacterTrackerSlot getAt(int index)
+	func CharacterTrackerSlot getAt(int index)
 		return pSlots.getAt(index) cast CharacterTrackerSlot
 	end
 	
 	/** Named tracker slot or null if absent. */
-	public func CharacterTrackerSlot getNamed(String name)
+	func CharacterTrackerSlot getNamed(String name)
 		return pSlots.find(block CharacterTrackerSlot each
 			return each.getName().compareNoCase(name) == 0
 		end) cast CharacterTrackerSlot
 	end
 	
 	/** First tracker slot matching type or null. */
-	public func CharacterTrackerSlot firstWithType(CharacterTrackerSlot.Type type)
+	func CharacterTrackerSlot firstWithType(CharacterTrackerSlot.Type type)
 		return pSlots.find(block CharacterTrackerSlot each
 			return each.getType() == type
 		end) cast CharacterTrackerSlot
 	end
 	
 	/** First tracker slot with assigned device matching type or null. */
-	public func CharacterTrackerSlot firstAttachedWithType(CharacterTrackerSlot.Type type)
+	func CharacterTrackerSlot firstAttachedWithType(CharacterTrackerSlot.Type type)
 		return pSlots.find(block CharacterTrackerSlot each
 			return each.getType() == type and each.isDeviceAttached()
 		end) cast CharacterTrackerSlot
 	end
 	
 	/** Add tracker slot. Throws exception if named tracker slot is present. */
-	public func void add(CharacterTrackerSlot slot)
+	func void add(CharacterTrackerSlot slot)
 		if hasNamed(slot.getName())
 			throw EInvalidParam.new("named tracker slot is present: " + slot.getName())
 		end
@@ -92,19 +92,19 @@ class CharacterTrackerSlots
 	end
 	
 	/** Remove tracker slot. Throws exception if named tracker slot is absent. */
-	public func void remove(CharacterTrackerSlot slot)
+	func void remove(CharacterTrackerSlot slot)
 		pSlots.remove(slot)
 	end
 	
 	/** Remove all tracker slots. */
-	public func void removeAll()
+	func void removeAll()
 		pSlots.removeAll()
 	end
 	
 	/**
 	 * Visit tracker slots with block. Block receives as only argument CharacterTrackerSlot.
 	 */
-	public func void forEach(Block ablock)
+	func void forEach(Block ablock)
 		pSlots.forEach(ablock)
 	end
 	
@@ -112,7 +112,7 @@ class CharacterTrackerSlots
 	 * Find tracker slot with block. Block receives as only argument CharacterTrackerSlot
 	 * and has to return true if the matching slot is found.
 	 */
-	public func CharacterTrackerSlot find(Block ablock)
+	func CharacterTrackerSlot find(Block ablock)
 		return pSlots.find(ablock) cast CharacterTrackerSlot
 	end
 	
@@ -121,19 +121,19 @@ class CharacterTrackerSlots
 	 * has to return true to include or false to exclude tracker slot.
 	 * Returns Array of CharacterTrackerSlot.
 	 */
-	public func Array collect(Block ablock)
+	func Array collect(Block ablock)
 		return pSlots.collect(ablock)
 	end
 	
 	/** List of tracker slots as Array of CharacterTrackerSlot. */
-	public func Array toArray()
+	func Array toArray()
 		return Array.new(pSlots)
 	end
 	
 	/**
 	 * Find closest slot with matching type or null.
 	 */
-	public func CharacterTrackerSlot bestMatching(InputDeviceType type, Vector position)
+	func CharacterTrackerSlot bestMatching(InputDeviceType type, Vector position)
 		return pSlots.inject(null, block CharacterTrackerSlot inject, CharacterTrackerSlot slot
 			if slot.getInputDeviceType() != type
 				return inject
@@ -149,7 +149,7 @@ class CharacterTrackerSlots
 	end
 	
 	/** Set all target positions from actor. */
-	public func void setAllTargetsFromActor(ActorProfile actorProfile)
+	func void setAllTargetsFromActor(ActorProfile actorProfile)
 		pSlots.forEach(block CharacterTrackerSlot each
 			each.setTargetFromActor(actorProfile)
 		end)

@@ -42,11 +42,11 @@ class ECBSceneObject extends DefaultECBehavior
 	/** Default implementation of behavior instance listener. */
 	class DefaultListener implements Listener
 		/** Create default listener. */
-		public func new()
+		func new()
 		end
 		
 		/** Name changed. */
-		public func void nameChanged(Instance instance)
+		func void nameChanged(Instance instance)
 		end
 	end
 	
@@ -58,44 +58,44 @@ class ECBSceneObject extends DefaultECBehavior
 	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
-		private var ECBSceneObject pECBehavior
-		private var String pName
-		private var String pDisplayName
+		var ECBSceneObject pECBehavior
+		var String pName
+		var String pDisplayName
 		protected var Array pListeners
 		
 		
 		
 		/** Create instance. */
-		public func new(ECBSceneObject ecbehavior, BehaviorElement element) super(element)
+		func new(ECBSceneObject ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pName = ""
 			pListeners = Array.new()
 		end
 		
 		/** Dispose of instance. */
-		public func void dispose()
+		func void dispose()
 			super.dispose()
 			pListeners = null
 		end
 		
 		/** Init behavior. */
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			pName = pECBehavior.name.getValue(stub)
 		end
 		
 		
 		/** Behavior. */
-		public func ECBSceneObject getECBehavior()
+		func ECBSceneObject getECBehavior()
 			return pECBehavior
 		end
 		
 		/** Set name or empty string. */
-		public func String getName()
+		func String getName()
 			return pName
 		end
 		
 		/** Set name or empty string. */
-		public func void setName(String name)
+		func void setName(String name)
 			if name.equals(pName)
 				return
 			end
@@ -114,7 +114,7 @@ class ECBSceneObject extends DefaultECBehavior
 		end
 		
 		/** Display name for list boxes. */
-		public func String getDisplayName()
+		func String getDisplayName()
 			if pDisplayName == null
 				if pName.empty()
 					var Element e = getElement()
@@ -142,7 +142,7 @@ class ECBSceneObject extends DefaultECBehavior
 		
 		
 		/** Add listener. */
-		public func void addListener(Listener listener)
+		func void addListener(Listener listener)
 			if listener == null
 				throw ENullPointer.new("listener")
 			end
@@ -150,14 +150,14 @@ class ECBSceneObject extends DefaultECBehavior
 		end
 		
 		/** Remove listener. */
-		public func void removeListener(Listener listener)
+		func void removeListener(Listener listener)
 			pListeners.remove(listener)
 		end
 		
 		
 		
 		/** Added to game world. */
-		public func void addToGameWorld()
+		func void addToGameWorld()
 			var Scene scene = getScene()
 			if scene != null
 				scene.notifyObjectAdded(this)
@@ -165,7 +165,7 @@ class ECBSceneObject extends DefaultECBehavior
 		end
 		
 		/** Removed from game world. */
-		public func void removeFromGameWorld()
+		func void removeFromGameWorld()
 			var Scene scene = getScene()
 			if scene != null
 				scene.notifyObjectRemoved(this)
@@ -173,7 +173,7 @@ class ECBSceneObject extends DefaultECBehavior
 		end
 		
 		/** Element geometry changed. */
-		public func void geometryChanged()
+		func void geometryChanged()
 			var Scene scene = getScene()
 			if scene != null
 				scene.notifyObjectGeometryChanged(this)
@@ -182,14 +182,14 @@ class ECBSceneObject extends DefaultECBehavior
 		
 		
 		/** String representation. */
-		public func String toString()
+		func String toString()
 			return getDisplayName()
 		end
 		
 		
 		
 		/** Read from file. */
-		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+		func void readFromFile(PersistencyEnvironment env, FileReader reader)
 			select reader.readByte() // version
 			case 0
 				pName = reader.readString8()
@@ -200,7 +200,7 @@ class ECBSceneObject extends DefaultECBehavior
 		end
 		
 		/** Write to file. */
-		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+		func void writeToFile(PersistencyEnvironment env, FileWriter writer)
 			writer.writeByte(0) // version
 			writer.writeString8(pName)
 		end
@@ -217,7 +217,7 @@ class ECBSceneObject extends DefaultECBehavior
 	
 	
 	/** Create behavior element class. */
-	public func new(BehaviorElementClass eclass) super(eclass)
+	func new(BehaviorElementClass eclass) super(eclass)
 		var String prefix = "sceneObject."
 		
 		pSceneObjectStubInitializers = Array.new()
@@ -244,21 +244,21 @@ class ECBSceneObject extends DefaultECBehavior
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		pSceneObjectStubInitializers = null
 		super.dispose()
 	end
 	
 	
 	/** Add create scene object stub initializer or null. */
-	public func void addSceneObjectStubInitializer(SceneObjectStubInitializer initializer)
+	func void addSceneObjectStubInitializer(SceneObjectStubInitializer initializer)
 		pSceneObjectStubInitializers.add(initializer)
 	end
 	
 	/**
 	 * Run scene object stub initializers. Returns true if all initializers succeeded.
 	 */
-	public func bool runSceneObjectStubInitializers(StubElement stub, Window window)
+	func bool runSceneObjectStubInitializers(StubElement stub, Window window)
 		return pSceneObjectStubInitializers.find(block SceneObjectStubInitializer each
 			return not each.initStub(stub, window)
 		end) == null
@@ -266,19 +266,19 @@ class ECBSceneObject extends DefaultECBehavior
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance(BehaviorElement element)
+	func Instance instance(BehaviorElement element)
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Get behavior in element class or null if absent. */
-	static public func ECBSceneObject getBehaviorIn(BehaviorElementClass eclass)
+	static func ECBSceneObject getBehaviorIn(BehaviorElementClass eclass)
 		return eclass.findBehavior(block ECBSceneObject each
 			return true
 		end) cast ECBSceneObject
 	end
 	
 	/** Get instance in element or null if absent. */
-	static public func Instance getInstanceIn(BehaviorElement element)
+	static func Instance getInstanceIn(BehaviorElement element)
 		return element.findInstance(block Instance each
 			return true
 		end) cast Instance
@@ -286,7 +286,7 @@ class ECBSceneObject extends DefaultECBehavior
 	
 	
 	/** Create Behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

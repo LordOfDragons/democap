@@ -36,34 +36,34 @@ class ECBRemoteCamera extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
-			public func new(Instance instance) super(instance, "ECBRemoteCamera", instance.getECBehavior().getID())
+			func new(Instance instance) super(instance, "ECBRemoteCamera", instance.getECBehavior().getID())
 			end
 			
-			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+			func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
 				return Gui.WMPSORemoteCamera.new(panelProject, getId(), getBehaviorId())
 			end
 		end
 		
 		
-		private var ECBRemoteCamera pECBehavior
-		private var ECBehaviorCamera.Instance pCamera
-		private var String pName
+		var ECBRemoteCamera pECBehavior
+		var ECBehaviorCamera.Instance pCamera
+		var String pName
 		
 		
 		/** Create instance. */
-		public func new(ECBRemoteCamera ecbehavior, BehaviorElement element) super(element)
+		func new(ECBRemoteCamera ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pCamera = pECBehavior.camera.instance(element)
 		end
 		
 		/** Dispose of instance. */
-		public func void dispose()
+		func void dispose()
 			pCamera = null
 			super.dispose()
 		end
 		
 		/** Init behavior. */
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			pName = pECBehavior.name.getValue(stub)
 			
 			if pECBehavior.behaviorGuiPanels != null
@@ -73,23 +73,23 @@ class ECBRemoteCamera extends DefaultECBehavior
 		
 		
 		/** Behavior. */
-		public func ECBRemoteCamera getECBehavior()
+		func ECBRemoteCamera getECBehavior()
 			return pECBehavior
 		end
 		
 		/** Camera behavior instance. */
-		public func ECBehaviorCamera.Instance getCamera()
+		func ECBehaviorCamera.Instance getCamera()
 			return pCamera
 		end
 		
 		
 		/** Name. */
-		public func String getName()
+		func String getName()
 			return pName
 		end
 		
 		/** Set name. */
-		public func void setName(String name)
+		func void setName(String name)
 			if name.equals(pName)
 				return
 			end
@@ -110,12 +110,12 @@ class ECBRemoteCamera extends DefaultECBehavior
 		
 		
 		/** Add to game world. */
-		public func void addToGameWorld()
+		func void addToGameWorld()
 			register()
 		end
 		
 		/** Remove from game world. */
-		public func void removeFromGameWorld()
+		func void removeFromGameWorld()
 			unregister()
 		end
 		
@@ -133,7 +133,7 @@ class ECBRemoteCamera extends DefaultECBehavior
 		
 		
 		/** Read behavior from file. */
-		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+		func void readFromFile(PersistencyEnvironment env, FileReader reader)
 			select reader.readByte() // version
 			case 0
 				pName = reader.readString8()
@@ -148,7 +148,7 @@ class ECBRemoteCamera extends DefaultECBehavior
 		end
 		
 		/** Write behavior to file. */
-		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+		func void writeToFile(PersistencyEnvironment env, FileWriter writer)
 			writer.writeByte(0) // version
 			writer.writeString8(pName)
 		end
@@ -161,7 +161,7 @@ class ECBRemoteCamera extends DefaultECBehavior
 	
 	
 	/** Create behavior element class. */
-	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
 	ECBehaviorCamera camera, String id) super(eclass, id)
 		if camera == null
 			throw ENullPointer.new("camera")
@@ -179,7 +179,7 @@ class ECBRemoteCamera extends DefaultECBehavior
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		behaviorGuiPanels = null
 		camera = null
 		super.dispose()
@@ -187,19 +187,19 @@ class ECBRemoteCamera extends DefaultECBehavior
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance(BehaviorElement element)
+	func Instance instance(BehaviorElement element)
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Get instance in element or null if absent. */
-	static public func Instance getInstanceIn(BehaviorElement element, String id)
+	static func Instance getInstanceIn(BehaviorElement element, String id)
 		return element.findInstance(block Instance each
 			return each.getECBehavior().getID().equals(id)
 		end) cast Instance
 	end
 	
 	/** Get list of all instances in element. */
-	static public func Array getAllInstancesIn(BehaviorElement element)
+	static func Array getAllInstancesIn(BehaviorElement element)
 		return element.collectInstances(block Instance each
 			return true
 		end)
@@ -207,7 +207,7 @@ class ECBRemoteCamera extends DefaultECBehavior
 	
 	
 	/** Create Behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

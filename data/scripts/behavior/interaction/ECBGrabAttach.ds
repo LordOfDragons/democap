@@ -43,24 +43,24 @@ class ECBGrabAttach extends DefaultECBehavior
 		class TemporaryDetachListener extends ECBShowInteractHandles.DefaultListener
 			protected var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void startInteract(ECBShowInteractHandles.Instance instance, ECBInteractHandle.Instance handle)
+			func void startInteract(ECBShowInteractHandles.Instance instance, ECBInteractHandle.Instance handle)
 				pInstance.temporaryDetach()
 			end
 			
-			public func void stopInteract(ECBShowInteractHandles.Instance instance, ECBInteractHandle.Instance handle)
+			func void stopInteract(ECBShowInteractHandles.Instance instance, ECBInteractHandle.Instance handle)
 				pInstance.reattachTemporaryDetach()
 			end
 		end
 		
 		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
-			public func new(Instance instance) super(instance, "ECBGrabAttach", instance.getECBehavior().getID())
+			func new(Instance instance) super(instance, "ECBGrabAttach", instance.getECBehavior().getID())
 			end
 			
-			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+			func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
 				return Gui.WMPSOGrabAttach.new(panelProject, getId(), getBehaviorId())
 			end
 		end
@@ -79,14 +79,14 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBGrabAttach ecbehavior, BehaviorElement element) super(element)
+		func new(ECBGrabAttach ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pGrabSpot = ecbehavior.grabSpot.instance(element)
 			pCollider = ecbehavior.collider.instance(element)
 		end
 		
 		/** Init behavior instance. */
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			var BehaviorElement element = getElement()
 			
 			if pECBehavior.attachable != null
@@ -107,7 +107,7 @@ class ECBGrabAttach extends DefaultECBehavior
 		end
 		
 		/** Dispose of behavior instance. */
-		public func void dispose()
+		func void dispose()
 			pGrabSpot = null
 			pCollider = null
 			pAttachable = null
@@ -118,27 +118,27 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		
 		
-		public func ECBGrabAttach getECBehavior()
+		func ECBGrabAttach getECBehavior()
 			return pECBehavior
 		end
 		
-		public func ECBehaviorGrabSpot.Instance getGrabSpot()
+		func ECBehaviorGrabSpot.Instance getGrabSpot()
 			return pGrabSpot
 		end
 		
-		public func ECBehaviorCollider.Instance getCollider()
+		func ECBehaviorCollider.Instance getCollider()
 			return pCollider
 		end
 		
-		public func ECBehaviorAttachable.Instance getAttachable()
+		func ECBehaviorAttachable.Instance getAttachable()
 			return pAttachable
 		end
 		
-		public func String getBone()
+		func String getBone()
 			return pBone
 		end
 		
-		public func void setBone(String bone)
+		func void setBone(String bone)
 			if bone.equals(pBone)
 				return
 			end
@@ -148,12 +148,12 @@ class ECBGrabAttach extends DefaultECBehavior
 		end
 		
 		/** Object does not move while grabbed. */
-		public func bool getImmobile()
+		func bool getImmobile()
 			return pImmobile
 		end
 		
 		/** Set if object does not move while grabbed. */
-		public func void setImmobile(bool immobile)
+		func void setImmobile(bool immobile)
 			if immobile == pImmobile
 				return
 			end
@@ -163,12 +163,12 @@ class ECBGrabAttach extends DefaultECBehavior
 		end
 		
 		/** Lock IK rotation. */
-		public func bool getIKLockRotation()
+		func bool getIKLockRotation()
 			return pIKLockRotation
 		end
 		
 		/** Set if IK rotation is locked. */
-		public func void setIKLockRotation(bool lock)
+		func void setIKLockRotation(bool lock)
 			if lock == pIKLockRotation
 				return
 			end
@@ -179,13 +179,13 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		
 		
-		public func ECBehaviorCollider.Instance getParentCollider()
+		func ECBehaviorCollider.Instance getParentCollider()
 			return pParentCollider
 		end
 		
 		
 		/** Remove from game world. */
-		public func void removeFromGameWorld()
+		func void removeFromGameWorld()
 			removeFromAttachments()
 			pParentCollider = null
 			getElement().setParent(null)
@@ -195,7 +195,7 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		
 		/** Attach element to parent object. */
-		public func void attachToParent(Element parent)
+		func void attachToParent(Element parent)
 			if pCollider.getCollider() == null
 				return
 			end
@@ -219,7 +219,7 @@ class ECBGrabAttach extends DefaultECBehavior
 		end
 		
 		/** Attach to collider. */
-		public func void attachToCollider(Collider collider)
+		func void attachToCollider(Collider collider)
 			var Collider thisCollider = pCollider.getCollider()
 			
 			if collider castable ColliderRig
@@ -234,7 +234,7 @@ class ECBGrabAttach extends DefaultECBehavior
 		end
 		
 		/** Add as attachment to ECBehaviorAttachments if parent has this behavior. */
-		public func void addToAttachments(BehaviorElement parent)
+		func void addToAttachments(BehaviorElement parent)
 			var ECBehaviorAttachments.Instance behavior = ECBehaviorAttachments.getInstanceIn(parent)
 			if behavior != null
 				behavior.addAttachment(getElement())
@@ -242,7 +242,7 @@ class ECBGrabAttach extends DefaultECBehavior
 		end
 		
 		/** Remove attachment from ECBehaviorAttachments if parent has this behavior. */
-		public func void removeFromAttachments()
+		func void removeFromAttachments()
 			if pParentCollider == null
 				return
 			end
@@ -260,12 +260,12 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		
 		/** Is temporarily detached. */
-		public func bool isTemporaryDetached()
+		func bool isTemporaryDetached()
 			return pTemporaryDetached
 		end
 		
 		/** Temporarily detach from parent. */
-		public func void temporaryDetach()
+		func void temporaryDetach()
 			if not pTemporaryDetached and pParentCollider != null
 				pParentCollider.getCollider().detach(pCollider.getCollider())
 				pTemporaryDetached = true
@@ -273,7 +273,7 @@ class ECBGrabAttach extends DefaultECBehavior
 		end
 		
 		/** Reattach after temporary detach. */
-		public func void reattachTemporaryDetach()
+		func void reattachTemporaryDetach()
 			if pTemporaryDetached and pParentCollider != null
 				attachToCollider(pParentCollider.getCollider())
 				pTemporaryDetached = false
@@ -283,7 +283,7 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		
 		/** Read behavior from file. */
-		public func void readFromFile(PersistencyEnvironment env, FileReader reader)
+		func void readFromFile(PersistencyEnvironment env, FileReader reader)
 			select reader.readByte() // version
 			case 0
 			case 1
@@ -305,7 +305,7 @@ class ECBGrabAttach extends DefaultECBehavior
 		end
 		
 		/** Write behavior to file. */
-		public func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+		func void writeToFile(PersistencyEnvironment env, FileWriter writer)
 			writer.writeByte(1) // version
 			
 			var PersistencyFlags flags = PersistencyFlags.new(2)
@@ -337,7 +337,7 @@ class ECBGrabAttach extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
 	ECBehaviorGrabSpot grabSpot, ECBehaviorCollider collider, ECBehaviorAttachable attachable,\
 	ECBShowInteractHandles showInteractHandles, String id) super(eclass, id)
 		if grabSpot == null
@@ -365,7 +365,7 @@ class ECBGrabAttach extends DefaultECBehavior
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		behaviorGuiPanels = null
 		grabSpot = null
 		collider = null
@@ -375,7 +375,7 @@ class ECBGrabAttach extends DefaultECBehavior
 	end
 	
 	
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

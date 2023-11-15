@@ -28,22 +28,22 @@ pin Dragengine.Utils
  * List of character animations.
  */
 class CharacterAnimations
-	private var FileUsageManager pFileUsage
-	private var Array pAnimations
-	private var Array pListeners
-	private var CharacterAnimation pActive
+	var FileUsageManager pFileUsage
+	var Array pAnimations
+	var Array pListeners
+	var CharacterAnimation pActive
 	
 	
 	
 	/** Create animation list. */
-	public func new(FileUsageManager fileUsage)
+	func new(FileUsageManager fileUsage)
 		pFileUsage = fileUsage
 		pListeners = Array.new()
 		pAnimations = Array.new()
 	end
 	
 	/** Dispose of list. */
-	public func void dispose()
+	func void dispose()
 		pListeners.removeAll()
 		pActive = null
 		removeAll()
@@ -52,36 +52,36 @@ class CharacterAnimations
 	
 	
 	/** Count of animations. */
-	public func int getCount()
+	func int getCount()
 		return pAnimations.getCount()
 	end
 	
 	/** Named animation is present. */
-	public func bool hasNamed(String name)
+	func bool hasNamed(String name)
 		return getNamed(name) != null
 	end
 	
 	/** Animation at index. */
-	public func CharacterAnimation getAt(int index)
+	func CharacterAnimation getAt(int index)
 		return pAnimations.getAt(index) cast CharacterAnimation
 	end
 	
 	/** Named animation or null if absent. */
-	public func CharacterAnimation getNamed(String name)
+	func CharacterAnimation getNamed(String name)
 		return pAnimations.find(block CharacterAnimation each
 			return each.getName().compareNoCase(name) == 0
 		end) cast CharacterAnimation
 	end
 	
 	/** Animation with path or null if absent. */
-	public func CharacterAnimation getWithPath(String path)
+	func CharacterAnimation getWithPath(String path)
 		return pAnimations.find(block CharacterAnimation each
 			return each.getPath().equals(path)
 		end) cast CharacterAnimation
 	end
 	
 	/** Add animation. Throws exception if named animation is present. */
-	public func void add(CharacterAnimation animation)
+	func void add(CharacterAnimation animation)
 		if hasNamed(animation.getName())
 			throw EInvalidParam.new("named animation is present: " + animation.getName())
 		end
@@ -102,7 +102,7 @@ class CharacterAnimations
 	end
 	
 	/** Remove animation. Throws exception if named animation is absent. */
-	public func void remove(CharacterAnimation animation)
+	func void remove(CharacterAnimation animation)
 		if pActive == animation
 			if pAnimations.getCount() == 1
 				setActive(null)
@@ -132,7 +132,7 @@ class CharacterAnimations
 	end
 	
 	/** Remove all animations. */
-	public func void removeAll()
+	func void removeAll()
 		setActive(null)
 		
 		pAnimations.forEach(block CharacterAnimation each
@@ -153,7 +153,7 @@ class CharacterAnimations
 	/**
 	 * Visit animations with block. Block receives as only argument CharacterAnimation.
 	 */
-	public func void forEach(Block ablock)
+	func void forEach(Block ablock)
 		pAnimations.forEach(ablock)
 	end
 	
@@ -162,22 +162,22 @@ class CharacterAnimations
 	 * has to return true to include or false to exclude animation.
 	 * Returns Array of CharacterAnimation.
 	 */
-	public func Array collect(Block ablock)
+	func Array collect(Block ablock)
 		return pAnimations.collect(ablock)
 	end
 	
 	/** List of animations as Array of CharacterAnimation. */
-	public func Array toArray()
+	func Array toArray()
 		return Array.new(pAnimations)
 	end
 	
 	/** Activate animation or null. */
-	public func CharacterAnimation getActive()
+	func CharacterAnimation getActive()
 		return pActive
 	end
 	
 	/** Set active animation. */
-	public func void setActive(CharacterAnimation active)
+	func void setActive(CharacterAnimation active)
 		if active == pActive
 			return
 		end
@@ -192,7 +192,7 @@ class CharacterAnimations
 	
 	
 	/** Add listener. */
-	public func void addListener(CharacterAnimationsListener listener)
+	func void addListener(CharacterAnimationsListener listener)
 		if listener == null
 			throw ENullPointer.new("listener")
 		end
@@ -200,19 +200,19 @@ class CharacterAnimations
 	end
 	
 	/** Remove listener. */
-	public func void removeListener(CharacterAnimationsListener listener)
+	func void removeListener(CharacterAnimationsListener listener)
 		pListeners.remove(listener)
 	end
 	
 	/** Notify listeners animation name changed. */
-	public func void notifyAnimationNameChanged(CharacterAnimation animation)
+	func void notifyAnimationNameChanged(CharacterAnimation animation)
 		pListeners.forEach(block CharacterAnimationsListener each
 			each.animationNameChanged(this, animation)
 		end)
 	end
 	
 	/** Notify listeners animation changed. */
-	public func void notifyAnimationChanged(CharacterAnimation animation)
+	func void notifyAnimationChanged(CharacterAnimation animation)
 		pListeners.forEach(block CharacterAnimationsListener each
 			each.animationChanged(this, animation)
 		end)
@@ -221,7 +221,7 @@ class CharacterAnimations
 	
 	
 	/** Create deep copy. */
-	public func CharacterAnimations deepCopy()
+	func CharacterAnimations deepCopy()
 		var CharacterAnimations animations = CharacterAnimations.new(pFileUsage)
 		
 		pAnimations.forEach(block CharacterAnimation each

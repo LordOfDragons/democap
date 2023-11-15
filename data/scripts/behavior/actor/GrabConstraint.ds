@@ -30,24 +30,24 @@ pin Dragengine.Utils
  */
 class GrabConstraint
 	class Constraint
-		private var ColliderRig pCollider
-		private var int pBone
-		private var int pTargetBone
-		private var DVector pLinearLimitLower
-		private var DVector pLinearLimitUpper
-		private var DVector pAngularLimitLower
-		private var DVector pAngularLimitUpper
-		private var bool pApplyLimitAngularX
-		private var bool pApplyLimitAngularY
-		private var bool pApplyLimitLinearX
-		private var bool pApplyLimitLinearY
-		private var bool pApplyLimitLinearZ
-		private var DVector pAnchorOffset
-		private var DMatrix pMatrix
-		private var DMatrix pAngularMatrix
-		private var DMatrix pAngularMatrixInv
+		var ColliderRig pCollider
+		var int pBone
+		var int pTargetBone
+		var DVector pLinearLimitLower
+		var DVector pLinearLimitUpper
+		var DVector pAngularLimitLower
+		var DVector pAngularLimitUpper
+		var bool pApplyLimitAngularX
+		var bool pApplyLimitAngularY
+		var bool pApplyLimitLinearX
+		var bool pApplyLimitLinearY
+		var bool pApplyLimitLinearZ
+		var DVector pAnchorOffset
+		var DMatrix pMatrix
+		var DMatrix pAngularMatrix
+		var DMatrix pAngularMatrixInv
 		
-		public func new(ColliderRig collider, int bone, int constraintIndex, DVector anchor)
+		func new(ColliderRig collider, int bone, int constraintIndex, DVector anchor)
 			var Rig rig = collider.getRig()
 			var ColliderConstraint constraint = rig.boneGetConstraintAt(bone, constraintIndex)
 			
@@ -101,7 +101,7 @@ class GrabConstraint
 			pApplyLimitLinearZ = diffLinear.getZ() > -0.001 // limited or locked
 		end
 		
-		public func DVector limit(DVector point)
+		func DVector limit(DVector point)
 			var DMatrix matrix = pMatrix * pCollider.boneGetMatrix(pTargetBone)
 			var DVector anchorOffset = pAnchorOffset
 			
@@ -143,7 +143,7 @@ class GrabConstraint
 			return point
 		end
 		
-		public func bool valid()
+		func bool valid()
 			return pBone != -1 and pTargetBone != -1
 		end
 	end
@@ -161,7 +161,7 @@ class GrabConstraint
 	public var bool immobile
 	public var bool lockGrabRotation
 	
-	public func new()
+	func new()
 		handBoneName = ""
 		handBoneIndex = -1
 		grabbedBoneIndex = -1
@@ -171,7 +171,7 @@ class GrabConstraint
 		anchorConstraints = Array.new()
 	end
 	
-	public func DVector limitAnchor(DVector anchor)
+	func DVector limitAnchor(DVector anchor)
 		if anchorConstraints.getCount() > 0
 			anchor = anchorConstraints.inject(anchor, block DVector result, Constraint each
 				return each.limit(result)

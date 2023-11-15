@@ -37,45 +37,45 @@ pin Dragengine.Utils
  * Tweaking panel.
  */
 class WMPPanelTweaking extends CollapsibleGroup
-	public class CharacterChanged extends WorldSpawnCharacter.DefaultListener
-		private var WMPPanelTweaking pPanel
+	class CharacterChanged extends WorldSpawnCharacter.DefaultListener
+		var WMPPanelTweaking pPanel
 		
-		public func new(WMPPanelTweaking panel)
+		func new(WMPPanelTweaking panel)
 			pPanel = panel
 		end
 		
-		public func void characterChanged(WorldSpawnCharacter wsc)
+		func void characterChanged(WorldSpawnCharacter wsc)
 			pPanel.setCharacter(wsc.getCharacter())
 		end
 	end
 	
 	class MotionTransferSelected extends DefaultListModelListener
-		private var WMPPanelTweaking pPanel
+		var WMPPanelTweaking pPanel
 		
-		public func new(WMPPanelTweaking panel)
+		func new(WMPPanelTweaking panel)
 			pPanel = panel
 		end
 		
-		public func void selectionChanged(ListModel listModel)
+		func void selectionChanged(ListModel listModel)
 			pPanel.selectMotionTransfer()
 		end
 	end
 	
 	/** Character tweaked listener. */
 	class CharacterTweaked extends DefaultCharacterConfigurationsListener
-		private var WMPPanelTweaking pPanel
+		var WMPPanelTweaking pPanel
 		
-		public func new(WMPPanelTweaking panel)
+		func new(WMPPanelTweaking panel)
 			pPanel = panel
 		end
 		
-		public func void configurationChanged(CharacterConfigurations configurations, CharacterConfiguration configuration)
+		func void configurationChanged(CharacterConfigurations configurations, CharacterConfiguration configuration)
 			if pPanel.getCharacter() == configuration
 				pPanel.onCharacterChanged()
 			end
 		end
 		
-		public func void configurationTweaked(CharacterConfigurations configurations, CharacterConfiguration configuration)
+		func void configurationTweaked(CharacterConfigurations configurations, CharacterConfiguration configuration)
 			if pPanel.getCharacter() == configuration
 				pPanel.onCharacterTweaked()
 			end
@@ -97,7 +97,7 @@ class WMPPanelTweaking extends CollapsibleGroup
 	
 	
 	/** Create panel. */
-	public func new(WMPanelCharacter panelCharacter) super("Tweaking", "uipanelcharacter#tweaking",\
+	func new(WMPanelCharacter panelCharacter) super("Tweaking", "uipanelcharacter#tweaking",\
 	CollapsibleGroup.persistModel(prefixUIOptions(panelCharacter), false))
 		pPrefixUIOptions = prefixUIOptions(panelCharacter)
 		
@@ -121,7 +121,7 @@ class WMPPanelTweaking extends CollapsibleGroup
 	end
 	
 	/** Dispose of widget. */
-	public func void dispose()
+	func void dispose()
 		if pCharacterChanged != null
 			GameApp.getGameApp().getWorldSpawnCharacter().removeListener(pCharacterChanged)
 			pCharacterChanged = null
@@ -136,19 +136,19 @@ class WMPPanelTweaking extends CollapsibleGroup
 	end
 	
 	/** UI options prefix. */
-	static public func String prefixUIOptions(WMPanelCharacter panelCharacter)
+	static func String prefixUIOptions(WMPanelCharacter panelCharacter)
 		return panelCharacter.getPrefixUIOptions() + "/WMPPanelTweaking"
 	end
 	
 	
 	
 	/** Character configuration or null. */
-	public func CharacterConfiguration getCharacter()
+	func CharacterConfiguration getCharacter()
 		return pCharacter
 	end
 	
 	/** Set character configuration or null. */
-	public func void setCharacter(CharacterConfiguration character)
+	func void setCharacter(CharacterConfiguration character)
 		if character == pCharacter
 			return
 		end
@@ -170,7 +170,7 @@ class WMPPanelTweaking extends CollapsibleGroup
 	end
 	
 	/** Select motion transfer. */
-	public func void selectMotionTransfer()
+	func void selectMotionTransfer()
 		var int selection = pModelMotionTransferPanel.getValue()
 		var WMPPMotionTransfer panel
 		
@@ -197,7 +197,7 @@ class WMPPanelTweaking extends CollapsibleGroup
 	end
 	
 	/** Character changed. */
-	public func void onCharacterChanged()
+	func void onCharacterChanged()
 		var String selection
 		if pModelMotionTransfers.getSelected() != -1
 			selection = (pModelMotionTransfers.getSelectedElement() cast MotionTransfer).getName()
@@ -222,7 +222,7 @@ class WMPPanelTweaking extends CollapsibleGroup
 	end
 	
 	/** Character tweaked. */
-	public func void onCharacterTweaked()
+	func void onCharacterTweaked()
 		var int selection = pModelMotionTransferPanel.getValue()
 		if selection > 0
 			(pPanelsMotionTransfer.getAt(selection - 1) cast WMPPMotionTransfer).onTweaked()
@@ -230,7 +230,7 @@ class WMPPanelTweaking extends CollapsibleGroup
 	end
 	
 	/** Notify character tweaked. */
-	public func void notifyCharacterTweaked()
+	func void notifyCharacterTweaked()
 		if pCharacter != null
 			pCharacter.notifyTweaked()
 			pSaveConfigTimeout = 0
@@ -239,7 +239,7 @@ class WMPPanelTweaking extends CollapsibleGroup
 	end
 	
 	/** Frame update. */
-	public func void onFrameUpdate(float elapsed)
+	func void onFrameUpdate(float elapsed)
 		if pRequiresSaving
 			pSaveConfigTimeout += elapsed
 			if pSaveConfigTimeout > 0.5

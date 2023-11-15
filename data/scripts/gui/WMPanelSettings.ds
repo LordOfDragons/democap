@@ -43,7 +43,7 @@ class WMPanelSettings extends Panel
 	
 	
 	/** Create session panel. */
-	public func new(bool inVR, String prefixUIOptions)
+	func new(bool inVR, String prefixUIOptions)
 		pInVR = inVR
 		pPrefixUIOptions = prefixUIOptions + "/WMPanelSettings"
 		
@@ -53,19 +53,19 @@ class WMPanelSettings extends Panel
 	end
 	
 	/** Dispose of widget. */
-	public func void dispose()
+	func void dispose()
 		super.dispose()
 	end
 	
 	
 	
 	/** Shown in VR. */
-	public func bool getInVR()
+	func bool getInVR()
 		return pInVR
 	end
 	
 	/** UI prefix options. */
-	public func String getPrefixUIOptions()
+	func String getPrefixUIOptions()
 		return pPrefixUIOptions
 	end
 	
@@ -84,7 +84,7 @@ class WMPanelSettings extends Panel
 		
 		addWidget(Panel.new(BorderLayout.new(5), block Panel p
 			p.setDesignerSelector("Panel.CollapsibleGroup.Header")
-			p.addWidget(Label.new("Settings / VR Control", "Label.CollapsibleGroup"), BorderLayout.Area.content)
+			p.addWidget(Label.new("@UI.WMPanelSettings.SettingsVRControl", "Label.CollapsibleGroup"), BorderLayout.Area.content)
 			
 			p.addWidget(HelpButton.new("uipanelsettings"), BorderLayout.Area.right)
 		end))
@@ -97,56 +97,52 @@ class WMPanelSettings extends Panel
 		end
 		
 		addWidget(Panel.new(GridLayout.new(2, 0), block Panel p
-			button = Button.new("Module Parameters", BlockActionListener.new(block ActionEvent event
+			button = Button.new("@UI.WMPanelSettings.ModuleParams", BlockActionListener.new(block ActionEvent event
 				var WindowSettings window = WindowSettings.new(Point.new(800, 600))
 				window.addSheet(WSSModuleParameters.new())
 				window.show(getWindow(), false, WindowModal.Placement.desktop)
 			end))
-			button.setToolTip("Edit game engine module parameters")
+			button.setToolTip("@UI.WMPanelSettings.ModuleParams.ToolTip")
 			p.addWidget(button)
 			
-			button = Button.new("Test Input Devices", BlockActionListener.new(block ActionEvent event
+			button = Button.new("@UI.WMPanelSettings.TestInputDevices", BlockActionListener.new(block ActionEvent event
 				var WindowInputDevice window = WindowInputDevice.new()
 				getDesktop().addWindow(window)
 				window.centerWindow()
 			end))
-			button.setToolTip("Show window for testing input devices")
+			button.setToolTip("@UI.WMPanelSettings.TestInputDevices.ToolTip")
 			p.addWidget(button)
 			
-			button = Button.new("Help (Wiki)", BlockActionListener.new(block ActionEvent event
+			button = Button.new("@UI.WMPanelSettings.HelpWiki", BlockActionListener.new(block ActionEvent event
 				FileSystem.openUrl("https://developer.dragondreams.ch/wiki/doku.php/democap:main")
 			end))
-			button.setToolTip("Show DEMoCap usage and tutorial information. Opens DEMoCap Wiki webpage")
+			button.setToolTip("@UI.WMPanelSettings.HelpWiki.ToolTip")
 			p.addWidget(button)
 		end))
 		
 		addWidget(Panel.new(GridLayout.new(2, 0), block Panel p
-			checkBox = CheckBox.new(sessionSettings.getModelEnableVR(), "Enable VR")
-			checkBox.setToolTip("Enable VR System")
+			checkBox = CheckBox.new(sessionSettings.getModelEnableVR(), "@UI.WMPanelSettings.EnableVR")
+			checkBox.setToolTip("@UI.WMPanelSettings.EnableVR.ToolTip")
 			p.addWidget(checkBox)
 			
-			checkBox = CheckBox.new(sessionSettings.getModelEnableHMD(), "Enable HMD")
-			checkBox.setToolTip("Enable HMD. If disabled shows placeholder model. For only tracker use")
+			checkBox = CheckBox.new(sessionSettings.getModelEnableHMD(), "@UI.WMPanelSettings.EnableHMD")
+			checkBox.setToolTip("@UI.WMPanelSettings.EnableHMD.ToolTip")
 			p.addWidget(checkBox)
 			
-			checkBox = CheckBox.new(sessionSettings.getModelUseEyeGazeTracking(), "Eye Gaze Tracking")
-			checkBox.setToolTip("Use eye gaze tracking if supported by VR Runtime."\
-				+ " Check before starting VR Runtime.")
+			checkBox = CheckBox.new(sessionSettings.getModelUseEyeGazeTracking(), "@UI.WMPanelSettings.EyeGazeTracking")
+			checkBox.setToolTip("@UI.WMPanelSettings.EyeGazeTracking.ToolTip")
 			p.addWidget(checkBox)
 			
-			checkBox = CheckBox.new(sessionSettings.getModelUseFacialTracking(), "Facial Tracking")
-			checkBox.setToolTip("Use facial tracking if supported by VR Runtime."\
-				+ " Check before starting VR Runtime.")
+			checkBox = CheckBox.new(sessionSettings.getModelUseFacialTracking(), "@UI.WMPanelSettings.FacialTracking")
+			checkBox.setToolTip("@UI.WMPanelSettings.FacialTracking.ToolTip")
 			p.addWidget(checkBox)
 			
-			checkBox = CheckBox.new(sessionSettings.getModelShowVRCamera(), "Show VR View")
-			checkBox.setToolTip("Show VR View (HMD left eye) or Free Camera in 3D View. "\
-				+ "Showing VR View is faster. Use Free Camera to set up scene.")
+			checkBox = CheckBox.new(sessionSettings.getModelShowVRCamera(), "@UI.WMPanelSettings.ShowVRView")
+			checkBox.setToolTip("@UI.WMPanelSettings.ShowVRView.ToolTip")
 			p.addWidget(checkBox)
 			
-			checkBox = CheckBox.new(sessionSettings.getModelAutoExport(), "Auto export")
-			checkBox.setToolTip("Automatically export captured animations to file named "\
-				+ "<scene>/<stage direction>/<object>/<animation>.*")
+			checkBox = CheckBox.new(sessionSettings.getModelAutoExport(), "@UI.WMPanelSettings.AutoExport")
+			checkBox.setToolTip("@UI.WMPanelSettings.AutoExport.ToolTip")
 			p.addWidget(checkBox)
 		end))
 		
@@ -154,8 +150,8 @@ class WMPanelSettings extends Panel
 			var DefaultTextModel modelEstimated = GameApp.getGameApp().getWorldSpawnCharacter().getEstimatedFloorOffset()
 			
 			p.addWidget(Panel.new(BorderLayout.new(2), block Panel p2
-				toolTip = "Floor offset in meters of the VR playspace. Recalibrate character if changed."
-				label = Label.new("Floor Offset:", "Label.FormCaption.SingleLine")
+				toolTip = "@UI.WMPanelSettings.FloorOffset.ToolTip"
+				label = Label.new("@UI.WMPanelSettings.FloorOffset", "Label.FormCaption.SingleLine")
 				label.setToolTip(toolTip)
 				p2.addWidget(label, BorderLayout.Area.left)
 				
@@ -167,13 +163,13 @@ class WMPanelSettings extends Panel
 				button = Button.new("<", BlockActionListener.new(block ActionEvent event
 					sessionSettings.getModelFloorOffset().setText(modelEstimated.getText())
 				end))
-				button.setToolTip("Use estimated floor offset as floor offset")
+				button.setToolTip("@UI.WMPanelSettings.FloorOffset.ToolTip2")
 				p2.addWidget(button, BorderLayout.Area.right)
 			end))
 			
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 5, FlowLayout.Stretch.last), block Panel p2
-				toolTip = "Floor offset estimated during the last calibration"
-				label = Label.new("Estimated:", "Label.FormCaption.SingleLine")
+				toolTip = "@UI.WMPanelSettings.FloorOffsetEstimated.ToolTip"
+				label = Label.new("@UI.WMPanelSettings.FloorOffsetEstimated", "Label.FormCaption.SingleLine")
 				label.setToolTip(toolTip)
 				p2.addWidget(label)
 				

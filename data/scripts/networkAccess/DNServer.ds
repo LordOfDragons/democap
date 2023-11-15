@@ -33,41 +33,41 @@ pin Dragengine.Utils
 /**
  * DEMoCap Network server.
  */
-public class DNServer implements ServerListener
+class DNServer implements ServerListener
 	/** Actor ready listener. */
-	public class ActorReadyListener extends WorldSpawnCharacter.DefaultListener
-		private var DNServer pServer
+	class ActorReadyListener extends WorldSpawnCharacter.DefaultListener
+		var DNServer pServer
 		
-		public func new(DNServer server)
+		func new(DNServer server)
 			pServer = server
 		end
 		
-		public func void characterChanged(WorldSpawnCharacter wsc)
+		func void characterChanged(WorldSpawnCharacter wsc)
 			pServer.updateCaptureBoneLayout()
 		end
 		
-		public func void actorReady(WorldSpawnCharacter wsc)
+		func void actorReady(WorldSpawnCharacter wsc)
 			pServer.updateCaptureBoneLayout()
 		end
 		
-		public func void actorNotReady(WorldSpawnCharacter wsc)
+		func void actorNotReady(WorldSpawnCharacter wsc)
 			pServer.updateCaptureBoneLayout()
 		end
 		
-		public func void gameWorldChanged(WorldSpawnCharacter wsc)
+		func void gameWorldChanged(WorldSpawnCharacter wsc)
 			pServer.updateCaptureBoneLayout()
 		end
 	end
 	
 	/** Frame updater. */
-	public class UpdateStates extends FrameUpdateListener
-		private var DNServer pServer
+	class UpdateStates extends FrameUpdateListener
+		var DNServer pServer
 		
-		public func new(DNServer server)
+		func new(DNServer server)
 			pServer = server
 		end
 		
-		public func void frameUpdate(float elapsed)
+		func void frameUpdate(float elapsed)
 			pServer.update()
 		end
 	end
@@ -81,37 +81,37 @@ public class DNServer implements ServerListener
 	end
 	
 	/** Default listener. */
-	public class DefaultListener implements Listener
-		public func new()
+	class DefaultListener implements Listener
+		func new()
 		end
 		
-		public func void connectionAdded(DNServer server, DNConnection connection)
+		func void connectionAdded(DNServer server, DNConnection connection)
 		end
 		
-		public func void connectionRemoved(DNServer server, DNConnection connection)
+		func void connectionRemoved(DNServer server, DNConnection connection)
 		end
 		
-		public func void allConnectionsRemoved(DNServer server)
+		func void allConnectionsRemoved(DNServer server)
 		end
 		
-		public func void connectionChanged(DNServer server, DNConnection connection)
+		func void connectionChanged(DNServer server, DNConnection connection)
 		end
 	end
 	
 	
-	private var Server pServer
-	private var Array pConnections
-	private var int pNextCaptureBoneLayoutRevision
-	private var DNCaptureBoneLayout pCaptureBoneLayout
-	private var DNCaptureFrame pCaptureFrame
-	private var DNStateRecordPlayback pStateRecordPlayback
-	private var ActorReadyListener pActorReadyListener
-	private var UpdateStates pUpdateStates
-	private var Array pListeners
+	var Server pServer
+	var Array pConnections
+	var int pNextCaptureBoneLayoutRevision
+	var DNCaptureBoneLayout pCaptureBoneLayout
+	var DNCaptureFrame pCaptureFrame
+	var DNStateRecordPlayback pStateRecordPlayback
+	var ActorReadyListener pActorReadyListener
+	var UpdateStates pUpdateStates
+	var Array pListeners
 	
 	
 	/** Create server. */
-	public func new()
+	func new()
 		pConnections = Array.new()
 		pCaptureBoneLayout = DNCaptureBoneLayout.new(nextCaptureBoneLayoutRevision())
 		pCaptureFrame = DNCaptureFrame.new(pCaptureBoneLayout)
@@ -120,19 +120,19 @@ public class DNServer implements ServerListener
 	end
 	
 	/** Dispose. */
-	public func void dispose()
+	func void dispose()
 		stopListening()
 		pListeners.removeAll()
 	end
 	
 	
 	/** Server is listening. */
-	public func bool isListening()
+	func bool isListening()
 		return pServer != null
 	end
 	
 	/** Start listening. */
-	public func void listenOn(String address)
+	func void listenOn(String address)
 		if pServer != null
 			return
 		end
@@ -155,7 +155,7 @@ public class DNServer implements ServerListener
 	end
 	
 	/** Stop listening. */
-	public func void stopListening()
+	func void stopListening()
 		if pServer == null
 			return
 		end
@@ -183,12 +183,12 @@ public class DNServer implements ServerListener
 	
 	
 	/** Visit connections with block. */
-	public func void forEachConnection(Block ablock)
+	func void forEachConnection(Block ablock)
 		pConnections.forEach(ablock)
 	end
 	
 	/** Remove connection. */
-	public func void removeConnection(DNConnection connection)
+	func void removeConnection(DNConnection connection)
 		if not pConnections.has(connection)
 			return
 		end
@@ -202,17 +202,17 @@ public class DNServer implements ServerListener
 	
 	
 	/** Add listener. */
-	public func void addListener(Listener listener)
+	func void addListener(Listener listener)
 		pListeners.add(listener)
 	end
 	
 	/** Remove listener. */
-	public func void removeListener(Listener listener)
+	func void removeListener(Listener listener)
 		pListeners.remove(listener)
 	end
 	
 	/** Notify listeners connection changed. */
-	public func void notifyConnectionChanged(DNConnection connection)
+	func void notifyConnectionChanged(DNConnection connection)
 		pListeners.forEach(block Listener each
 			each.connectionChanged(this, connection)
 		end)
@@ -220,22 +220,22 @@ public class DNServer implements ServerListener
 	
 	
 	/** Capture bone layout. */
-	public func DNCaptureBoneLayout getCaptureBoneLayout()
+	func DNCaptureBoneLayout getCaptureBoneLayout()
 		return pCaptureBoneLayout
 	end
 	
 	/** Capture frame. */
-	public func DNCaptureFrame getCaptureFrame()
+	func DNCaptureFrame getCaptureFrame()
 		return pCaptureFrame
 	end
 	
 	/** State record/playback. */
-	public func DNStateRecordPlayback getStateRecordPlayback()
+	func DNStateRecordPlayback getStateRecordPlayback()
 		return pStateRecordPlayback
 	end
 	
 	/** Update. */
-	public func void update()
+	func void update()
 		if pServer == null
 			return
 		end
@@ -245,7 +245,7 @@ public class DNServer implements ServerListener
 	
 	
 	/** Update capture bone layout from active actor if ready otherwise set empty. */
-	public func void updateCaptureBoneLayout()
+	func void updateCaptureBoneLayout()
 		if pServer == null
 			return
 		end
@@ -271,7 +271,7 @@ public class DNServer implements ServerListener
 	end
 	
 	/** Update capture frame. */
-	public func void updateCaptureFrame()
+	func void updateCaptureFrame()
 		if pServer == null
 			return
 		end
@@ -291,7 +291,7 @@ public class DNServer implements ServerListener
 	
 	
 	/** Client connected. */
-	public func void clientConnected(Connection connection)
+	func void clientConnected(Connection connection)
 		var DNConnection dncon = DNConnection.new(this, connection)
 		pConnections.add(dncon)
 		

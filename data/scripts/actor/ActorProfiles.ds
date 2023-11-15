@@ -31,14 +31,14 @@ pin Dragengine.Utils
  * as files of type "*.demcap" .
  */
 class ActorProfiles
-	private var String pDirectory
-	private var Array pProfiles
-	private var Array pListeners
+	var String pDirectory
+	var Array pProfiles
+	var Array pListeners
 	
 	
 	
 	/** Create actor list. */
-	public func new(String directory)
+	func new(String directory)
 		if directory == null
 			throw ENullPointer.new("directory")
 		end
@@ -49,7 +49,7 @@ class ActorProfiles
 	end
 	
 	/** Dispose of list. */
-	public func void dispose()
+	func void dispose()
 		pListeners.removeAll()
 		removeAll()
 	end
@@ -57,29 +57,29 @@ class ActorProfiles
 	
 	
 	/** Directory to save actor profiles to. */
-	public func String getDirectory()
+	func String getDirectory()
 		return pDirectory
 	end
 	
 	
 	
 	/** Count of profiles. */
-	public func int getCount()
+	func int getCount()
 		return pProfiles.getCount()
 	end
 	
 	/** Named profile is present. */
-	public func bool hasNamed(String name)
+	func bool hasNamed(String name)
 		return getNamed(name) != null
 	end
 	
 	/** Profile at index. */
-	public func ActorProfile getAt(int index)
+	func ActorProfile getAt(int index)
 		return pProfiles.getAt(index) cast ActorProfile
 	end
 	
 	/** Named profile or null if absent. */
-	public func ActorProfile getNamed(String name)
+	func ActorProfile getNamed(String name)
 		name = name.toLower()
 		return pProfiles.find(block ActorProfile each
 			return each.getName().compareNoCase(name) == 0
@@ -87,7 +87,7 @@ class ActorProfiles
 	end
 	
 	/** Add profile. Throws exception if named profile is present. */
-	public func void add(ActorProfile profile)
+	func void add(ActorProfile profile)
 		if hasNamed(profile.getName())
 			throw EInvalidParam.new("named profile is present: " + profile.getName())
 		end
@@ -99,7 +99,7 @@ class ActorProfiles
 	end
 	
 	/** Remove profile. Throws exception if named profile is absent. */
-	public func void remove(ActorProfile profile)
+	func void remove(ActorProfile profile)
 		pProfiles.remove(profile)
 		
 		pListeners.forEach(block ActorProfilesListener each
@@ -110,7 +110,7 @@ class ActorProfiles
 	end
 	
 	/** Remove all profiles. */
-	public func void removeAll()
+	func void removeAll()
 		pProfiles.forEach(block ActorProfile each
 			each.dispose()
 		end)
@@ -124,7 +124,7 @@ class ActorProfiles
 	/**
 	 * Visit profiles with block. Block receives as only argument ActorProfile.
 	 */
-	public func void forEach(Block ablock)
+	func void forEach(Block ablock)
 		pProfiles.forEach(ablock)
 	end
 	
@@ -133,19 +133,19 @@ class ActorProfiles
 	 * has to return true to include or false to exclude profile.
 	 * Returns Array of ActorProfile.
 	 */
-	public func Array collect(Block ablock)
+	func Array collect(Block ablock)
 		return pProfiles.collect(ablock)
 	end
 	
 	/** List of profiles as Array of ActorProfile. */
-	public func Array toArray()
+	func Array toArray()
 		return Array.new(pProfiles)
 	end
 	
 	
 	
 	/** Load actors from directory (*.dmcc). */
-	public func void loadAll()
+	func void loadAll()
 		var LoadActorProfile loader = GameApp.getGameApp().getLoadActorProfile()
 		var Console console = GameApp.getGameApp().getConsole()
 		
@@ -166,7 +166,7 @@ class ActorProfiles
 	end
 	
 	/** Save actors to directory (*.dmcc). */
-	public func void saveAll()
+	func void saveAll()
 		var LoadActorProfile loader = GameApp.getGameApp().getLoadActorProfile()
 		var Console console = GameApp.getGameApp().getConsole()
 		
@@ -185,7 +185,7 @@ class ActorProfiles
 	
 	
 	/** Add listener. */
-	public func void addListener(ActorProfilesListener listener)
+	func void addListener(ActorProfilesListener listener)
 		if listener == null
 			throw ENullPointer.new("listener")
 		end
@@ -193,7 +193,7 @@ class ActorProfiles
 	end
 	
 	/** Remove listener. */
-	public func void removeListener(ActorProfilesListener listener)
+	func void removeListener(ActorProfilesListener listener)
 		pListeners.remove(listener)
 	end
 end

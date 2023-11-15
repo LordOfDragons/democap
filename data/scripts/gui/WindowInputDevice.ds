@@ -35,11 +35,11 @@ pin Dragengine.LoadSave
  */
 class WindowInputDevice extends Window
 	/** Input device renderer. */
-	public class InputDeviceRenderer extends DefaultListElementRenderer
-		public func new()
+	class InputDeviceRenderer extends DefaultListElementRenderer
+		func new()
 		end
 		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, \
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, \
 		bool selected, bool focused)
 			if element != null
 				var InputDevice device = element cast InputDevice
@@ -53,14 +53,14 @@ class WindowInputDevice extends Window
 	end
 	
 	/** Input device selection listener. */
-	public class SelectInputDevice extends DefaultListModelListener
-		private var WindowInputDevice pWindow
+	class SelectInputDevice extends DefaultListModelListener
+		var WindowInputDevice pWindow
 		
-		public func new(WindowInputDevice window)
+		func new(WindowInputDevice window)
 			pWindow = window
 		end
 		
-		public func void selectionChanged(ListModel listModel)
+		func void selectionChanged(ListModel listModel)
 			if listModel.getSelected() != -1
 				pWindow.setInputDevice(listModel.getAt(listModel.getSelected()) cast InputDevice)
 				
@@ -71,15 +71,15 @@ class WindowInputDevice extends Window
 	end
 	
 	/** Input device axis renderer. */
-	public class InputDeviceAxisRenderer extends DefaultListElementRenderer
-		public func new()
+	class InputDeviceAxisRenderer extends DefaultListElementRenderer
+		func new()
 		end
 		
-		public func Widget createRenderer(ListBox listBox)
+		func Widget createRenderer(ListBox listBox)
 			return AxisPanel.new()
 		end
 		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, \
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, \
 		bool selected, bool focused)
 			if element != null
 				(renderer cast AxisPanel).setAxis(element cast InputDeviceAxis)
@@ -92,11 +92,11 @@ class WindowInputDevice extends Window
 		private static fixed var WeightLayout.LayoutSettings column1 = WeightLayout.LayoutSettings.new(0, 100)
 		private static fixed var WeightLayout.LayoutSettings column2 = WeightLayout.LayoutSettings.new(1)
 		
-		private var InputDeviceAxis pAxis
-		private var TextModel pModelName
-		private var RangeModel pModelValue
+		var InputDeviceAxis pAxis
+		var TextModel pModelName
+		var RangeModel pModelValue
 		
-		public func new()
+		func new()
 			pModelName = DefaultTextModel.new("?: ")
 			pModelValue = DefaultRangeModel.new(-100, 100, 10, 0, 1)
 			
@@ -111,26 +111,26 @@ class WindowInputDevice extends Window
 			startFrameUpdater()
 		end
 		
-		public func void setAxis(InputDeviceAxis axis)
+		func void setAxis(InputDeviceAxis axis)
 			pAxis = axis
 			pModelName.setText(axis.getName())
 		end
 		
-		public func void onFrameUpdate(float elapsed)
+		func void onFrameUpdate(float elapsed)
 			pModelValue.setValue((pAxis.getValue() * 100.0) cast int)
 		end
 	end
 	
 	/** Input device button renderer. */
-	public class InputDeviceButtonRenderer extends DefaultListElementRenderer
-		public func new()
+	class InputDeviceButtonRenderer extends DefaultListElementRenderer
+		func new()
 		end
 		
-		public func Widget createRenderer(ListBox listBox)
+		func Widget createRenderer(ListBox listBox)
 			return ButtonPanel.new()
 		end
 		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, \
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, \
 		bool selected, bool focused)
 			if element != null
 				(renderer cast ButtonPanel).setButton(element cast InputDeviceButton)
@@ -144,12 +144,12 @@ class WindowInputDevice extends Window
 		private static fixed var WeightLayout.LayoutSettings column2 = WeightLayout.LayoutSettings.new(1)
 		private static fixed var WeightLayout.LayoutSettings column3 = WeightLayout.LayoutSettings.new(1)
 		
-		private var InputDeviceButton pButton
-		private var TextModel pModelName
-		private var Label pLabelPressed
-		private var Label pLabelTouched
+		var InputDeviceButton pButton
+		var TextModel pModelName
+		var Label pLabelPressed
+		var Label pLabelTouched
 		
-		public func new()
+		func new()
 			pModelName = DefaultTextModel.new("?: ")
 			
 			setLayout(WeightLayout.new(LayoutAxis.x, 5))
@@ -161,12 +161,12 @@ class WindowInputDevice extends Window
 			startFrameUpdater()
 		end
 		
-		public func void setButton(InputDeviceButton button)
+		func void setButton(InputDeviceButton button)
 			pButton = button
 			pModelName.setText(button.getName())
 		end
 		
-		public func void onFrameUpdate(float elapsed)
+		func void onFrameUpdate(float elapsed)
 			pLabelPressed.setDesignerSelector(pButton.isPressed() if "Label.DeviceButtonPressed" else "Label.DeviceButtonReleased")
 			pLabelTouched.setDesignerSelector(pButton.isTouched() if "Label.DeviceButtonTouched" else "Label.DeviceButtonUntouched")
 		end
@@ -174,13 +174,13 @@ class WindowInputDevice extends Window
 	
 	/** Pose panel. */
 	class PosePanel extends Panel
-		private var InputDevice pDevice
-		private var TextModel pModelPosition
-		private var TextModel pModelOrientation
-		private var TextModel pModelLinearVelocity
-		private var TextModel pModelAngularVelocity
+		var InputDevice pDevice
+		var TextModel pModelPosition
+		var TextModel pModelOrientation
+		var TextModel pModelLinearVelocity
+		var TextModel pModelAngularVelocity
 		
-		public func new()
+		func new()
 			pModelPosition = DefaultTextModel.new("(0,0,0)")
 			pModelOrientation = DefaultTextModel.new("(0,0,0)")
 			pModelLinearVelocity = DefaultTextModel.new("(0,0,0)")
@@ -200,7 +200,7 @@ class WindowInputDevice extends Window
 			startFrameUpdater()
 		end
 		
-		public func void dispose()
+		func void dispose()
 			pModelPosition = null
 			pModelOrientation = null
 			pModelLinearVelocity = null
@@ -208,11 +208,11 @@ class WindowInputDevice extends Window
 			super.dispose()
 		end
 		
-		public func void setDevice(InputDevice device)
+		func void setDevice(InputDevice device)
 			pDevice = device
 		end
 		
-		public func void onFrameUpdate(float elapsed)
+		func void onFrameUpdate(float elapsed)
 			if pDevice != null
 				var Vector v = pDevice.getDevicePosePosition()
 				pModelPosition.setText("({:+06.3f}, {:+06.3f}, {:+06.3f})".format(\
@@ -244,10 +244,10 @@ class WindowInputDevice extends Window
 	
 	/** Face panel. */
 	class FacePanel extends Panel
-		private var InputDevice pDevice
-		private var Dictionary pExpressions //!< int -> RangeModel
+		var InputDevice pDevice
+		var Dictionary pExpressions //!< int -> RangeModel
 		
-		public func new()
+		func new()
 			pExpressions = Dictionary.new()
 			
 			runWhileBlockingLayout(block
@@ -310,12 +310,12 @@ class WindowInputDevice extends Window
 			startFrameUpdater()
 		end
 		
-		public func void dispose()
+		func void dispose()
 			pExpressions = null
 			super.dispose()
 		end
 		
-		public func void setDevice(InputDevice device)
+		func void setDevice(InputDevice device)
 			if device != pDevice
 				pDevice = device
 				
@@ -327,7 +327,7 @@ class WindowInputDevice extends Window
 			end
 		end
 		
-		public func void onFrameUpdate(float elapsed)
+		func void onFrameUpdate(float elapsed)
 			if pDevice != null
 				var int count = pDevice.getDeviceFaceExpressionCount()
 				pExpressions.forEach(block int index, RangeModel model
@@ -354,33 +354,33 @@ class WindowInputDevice extends Window
 	
 	/** Device changes listener. */
 	class DeviceChangeListener extends DefaultBindingManagerListener
-		private var WindowInputDevice pWindow
+		var WindowInputDevice pWindow
 		
-		public func new(WindowInputDevice window)
+		func new(WindowInputDevice window)
 			pWindow = window
 		end
 		
-		public func void devicesReloaded(BindingManager manager)
+		func void devicesReloaded(BindingManager manager)
 			pWindow.updateInputDeviceModel()
 		end
 	end
 	
 	
 	
-	private var DeviceChangeListener pDeviceChangeListener
-	private var DefaultListModel pModelInputDevices
-	private var ListBox pListInputDevices
-	private var InputDevice pInputDevice //<! Active input device
-	private var DefaultListModel pModelAxes
-	private var DefaultListModel pModelButtons
-	private var Panel pPanelAxes, pPanelButtons, pPanelFaceCont
-	private var PosePanel pPanelPose
-	private var FacePanel pPanelFace
+	var DeviceChangeListener pDeviceChangeListener
+	var DefaultListModel pModelInputDevices
+	var ListBox pListInputDevices
+	var InputDevice pInputDevice //<! Active input device
+	var DefaultListModel pModelAxes
+	var DefaultListModel pModelButtons
+	var Panel pPanelAxes, pPanelButtons, pPanelFaceCont
+	var PosePanel pPanelPose
+	var FacePanel pPanelFace
 	
 	
 	
 	/** Create window. */
-	public func new() super(0, 0, 800, 500)
+	func new() super(0, 0, 800, 500)
 		pModelInputDevices = DefaultListModel.new()
 		pModelAxes = DefaultListModel.new()
 		pModelButtons = DefaultListModel.new()
@@ -398,7 +398,7 @@ class WindowInputDevice extends Window
 	end
 	
 	/** Dispose of window. */
-	public func void dispose()
+	func void dispose()
 		if pDeviceChangeListener != null
 			BaseGameApp.getApp().getBindingManager().removeListener(pDeviceChangeListener)
 			pDeviceChangeListener = null
@@ -465,7 +465,7 @@ class WindowInputDevice extends Window
 	end
 	
 	/** Update input device list. */
-	public func void updateInputDeviceModel()
+	func void updateInputDeviceModel()
 		var InputDevice selection = pInputDevice
 		var Array content = Array.new()
 		
@@ -478,7 +478,7 @@ class WindowInputDevice extends Window
 	end
 	
 	/** Set input device to show. */
-	public func void setInputDevice(InputDevice inputDevice)
+	func void setInputDevice(InputDevice inputDevice)
 		if inputDevice == pInputDevice
 			return
 		end

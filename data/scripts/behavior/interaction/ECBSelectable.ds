@@ -41,32 +41,32 @@ class ECBSelectable extends DefaultECBehavior
 		/** Default implementation of tracker listener. */
 		class DefaultListener implements Listener
 			/** Create default listener. */
-			public func new()
+			func new()
 			end
 			
 			/** Selected element changed. */
-			public func void selectedElementChanged(Tracker tracker)
+			func void selectedElementChanged(Tracker tracker)
 			end
 		end
 		
 		
-		private var Instance pElement
-		private var Array pListeners
+		var Instance pElement
+		var Array pListeners
 		
 		
 		/** Create tracker. */
-		public func new()
+		func new()
 			pListeners = Array.new()
 		end
 		
 		
 		/** Selected element or null if not assigned. */
-		public func Instance getElement()
+		func Instance getElement()
 			return pElement
 		end
 		
 		/** Set selected element or null if not assigned. */
-		public func void setElement(Instance element)
+		func void setElement(Instance element)
 			if pElement == element
 				return
 			end
@@ -88,13 +88,13 @@ class ECBSelectable extends DefaultECBehavior
 		end
 		
 		/** Clear selection. */
-		public func void clear()
+		func void clear()
 			setElement(null)
 		end
 		
 		
 		/** Add listener. */
-		public func void addListener(Listener listener)
+		func void addListener(Listener listener)
 			if listener == null
 				throw ENullPointer.new("listener")
 			end
@@ -102,7 +102,7 @@ class ECBSelectable extends DefaultECBehavior
 		end
 		
 		/** Remove listener. */
-		public func void removeListener(Listener listener)
+		func void removeListener(Listener listener)
 			pListeners.remove(listener)
 		end
 	end
@@ -119,33 +119,33 @@ class ECBSelectable extends DefaultECBehavior
 	/** Default implementation of behavior instance listener. */
 	class DefaultListener implements Listener
 		/** Create default listener. */
-		public func new()
+		func new()
 		end
 		
 		/** Became selected element. */
-		public func void selected(Instance instance)
+		func void selected(Instance instance)
 		end
 		
 		/** Ceased being selected element. */
-		public func void deselected(Instance instance)
+		func void deselected(Instance instance)
 		end
 	end
 	
 	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
-		private var ECBSelectable pECBehavior
-		private var Array pListeners
+		var ECBSelectable pECBehavior
+		var Array pListeners
 		
 		
 		/** Create instance. */
-		public func new(ECBSelectable ecbehavior, BehaviorElement element) super(element)
+		func new(ECBSelectable ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pListeners = Array.new()
 		end
 		
 		/** Dispose of instance. */
-		public func void dispose()
+		func void dispose()
 			if GameApp.getGameApp().getSelectionTracker() != null
 				if GameApp.getGameApp().getSelectionTracker().getElement() == this
 					GameApp.getGameApp().getSelectionTracker().setElement(null)
@@ -159,40 +159,40 @@ class ECBSelectable extends DefaultECBehavior
 		
 		
 		/** Behavior. */
-		public func ECBSelectable getECBehavior()
+		func ECBSelectable getECBehavior()
 			return pECBehavior
 		end
 		
 		
 		/** Element is the selected element. */
-		public func bool isSelected()
+		func bool isSelected()
 			return GameApp.getGameApp().getSelectionTracker().getElement() == this
 		end
 		
 		/** Element is not the selected element. */
-		public func bool isDeselected()
+		func bool isDeselected()
 			return GameApp.getGameApp().getSelectionTracker().getElement() != this
 		end
 		
 		/** Select element. */
-		public func void selectElement()
+		func void selectElement()
 			GameApp.getGameApp().getSelectionTracker().setElement(this)
 		end
 		
 		/** Selected element. */
-		public func Instance getSelected()
+		func Instance getSelected()
 			return GameApp.getGameApp().getSelectionTracker().getElement()
 		end
 		
 		/** Called by Tracker to notify behavior listeners. */
-		public func void notifySelected()
+		func void notifySelected()
 			pListeners.forEach(block Listener each
 				each.selected(this)
 			end)
 		end
 		
 		/** Called by Tracker to notify behavior listeners. */
-		public func void notifyDeselected()
+		func void notifyDeselected()
 			pListeners.forEach(block Listener each
 				each.deselected(this)
 			end)
@@ -200,7 +200,7 @@ class ECBSelectable extends DefaultECBehavior
 		
 		
 		/** Add listener. */
-		public func void addListener(Listener listener)
+		func void addListener(Listener listener)
 			if listener == null
 				throw EInvalidParam.new()
 			end
@@ -208,32 +208,32 @@ class ECBSelectable extends DefaultECBehavior
 		end
 		
 		/** Remove listener. */
-		public func void removeListener(Listener listener)
+		func void removeListener(Listener listener)
 			pListeners.remove(listener)
 		end
 	end
 	
 	
 	/** Create behavior element class. */
-	public func new(BehaviorElementClass eclass) super(eclass)
+	func new(BehaviorElementClass eclass) super(eclass)
 		eclass.addBehavior(this)
 	end
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance(BehaviorElement element)
+	func Instance instance(BehaviorElement element)
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Get behavior in element class or null if absent. */
-	static public func ECBSelectable getBehaviorIn(BehaviorElementClass eclass)
+	static func ECBSelectable getBehaviorIn(BehaviorElementClass eclass)
 		return eclass.findBehavior(block ECBSelectable each
 			return true
 		end) cast ECBSelectable
 	end
 	
 	/** Get instance in element or null if absent. */
-	static public func Instance getInstanceIn(BehaviorElement element)
+	static func Instance getInstanceIn(BehaviorElement element)
 		return element.findInstance(block Instance each
 			return true
 		end) cast Instance
@@ -241,7 +241,7 @@ class ECBSelectable extends DefaultECBehavior
 	
 	
 	/** Create Behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

@@ -44,11 +44,11 @@ class ECBTemporaryGhost extends DefaultECBehavior
 	/** Default implementation of behavior instance listener. */
 	class DefaultListener implements Listener
 		/** Create default listener. */
-		public func new()
+		func new()
 		end
 		
 		/** Enabled changed. */
-		public func void enabledChanged(Instance instance)
+		func void enabledChanged(Instance instance)
 		end
 	end
 	
@@ -56,15 +56,15 @@ class ECBTemporaryGhost extends DefaultECBehavior
 	class Instance extends DefaultECBehaviorInstance
 		/** Component texture. */
 		class Texture
-			private var Component pComponent
-			private var String pName
-			private var int pIndex
-			private var Skin pSkin
-			private var int pSkinTexture
-			private var DynamicSkin pDynamicSkin
+			var Component pComponent
+			var String pName
+			var int pIndex
+			var Skin pSkin
+			var int pSkinTexture
+			var DynamicSkin pDynamicSkin
 			
 			/** Create component texture for restoring. */
-			public func new(Component component, int index)
+			func new(Component component, int index)
 				pComponent = component
 				pIndex = index
 				pName = component.getTextureNameAt(index)
@@ -74,13 +74,13 @@ class ECBTemporaryGhost extends DefaultECBehavior
 			end
 			
 			/** Replace component texture with ghose skin. */
-			public func void replace(Skin skin)
+			func void replace(Skin skin)
 				pComponent.setTextureSkinAt(pIndex, skin, 0)
 				pComponent.setTextureDynamicSkinAt(pIndex, null)
 			end
 			
 			/** Restore component texture. */
-			public func void restore()
+			func void restore()
 				// it is possible the component changed in the mean time so ignore errors but log them
 				try
 					pComponent.setTextureSkinAt(pIndex, pSkin, pSkinTexture)
@@ -93,27 +93,27 @@ class ECBTemporaryGhost extends DefaultECBehavior
 		end
 		
 		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
-			public func new(Instance instance) super(instance, "ECBTemporaryGhost")
+			func new(Instance instance) super(instance, "ECBTemporaryGhost")
 			end
 			
-			public func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+			func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
 				return Gui.WMPSOTemporaryGhost.new(panelProject, getId())
 			end
 		end
 		
 		
 		
-		private var ECBTemporaryGhost pECBehavior
-		private var Array pComponents // ECBehaviorComponent.Instance
-		private var Array pTextures // Texture
-		private var Skin pSkin
-		private var bool pEnabled
+		var ECBTemporaryGhost pECBehavior
+		var Array pComponents // ECBehaviorComponent.Instance
+		var Array pTextures // Texture
+		var Skin pSkin
+		var bool pEnabled
 		protected var Array pListeners
 		
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBTemporaryGhost ecbehavior, BehaviorElement element) super(element)
+		func new(ECBTemporaryGhost ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pListeners = Array.new()
 			
@@ -123,7 +123,7 @@ class ECBTemporaryGhost extends DefaultECBehavior
 		end
 		
 		/** Dispose of behavior instance. */
-		public func void dispose()
+		func void dispose()
 			pTextures = null
 			pComponents = null
 			pListeners = null
@@ -131,7 +131,7 @@ class ECBTemporaryGhost extends DefaultECBehavior
 		end
 		
 		/** Init behavior instance. */
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			pSkin = pECBehavior.getSkin().getSkin(stub, getElement().getClass())
 			
 			if pECBehavior.behaviorGuiPanels != null
@@ -142,12 +142,12 @@ class ECBTemporaryGhost extends DefaultECBehavior
 		
 		
 		/** Enabled. */
-		public func bool getEnabled()
+		func bool getEnabled()
 			return pEnabled
 		end
 		
 		/** Set enabled. */
-		public func void setEnabled(bool enabled)
+		func void setEnabled(bool enabled)
 			if enabled == pEnabled
 				return
 			end
@@ -170,7 +170,7 @@ class ECBTemporaryGhost extends DefaultECBehavior
 		
 		
 		/** Add listener. */
-		public func void addListener(Listener listener)
+		func void addListener(Listener listener)
 			if listener == null
 				throw ENullPointer.new("listener")
 			end
@@ -178,7 +178,7 @@ class ECBTemporaryGhost extends DefaultECBehavior
 		end
 		
 		/** Remove listener. */
-		public func void removeListener(Listener listener)
+		func void removeListener(Listener listener)
 			pListeners.remove(listener)
 		end
 		
@@ -221,13 +221,13 @@ class ECBTemporaryGhost extends DefaultECBehavior
 	
 	
 	public var ECBBehaviorGuiPanels behaviorGuiPanels
-	private var Array pComponents
-	private var ECPSkin pSkin
+	var Array pComponents
+	var ECPSkin pSkin
 	
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
 	ECBehaviorComponent component) super(eclass)
 		var String prefix = "temporaryGhost."
 		
@@ -244,7 +244,7 @@ class ECBTemporaryGhost extends DefaultECBehavior
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		behaviorGuiPanels = null
 		pComponents = null
 		super.dispose()
@@ -253,24 +253,24 @@ class ECBTemporaryGhost extends DefaultECBehavior
 	
 	
 	/** Array of ECBehaviorComponent. */
-	public func Array getComponents()
+	func Array getComponents()
 		return pComponents
 	end
 	
 	/** Ghost skin. */
-	public func ECPSkin getSkin()
+	func ECPSkin getSkin()
 		return pSkin
 	end
 	
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance(BehaviorElement element)
+	func Instance instance(BehaviorElement element)
 		return element.getInstanceAt(this.getInstanceIndex()) cast Instance
 	end
 	
 	/** Get instance with slot name in element or null if absent. */
-	static public func Instance getInstanceIn(BehaviorElement element)
+	static func Instance getInstanceIn(BehaviorElement element)
 		return element.findInstance(block Instance each
 			return true
 		end) cast Instance
@@ -279,7 +279,7 @@ class ECBTemporaryGhost extends DefaultECBehavior
 	
 	
 	/** Create behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

@@ -36,19 +36,19 @@ pin Dragengine.Utils
 class ECBPreviewLevel extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
-		private var ECBPreviewLevel pECBehavior
-		private var ECBPreviewDataQuery.Instance pDataQuery
-		private var ECBehaviorComponent.Instance pComponent
-		private var Model pModel
-		private var DebugDrawer pDebugDrawer
-		private var ColliderVolume pCollider
-		private var float pLevel
-		private var bool pVisible
+		var ECBPreviewLevel pECBehavior
+		var ECBPreviewDataQuery.Instance pDataQuery
+		var ECBehaviorComponent.Instance pComponent
+		var Model pModel
+		var DebugDrawer pDebugDrawer
+		var ColliderVolume pCollider
+		var float pLevel
+		var bool pVisible
 		
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBPreviewLevel ecbehavior, BehaviorElement element) super(element)
+		func new(ECBPreviewLevel ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pLevel = 0
 			pVisible = false
@@ -58,13 +58,13 @@ class ECBPreviewLevel extends DefaultECBehavior
 		end
 		
 		/** Dispose of behavior instance. */
-		public func void dispose()
+		func void dispose()
 			pComponent = null
 			super.dispose()
 		end
 		
 		/** Init behavior instance. */
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			var ElementClass eclass = getElement().getClass()
 			
 			pModel = pECBehavior.getModel().getModel(stub, eclass)
@@ -79,17 +79,17 @@ class ECBPreviewLevel extends DefaultECBehavior
 		
 		
 		/** Debug drawer. */
-		public func DebugDrawer getDebugDrawer()
+		func DebugDrawer getDebugDrawer()
 			return pDebugDrawer
 		end
 		
 		/** Model. */
-		public func Model getModel()
+		func Model getModel()
 			return pModel
 		end
 		
 		/** Set visibility. */
-		public func void setVisible(bool visible)
+		func void setVisible(bool visible)
 			if visible == pVisible
 				return
 			end
@@ -98,12 +98,12 @@ class ECBPreviewLevel extends DefaultECBehavior
 		end
 		
 		/** Level. */
-		public func float getLevel()
+		func float getLevel()
 			return pLevel
 		end
 		
 		/** Set level. */
-		public func void setLevel(float level)
+		func void setLevel(float level)
 			if DEMath.fabs( level - pLevel ) < 0.0001
 				return
 			end
@@ -112,19 +112,19 @@ class ECBPreviewLevel extends DefaultECBehavior
 		end
 		
 		/** Get world level matrix. */
-		public func DMatrix getMatrix()
+		func DMatrix getMatrix()
 			return DMatrix.newTranslation(0, pLevel, 0) * getParentMatrix()
 		end
 		
 		/** Get world matrix of level parent. */
-		public func DMatrix getParentMatrix()
+		func DMatrix getParentMatrix()
 			return getElement().getElementMatrix().normalize()
 		end
 		
 		
 		
 		/** Element has been added to game world. */
-		public func void addToGameWorld()
+		func void addToGameWorld()
 			var World world = getElement().getGameWorld().getWorld()
 			
 			updateLevelShapes()
@@ -136,7 +136,7 @@ class ECBPreviewLevel extends DefaultECBehavior
 		end
 		
 		/** Element is removed from game world. */
-		public func void removeFromGameWorld()
+		func void removeFromGameWorld()
 			var World world = getElement().getGameWorld().getWorld()
 			
 			world.removeDebugDrawer(pDebugDrawer)
@@ -144,12 +144,12 @@ class ECBPreviewLevel extends DefaultECBehavior
 		end
 		
 		/** Element position, orientation or scale changed. */
-		public func void geometryChanged()
+		func void geometryChanged()
 			updateLevelGeometry()
 		end
 		
 		/** Element state changed. */
-		public func void stateChanged()
+		func void stateChanged()
 			updateLevelVisibility()
 		end
 		
@@ -213,14 +213,14 @@ class ECBPreviewLevel extends DefaultECBehavior
 	
 	
 	
-	private var ECBPreviewDataQuery pDataQuery
-	private var ECBehaviorComponent pComponent
-	private var ECPModel pModel
+	var ECBPreviewDataQuery pDataQuery
+	var ECBehaviorComponent pComponent
+	var ECPModel pModel
 	
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBPreviewDataQuery dataQuery,\
+	func new(BehaviorElementClass eclass, ECBPreviewDataQuery dataQuery,\
 	ECBehaviorComponent component) super(eclass)
 		if dataQuery == null
 			throw ENullPointer.new("dataQuery")
@@ -241,7 +241,7 @@ class ECBPreviewLevel extends DefaultECBehavior
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		pDataQuery = null
 		pComponent = null
 		super.dispose()
@@ -250,43 +250,43 @@ class ECBPreviewLevel extends DefaultECBehavior
 	
 	
 	/** Data query. */
-	public func ECBPreviewDataQuery getDataQuery()
+	func ECBPreviewDataQuery getDataQuery()
 		return pDataQuery
 	end
 	
 	/** Component behavior. */
-	public func ECBehaviorComponent getComponent()
+	func ECBehaviorComponent getComponent()
 		return pComponent
 	end
 	
 	/** Model. */
-	public func ECPModel getModel()
+	func ECPModel getModel()
 		return pModel
 	end
 	
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance( BehaviorElement element )
+	func Instance instance( BehaviorElement element )
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Get instance for element or null. */
-	static public func Instance getInstanceIn(BehaviorElement element)
+	static func Instance getInstanceIn(BehaviorElement element)
 		return element.findInstance(block Instance each
 			return true
 		end) cast Instance
 	end
 	
 	/** Get behavior in element class or null if absent. */
-	static public func ECBPreviewLevel getBehaviorIn(BehaviorElementClass eclass)
+	static func ECBPreviewLevel getBehaviorIn(BehaviorElementClass eclass)
 		return eclass.findBehavior(block ECBPreviewLevel each
 			return true
 		end) cast ECBPreviewLevel
 	end
 	
 	/** Create behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

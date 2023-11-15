@@ -28,19 +28,19 @@ pin Dragengine.Utils
  * List of character configurations.
  */
 class CharacterConfigurations
-	private var Array pConfigurations
-	private var Array pListeners
+	var Array pConfigurations
+	var Array pListeners
 	
 	
 	
 	/** Create configuration list. */
-	public func new()
+	func new()
 		pListeners = Array.new()
 		pConfigurations = Array.new()
 	end
 	
 	/** Dispose of list. */
-	public func void dispose()
+	func void dispose()
 		pListeners.removeAll()
 		removeAll()
 	end
@@ -48,29 +48,29 @@ class CharacterConfigurations
 	
 	
 	/** Count of configurations. */
-	public func int getCount()
+	func int getCount()
 		return pConfigurations.getCount()
 	end
 	
 	/** Named configuration is present. */
-	public func bool hasNamed(String name)
+	func bool hasNamed(String name)
 		return getNamed(name) != null
 	end
 	
 	/** Configuration at index. */
-	public func CharacterConfiguration getAt(int index)
+	func CharacterConfiguration getAt(int index)
 		return pConfigurations.getAt(index) cast CharacterConfiguration
 	end
 	
 	/** Named configuration or null if absent. */
-	public func CharacterConfiguration getNamed(String name)
+	func CharacterConfiguration getNamed(String name)
 		return pConfigurations.find(block CharacterConfiguration each
 			return each.getName().compareNoCase(name) == 0
 		end) cast CharacterConfiguration
 	end
 	
 	/** Add configuration. Throws exception if named configuration is present. */
-	public func void add(CharacterConfiguration configuration)
+	func void add(CharacterConfiguration configuration)
 		if hasNamed(configuration.getName())
 			throw EInvalidParam.new("named configuration is present: " + configuration.getName())
 		end
@@ -82,7 +82,7 @@ class CharacterConfigurations
 	end
 	
 	/** Remove configuration. Throws exception if named configuration is absent. */
-	public func void remove(CharacterConfiguration configuration)
+	func void remove(CharacterConfiguration configuration)
 		pConfigurations.remove(configuration)
 		
 		pListeners.forEach(block CharacterConfigurationsListener each
@@ -93,7 +93,7 @@ class CharacterConfigurations
 	end
 	
 	/** Remove all configurations. */
-	public func void removeAll()
+	func void removeAll()
 		pConfigurations.forEach(block CharacterConfiguration each
 			each.dispose()
 		end)
@@ -107,7 +107,7 @@ class CharacterConfigurations
 	/**
 	 * Visit configurations with block. Block receives as only argument CharacterConfiguration.
 	 */
-	public func void forEach(Block ablock)
+	func void forEach(Block ablock)
 		pConfigurations.forEach(ablock)
 	end
 	
@@ -116,24 +116,24 @@ class CharacterConfigurations
 	 * has to return true to include or false to exclude configuration.
 	 * Returns Array of CharacterConfiguration.
 	 */
-	public func Array collect(Block ablock)
+	func Array collect(Block ablock)
 		return pConfigurations.collect(ablock)
 	end
 	
 	/** List of configurations as Array of CharacterConfiguration. */
-	public func Array toArray()
+	func Array toArray()
 		return Array.new(pConfigurations)
 	end
 	
 	/** Notify listener character configuration has been changed. */
-	public func void notifyChanged(CharacterConfiguration configuration)
+	func void notifyChanged(CharacterConfiguration configuration)
 		pListeners.forEach(block CharacterConfigurationsListener each
 			each.configurationChanged(this, configuration)
 		end)
 	end
 	
 	/** Notify listener character configuration has been tweaked. */
-	public func void notifyTweaked(CharacterConfiguration configuration)
+	func void notifyTweaked(CharacterConfiguration configuration)
 		pListeners.forEach(block CharacterConfigurationsListener each
 			each.configurationTweaked(this, configuration)
 		end)
@@ -142,7 +142,7 @@ class CharacterConfigurations
 	
 	
 	/** Add listener. */
-	public func void addListener(CharacterConfigurationsListener listener)
+	func void addListener(CharacterConfigurationsListener listener)
 		if listener == null
 			throw ENullPointer.new("listener")
 		end
@@ -150,7 +150,7 @@ class CharacterConfigurations
 	end
 	
 	/** Remove listener. */
-	public func void removeListener(CharacterConfigurationsListener listener)
+	func void removeListener(CharacterConfigurationsListener listener)
 		pListeners.remove(listener)
 	end
 end

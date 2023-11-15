@@ -39,15 +39,15 @@ class ECBAHudShowCamera extends DefaultECBehavior
 		class SwitchCamera extends DefaultListModelListener
 			protected var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+			func void contentChanged(ListModel model, int fromIndex, int toIndex)
 				selectionChanged(model)
 			end
 			
-			public func void selectionChanged(ListModel model)
+			func void selectionChanged(ListModel model)
 				var int index = model.getSelected()
 				if index != -1
 					pInstance.setCamera(model.getAt(index) cast ECBRemoteCamera.Instance)
@@ -60,23 +60,23 @@ class ECBAHudShowCamera extends DefaultECBehavior
 		
 		
 		
-		private var ECBAHudShowCamera pECBehavior
-		private var ECBVRHudInfo.Instance pVRHudInfo
-		private var ECBRemoteCamera.Instance pCamera
-		private var Panel pPanel
-		private var WorldRenderer pWorldRenderer
-		private var SwitchCamera pSwitchCamera
+		var ECBAHudShowCamera pECBehavior
+		var ECBVRHudInfo.Instance pVRHudInfo
+		var ECBRemoteCamera.Instance pCamera
+		var Panel pPanel
+		var WorldRenderer pWorldRenderer
+		var SwitchCamera pSwitchCamera
 		
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBAHudShowCamera ecbehavior, BehaviorElement element) super(element)
+		func new(ECBAHudShowCamera ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pVRHudInfo = ecbehavior.getVRHudInfo().instance(element)
 		end
 		
 		/** Dispose of behavior instance. */
-		public func void dispose()
+		func void dispose()
 			hidePanel()
 			pCamera = null
 			pVRHudInfo = null
@@ -84,25 +84,25 @@ class ECBAHudShowCamera extends DefaultECBehavior
 		end
 		
 		/** Init behavior instance. */
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			setCamera(SessionSettings.get().getHudCamera())
 		end
 		
 		
 		/** Behavior instance VR HUD Info. */
-		public func ECBVRHudInfo.Instance getVRHudInfo()
+		func ECBVRHudInfo.Instance getVRHudInfo()
 			return pVRHudInfo
 		end
 		
 		
 		
 		/** Camera to show or null. */
-		public func ECBRemoteCamera.Instance getCamera()
+		func ECBRemoteCamera.Instance getCamera()
 			return pCamera
 		end
 		
 		/** Set camera to show or null. */
-		public func void setCamera(ECBRemoteCamera.Instance camera)
+		func void setCamera(ECBRemoteCamera.Instance camera)
 			if camera == pCamera
 				return
 			end
@@ -163,12 +163,12 @@ class ECBAHudShowCamera extends DefaultECBehavior
 		end
 		
 		
-		public func void addToGameWorld()
+		func void addToGameWorld()
 			pSwitchCamera = SwitchCamera.new(this)
 			SessionSettings.get().getModelHudCamera().addListener(pSwitchCamera)
 		end
 		
-		public func void removeFromGameWorld()
+		func void removeFromGameWorld()
 			if pSwitchCamera != null
 				SessionSettings.get().getModelHudCamera().removeListener(pSwitchCamera)
 				pSwitchCamera = null
@@ -183,7 +183,7 @@ class ECBAHudShowCamera extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBVRHudInfo vrHudInfo) super(eclass)
+	func new(BehaviorElementClass eclass, ECBVRHudInfo vrHudInfo) super(eclass)
 		pVRHudInfo = vrHudInfo
 		
 		eclass.addBehavior(this)
@@ -192,26 +192,26 @@ class ECBAHudShowCamera extends DefaultECBehavior
 	
 	
 	/** VR Hud Info behavior. */
-	public func ECBVRHudInfo getVRHudInfo()
+	func ECBVRHudInfo getVRHudInfo()
 		return pVRHudInfo
 	end
 	
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance( BehaviorElement element )
+	func Instance instance( BehaviorElement element )
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Get instance in element or null if absent. */
-	static public func Instance getInstanceIn(BehaviorElement element)
+	static func Instance getInstanceIn(BehaviorElement element)
 		return element.findInstance(block Instance each
 			return true
 		end) cast Instance
 	end
 	
 	/** Create behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

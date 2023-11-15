@@ -42,19 +42,19 @@ class WMPanelSession extends Panel
 	class GameChangedListener extends DefaultGameListener
 		protected var WMPanelSession pPanel
 		
-		public func new(WMPanelSession panel)
+		func new(WMPanelSession panel)
 			pPanel = panel
 		end
 		
-		public func void projectChanged(GameApp app)
+		func void projectChanged(GameApp app)
 			pPanel.setScene(null)
 		end
 		
-		public func void sceneChanged(GameApp app)
+		func void sceneChanged(GameApp app)
 			pPanel.setScene(app.getScene())
 		end
 		
-		public func void gameWorldChanged(GameApp app)
+		func void gameWorldChanged(GameApp app)
 			pPanel.updateModelCapturables()
 		end
 	end
@@ -66,29 +66,29 @@ class WMPanelSession extends Panel
 		protected var bool pUpdateModelCapturables
 		protected var ECBSceneObject.Instance pUpdateModelCapturableName
 		
-		public func new(WMPanelSession panel)
+		func new(WMPanelSession panel)
 			pPanel = panel
 		end
 		
-		public func void objectAdded(Scene scene, ECBSceneObject.Instance object)
+		func void objectAdded(Scene scene, ECBSceneObject.Instance object)
 			pUpdateModelCapturables = true
 			pUpdateModelCapturableName = null
 			pStartTimer()
 		end
 		
-		public func void objectRemoved(Scene scene, ECBSceneObject.Instance object)
+		func void objectRemoved(Scene scene, ECBSceneObject.Instance object)
 			pUpdateModelCapturables = true
 			pUpdateModelCapturableName = null
 			pStartTimer()
 		end
 		
-		public func void allObjectsRemoved(Scene scene)
+		func void allObjectsRemoved(Scene scene)
 			pUpdateModelCapturables = true
 			pUpdateModelCapturableName = null
 			pStartTimer()
 		end
 		
-		public func void objectNameChanged(Scene scene, ECBSceneObject.Instance object)
+		func void objectNameChanged(Scene scene, ECBSceneObject.Instance object)
 			if pUpdateModelCapturableName == null
 				pUpdateModelCapturableName = object
 			else
@@ -125,31 +125,31 @@ class WMPanelSession extends Panel
 	class PlaybackChanged extends PlaybackScene.DefaultListener
 		protected var WMPanelSession pPanel
 		
-		public func new(WMPanelSession panel)
+		func new(WMPanelSession panel)
 			pPanel = panel
 		end
 		
-		public func void startPlayback(PlaybackScene playbackScene)
+		func void startPlayback(PlaybackScene playbackScene)
 			pPanel.updatePlaybackState()
 		end
 		
-		public func void stopPlayback(PlaybackScene playbackScene)
+		func void stopPlayback(PlaybackScene playbackScene)
 			pPanel.updatePlaybackState()
 		end
 		
-		public func void pausePlayback(PlaybackScene playbackScene)
+		func void pausePlayback(PlaybackScene playbackScene)
 			pPanel.updatePlaybackState()
 		end
 		
-		public func void timeChanged(PlaybackScene playbackScene, float time)
+		func void timeChanged(PlaybackScene playbackScene, float time)
 			pPanel.updatePlaybackPosition()
 		end
 		
-		public func void playtimeChanged(PlaybackScene playbackScene, float playtime)
+		func void playtimeChanged(PlaybackScene playbackScene, float playtime)
 			pPanel.updatePlaybackPosition()
 		end
 		
-		public func void speedChanged(PlaybackScene playbackScene, float speed)
+		func void speedChanged(PlaybackScene playbackScene, float speed)
 			pPanel.updatePlaybackSpeed()
 		end
 	end
@@ -158,19 +158,19 @@ class WMPanelSession extends Panel
 	class RecordStateChanged extends RecordScene.DefaultListener
 		protected var WMPanelSession pPanel
 		
-		public func new(WMPanelSession panel)
+		func new(WMPanelSession panel)
 			pPanel = panel
 		end
 		
-		public func void prepareRecording(RecordScene recordScene)
+		func void prepareRecording(RecordScene recordScene)
 			pPanel.updateRecordState()
 		end
 		
-		public func void startRecording(RecordScene recordScene)
+		func void startRecording(RecordScene recordScene)
 			pPanel.updateRecordState()
 		end
 		
-		public func void stopRecording(RecordScene recordScene)
+		func void stopRecording(RecordScene recordScene)
 			pPanel.updateRecordState()
 		end
 	end
@@ -181,19 +181,19 @@ class WMPanelSession extends Panel
 		protected var Widget pWidget
 		protected var WMPanelSession pPanel
 		
-		public func new(WMPanelSession panel, Widget widget)
+		func new(WMPanelSession panel, Widget widget)
 			pPanel = panel
 			pWidget = widget
 		end
 		
-		public func float positionFromMouse(int mouse)
+		func float positionFromMouse(int mouse)
 			var int x = mouse - pWidget.getPadding().getLeft()
 			var int width = pWidget.getWidth() - pWidget.getPadding().getWidth()
 			var float percentage = (x cast float) / (width cast float)
 			return GameApp.getGameApp().getPlaybackScene().getPlaytime() * percentage
 		end
 		
-		public func void onButtonPress( MouseEvent event )
+		func void onButtonPress( MouseEvent event )
 			if not pDragging and event.getButton() == InputEventMouseButton.left
 				GameApp.getGameApp().getRecordScene().stop(false)
 				pDragging = true
@@ -204,14 +204,14 @@ class WMPanelSession extends Panel
 			end
 		end
 		
-		public func void onButtonRelease(MouseEvent event)
+		func void onButtonRelease(MouseEvent event)
 			if pDragging and event.getButton() == InputEventMouseButton.left
 				pDragging = false
 				pWidget.releaseMouse()
 			end
 		end
 		
-		public func void onMouseMove(MouseEvent event)
+		func void onMouseMove(MouseEvent event)
 			if pDragging
 				GameApp.getGameApp().getPlaybackScene().setTime(\
 					positionFromMouse(event.getPosition().getX()))
@@ -220,11 +220,11 @@ class WMPanelSession extends Panel
 	end
 	
 	class RecordDevicesRenderer extends DefaultListElementRenderer
-		public func new()
+		func new()
 			setDefaultObject(SessionSettings.RecordDevices.reference) // longest name
 		end
 		
-		public func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
 			super.updateRenderer(listBox, renderer, (element cast SessionSettings.RecordDevices).name(), selected, focused)
 		end
 	end
@@ -232,15 +232,15 @@ class WMPanelSession extends Panel
 	class SelectCapturable extends DefaultListModelListener
 		protected var WMPanelSession pPanel
 		
-		public func new(WMPanelSession panel)
+		func new(WMPanelSession panel)
 			pPanel = panel
 		end
 		
-		public func void contentChanged(ListModel model, int fromIndex, int toIndex)
+		func void contentChanged(ListModel model, int fromIndex, int toIndex)
 			selectionChanged(model)
 		end
 		
-		public func void selectionChanged(ListModel model)
+		func void selectionChanged(ListModel model)
 			if pPanel.preventUpdateObjects
 				return
 			end
@@ -258,11 +258,11 @@ class WMPanelSession extends Panel
 	class SelectedCaptureableChanged extends ECBCapturable.Tracker.DefaultListener
 		protected var WMPanelSession pPanel
 		
-		public func new(WMPanelSession panel)
+		func new(WMPanelSession panel)
 			pPanel = panel
 		end
 		
-		public func void capturedElementChanged(ECBCapturable.Tracker tracker)
+		func void capturedElementChanged(ECBCapturable.Tracker tracker)
 			pPanel.selectCapturableFromTracker()
 		end
 	end
@@ -293,7 +293,7 @@ class WMPanelSession extends Panel
 	
 	
 	/** Create session panel. */
-	public func new(bool inVR, String prefixUIOptions)
+	func new(bool inVR, String prefixUIOptions)
 		pInVR = inVR
 		pPrefixUIOptions = prefixUIOptions + "/WMPanelSession"
 		
@@ -335,7 +335,7 @@ class WMPanelSession extends Panel
 	end
 	
 	/** Dispose of widget. */
-	public func void dispose()
+	func void dispose()
 		setScene(null)
 		
 		var GameApp app = GameApp.getGameApp()
@@ -372,24 +372,24 @@ class WMPanelSession extends Panel
 	
 	
 	/** Shown in VR. */
-	public func bool getInVR()
+	func bool getInVR()
 		return pInVR
 	end
 	
 	/** UI prefix options. */
-	public func String getPrefixUIOptions()
+	func String getPrefixUIOptions()
 		return pPrefixUIOptions
 	end
 	
 	
 	
 	/** Active scene or null. */
-	public func Scene getScene()
+	func Scene getScene()
 		return pScene
 	end
 	
 	/** Set active scene or null. */
-	public func void setScene(Scene scene)
+	func void setScene(Scene scene)
 		if scene == pScene
 			return
 		end
@@ -410,12 +410,12 @@ class WMPanelSession extends Panel
 	
 	
 	/** Capturables model. */
-	public func DefaultListModel getModelCapturables()
+	func DefaultListModel getModelCapturables()
 		return pModelCapturables
 	end
 	
 	/** Selected capturable from tracker. */
-	public func ECBSceneObject.Instance getCapturableFromTracker()
+	func ECBSceneObject.Instance getCapturableFromTracker()
 		var ECBCapturable.Instance capturable = GameApp.getGameApp().getCapturableTracker().getElement()
 		if capturable != null
 			return ECBSceneObject.getInstanceIn(capturable.getElement())
@@ -424,14 +424,14 @@ class WMPanelSession extends Panel
 	end
 	
 	/** Select capturable from tracker. */
-	public func void selectCapturableFromTracker()
+	func void selectCapturableFromTracker()
 		preventUpdateObjects = true
 		pModelCapturables.setSelectedElement(getCapturableFromTracker())
 		preventUpdateObjects = false
 	end
 	
 	/** Update capturables model. */
-	public func void updateModelCapturables()
+	func void updateModelCapturables()
 		if pModelCapturables == null
 			return // dispose protection
 		end
@@ -462,7 +462,7 @@ class WMPanelSession extends Panel
 		setCapturable(selection)
 	end
 	
-	public func void updateModelCapturableName(ECBSceneObject.Instance object)
+	func void updateModelCapturableName(ECBSceneObject.Instance object)
 		if pModelCapturables == null
 			return // dispose protection
 		end
@@ -473,7 +473,7 @@ class WMPanelSession extends Panel
 		end
 	end
 	
-	public func void setCapturable(ECBSceneObject.Instance capturable)
+	func void setCapturable(ECBSceneObject.Instance capturable)
 		if capturable != null
 			GameApp.getGameApp().getCapturableTracker().setElement(ECBCapturable.getInstanceIn(capturable.getElement()))
 			
@@ -485,7 +485,7 @@ class WMPanelSession extends Panel
 	
 	
 	/** Update record state. */
-	public func void updateRecordState()
+	func void updateRecordState()
 		var RecordScene record = GameApp.getGameApp().getRecordScene()
 		var RecordScene.State state = record.getState()
 		
@@ -494,7 +494,7 @@ class WMPanelSession extends Panel
 	end
 	
 	/** Start recording. */
-	public func void startRecording()
+	func void startRecording()
 		var GameApp app = GameApp.getGameApp()
 		var BaseVRActor actor = app.getWorldSpawnCharacter().getActor()
 		if actor == null
@@ -553,7 +553,7 @@ class WMPanelSession extends Panel
 	end
 	
 	/** Stop recording. */
-	public func void stopRecording()
+	func void stopRecording()
 		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
 		if actor == null
 			return
@@ -566,14 +566,14 @@ class WMPanelSession extends Panel
 	end
 	
 	/** Browse captured animations in overlay directory. */
-	public func void browseCapturedAnimations()
+	func void browseCapturedAnimations()
 		FileSystem.browseCapture(GameApp.getGameApp().getPathCaptureAnimations())
 	end
 	
 	
 	
 	/** Update playback state. */
-	public func void updatePlaybackState()
+	func void updatePlaybackState()
 		var PlaybackScene playback = GameApp.getGameApp().getPlaybackScene()
 		var PlaybackScene.State state = playback.getState()
 		var bool recordStopped = GameApp.getGameApp().getRecordScene().isStopped()
@@ -587,7 +587,7 @@ class WMPanelSession extends Panel
 	end
 	
 	/** Update playback position. */
-	public func void updatePlaybackPosition()
+	func void updatePlaybackPosition()
 		var PlaybackScene ps = GameApp.getGameApp().getPlaybackScene()
 		var float playtime = ps.getPlaytime()
 		
@@ -600,36 +600,36 @@ class WMPanelSession extends Panel
 	end
 	
 	/** Update playback speed. */
-	public func void updatePlaybackSpeed()
+	func void updatePlaybackSpeed()
 		pModelTextPlaybackSpeed.setText(((GameApp.getGameApp().getPlaybackScene().getSpeed() * 100 + 0.5) cast int).toString())
 	end
 	
 	/** Start playback. */
-	public func void playbackStart(bool backwards)
+	func void playbackStart(bool backwards)
 		GameApp.getGameApp().getRecordScene().stop(false)
 		GameApp.getGameApp().getPlaybackScene().play(backwards)
 	end
 	
 	/** Pause playback. */
-	public func void playbackPause()
+	func void playbackPause()
 		GameApp.getGameApp().getRecordScene().stop(false)
 		GameApp.getGameApp().getPlaybackScene().pause()
 	end
 	
 	/** Stop playback. */
-	public func void playbackStop()
+	func void playbackStop()
 		GameApp.getGameApp().getRecordScene().stop(false)
 		GameApp.getGameApp().getPlaybackScene().stop()
 	end
 	
 	/** Rewind playback. */
-	public func void playbackRewind()
+	func void playbackRewind()
 		GameApp.getGameApp().getRecordScene().stop(false)
 		GameApp.getGameApp().getPlaybackScene().rewind()
 	end
 	
 	/** Fast forward to end of playback. */
-	public func void playbackForwardEnd()
+	func void playbackForwardEnd()
 		GameApp.getGameApp().getRecordScene().stop(false)
 		GameApp.getGameApp().getPlaybackScene().forwardEnd()
 	end

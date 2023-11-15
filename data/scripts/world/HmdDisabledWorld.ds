@@ -33,19 +33,19 @@ class HmdDisabledWorld extends GameWorld
 	class LoadResources implements ResourceListener
 		private static var String pathModelGallery = "/content/models/vrgallery/vrgallery.demodel"
 		private static var String pathSkinGallery = "/content/models/vrgallery/vrgrallery.deskin"
-		private var int pCounter
-		private var HmdDisabledWorld pWorld
+		var int pCounter
+		var HmdDisabledWorld pWorld
 		
 		public var Model modelGallery
 		public var Skin skinGallery
 		
-		public func new(HmdDisabledWorld world)
+		func new(HmdDisabledWorld world)
 			pWorld = world
 			Model.loadAsynchron(pathModelGallery, this)
 			Skin.loadAsynchron(pathSkinGallery, this)
 		end
 		
-		public func void finishedLoading(String filename, ResourceLoaderType resourceType, Object resource)
+		func void finishedLoading(String filename, ResourceLoaderType resourceType, Object resource)
 			if filename.equals(pathModelGallery)
 				modelGallery = resource cast Model
 			elif filename.equals(pathSkinGallery)
@@ -55,7 +55,7 @@ class HmdDisabledWorld extends GameWorld
 			checkFinished()
 		end
 		
-		public func void failedLoading(String filename, ResourceLoaderType resourceType)
+		func void failedLoading(String filename, ResourceLoaderType resourceType)
 			pCounter++
 			checkFinished()
 		end
@@ -68,23 +68,23 @@ class HmdDisabledWorld extends GameWorld
 	end
 	
 	private class FrameUpdater extends FrameUpdateListener
-		private var HmdDisabledWorld pWorld
+		var HmdDisabledWorld pWorld
 		
-		public func new(HmdDisabledWorld world)
+		func new(HmdDisabledWorld world)
 			pWorld = world
 		end
 		
-		public func void frameUpdate(float elapsed)
+		func void frameUpdate(float elapsed)
 			pWorld.update(elapsed)
 		end
 	end
 	
 	
-	private var FrameUpdater pUpdater
+	var FrameUpdater pUpdater
 	
 	
 	/** Create game world. */
-	public func new()
+	func new()
 		var World world = getWorld()
 		
 		world.setDisableLights(true)
@@ -105,7 +105,7 @@ class HmdDisabledWorld extends GameWorld
 	end
 	
 	/** Dispose of game world. */
-	public func void dispose()
+	func void dispose()
 		if pUpdater != null
 			pUpdater.giveUp()
 			pUpdater = null
@@ -114,7 +114,7 @@ class HmdDisabledWorld extends GameWorld
 		super.dispose()
 	end
 	
-	public func void createResources(LoadResources loader)
+	func void createResources(LoadResources loader)
 		if loader.modelGallery != null and loader.skinGallery != null
 			getWorld().addComponent(Component.new(loader.modelGallery, loader.skinGallery))
 		end

@@ -42,19 +42,19 @@ class ECBInteractionBubble extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class SelectableChanged extends ECBSelectable.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void selected(ECBSelectable.Instance instance)
+			func void selected(ECBSelectable.Instance instance)
 				if pInstance.getElement() != null
 					pInstance.selectableChanged()
 				end
 			end
 			
-			public func void deselected(ECBSelectable.Instance instance)
+			func void deselected(ECBSelectable.Instance instance)
 				if pInstance.getElement() != null
 					pInstance.selectableChanged()
 				end
@@ -62,23 +62,23 @@ class ECBInteractionBubble extends DefaultECBehavior
 		end
 		
 		class FlexibleGridLayout implements Layout
-			private var Point cellSize, cellHalfSize
-			private var int gap, minColumns
+			var Point cellSize, cellHalfSize
+			var int gap, minColumns
 			
-			public func new(int minColumns)
+			func new(int minColumns)
 				cellSize = Point.new(48, 48)
 				cellHalfSize = Point.new(24, 24)
 				gap = 12
 				this.minColumns = minColumns
 			end
 			
-			public func void addWidget(Widget widget, Object settings)
+			func void addWidget(Widget widget, Object settings)
 			end
 			
-			public func void removeWidget(Widget widget)
+			func void removeWidget(Widget widget)
 			end
 			
-			public func Point getMinimumSize(Container container)
+			func Point getMinimumSize(Container container)
 				var int count = getVisibleWidgets(container).getCount()
 				var int rows = (DEMath.max(count - 1, 0)) / 4 + 1
 				var int columns = DEMath.clamp(count, minColumns, 4)
@@ -87,15 +87,15 @@ class ECBInteractionBubble extends DefaultECBehavior
 					cellSize.getY() * rows + gap * (rows - 1))
 			end
 			
-			public func Point getMinimumSizeForWidth(Container container, int width)
+			func Point getMinimumSizeForWidth(Container container, int width)
 				return getMinimumSize(container)
 			end
 			
-			public func Point getMinimumSizeForHeight(Container container, int height)
+			func Point getMinimumSizeForHeight(Container container, int height)
 				return getMinimumSize(container)
 			end
 			
-			public func void doLayout(Container container)
+			func void doLayout(Container container)
 				var Array list = getVisibleWidgets(container)
 				var int count = list.getCount()
 				var int rows = (DEMath.max(count - 1, 0)) / 4 + 1
@@ -130,13 +130,13 @@ class ECBInteractionBubble extends DefaultECBehavior
 		end
 		
 		class AttachRecordAnimation extends ECBehaviorPlayerControllable.Tracker.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void activeActorChanged(ECBehaviorPlayerControllable.Tracker tracker)
+			func void activeActorChanged(ECBehaviorPlayerControllable.Tracker tracker)
 				if tracker.getActor() != null
 					pInstance.setRecordAnimation(ECBRecordAnimation.getInstanceIn(tracker.getActor().getElement()))
 					
@@ -147,30 +147,30 @@ class ECBInteractionBubble extends DefaultECBehavior
 		end
 		
 		class RecordingStateChanged extends ECBRecordAnimation.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void prepareRecording(ECBRecordAnimation.Instance instance)
+			func void prepareRecording(ECBRecordAnimation.Instance instance)
 				pInstance.updateVisibility()
 			end
 			
-			public func void stopRecording(ECBRecordAnimation.Instance instance)
+			func void stopRecording(ECBRecordAnimation.Instance instance)
 				pInstance.updateVisibility()
 			end
 		end
 		
 		class BubbleToolTipManager extends ToolTipManager
-			private var DefaultTextModel pModel
+			var DefaultTextModel pModel
 			
-			public func new(Desktop desktop, DefaultTextModel model) super(desktop)
+			func new(Desktop desktop, DefaultTextModel model) super(desktop)
 				pModel = model
 				setPopup(null)
 			end
 			
-			public func void onToolTipChanged()
+			func void onToolTipChanged()
 				var Object toolTip = getToolTip()
 				if toolTip == null
 					toolTip = ""
@@ -180,13 +180,13 @@ class ECBInteractionBubble extends DefaultECBehavior
 		end
 		
 		class SceneObjectNameChanged extends ECBSceneObject.DefaultListener
-			private var Instance pInstance
+			var Instance pInstance
 			
-			public func new(Instance instance)
+			func new(Instance instance)
 				pInstance = instance
 			end
 			
-			public func void nameChanged(ECBSceneObject.Instance instance)
+			func void nameChanged(ECBSceneObject.Instance instance)
 				if instance == pInstance.getSceneObject()
 					pInstance.updateModelObjectName()
 				end
@@ -195,31 +195,31 @@ class ECBInteractionBubble extends DefaultECBehavior
 		
 		
 		
-		private var ECBInteractionBubble pECBehavior
-		private var ECBRecordAnimation.Instance pRecordAnimation
-		private var AttachRecordAnimation pAttachRecordAnimation
-		private var RecordingStateChanged pRecordingStateChanged
-		private var ECBSceneObject.Instance pSceneObject
-		private var ColliderVolume pCollider
+		var ECBInteractionBubble pECBehavior
+		var ECBRecordAnimation.Instance pRecordAnimation
+		var AttachRecordAnimation pAttachRecordAnimation
+		var RecordingStateChanged pRecordingStateChanged
+		var ECBSceneObject.Instance pSceneObject
+		var ColliderVolume pCollider
 		
-		private var Window pWindow
-		private var TabLayout pTabLayout
-		private var Panel pPanelButtonsSelected
-		private var Panel pPanelButtonsDeselected
-		private var Vector pAttachPosition
-		private var Quaternion pAttachOrientation
-		private var ECBSelectable.Instance pParentSelectable
-		private var ECBShowInteractHandles.Instance pParentShowInteractHandles
-		private var bool pShowSelected
-		private var float pDesktopFactorHalfX, pDesktopFactorHalfY
-		private var float pDesktopFactorX, pDesktopFactorY
-		private var Vector2 pEnlargePanelSize
-		private var DefaultTextModel pModelObjectName
-		private var DefaultTextModel pModelToolTip
+		var Window pWindow
+		var TabLayout pTabLayout
+		var Panel pPanelButtonsSelected
+		var Panel pPanelButtonsDeselected
+		var Vector pAttachPosition
+		var Quaternion pAttachOrientation
+		var ECBSelectable.Instance pParentSelectable
+		var ECBShowInteractHandles.Instance pParentShowInteractHandles
+		var bool pShowSelected
+		var float pDesktopFactorHalfX, pDesktopFactorHalfY
+		var float pDesktopFactorX, pDesktopFactorY
+		var Vector2 pEnlargePanelSize
+		var DefaultTextModel pModelObjectName
+		var DefaultTextModel pModelToolTip
 		
 		
 		/** Create behavior instance. */
-		public func new(ECBInteractionBubble ecbehavior, BehaviorElement element) super(element)
+		func new(ECBInteractionBubble ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pAttachPosition = Vector.new()
 			pAttachOrientation = Quaternion.newFromEulerY(180)
@@ -230,7 +230,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 		end
 		
 		/** Init behavior instance. */
-		public func void init(StubElement stub)
+		func void init(StubElement stub)
 			var BehaviorElement element = getElement()
 			
 			pCollider = pECBehavior.attachable.instance(element).getCollider().getCollider() cast ColliderVolume
@@ -284,7 +284,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 		end
 		
 		/** Dispose of behavior instance. */
-		public func void dispose()
+		func void dispose()
 			super.dispose()
 			
 			pPanelButtonsSelected = null
@@ -305,34 +305,34 @@ class ECBInteractionBubble extends DefaultECBehavior
 		
 		
 		/** Behavior. */
-		public func ECBInteractionBubble getECBehavior()
+		func ECBInteractionBubble getECBehavior()
 			return pECBehavior
 		end
 		
 		/** Window. */
-		public func Window getWindow()
+		func Window getWindow()
 			return pWindow
 		end
 		
 		/** Selected panel to add buttons to. */
-		public func Panel getPanelButtonsSelected()
+		func Panel getPanelButtonsSelected()
 			return pPanelButtonsSelected
 		end
 		
 		/** Deselected panel to add buttons to. */
-		public func Panel getPanelButtonsDeselected()
+		func Panel getPanelButtonsDeselected()
 			return pPanelButtonsDeselected
 		end
 		
 		/** Scene object. */
-		public func ECBSceneObject.Instance getSceneObject()
+		func ECBSceneObject.Instance getSceneObject()
 			return pSceneObject
 		end
 		
 		
 		
 		/** Align bubble. */
-		public func void alignBubble()
+		func void alignBubble()
 			var BehaviorElement element = getElement()
 			if not element.getVisible()
 				return
@@ -380,19 +380,19 @@ class ECBInteractionBubble extends DefaultECBehavior
 		end
 		
 		/** Selectable changed. */
-		public func void selectableChanged()
+		func void selectableChanged()
 			setShowSelected(pParentSelectable != null and pParentSelectable.isSelected())
 		end
 		
 		
 		
 		/** Record animation or null. */
-		public func ECBRecordAnimation.Instance getRecordAnimation()
+		func ECBRecordAnimation.Instance getRecordAnimation()
 			return pRecordAnimation
 		end
 		
 		/** Set record animation or null. */
-		public func void setRecordAnimation(ECBRecordAnimation.Instance recordAnimation)
+		func void setRecordAnimation(ECBRecordAnimation.Instance recordAnimation)
 			if recordAnimation == pRecordAnimation
 				return
 			end
@@ -415,7 +415,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 		
 		
 		/** Update visibility. */
-		public func void updateVisibility()
+		func void updateVisibility()
 			var bool visible = true
 			
 			var BehaviorElement element = getElement()
@@ -441,17 +441,17 @@ class ECBInteractionBubble extends DefaultECBehavior
 		
 		
 		/** State changed for example visibility. */
-		public func void stateChanged()
+		func void stateChanged()
 			updateRequiresThink()
 		end
 		
 		/** Post think. */
-		public func void postThink(float elapsed)
+		func void postThink(float elapsed)
 			alignBubble()
 		end
 		
 		/** Added to game world. */
-		public func void addToGameWorld()
+		func void addToGameWorld()
 			pAttachRecordAnimation = AttachRecordAnimation.new(this)
 			GameApp.getGameApp().getPlayerControlledActor().addListener(pAttachRecordAnimation)
 			pAttachRecordAnimation.activeActorChanged(GameApp.getGameApp().getPlayerControlledActor())
@@ -460,14 +460,14 @@ class ECBInteractionBubble extends DefaultECBehavior
 		end
 		
 		/** Remove from game world. */
-		public func void removeFromGameWorld()
+		func void removeFromGameWorld()
 			setRecordAnimation(null)
 			GameApp.getGameApp().getPlayerControlledActor().removeListener(pAttachRecordAnimation)
 			pAttachRecordAnimation = null
 		end
 		
 		/** Attach to parent. */
-		public func void attachToParent(Element parent)
+		func void attachToParent(Element parent)
 			if not parent castable BehaviorElement
 				return
 			end
@@ -503,7 +503,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 			selectableChanged()
 		end
 		
-		public func void updateModelObjectName()
+		func void updateModelObjectName()
 			if pSceneObject != null
 				pModelObjectName.setText(pSceneObject.getDisplayName())
 				
@@ -619,7 +619,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 	
 	
 	/** Create behavior and add it to element class. */
-	public func new(BehaviorElementClass eclass, ECBehaviorAttachable attachable,\
+	func new(BehaviorElementClass eclass, ECBehaviorAttachable attachable,\
 	ECBehaviorRenderableDesktop renderabledesktop) super(eclass)
 		if attachable == null
 			throw ENullPointer.new("attachable")
@@ -637,7 +637,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 	end
 	
 	/** Dispose of behavior. */
-	public func void dispose()
+	func void dispose()
 		attachable = null
 		renderableDesktop = null
 		super.dispose()
@@ -645,19 +645,19 @@ class ECBInteractionBubble extends DefaultECBehavior
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance(BehaviorElement element)
+	func Instance instance(BehaviorElement element)
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Get behavior in element class or null if absent. */
-	static public func ECBInteractionBubble getBehaviorIn(BehaviorElementClass eclass)
+	static func ECBInteractionBubble getBehaviorIn(BehaviorElementClass eclass)
 		return eclass.findBehavior(block ECBInteractionBubble each
 			return true
 		end) cast ECBInteractionBubble
 	end
 	
 	/** Get instance in element or null if absent. */
-	static public func Instance getInstanceIn(BehaviorElement element)
+	static func Instance getInstanceIn(BehaviorElement element)
 		return element.findInstance(block Instance each
 			return true
 		end) cast Instance
@@ -665,7 +665,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 	
 	
 	/** Create behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

@@ -41,32 +41,32 @@ class ECBCapturable extends DefaultECBehavior
 		/** Default implementation of tracker listener. */
 		class DefaultListener implements Listener
 			/** Create default listener. */
-			public func new()
+			func new()
 			end
 			
 			/** Captured element changed. */
-			public func void capturedElementChanged(Tracker tracker)
+			func void capturedElementChanged(Tracker tracker)
 			end
 		end
 		
 		
-		private var Instance pElement
-		private var Array pListeners
+		var Instance pElement
+		var Array pListeners
 		
 		
 		/** Create tracker. */
-		public func new()
+		func new()
 			pListeners = Array.new()
 		end
 		
 		
 		/** Captured element or null if not assigned. */
-		public func Instance getElement()
+		func Instance getElement()
 			return pElement
 		end
 		
 		/** Set captured element or null if not assigned. */
-		public func void setElement(Instance element)
+		func void setElement(Instance element)
 			if pElement == element
 				return
 			end
@@ -88,13 +88,13 @@ class ECBCapturable extends DefaultECBehavior
 		end
 		
 		/** Clear selection. */
-		public func void clear()
+		func void clear()
 			setElement(null)
 		end
 		
 		
 		/** Add listener. */
-		public func void addListener(Listener listener)
+		func void addListener(Listener listener)
 			if listener == null
 				throw ENullPointer.new("listener")
 			end
@@ -102,7 +102,7 @@ class ECBCapturable extends DefaultECBehavior
 		end
 		
 		/** Remove listener. */
-		public func void removeListener(Listener listener)
+		func void removeListener(Listener listener)
 			pListeners.remove(listener)
 		end
 	end
@@ -119,33 +119,33 @@ class ECBCapturable extends DefaultECBehavior
 	/** Default implementation of behavior instance listener. */
 	class DefaultListener implements Listener
 		/** Create default listener. */
-		public func new()
+		func new()
 		end
 		
 		/** Became captured element. */
-		public func void captured(Instance instance)
+		func void captured(Instance instance)
 		end
 		
 		/** Ceased being captured element. */
-		public func void decaptured(Instance instance)
+		func void decaptured(Instance instance)
 		end
 	end
 	
 	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
-		private var ECBCapturable pECBehavior
-		private var Array pListeners
+		var ECBCapturable pECBehavior
+		var Array pListeners
 		
 		
 		/** Create instance. */
-		public func new(ECBCapturable ecbehavior, BehaviorElement element) super(element)
+		func new(ECBCapturable ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pListeners = Array.new()
 		end
 		
 		/** Dispose of instance. */
-		public func void dispose()
+		func void dispose()
 			if GameApp.getGameApp().getCapturableTracker() != null
 				if GameApp.getGameApp().getCapturableTracker().getElement() == this
 					GameApp.getGameApp().getCapturableTracker().setElement(null)
@@ -159,45 +159,45 @@ class ECBCapturable extends DefaultECBehavior
 		
 		
 		/** Behavior. */
-		public func ECBCapturable getECBehavior()
+		func ECBCapturable getECBehavior()
 			return pECBehavior
 		end
 		
 		
 		/** Element is the captured element. */
-		public func bool isCaptured()
+		func bool isCaptured()
 			return GameApp.getGameApp().getCapturableTracker().getElement() == this
 		end
 		
 		/** Element is not the captured element. */
-		public func bool isNotCaptured()
+		func bool isNotCaptured()
 			return GameApp.getGameApp().getCapturableTracker().getElement() != this
 		end
 		
 		/** Capture element. */
-		public func void captureElement()
+		func void captureElement()
 			GameApp.getGameApp().getCapturableTracker().setElement(this)
 		end
 		
 		/** Stop capture element. */
-		public func void stopCaptureElement()
+		func void stopCaptureElement()
 			GameApp.getGameApp().getCapturableTracker().setElement(null)
 		end
 		
 		/** Capture element. */
-		public func Instance getCaptured()
+		func Instance getCaptured()
 			return GameApp.getGameApp().getCapturableTracker().getElement()
 		end
 		
 		/** Called by Tracker to notify behavior listeners. */
-		public func void notifyCaptured()
+		func void notifyCaptured()
 			pListeners.forEach(block Listener each
 				each.captured(this)
 			end)
 		end
 		
 		/** Called by Tracker to notify behavior listeners. */
-		public func void notifyDecaptured()
+		func void notifyDecaptured()
 			pListeners.forEach(block Listener each
 				each.decaptured(this)
 			end)
@@ -205,7 +205,7 @@ class ECBCapturable extends DefaultECBehavior
 		
 		
 		/** Add listener. */
-		public func void addListener(Listener listener)
+		func void addListener(Listener listener)
 			if listener == null
 				throw EInvalidParam.new()
 			end
@@ -213,32 +213,32 @@ class ECBCapturable extends DefaultECBehavior
 		end
 		
 		/** Remove listener. */
-		public func void removeListener(Listener listener)
+		func void removeListener(Listener listener)
 			pListeners.remove(listener)
 		end
 	end
 	
 	
 	/** Create behavior element class. */
-	public func new(BehaviorElementClass eclass) super(eclass)
+	func new(BehaviorElementClass eclass) super(eclass)
 		eclass.addBehavior(this)
 	end
 	
 	
 	/** Get instance in element from owner element class. */
-	public func Instance instance(BehaviorElement element)
+	func Instance instance(BehaviorElement element)
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Get behavior in element class or null if absent. */
-	static public func ECBCapturable getBehaviorIn(BehaviorElementClass eclass)
+	static func ECBCapturable getBehaviorIn(BehaviorElementClass eclass)
 		return eclass.findBehavior(block ECBCapturable each
 			return true
 		end) cast ECBCapturable
 	end
 	
 	/** Get instance in element or null if absent. */
-	static public func Instance getInstanceIn(BehaviorElement element)
+	static func Instance getInstanceIn(BehaviorElement element)
 		return element.findInstance(block Instance each
 			return true
 		end) cast Instance
@@ -246,7 +246,7 @@ class ECBCapturable extends DefaultECBehavior
 	
 	
 	/** Create Behavior instance. */
-	public func ECBehaviorInstance createInstance(BehaviorElement element)
+	func ECBehaviorInstance createInstance(BehaviorElement element)
 		return Instance.new(this, element)
 	end
 end

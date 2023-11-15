@@ -36,13 +36,13 @@ pin Dragengine.Utils
  */
 class AADefault extends AABase
 	/** Factory for loading actor actions. */
-	public class Factory implements PersistencyFactory, ECBehaviorActorAIAction.ActionFactory
+	class Factory implements PersistencyFactory, ECBehaviorActorAIAction.ActionFactory
 		public static fixed var String name = "AADefault"
 		
-		public func new()
+		func new()
 		end
 		
-		public func Persistable readObjectFromFile(PersistencyEnvironment env, FileReader reader)
+		func Persistable readObjectFromFile(PersistencyEnvironment env, FileReader reader)
 			return AADefault.new()
 		end
 		
@@ -50,7 +50,7 @@ class AADefault extends AABase
 			persistency.addFactory(name, Factory.new())
 		end
 		
-		public func BaseActorAction createAction(ECBehaviorActorAIAction.Instance instance)
+		func BaseActorAction createAction(ECBehaviorActorAIAction.Instance instance)
 			return AADefault.new()
 		end
 	end
@@ -68,7 +68,7 @@ class AADefault extends AABase
 	
 	
 	/** Create action. */
-	public func new()
+	func new()
 	end
 	
 	
@@ -90,7 +90,7 @@ class AADefault extends AABase
 	
 	
 	/** Action has been activated. */
-	public func void activate(BehaviorElement actor)
+	func void activate(BehaviorElement actor)
 		super.activate(actor)
 		
 		resetCalibrationWatcher.reset()
@@ -101,13 +101,13 @@ class AADefault extends AABase
 	end
 	
 	/** Action has been deactivated. */
-	public func void deactivate()
+	func void deactivate()
 		resetCalibrationWatcher.reset()
 		super.deactivate()
 	end
 	
 	/** Controller capabilities changed. */
-	public func void controllerCapabilitiesChanged()
+	func void controllerCapabilitiesChanged()
 		var TrackControllerCaps caps = GameApp.getGameApp().getTrackControllerCaps()
 		vrRightHandPointAt.setEnabled(caps.getHasControllerRight() and not caps.getHasTouchTrackPadRight())
 		vrLeftHandPointAt.setEnabled(caps.getHasControllerLeft() and not caps.getHasTouchTrackPadLeft())
@@ -116,7 +116,7 @@ class AADefault extends AABase
 	
 	
 	/** Trigger pulled. */
-	public func void triggerPull(bool rightHand)
+	func void triggerPull(bool rightHand)
 		resetCalibrationWatcher.triggerPulled(rightHand)
 		
 		if rightHand
@@ -142,7 +142,7 @@ class AADefault extends AABase
 	end
 	
 	/** Trigger released. */
-	public func void triggerRelease(bool rightHand)
+	func void triggerRelease(bool rightHand)
 		resetCalibrationWatcher.triggerRelease(rightHand)
 		
 		if rightHand
@@ -158,7 +158,7 @@ class AADefault extends AABase
 	
 	
 	/** Menu button pressed. */
-	public func void menuPress(bool rightHand)
+	func void menuPress(bool rightHand)
 		if resetCalibrationWatcher.menuPress(rightHand)
 			return
 		end
@@ -194,7 +194,7 @@ class AADefault extends AABase
 	end
 	
 	/** Menu button released. */
-	public func void menuRelease(bool rightHand)
+	func void menuRelease(bool rightHand)
 		resetCalibrationWatcher.menuRelease(rightHand)
 		
 		if rightHand
@@ -208,17 +208,17 @@ class AADefault extends AABase
 	
 	
 	/** Secondary button pressed. */
-	public func void secondaryPress(bool rightHand)
+	func void secondaryPress(bool rightHand)
 	end
 	
 	/** Secondary button released. */
-	public func void secondaryRelease(bool rightHand)
+	func void secondaryRelease(bool rightHand)
 	end
 	
 	
 	
 	/** Touch track pad. */
-	public func void trackPadTouch(bool rightHand)
+	func void trackPadTouch(bool rightHand)
 		if rightHand
 			if grabRightHand.trackPadTouch()
 				
@@ -236,7 +236,7 @@ class AADefault extends AABase
 	end
 	
 	/** Untouch track pad. */
-	public func void trackPadUntouch(bool rightHand)
+	func void trackPadUntouch(bool rightHand)
 		if rightHand
 			if controlDesktop.getPointAt() == vrRightHandPointAt
 				controlDesktop.cancel()
@@ -262,7 +262,7 @@ class AADefault extends AABase
 	
 	
 	/** Grip grab. */
-	public func void gripGrab(bool rightHand)
+	func void gripGrab(bool rightHand)
 		if rightHand
 			if vrRightHandPointAt.getEnabled()
 			elif grabRightHand.grab()
@@ -276,7 +276,7 @@ class AADefault extends AABase
 	end
 	
 	/** Grip ungrab. */
-	public func void gripUngrab(bool rightHand)
+	func void gripUngrab(bool rightHand)
 		if rightHand
 			grabRightHand.ungrab()
 			
@@ -288,7 +288,7 @@ class AADefault extends AABase
 	
 	
 	/** Player update thinking. */
-	public func void playerThink(float elapsed)
+	func void playerThink(float elapsed)
 		super.playerThink(elapsed)
 		
 		if vrRightHandPointAt.getEnabled()
@@ -306,7 +306,7 @@ class AADefault extends AABase
 	end
 	
 	/** Think. */
-	public func void think(float elapsed)
+	func void think(float elapsed)
 		super.think(elapsed)
 		
 		grabRightHand.updateGrab(elapsed)
@@ -314,7 +314,7 @@ class AADefault extends AABase
 	end
 	
 	/** Post think. */
-	public func void postThink(float elapsed)
+	func void postThink(float elapsed)
 		super.postThink(elapsed)
 		
 		grabRightHand.updateGrabPostThink()
@@ -324,7 +324,7 @@ class AADefault extends AABase
 	
 	
 	/** Start teleporting if required. */
-	public func void checkBeginTeleport()
+	func void checkBeginTeleport()
 		if not SessionSettings.get().getTeleportMovement()
 			return
 		end
@@ -338,7 +338,7 @@ class AADefault extends AABase
 	end
 	
 	/** Pointing at element. */
-	public func void pointAt(ECBehaviorVRHandPointAt.Instance behavior)
+	func void pointAt(ECBehaviorVRHandPointAt.Instance behavior)
 		// pulled trigger locks action to be used
 		if controlDesktop.getTriggerPulled()
 			controlDesktop.pointAt(behavior)
@@ -355,7 +355,7 @@ class AADefault extends AABase
 	end
 	
 	/** Pull trigger on pointed at element. */
-	public func void pointAtPull(ECBehaviorVRHandPointAt.Instance behavior)
+	func void pointAtPull(ECBehaviorVRHandPointAt.Instance behavior)
 		if controlDesktop.pointAtPull(behavior)
 			
 		elif interactHandle.pointAtPull(behavior)
@@ -366,7 +366,7 @@ class AADefault extends AABase
 	end
 	
 	/** Release trigger on pointed at element. */
-	public func void pointAtRelease(ECBehaviorVRHandPointAt.Instance behavior)
+	func void pointAtRelease(ECBehaviorVRHandPointAt.Instance behavior)
 		if controlDesktop.pointAtRelease(behavior)
 			
 		elif interactHandle.pointAtRelease(behavior)
@@ -377,7 +377,7 @@ class AADefault extends AABase
 	
 	
 	/** Start calibration. Return true if calibration started. */
-	public func bool startCalibrate()
+	func bool startCalibrate()
 		if ECBCharacterConfiguration.getInstanceIn(actor) == null
 			return false
 		end
@@ -387,7 +387,7 @@ class AADefault extends AABase
 	end
 	
 	/** Start recording. Return true if recording started. */
-	public func bool startRecording()
+	func bool startRecording()
 		if ECBCharacterConfiguration.getInstanceIn(actor) == null
 			return false
 		end
@@ -399,7 +399,7 @@ class AADefault extends AABase
 	
 	
 	/** Name of PersistencyFactory required to load object from file. */
-	public func String persistencyFactoryName()
+	func String persistencyFactoryName()
 		return Factory.name
 	end
 end

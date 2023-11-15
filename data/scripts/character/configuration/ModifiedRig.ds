@@ -30,7 +30,7 @@ pin Dragengine.Utils
  */
 class ModifiedRig
 	/** Rig constraint degree of freedom. */
-	public class ConstraintDof
+	class ConstraintDof
 		public var float lowerLimit
 		public var float upperLimit
 		public var float staticFriction
@@ -38,7 +38,7 @@ class ModifiedRig
 		public var float springStiffness
 		
 		/** Create constraint degree of freedom. */
-		public func new(ColliderConstraintDof dof)
+		func new(ColliderConstraintDof dof)
 			select dof
 			case ColliderConstraintDof.angularX, ColliderConstraintDof.angularY, ColliderConstraintDof.angularZ
 				lowerLimit = 360
@@ -49,7 +49,7 @@ class ModifiedRig
 		end
 		
 		/** Create constraint degree of freedom from rig bone constraint. */
-		public func new(ColliderConstraint constraint, ColliderConstraintDof dof)
+		func new(ColliderConstraint constraint, ColliderConstraintDof dof)
 			lowerLimit = constraint.getLowerLimitFor(dof)
 			upperLimit = constraint.getUpperLimitFor(dof)
 			staticFriction = constraint.getStaticFrictionFor(dof)
@@ -59,7 +59,7 @@ class ModifiedRig
 	end
 	
 	/** Rig constraint. */
-	public class Constraint
+	class Constraint
 		public var Vector referencePosition
 		public var Quaternion referenceOrientation
 		public var Vector boneOffset
@@ -79,7 +79,7 @@ class ModifiedRig
 		public var int index //!< Internal use
 		
 		/** Create constraint. */
-		public func new()
+		func new()
 			index = -1
 			referencePosition = Vector.new()
 			referenceOrientation = Quaternion.new()
@@ -93,7 +93,7 @@ class ModifiedRig
 		end
 		
 		/** Create constraint from rig bone constraint. */
-		public func new(ModifiedRig modifiedRig, Bone bone, int constraint)
+		func new(ModifiedRig modifiedRig, Bone bone, int constraint)
 			var Rig rig = modifiedRig.getOriginalRig()
 			var ColliderConstraint orgConstraint = rig.boneGetConstraintAt(bone.index, constraint)
 			index = constraint
@@ -118,7 +118,7 @@ class ModifiedRig
 	end
 	
 	/** Rig bone. */
-	public class Bone
+	class Bone
 		public var String name
 		public var Bone parent
 		public var Vector position
@@ -138,7 +138,7 @@ class ModifiedRig
 		public var int index //!< Internal use
 		
 		/** Create bone. */
-		public func new(int index, String name)
+		func new(int index, String name)
 			this.index = index
 			this.name = name
 			position = Vector.new()
@@ -153,7 +153,7 @@ class ModifiedRig
 		end
 		
 		/** Create bone from rig bone (first round init). */
-		public func new(Rig rig, int bone)
+		func new(Rig rig, int bone)
 			index = bone
 			name = rig.boneGetName(bone)
 			position = rig.boneGetPosition(bone)
@@ -177,7 +177,7 @@ class ModifiedRig
 		protected var ModifiedRig pModifiedRig
 		
 		/** Create rig builder. */
-		public func new(ModifiedRig modifiedRig)
+		func new(ModifiedRig modifiedRig)
 			pModifiedRig = modifiedRig
 		end
 		
@@ -221,18 +221,18 @@ class ModifiedRig
 	
 	
 	
-	private var Rig pOriginalRig
-	private var Rig pModifiedRig
-	private var Array pBones
-	private var Bone pRootBone
-	private var ShapeList pRigShapes
-	private var Vector pCentralMassPoint
-	private var int pGenBoneNumber
+	var Rig pOriginalRig
+	var Rig pModifiedRig
+	var Array pBones
+	var Bone pRootBone
+	var ShapeList pRigShapes
+	var Vector pCentralMassPoint
+	var int pGenBoneNumber
 	
 	
 	
 	/** Create modified rig. */
-	public func new(Rig rig)
+	func new(Rig rig)
 		var int i, count, parent
 		
 		pOriginalRig = rig
@@ -265,17 +265,17 @@ class ModifiedRig
 	
 	
 	/** Original rig. */
-	public func Rig getOriginalRig()
+	func Rig getOriginalRig()
 		return pOriginalRig
 	end
 	
 	/** Modified rig or null if not created. */
-	public func Rig getModifiedRig()
+	func Rig getModifiedRig()
 		return pModifiedRig
 	end
 	
 	/** Update modified rig indicies. */
-	public func void updateIndices()
+	func void updateIndices()
 		pBones.forEach(block int indexBone, Bone bone
 			bone.index = indexBone
 			bone.constraints.forEach(block int indexConstraint, Constraint constraint
@@ -285,7 +285,7 @@ class ModifiedRig
 	end
 	
 	/** Build modified rig. */
-	public func void buildModifiedRig()
+	func void buildModifiedRig()
 		updateIndices()
 		pModifiedRig = ModifiedRigBuilder.new(this).build("")
 	end
@@ -293,79 +293,79 @@ class ModifiedRig
 	
 	
 	/** Count of bones. */
-	public func int getBoneCount()
+	func int getBoneCount()
 		return pBones.getCount()
 	end
 	
 	/** Bone at index. */
-	public func Bone getBoneAt(int index)
+	func Bone getBoneAt(int index)
 		return pBones.getAt(index) cast Bone
 	end
 	
 	/** Named bone or null if absent. */
-	public func Bone getBoneNamed(String name)
+	func Bone getBoneNamed(String name)
 		return pBones.find(block Bone each
 			return each.name.equals(name)
 		end) cast Bone
 	end
 	
 	/** Add bone. */
-	public func Bone addBone(String name)
+	func Bone addBone(String name)
 		var Bone bone = Bone.new(pBones.getCount(), generateBoneName() + name)
 		pBones.add(bone)
 		return bone
 	end
 	
 	/** Remove bone. */
-	public func void removeBone(Bone bone)
+	func void removeBone(Bone bone)
 		pBones.remove(bone)
 		updateIndices()
 	end
 	
 	/** Remove all bones. */
-	public func void removeAllBones()
+	func void removeAllBones()
 		pBones.removeAll()
 	end
 	
 	/** Visit bones with block receiving Bone as argument. */
-	public func void forEachBone(Block ablock)
+	func void forEachBone(Block ablock)
 		pBones.forEach(ablock)
 	end
 	
 	/** Find bone with block receiving Bone as argument and returning true if found. */
-	public func Bone findBone(Block ablock)
+	func Bone findBone(Block ablock)
 		return pBones.find(ablock) cast Bone
 	end
 	
 	/** Generate bone name. */
-	public func String generateBoneName()
+	func String generateBoneName()
 		return "democap.genbone" + pGenBoneNumber++ + "."
 	end
 	
 	
 	
 	/** Rig shaped. */
-	public func ShapeList getRigShapes()
+	func ShapeList getRigShapes()
 		return pRigShapes
 	end
 	
 	/** Rig central mass point. */
-	public func Vector getCentralMassPoint()
+	func Vector getCentralMassPoint()
 		return pCentralMassPoint
 	end
 	
 	/** Set rig central mass point. */
-	public func void setCentralMassPoint(Vector centralMassPoint)
+	func void setCentralMassPoint(Vector centralMassPoint)
 		pCentralMassPoint = centralMassPoint
 	end
 	
 	/** Root bone or null. */
-	public func Bone getRootBone()
+	func Bone getRootBone()
 		return pRootBone
 	end
 	
 	/** Set root bone or null. */
-	public func void setRootBone(Bone bone)
+	func void setRootBone(Bone bone)
 		pRootBone = bone
 	end
 end

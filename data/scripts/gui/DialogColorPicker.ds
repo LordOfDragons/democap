@@ -37,11 +37,11 @@ class DialogColorPicker extends WindowDialog
 	class RgbValueChanged extends DefaultRangeModelListener
 		protected var DialogColorPicker pDialog
 		
-		public func new(DialogColorPicker dialog)
+		func new(DialogColorPicker dialog)
 			pDialog = dialog
 		end
 		
-		public func void valueChanged(RangeModel rangeModel)
+		func void valueChanged(RangeModel rangeModel)
 			pDialog.setColorFromRangeRgb()
 		end
 	end
@@ -50,11 +50,11 @@ class DialogColorPicker extends WindowDialog
 	class HsvValueChanged extends DefaultRangeModelListener
 		protected var DialogColorPicker pDialog
 		
-		public func new(DialogColorPicker dialog)
+		func new(DialogColorPicker dialog)
 			pDialog = dialog
 		end
 		
-		public func void valueChanged(RangeModel rangeModel)
+		func void valueChanged(RangeModel rangeModel)
 			pDialog.setColorFromRangeHsv()
 		end
 	end
@@ -64,23 +64,23 @@ class DialogColorPicker extends WindowDialog
 		protected var RangeModel pModel
 		protected var bool pDraging
 		
-		public func new(RangeModel model)
+		func new(RangeModel model)
 			pModel = model
 		end
 		
-		public func void onButtonPress(MouseEvent event)
+		func void onButtonPress(MouseEvent event)
 			(event.getSource() cast Widget).captureMouse()
 			pDraging = true
 		end
 		
-		public func void onButtonRelease(MouseEvent event)
+		func void onButtonRelease(MouseEvent event)
 			if pDraging
 				pDraging = false
 				(event.getSource() cast Widget).releaseMouse()
 			end
 		end
 		
-		public func void onMouseMove(MouseEvent event)
+		func void onMouseMove(MouseEvent event)
 			if pDraging
 				var int width = (event.getSource() cast Widget).getWidth()
 				if width > 1
@@ -89,7 +89,7 @@ class DialogColorPicker extends WindowDialog
 			end
 		end
 		
-		public func void onMouseWheel(MouseEvent event)
+		func void onMouseWheel(MouseEvent event)
 			pModel.setValue(pModel.getValue() + pModel.getPageSize() * event.getPosition().getY())
 		end
 	end
@@ -100,24 +100,24 @@ class DialogColorPicker extends WindowDialog
 		protected var RangeModel pModelY
 		protected var bool pDraging
 		
-		public func new(RangeModel modelX, RangeModel modelY)
+		func new(RangeModel modelX, RangeModel modelY)
 			pModelX = modelX
 			pModelY = modelY
 		end
 		
-		public func void onButtonPress(MouseEvent event)
+		func void onButtonPress(MouseEvent event)
 			(event.getSource() cast Widget).captureMouse()
 			pDraging = true
 		end
 		
-		public func void onButtonRelease(MouseEvent event)
+		func void onButtonRelease(MouseEvent event)
 			if pDraging
 				pDraging = false
 				(event.getSource() cast Widget).releaseMouse()
 			end
 		end
 		
-		public func void onMouseMove(MouseEvent event)
+		func void onMouseMove(MouseEvent event)
 			if pDraging
 				var Point size = (event.getSource() cast Widget).getSize()
 				if not (size <= Point.new(1, 1))
@@ -137,7 +137,7 @@ class DialogColorPicker extends WindowDialog
 		protected var RangeModel pModel
 		protected var Widget pMarker
 		
-		public func new(RangeModel model) super(FixedLayout.new())
+		func new(RangeModel model) super(FixedLayout.new())
 			setMinimumSize(Point.new(1, 1))
 			setProtectMinimumSize(true)
 			
@@ -150,17 +150,17 @@ class DialogColorPicker extends WindowDialog
 			model.addListener(this)
 		end
 		
-		public func void dispose()
+		func void dispose()
 			pModel = null
 			pMarker = null
 			super.dispose()
 		end
 		
-		public func Widget getWidgetAt(Point position)
+		func Widget getWidgetAt(Point position)
 			return null // make a ghost
 		end
 		
-		public func void doLayout()
+		func void doLayout()
 			if pMarker != null
 				var int markerWidth = pMarker.getMinimumSize().getX()
 				var int offset = markerWidth / 2
@@ -174,10 +174,10 @@ class DialogColorPicker extends WindowDialog
 			super.doLayout()
 		end
 		
-		public func void rangeChanged(RangeModel rangeModel)
+		func void rangeChanged(RangeModel rangeModel)
 		end
 		
-		public func void valueChanged(RangeModel rangeModel)
+		func void valueChanged(RangeModel rangeModel)
 			doLayout()
 		end
 	end
@@ -188,7 +188,7 @@ class DialogColorPicker extends WindowDialog
 		protected var RangeModel pModelY
 		protected var Widget pMarker
 		
-		public func new(RangeModel modelX, RangeModel modelY) super(FixedLayout.new())
+		func new(RangeModel modelX, RangeModel modelY) super(FixedLayout.new())
 			setMinimumSize(Point.new(1, 1))
 			setProtectMinimumSize(true)
 			
@@ -203,18 +203,18 @@ class DialogColorPicker extends WindowDialog
 			modelY.addListener(this)
 		end
 		
-		public func void dispose()
+		func void dispose()
 			pModelX = null
 			pModelY = null
 			pMarker = null
 			super.dispose()
 		end
 		
-		public func Widget getWidgetAt(Point position)
+		func Widget getWidgetAt(Point position)
 			return null // make a ghost
 		end
 		
-		public func void doLayout()
+		func void doLayout()
 			if pMarker != null
 				var Point markerSize = pMarker.getMinimumSize()
 				var Point containerSize = getContainerSize()
@@ -229,10 +229,10 @@ class DialogColorPicker extends WindowDialog
 			super.doLayout()
 		end
 		
-		public func void rangeChanged(RangeModel rangeModel)
+		func void rangeChanged(RangeModel rangeModel)
 		end
 		
-		public func void valueChanged(RangeModel rangeModel)
+		func void valueChanged(RangeModel rangeModel)
 			doLayout()
 		end
 	end
@@ -268,7 +268,7 @@ class DialogColorPicker extends WindowDialog
 	
 	
 	/** Create window. */
-	public func new(Window window, String title, ResultListener listener)
+	func new(Window window, String title, ResultListener listener)
 		pColor = Color.white
 		
 		pModelRed = DefaultRangeModel.new(0, 255, 32, 255, 1)
@@ -315,7 +315,7 @@ class DialogColorPicker extends WindowDialog
 	end
 	
 	/** Dispose of window. */
-	public func void dispose()
+	func void dispose()
 		pModelRed = null
 		pModelGreen = null
 		pModelBlue = null
@@ -348,12 +348,12 @@ class DialogColorPicker extends WindowDialog
 	
 	
 	/** Color. */
-	public func Color getColor()
+	func Color getColor()
 		return pColor
 	end
 	
 	/** Set color. */
-	public func void setColor(Color color)
+	func void setColor(Color color)
 		if color == null
 			throw ENullPointer.new("color")
 		end
@@ -490,7 +490,7 @@ class DialogColorPicker extends WindowDialog
 	end
 	
 	/** Set color from RGB range models. */
-	public func void setColorFromRangeRgb()
+	func void setColorFromRangeRgb()
 		if not pPreventUpdate
 			setColor(Color.newRGB(pModelRed.getValue(), pModelGreen.getValue(), pModelBlue.getValue()))
 		end
@@ -513,7 +513,7 @@ class DialogColorPicker extends WindowDialog
 	end
 	
 	/** Set color from HSV range models. */
-	public func void setColorFromRangeHsv()
+	func void setColorFromRangeHsv()
 		if not pPreventUpdate
 			setColor(Color.newHSV(0.01 * pModelHue.getValue(),\
 				0.01 * pModelSaturation.getValue(), 0.01 * pModelValue.getValue()))
@@ -525,7 +525,7 @@ class DialogColorPicker extends WindowDialog
 	end
 	
 	/** Update color component editable images. */
-	public func void updateEditableImages()
+	func void updateEditableImages()
 		updateRgbImage(pImageRed, Color.red)
 		updateRgbImage(pImageGreen, Color.green)
 		updateRgbImage(pImageBlue, Color.blue)
@@ -536,7 +536,7 @@ class DialogColorPicker extends WindowDialog
 	end
 	
 	/** Update color component editable image. */
-	public func void updateRgbImage(EditableImage editImage, Color mask)
+	func void updateRgbImage(EditableImage editImage, Color mask)
 		var Color base = pColor * mask.invert()
 		var int i
 		
@@ -547,7 +547,7 @@ class DialogColorPicker extends WindowDialog
 	end
 	
 	/** Update color component editable image. */
-	public func void updateHsvImage(EditableImage editImage,\
+	func void updateHsvImage(EditableImage editImage,\
 	float maskHue, float maskSaturation, float maskValue)
 		var Array values = pColor.toHSV()
 		var float baseHue = values.getAt(0) cast float * (1.0 - maskHue)
