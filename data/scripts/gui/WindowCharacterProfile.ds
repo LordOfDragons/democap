@@ -30,6 +30,7 @@ pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Preloading
 pin Dragengine.Scenery
+pin Dragengine.Utils
 
 
 /**
@@ -134,7 +135,7 @@ class WindowCharacterProfile extends WindowDialog
 		
 		runWhileBlockingLayout(block
 			setGuiTheme(window.getGuiTheme())
-			setTitle("Character Profile")
+			setTitle("@UI.WindowCharacterProfile.Title")
 			setDesignerSelector("Window.Dialog.CharacterProfile")
 			setSize(window.getDesktop().getContainerSize() - Point.new(100, 100))
 			
@@ -187,16 +188,18 @@ class WindowCharacterProfile extends WindowDialog
 		var String profileName = pModelProfileName.getText()
 		if not profileName.toLower().equals(pCharacterProfile.getName().toLower())
 			if profileName.empty()
-				WindowDialog.message(this, "Save Profile", "Profile name can not be empty", null, null, null)
+				WindowDialog.message(this, "@UI.WindowCharacterProfile.Profile.Save",\
+					"@UI.WindowCharacterProfile.Profile.Empty", null, null, null)
 				return
 			end
 			if GameApp.getGameApp().getCharacterProfiles().hasNamed(profileName)
-				WindowDialog.message(this, "Save Profile", "Profile with same name exists", null, null, null)
+				WindowDialog.message(this, "@UI.WindowCharacterProfile.Profile.Save",\
+					"@UI.WindowCharacterProfile.Profile.Duplicate", null, null, null)
 				return
 			end
 			if not FileSystem.canDeleteFile(pCharacterProfile.getPathProfile())
-				WindowDialog.message(this, "Save Profile", \
-					"Profile can not be renamed. Old profile file can not be deleted", null, null, null)
+				WindowDialog.message(this, "@UI.WindowCharacterProfile.Profile.Save",\
+					"@UI.WindowCharacterProfile.Profile.RenameFailed", null, null, null)
 				return
 			end
 		end
@@ -228,7 +231,8 @@ class WindowCharacterProfile extends WindowDialog
 				
 			catch Exception e
 				GameApp.getGameApp().getConsole().addError("Delete profile", e)
-				WindowDialog.message(this, "Save Profile", "Failed deleting old profile:\n" + e, null, null, null)
+				WindowDialog.message(this, "@UI.WindowCharacterProfile.Profile.Save",\
+					TranslationManager.get().translate("UI.WindowCharacterProfile.DeleteProfile.Failed").toUTF8() + "\n" + e, null, null, null)
 			end
 		end
 		
@@ -271,109 +275,108 @@ class WindowCharacterProfile extends WindowDialog
 		addWidget(pCharacterPreview, BorderLayout.Area.content)
 		
 		// properties
-		addWidget(StaticGroup.new("Actor Configuration", "dialog_characterprofile",\
+		addWidget(StaticGroup.new("@UI.WindowCharacterProfile.ActorConfiguration", "dialog_characterprofile",\
 		FormLayout.new(true, 10, 2), block Panel p
 			// profile name
-			p.addWidget(Label.new("Profile Name:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WindowCharacterProfile.ProfileName", "Label.FormCaption"))
 			
 			textField = TextField.new(pModelProfileName, 15)
 			textField.setDesignerSelector("TextField.WindowCharacterProfile")
-			textField.setToolTip("Unique profile name")
+			textField.setToolTip("@UI.WindowCharacterProfile.ProfileName.ToolTip")
 			p.addWidget(textField)
 			
 			// path model resource
-			p.addWidget(Label.new("Model:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WindowCharacterProfile.Model", "Label.FormCaption"))
 			
 			editPath = EditPath.new(pModelPathModel, ResourceLoaderType.model, startDirectory)
-			editPath.setToolTip("Model resource to use")
+			editPath.setToolTip("@UI.WindowCharacterProfile.Model.ToolTip")
 			p.addWidget(editPath)
 			editPath.addActionListener(actionReloadCharacterPreview)
 			
 			// path skin resource
-			p.addWidget(Label.new("Skin:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WindowCharacterProfile.Skin", "Label.FormCaption"))
 			
 			editPath = EditPath.new(pModelPathSkin, ResourceLoaderType.skin, startDirectory)
-			editPath.setToolTip("Skin resource to use")
+			editPath.setToolTip("@UI.WindowCharacterProfile.Skin.ToolTip")
 			p.addWidget(editPath)
 			editPath.addActionListener(actionReloadCharacterPreview)
 			
 			// path rig resource
-			p.addWidget(Label.new("Rig:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WindowCharacterProfile.Rig", "Label.FormCaption"))
 			
 			editPath = EditPath.new(pModelPathRig, ResourceLoaderType.rig, startDirectory)
-			editPath.setToolTip("Rig resource to use")
+			editPath.setToolTip("@UI.WindowCharacterProfile.Rig.ToolTip")
 			p.addWidget(editPath)
 			editPath.addActionListener(actionReloadCharacterPreview)
 			
 			// path animation resource
-			p.addWidget(Label.new("Animation:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WindowCharacterProfile.Animation", "Label.FormCaption"))
 			
 			editPath = EditPath.new(pModelPathAnimation, ResourceLoaderType.animation, startDirectory)
-			editPath.setToolTip("Animation resource to use")
+			editPath.setToolTip("@UI.WindowCharacterProfile.Animation.ToolTip")
 			p.addWidget(editPath)
 			editPath.addActionListener(actionReloadCharacterPreview)
 			
 			// origin bone
-			label = Label.new("Origin Bone:", "Label.FormCaption")
+			label = Label.new("@UI.WindowCharacterProfile.OriginBone", "Label.FormCaption")
 			p.addWidget(label)
 			
 			comboBox = ComboBox.new(pModelListOriginBone, DefaultComboBoxEditor.new(pModelTextOriginBone))
 			comboBox.setDesignerSelector("ComboBox.WindowCharacterProfile")
-			comboBox.setToolTip("Origin bone. This bone is moved to the calibration origin during capturing.")
+			comboBox.setToolTip("@UI.WindowCharacterProfile.OriginBone.ToolTip")
 			p.addWidget(comboBox)
 			
 			CPEBone.new(pCharacterPreview, label, comboBox)
 			
 			// teleport bone
-			label = Label.new("Teleport Bone:", "Label.FormCaption")
+			label = Label.new("@UI.WindowCharacterProfile.TeleportBone", "Label.FormCaption")
 			p.addWidget(label)
 			
 			comboBox = ComboBox.new(pModelListTeleportBone, DefaultComboBoxEditor.new(pModelTextTeleportBone))
 			comboBox.setDesignerSelector("ComboBox.WindowCharacterProfile")
-			comboBox.setToolTip("Teleport bone. If not empty string this bone is used to align with markers"\
-				+ " on teleporting. If empty string playspace origin is used instead. Waist bone is recommended.")
+			comboBox.setToolTip("@UI.WindowCharacterProfile.TeleportBone.ToolTip")
 			p.addWidget(comboBox)
 			
 			CPEBone.new(pCharacterPreview, label, comboBox)
 			
 			// shoulder level
-			label = Label.new("Shoulder Level:", "Label.FormCaption")
+			label = Label.new("@UI.WindowCharacterProfile.ShoulderLevel", "Label.FormCaption")
 			p.addWidget(label)
 			
 			textField = TextField.new(pModelShoulderLevel, 8)
 			textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-			textField.setToolTip("Shoulder level in meters. Use height of upper arm bone origin above ground.")
+			textField.setToolTip("@UI.WindowCharacterProfile.ShoulderLevel.ToolTip")
 			textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
 			p.addWidget(textField)
 			
 			CPELevel.new(pCharacterPreview, label, textField)
 			
 			// bone axis
-			label = Label.new("Bone Axis:", "Label.FormCaption")
+			label = Label.new("@UI.WindowCharacterProfile.BoneAxis", "Label.FormCaption")
 			p.addWidget(label)
 			
 			comboBox = ComboBox.new(pModelBoneAxis)
 			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-			comboBox.setToolTip("Major bone axis. Used to adjust orientation to match Z-axis.")
+			comboBox.setToolTip("@UI.WindowCharacterProfile.BoneAxis.ToolTip")
 			p.addWidget(comboBox)
 			
 			// scale
-			label = Label.new("Scale:", "Label.FormCaption")
+			label = Label.new("@UI.WindowCharacterProfile.Scale", "Label.FormCaption")
 			p.addWidget(label)
 			
 			textField = TextField.new(pModelScale, 8)
 			textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-			textField.setToolTip("Scale to apply if model does not use 1m as unit scale.")
+			textField.setToolTip("@UI.WindowCharacterProfile.Scale.ToolTip")
 			textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
 			textField.addActionListener(ScaleChanged.new(this))
 			p.addWidget(textField)
 			
 			// preview move
-			p.addWidget(Label.new("Preview Move:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WindowCharacterProfile.PreviewMove", "Label.FormCaption"))
 			
 			comboBox = ComboBox.new(pModelListPreviewMove, DefaultComboBoxEditor.new(pModelTextPreviewMove))
 			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-			comboBox.setToolTip("Preview animation move to use.")
+			comboBox.setToolTip("@UI.WindowCharacterProfile.PreviewMove.ToolTip")
 			comboBox.getEditor().addActionListener(PreviewMoveChanged.new(this))
 			p.addWidget(comboBox)
 			
@@ -381,13 +384,13 @@ class WindowCharacterProfile extends WindowDialog
 		
 		// button line
 		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x), block Panel p
-			button = Button.new("Save", BlockActionListener.new(block ActionEvent e
+			button = Button.new("@UI.Save", BlockActionListener.new(block ActionEvent e
 				saveAndClose()
 			end))
 			button.setDesignerSelector("Button.WindowCharacterProfile.Save")
 			p.addWidget(button)
 			
-			button = Button.new("Cancel", CloseDialog.new(this, false))
+			button = Button.new("@UI.Cancel", CloseDialog.new(this, false))
 			button.setDesignerSelector("Button.WindowCharacterProfile.Cancel")
 			p.addWidget(button)
 		end ), BorderLayout.Area.bottom )

@@ -28,6 +28,7 @@ pin Democap.Characters
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Scenery
+pin Dragengine.Utils
 
 
 
@@ -242,25 +243,25 @@ class WMPanelCharacter extends Panel
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
 			
-			menu.addWidget(MenuItemCommand.new("Add Actor...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.WMPanelCharacter.Menu.AddActor", BlockActionListener.new(block ActionEvent event
 				pPanel.addActorProfile()
 			end)))
 			
-			menu.addWidget(MenuItemCommand.new("Duplicate Actor...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.WMPanelCharacter.Menu.DuplicateActor", BlockActionListener.new(block ActionEvent event
 				pPanel.duplicateActorProfile()
 			end)))
 			
-			item = MenuItemCommand.new("Remove Actor", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.WMPanelCharacter.Menu.RemoveActor", BlockActionListener.new(block ActionEvent event
 				pPanel.removeActorProfile()
 			end))
 			item.setEnabled(pPanel.getActorProfile() != null)
 			menu.addWidget(item)
 			
-			menu.addWidget(MenuItemCommand.new("Edit Actor...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.WMPanelCharacter.Menu.EditActor", BlockActionListener.new(block ActionEvent event
 				pPanel.editActorProfile()
 			end)))
 			
-			menu.addWidget(MenuItemCommand.new("Browse Actors...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.WMPanelCharacter.Menu.BrowseActors", BlockActionListener.new(block ActionEvent event
 				pPanel.browseActorProfiles()
 			end)))
 			
@@ -282,33 +283,33 @@ class WMPanelCharacter extends Panel
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
 			
-			menu.addWidget(MenuItemCommand.new("Add Character...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.WMPanelCharacter.Menu.AddCharacter", BlockActionListener.new(block ActionEvent event
 				pPanel.addCharacterProfile(true)
 			end)))
 			
-			menu.addWidget(MenuItemCommand.new("Add Global Character...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.WMPanelCharacter.Menu.AddGlobalCharacter", BlockActionListener.new(block ActionEvent event
 				pPanel.addCharacterProfile(false)
 			end)))
 			
-			menu.addWidget(MenuItemCommand.new("Duplicate Character...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.WMPanelCharacter.Menu.DuplicateCharacter", BlockActionListener.new(block ActionEvent event
 				pPanel.duplicateCharacterProfile()
 			end)))
 			
-			item = MenuItemCommand.new("Remove Character", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.WMPanelCharacter.Menu.RemoveCharacter", BlockActionListener.new(block ActionEvent event
 				pPanel.removeCharacterProfile()
 			end))
 			item.setEnabled(pPanel.getCharacterProfile() != null)
 			menu.addWidget(item)
 			
-			menu.addWidget(MenuItemCommand.new("Edit Character...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.WMPanelCharacter.Menu.EditCharacter", BlockActionListener.new(block ActionEvent event
 				pPanel.editCharacterProfile()
 			end)))
 			
-			menu.addWidget(MenuItemCommand.new("Browse Characters...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.WMPanelCharacter.Menu.BrowseCharacters", BlockActionListener.new(block ActionEvent event
 				pPanel.browseCharacterProfiles()
 			end)))
 			
-			menu.addWidget(MenuItemCommand.new("Browse Models...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.WMPanelCharacter.Menu.BrowseModels", BlockActionListener.new(block ActionEvent event
 				pPanel.browseCharacterModels()
 			end)))
 			
@@ -330,21 +331,21 @@ class WMPanelCharacter extends Panel
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
 			
-			menu.addWidget(MenuItemCommand.new("Add Configuration...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.WMPanelCharacter.Menu.AddConfiguration", BlockActionListener.new(block ActionEvent event
 				pPanel.addCharacterConfiguration()
 			end)))
 			
-			menu.addWidget(MenuItemCommand.new("Duplicate Configuration...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.WMPanelCharacter.Menu.DuplicateConfiguration", BlockActionListener.new(block ActionEvent event
 				pPanel.duplicateCharacterConfiguration()
 			end)))
 			
-			item = MenuItemCommand.new("Remove Configuration", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.WMPanelCharacter.Menu.RemoveConfiguration", BlockActionListener.new(block ActionEvent event
 				pPanel.removeCharacterConfiguration()
 			end))
 			item.setEnabled(pPanel.getCharacterProfile() != null)
 			menu.addWidget(item)
 			
-			menu.addWidget(MenuItemCommand.new("Edit Configuration...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.WMPanelCharacter.Menu.EditConfiguration", BlockActionListener.new(block ActionEvent event
 				pPanel.editCharacterConfiguration()
 			end)))
 			
@@ -453,14 +454,16 @@ class WMPanelCharacter extends Panel
 	
 	/** Add actor profile. */
 	func void addActorProfile()
-		WindowDialog.input(getWindow(), "Add Actor Profile", "Profile Name:", null, "Actor",\
+		WindowDialog.input(getWindow(), "@UI.WMPanelCharacter.AddActorProfile.Title",\
+			"@UI.WMPanelCharacter.AddActorProfile.Message", null, "Actor",\
 			null, null, WindowDialog.BlockResultListener.new(block String result
 				if result != null
 					var ActorProfiles profiles = GameApp.getGameApp().getActorProfiles()
 					
 					if profiles.hasNamed(result)
-						WindowDialog.message(getWindow(), "Add Actor Profile", "Actor profile '"\
-							+ result + "' exists already", null, null, null)
+						WindowDialog.message(getWindow(), "@UI.WMPanelCharacter.AddActorProfile.Title",\
+							TranslationManager.get().translate("UI.WMPanelCharacter.AddActorProfile.Duplicate")\
+								.toUTF8().format(Array.newWith(result)), null, null, null)
 						
 					else
 						var ActorProfile profile = ActorProfile.new(result)
@@ -479,15 +482,17 @@ class WMPanelCharacter extends Panel
 			return
 		end
 		
-		WindowDialog.input(getWindow(), "Duplicate Actor Profile", "Profile Name:", null,\
+		WindowDialog.input(getWindow(), "@UI.WMPanelCharacter.DuplicateActorProfile.Title",\
+			"@UI.WMPanelCharacter.DuplicateActorProfile.Message", null,\
 			pActorProfile.getName(), null, null, WindowDialog.BlockResultListener.new(\
 			block String result
 				if result != null
 					var ActorProfiles profiles = GameApp.getGameApp().getActorProfiles()
 					
 					if profiles.hasNamed(result)
-						WindowDialog.message(getWindow(), "Duplicate Actor Profile", "Actor profile '"\
-							+ result + "' exists already", null, null, null)
+						WindowDialog.message(getWindow(), "@UI.WMPanelCharacter.DuplicateActorProfile.Title",\
+							TranslationManager.get().translate("UI.WMPanelCharacter.AddActorProfile.Duplicate")\
+								.toUTF8().format(Array.newWith(result)), null, null, null)
 						
 					else
 						var ActorProfile profile = ActorProfile.new(result, pActorProfile)
@@ -506,10 +511,11 @@ class WMPanelCharacter extends Panel
 			return
 		end
 		
-		WindowDialog.question(getWindow(), "Remove Actor Profile",\
-			"Do you really want to remove actor profile '" + pActorProfile.getName() + "'?",\
-			null, Array.newWith(WindowDialog.ButtonConfiguration.new("Remove", true), \
-				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+		WindowDialog.question(getWindow(), "@UI.WMPanelCharacter.RemoveActorProfile.Title",\
+			TranslationManager.get().translate("UI.WMPanelCharacter.RemoveActorProfile.Message")\
+				.toUTF8().format(Array.newWith(pActorProfile.getName())),\
+			null, Array.newWith(WindowDialog.ButtonConfiguration.new("@UI.Remove", true), \
+				WindowDialog.ButtonConfiguration.new("@UI.Cancel", false)),\
 			WindowDialog.BlockResultListener.new(block bool result
 				if result
 					GameApp.getGameApp().getWorldSpawnCharacter().setCharacter(null)
@@ -579,14 +585,16 @@ class WMPanelCharacter extends Panel
 	
 	/** Add character profile. */
 	func void addCharacterProfile(bool inProject)
-		WindowDialog.input(getWindow(), "Add Character Profile", "Profile Name:", null, "Character",\
+		WindowDialog.input(getWindow(), "@UI.WMPanelCharacter.AddCharacterProfile.Title",\
+			"@UI.WMPanelCharacter.AddCharacterProfile.Message", null, "Character",\
 			null, null, WindowDialog.BlockResultListener.new(block String result
 				if result != null
 					var CharacterProfiles profiles = GameApp.getGameApp().getCharacterProfiles()
 					
 					if profiles.hasNamed(result)
-						WindowDialog.message(getWindow(), "Add Character Profile", "Character profile '"\
-							+ result + "' exists already", null, null, null)
+						WindowDialog.message(getWindow(), "@UI.WMPanelCharacter.AddCharacterProfile.Title",\
+							TranslationManager.get().translate("UI.WMPanelCharacter.AddCharacterProfile.Duplicate")\
+								.toUTF8().format(Array.newWith(result)), null, null, null)
 						
 					else
 						var CharacterProfile profile = CharacterProfile.new(result)
@@ -606,15 +614,17 @@ class WMPanelCharacter extends Panel
 			return
 		end
 		
-		WindowDialog.input(getWindow(), "Duplicate Character Profile", "Profile Name:",\
+		WindowDialog.input(getWindow(), "@UI.WMPanelCharacter.DuplicateCharacterProfile.Title",\
+			"@UI.WMPanelCharacter.DuplicateCharacterProfile.Message",\
 			null, pCharacterProfile.getName(), null, null, WindowDialog.BlockResultListener.new(\
 			block String result
 				if result != null
 					var CharacterProfiles profiles = GameApp.getGameApp().getCharacterProfiles()
 					
 					if profiles.hasNamed(result)
-						WindowDialog.message(getWindow(), "Duplicate Character Profile", "Character profile '"\
-							+ result + "' exists already", null, null, null)
+						WindowDialog.message(getWindow(), "@UI.WMPanelCharacter.DuplicateCharacterProfile.Title",\
+							TranslationManager.get().translate("UI.WMPanelCharacter.AddCharacterProfile.Duplicate")\
+								.toUTF8().format(Array.newWith(result)), null, null, null)
 						
 					else
 						var CharacterProfile profile = CharacterProfile.new(result, pCharacterProfile)
@@ -633,10 +643,11 @@ class WMPanelCharacter extends Panel
 			return
 		end
 		
-		WindowDialog.question(getWindow(), "Remove Character Profile",\
-			"Do you really want to remove character profile '" + pCharacterProfile.getName() + "'?",\
-			null, Array.newWith(WindowDialog.ButtonConfiguration.new("Remove", true), \
-				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+		WindowDialog.question(getWindow(), "@UI.WMPanelCharacter.RemoveCharacterProfile.Title",\
+			TranslationManager.get().translate("UI.WMPanelCharacter.RemoveCharacterProfile.Message")\
+				.toUTF8().format(Array.newWith(pCharacterProfile.getName())),\
+			null, Array.newWith(WindowDialog.ButtonConfiguration.new("@UI.Remove", true), \
+				WindowDialog.ButtonConfiguration.new("@UI.Cancel", false)),\
 			WindowDialog.BlockResultListener.new(block bool result
 				if result
 					GameApp.getGameApp().getWorldSpawnCharacter().setCharacter(null)
@@ -714,14 +725,16 @@ class WMPanelCharacter extends Panel
 			return
 		end
 		
-		WindowDialog.input(getWindow(), "Add Character Configuration", "Configuration Name:", null, "Configuration",\
+		WindowDialog.input(getWindow(), "@UI.WMPanelCharacter.AddCharacterConfiguration.Title",\
+			"@UI.WMPanelCharacter.AddCharacterConfiguration.Message", null, "Configuration",\
 			null, null, WindowDialog.BlockResultListener.new(block String result
 				if result != null
 					var CharacterConfigurations configurations = pCharacterProfile.getConfigurations()
 					
 					if configurations.hasNamed(result)
-						WindowDialog.message(getWindow(), "Add Character Configuration", "Character configuration '"\
-							+ result + "' exists already", null, null, null)
+						WindowDialog.message(getWindow(), "@UI.WMPanelCharacter.AddCharacterConfiguration.Title",\
+							TranslationManager.get().translate("UI.WMPanelCharacter.AddCharacterConfiguration.Duplicate")\
+								.toUTF8().format(Array.newWith(result)), null, null, null)
 						
 					else
 						var CharacterConfiguration configuration = CharacterConfiguration.new(pCharacterProfile, result)
@@ -740,15 +753,17 @@ class WMPanelCharacter extends Panel
 			return
 		end
 		
-		WindowDialog.input(getWindow(), "Duplicate Character Configuration", "Configuration Name:",\
+		WindowDialog.input(getWindow(), "@UI.WMPanelCharacter.DuplicateCharacterConfiguration.Title",\
+			"@UI.WMPanelCharacter.DuplicateCharacterConfiguration.Message",\
 			null, pCharacterConfiguration.getName(), null, null, WindowDialog.BlockResultListener.new(\
 			block String result
 				if result != null
 					var CharacterConfigurations configurations = pCharacterProfile.getConfigurations()
 					
 					if configurations.hasNamed(result)
-						WindowDialog.message(getWindow(), "Duplicate Character Configuration", "Character configuration '"\
-							+ result + "' exists already", null, null, null)
+						WindowDialog.message(getWindow(), "@UI.WMPanelCharacter.DuplicateCharacterConfiguration.Title",\
+							TranslationManager.get().translate("UI.WMPanelCharacter.AddCharacterConfiguration.Duplicate")\
+								.toUTF8().format(Array.newWith(result)), null, null, null)
 						
 					else
 						var CharacterConfiguration configuration = CharacterConfiguration.new(\
@@ -768,10 +783,11 @@ class WMPanelCharacter extends Panel
 			return
 		end
 		
-		WindowDialog.question(getWindow(), "Remove Character Configuration",\
-			"Do you really want to remove character configuration '" + pCharacterConfiguration.getName() + "'?",\
-			null, Array.newWith(WindowDialog.ButtonConfiguration.new("Remove", true), \
-				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+		WindowDialog.question(getWindow(), "@UI.WMPanelCharacter.RemoveCharacterConfiguration.Title",\
+			TranslationManager.get().translate("UI.WMPanelCharacter.RemoveCharacterConfiguration.Message")\
+				.toUTF8().format(Array.newWith(pCharacterConfiguration.getName())),\
+			null, Array.newWith(WindowDialog.ButtonConfiguration.new("@UI.Remove", true), \
+				WindowDialog.ButtonConfiguration.new("@UI.Cancel", false)),\
 			WindowDialog.BlockResultListener.new(block bool result
 				if result
 					GameApp.getGameApp().getWorldSpawnCharacter().setCharacter(null)
@@ -794,12 +810,14 @@ class WMPanelCharacter extends Panel
 	/** Activate selected character configuration if present. */
 	func void activateCharacterConfiguration()
 		if pActorProfile == null
-			WindowDialog.message(getWindow(), "Activate Configuration", "No actor selected", null, null, null)
+			WindowDialog.message(getWindow(), "@UI.WMPanelCharacter.ActivateConfiguration.Title",\
+				"@UI.WMPanelCharacter.ActivateConfiguration.NoActor", null, null, null)
 			return
 		end
 		
 		if pCharacterConfiguration == null
-			WindowDialog.message(getWindow(), "Activate Configuration", "No character configuration selected", null, null, null)
+			WindowDialog.message(getWindow(), "@UI.WMPanelCharacter.ActivateConfiguration.Title",\
+				"@UI.WMPanelCharacter.ActivateConfiguration.NoCharacter", null, null, null)
 			return
 		end
 		
@@ -875,13 +893,13 @@ class WMPanelCharacter extends Panel
 		
 		addWidget(Panel.new(BorderLayout.new(5), block Panel p
 			p.setDesignerSelector("Panel.CollapsibleGroup.Header")
-			p.addWidget(Label.new("Character Selection", "Label.CollapsibleGroup"), BorderLayout.Area.content)
+			p.addWidget(Label.new("@UI.WMPanelCharacter.CharacterSelection", "Label.CollapsibleGroup"), BorderLayout.Area.content)
 			
 			p.addWidget(HelpButton.new("uipanelcharacter"), BorderLayout.Area.right)
 		end))
 		
 		addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
-			p.addWidget(Label.new("Actors:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WMPanelCharacter.Actors", "Label.FormCaption"))
 			
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
 				p2.addWidget(ComboBox.new(pModelActorProfiles, ActorProfileRenderer.new()))
@@ -891,7 +909,7 @@ class WMPanelCharacter extends Panel
 				p2.addWidget(button)
 			end))
 			
-			p.addWidget(Label.new("Character:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WMPanelCharacter.Character", "Label.FormCaption"))
 			
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
 				p2.addWidget(ComboBox.new(pModelCharacterProfiles, CharacterProfileRenderer.new()))
@@ -901,7 +919,7 @@ class WMPanelCharacter extends Panel
 				p2.addWidget(button)
 			end))
 			
-			p.addWidget(Label.new("Configuration:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WMPanelCharacter.Configuration", "Label.FormCaption"))
 			
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
 				p2.addWidget(ComboBox.new(pModelCharacterConfigurations, CharacterConfigurationRenderer.new()))
@@ -913,36 +931,36 @@ class WMPanelCharacter extends Panel
 		end))
 		
 		addWidget(Panel.new(GridLayout.new(0, 1), block Panel p
-			button = Button.new("Activate", BlockActionListener.new(block ActionEvent event
+			button = Button.new("@UI.WMPanelCharacter.Activate", BlockActionListener.new(block ActionEvent event
 				activateCharacterConfiguration()
 			end))
-			button.setToolTip("Activate character. Adds character to world under actor control")
+			button.setToolTip("@UI.WMPanelCharacter.Activate.ToolTip")
 			p.addWidget(button)
 			
-			button = Button.new("Deactivate", BlockActionListener.new(block ActionEvent event
+			button = Button.new("@UI.WMPanelCharacter.Deactivate", BlockActionListener.new(block ActionEvent event
 				deactivateCharacterConfiguration()
 			end))
-			button.setToolTip("Deactivate character. Removes character from world allowing free VR movement to actor.")
+			button.setToolTip("@UI.WMPanelCharacter.Deactivate.ToolTip")
 			p.addWidget(button)
 		end))
 		
 		addWidget(Panel.new(GridLayout.new(0, 1), block Panel p
-			button = Button.new("Calibrate", BlockActionListener.new(block ActionEvent event
+			button = Button.new("@UI.WMPanelCharacter.Calibrate", BlockActionListener.new(block ActionEvent event
 				calibrateCharacter()
 			end))
-			button.setToolTip("Start calibrating character. Follow instructions displayed in HMD")
+			button.setToolTip("@UI.WMPanelCharacter.Calibrate.ToolTip")
 			p.addWidget(button)
 			
-			button = Button.new("Recalibrate", BlockActionListener.new(block ActionEvent event
+			button = Button.new("@UI.WMPanelCharacter.Recalibrate", BlockActionListener.new(block ActionEvent event
 				recalibrateCharacter()
 			end))
-			button.setToolTip("Instant recalibrate character for fine tuning")
+			button.setToolTip("@UI.WMPanelCharacter.Recalibrate.ToolTip")
 			p.addWidget(button)
 			
-			button = Button.new("Reset", BlockActionListener.new(block ActionEvent event
+			button = Button.new("@UI.WMPanelCharacter.Reset", BlockActionListener.new(block ActionEvent event
 				resetCharacter()
 			end))
-			button.setToolTip("Reset calibration character. Allows free moving.")
+			button.setToolTip("@UI.WMPanelCharacter.Reset.ToolTip")
 			p.addWidget(button)
 		end))
 		
