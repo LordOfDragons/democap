@@ -26,6 +26,7 @@ pin Democap.Actors
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Scenery
+pin Dragengine.Utils
 
 
 /**
@@ -57,7 +58,7 @@ class WindowActorProfile extends WindowDialog
 		
 		runWhileBlockingLayout(block
 			setGuiTheme(window.getGuiTheme())
-			setTitle("Actor Profile")
+			setTitle("@UI.WindowActorProfile.Title")
 			setDesignerSelector("Window.Dialog.ActorProfile")
 			
 			createContent()
@@ -95,16 +96,18 @@ class WindowActorProfile extends WindowDialog
 		var String profileName = pModelProfileName.getText()
 		if not profileName.toLower().equals(pActorProfile.getName().toLower())
 			if profileName.empty()
-				WindowDialog.message(this, "Save Profile", "Profile name can not be empty", null, null, null)
+				WindowDialog.message(this, "@UI.WindowActorProfile.Profile.Save",\
+					"@UI.WindowActorProfile.Profile.NotEmpty", null, null, null)
 				return
 			end
 			if GameApp.getGameApp().getActorProfiles().hasNamed(profileName)
-				WindowDialog.message(this, "Save Profile", "Profile with same name exists", null, null, null)
+				WindowDialog.message(this, "@UI.WindowActorProfile.Profile.Save",\
+					"@UI.WindowActorProfile.Profile.Duplicate", null, null, null)
 				return
 			end
 			if not FileSystem.canDeleteFile(pActorProfile.getPathProfile())
-				WindowDialog.message(this, "Save Profile", \
-					"Profile can not be renamed. Old profile file can not be deleted", null, null, null)
+				WindowDialog.message(this, "@UI.WindowActorProfile.Profile.Save",\
+					"@UI.WindowActorProfile.Profile.RenameFailed", null, null, null)
 				return
 			end
 		end
@@ -128,7 +131,9 @@ class WindowActorProfile extends WindowDialog
 				
 			catch Exception e
 				GameApp.getGameApp().getConsole().addError("Delete profile", e)
-				WindowDialog.message(this, "Save Profile", "Failed deleting old profile:\n" + e, null, null, null)
+				WindowDialog.message(this, "@UI.WindowActorProfile.Profile.Save",\
+					TranslationManager.get().translate("UI.WindowActorProfile.Profile.DeleteFailed")\
+						.toUTF8() + "\n" + e, null, null, null)
 			end
 		end
 		
@@ -150,73 +155,73 @@ class WindowActorProfile extends WindowDialog
 		// properties
 		var Button button
 		
-		addWidget(StaticGroup.new("Actor Configuration", "dialog_actorprofile",\
-		FormLayout.new(true, 10, 2), block Panel p
+		addWidget(StaticGroup.new("@UI.WindowActorProfile.ActorConfiguration",\
+		"dialog_actorprofile", FormLayout.new(true, 10, 2), block Panel p
 			var TextField textField
 			
 			// profile name
-			p.addWidget(Label.new("Profile Name:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WindowActorProfile.ProfileName", "Label.FormCaption"))
 			
 			textField = TextField.new(pModelProfileName, 15)
 			textField.setDesignerSelector("TextField.WindowActorProfile")
 			p.addWidget(textField)
 			
 			// shoulder level
-			p.addWidget(Label.new("Shoulder Level:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WindowActorProfile.ShoulderLevel", "Label.FormCaption"))
 			
 			textField = TextField.new(pModelShoulderLevel, 6)
 			textField.setDesignerSelector("TextField.WindowActorProfile")
 			textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
-			textField.setToolTip("Distance between floor and your shoulder.")
+			textField.setToolTip("@UI.WindowActorProfile.ShoulderLevel.ToolTip")
 			p.addWidget(textField)
 			
 			// shoulder width
-			p.addWidget(Label.new("Shoulder Width:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WindowActorProfile.ShoulderWidth", "Label.FormCaption"))
 			
 			textField = TextField.new(pModelShoulderWidth, 6)
 			textField.setDesignerSelector("TextField.WindowActorProfile")
 			textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
-			textField.setToolTip("Distance between left and right shoulder bone.")
+			textField.setToolTip("@UI.WindowActorProfile.ShoulderWidth.ToolTip")
 			p.addWidget(textField)
 			
 			// arm length
-			p.addWidget(Label.new("Arm Length:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WindowActorProfile.ArmLength", "Label.FormCaption"))
 			
 			textField = TextField.new(pModelArmLength, 6)
 			textField.setDesignerSelector("TextField.WindowActorProfile")
 			textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
-			textField.setToolTip("Distance between shoulder bone and palm center.")
+			textField.setToolTip("@UI.WindowActorProfile.ArmLength.ToolTip")
 			p.addWidget(textField)
 			
 			// leg length
-			p.addWidget(Label.new("Leg Length:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WindowActorProfile.LegLength", "Label.FormCaption"))
 			
 			textField = TextField.new(pModelLegLength, 6)
 			textField.setDesignerSelector("TextField.WindowActorProfile")
 			textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
-			textField.setToolTip("Distance between waist belt and floor.")
+			textField.setToolTip("@UI.WindowActorProfile.LegLength.ToolTip")
 			p.addWidget(textField)
 			
 			// foot width
-			p.addWidget(Label.new("Foot Distance:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.WindowActorProfile.FootDistance", "Label.FormCaption"))
 			
 			textField = TextField.new(pModelFootDistance, 6)
 			textField.setDesignerSelector("TextField.WindowActorProfile")
 			textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
-			textField.setToolTip("Distance between left and right foot center.")
+			textField.setToolTip("@UI.WindowActorProfile.FootDistance.ToolTip")
 			p.addWidget(textField)
 			
 		end), BorderLayout.Area.content)
 		
 		// button line
 		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x), block Panel p
-			button = Button.new("Save", BlockActionListener.new(block ActionEvent e
+			button = Button.new("@UI.Save", BlockActionListener.new(block ActionEvent e
 				saveAndClose()
 			end))
 			button.setDesignerSelector("Button.WindowActorProfile.Save")
 			p.addWidget(button)
 			
-			button = Button.new("Cancel", CloseDialog.new(this, false))
+			button = Button.new("@UI.Cancel", CloseDialog.new(this, false))
 			button.setDesignerSelector("Button.WindowActorProfile.Cancel")
 			p.addWidget(button)
 		end ), BorderLayout.Area.bottom )
