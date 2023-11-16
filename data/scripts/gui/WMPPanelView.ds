@@ -35,6 +35,22 @@ pin Dragengine.Utils
  * View settings panel.
  */
 class WMPPanelView extends CollapsibleGroup
+	class LanguagePackRenderer extends DefaultListElementRenderer
+		func new(): end
+		
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var String text
+			if element != null
+				text = (element cast LanguagePack).getName().toUTF8()
+				
+			else
+				text = String.new('X', 20)
+			end
+			super.updateRenderer(listBox, renderer, text, selected, focused)
+		end
+	end
+	
+	
 	protected var String pPrefixUIOptions
 	
 	/** Create panel. */
@@ -63,7 +79,9 @@ class WMPPanelView extends CollapsibleGroup
 	protected func void createContent(Panel content)
 		var SessionSettings sessionSettings = SessionSettings.get()
 		var CheckBox checkBox
+		var ComboBox comboBox
 		var Slider slider
+		var Label label
 		
 		content.setLayout(FormLayout.new(true, 5, 2))
 		
@@ -87,5 +105,14 @@ class WMPPanelView extends CollapsibleGroup
 			checkBox.setToolTip("@UI.ToolTip.Fullbright")
 			p.addWidget(checkBox)
 		end))
+		
+		// language
+		label = Label.new("@UI.Language.Label")
+		label.setToolTip("@UI.ToolTip.Language")
+		content.addWidget(label)
+		
+		comboBox = ComboBox.new(SessionSettings.get().getModelLanguage(), LanguagePackRenderer.new())
+		comboBox.setToolTip("@UI.ToolTip.Language")
+		content.addWidget(comboBox)
 	end
 end

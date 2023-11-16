@@ -225,6 +225,26 @@ class SessionSettings
 		end
 	end
 	
+	class SaveLanguageChanged extends DefaultListModelListener
+		var String pSettingPath
+		
+		func new(String settingPath)
+			pSettingPath = settingPath
+		end
+		
+		func void selectionChanged(ListModel listModel)
+			if listModel.getSelected() == -1
+				return
+			end
+			
+			var LanguagePack langpack = listModel.getAt(listModel.getSelected()) cast LanguagePack
+			TranslationManager.get().setActive(langpack)
+			EngineTranslations.get().setActiveWithIdIfPresent(langpack.getIdentifier())
+			GameApp.getGameApp().getDesktop().onTranslationChanged()
+			GameApp.getGameApp().getSettings().setAt(pSettingPath, langpack.getIdentifier())
+		end
+	end
+	
 	
 	
 	var DefaultToggleModel pModelEnableVR
@@ -252,6 +272,8 @@ class SessionSettings
 	var DefaultToggleModel pModelTeleportMovement
 	
 	var DefaultTextModel pModelServerAddress
+	
+	var DefaultListModel pModelLanguage
 	
 	
 	
@@ -333,6 +355,17 @@ class SessionSettings
 		
 		pModelServerAddress = DefaultTextModel.new(s.getStringAt("ServerAddress", "localhost"))
 		pModelServerAddress.addListener(SaveTextModelChanged.new("ServerAddress"))
+		
+		var TranslationManager tm = TranslationManager.get()
+		pModelLanguage = DefaultListModel.new(tm.allSorted())
+		var LanguagePack langpack = tm.getWithId(GameApp.getGameApp().getSettings().getStringAt("Language", "en"))
+		if langpack == null
+			langpack = tm.getActive()
+		end
+		tm.setActive(langpack)
+		EngineTranslations.get().setActiveWithIdIfPresent(langpack.getIdentifier())
+		pModelLanguage.setSelectedElement(langpack)
+		pModelLanguage.addListener(SaveLanguageChanged.new("Language"))
 	end
 	
 	
@@ -549,5 +582,12 @@ class SessionSettings
 	/** Server address. */
 	func DefaultTextModel getModelServerAddress()
 		return pModelServerAddress
+	end
+	
+	
+	
+	/** Language. */
+	func DefaultListModel getModelLanguage()
+		return pModelLanguage
 	end
 end
