@@ -135,7 +135,7 @@ class WindowCharacterProfile extends WindowDialog
 		
 		runWhileBlockingLayout(block
 			setGuiTheme(window.getGuiTheme())
-			setTitle("@UI.WindowCharacterProfile.Title")
+			setTitle("@UI.CharacterProfile")
 			setDesignerSelector("Window.Dialog.CharacterProfile")
 			setSize(window.getDesktop().getContainerSize() - Point.new(100, 100))
 			
@@ -188,18 +188,18 @@ class WindowCharacterProfile extends WindowDialog
 		var String profileName = pModelProfileName.getText()
 		if not profileName.toLower().equals(pCharacterProfile.getName().toLower())
 			if profileName.empty()
-				WindowDialog.message(this, "@UI.WindowCharacterProfile.Profile.Save",\
-					"@UI.WindowCharacterProfile.Profile.Empty", null, null, null)
+				WindowDialog.message(this, "@UI.SaveProfile",\
+					"@UI.Message.ProfileNameEmpty", null, null, null)
 				return
 			end
 			if GameApp.getGameApp().getCharacterProfiles().hasNamed(profileName)
-				WindowDialog.message(this, "@UI.WindowCharacterProfile.Profile.Save",\
-					"@UI.WindowCharacterProfile.Profile.Duplicate", null, null, null)
+				WindowDialog.message(this, "@UI.SaveProfile",\
+					"@UI.Message.DuplicateProfile", null, null, null)
 				return
 			end
 			if not FileSystem.canDeleteFile(pCharacterProfile.getPathProfile())
-				WindowDialog.message(this, "@UI.WindowCharacterProfile.Profile.Save",\
-					"@UI.WindowCharacterProfile.Profile.RenameFailed", null, null, null)
+				WindowDialog.message(this, "@UI.SaveProfile",\
+					"@UI.Message.RenameProfileFailed", null, null, null)
 				return
 			end
 		end
@@ -231,8 +231,8 @@ class WindowCharacterProfile extends WindowDialog
 				
 			catch Exception e
 				GameApp.getGameApp().getConsole().addError("Delete profile", e)
-				WindowDialog.message(this, "@UI.WindowCharacterProfile.Profile.Save",\
-					TranslationManager.get().translate("UI.WindowCharacterProfile.DeleteProfile.Failed").toUTF8() + "\n" + e, null, null, null)
+				WindowDialog.message(this, "@UI.SaveProfile",\
+					TranslationManager.get().translate("UI.Message.FailedDeleteOldProfile").toUTF8() + "\n" + e, null, null, null)
 			end
 		end
 		
@@ -275,10 +275,10 @@ class WindowCharacterProfile extends WindowDialog
 		addWidget(pCharacterPreview, BorderLayout.Area.content)
 		
 		// properties
-		addWidget(StaticGroup.new("@UI.WindowCharacterProfile.ActorConfiguration", "dialog_characterprofile",\
+		addWidget(StaticGroup.new("@UI.ActorConfiguration", "dialog_characterprofile",\
 		FormLayout.new(true, 10, 2), block Panel p
 			// profile name
-			p.addWidget(Label.new("@UI.WindowCharacterProfile.ProfileName", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.ProfileName.Label", "Label.FormCaption"))
 			
 			textField = TextField.new(pModelProfileName, 15)
 			textField.setDesignerSelector("TextField.WindowCharacterProfile")
@@ -286,7 +286,7 @@ class WindowCharacterProfile extends WindowDialog
 			p.addWidget(textField)
 			
 			// path model resource
-			p.addWidget(Label.new("@UI.WindowCharacterProfile.Model", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.Model.Label", "Label.FormCaption"))
 			
 			editPath = EditPath.new(pModelPathModel, ResourceLoaderType.model, startDirectory)
 			editPath.setToolTip("@UI.WindowCharacterProfile.Model.ToolTip")
@@ -294,7 +294,7 @@ class WindowCharacterProfile extends WindowDialog
 			editPath.addActionListener(actionReloadCharacterPreview)
 			
 			// path skin resource
-			p.addWidget(Label.new("@UI.WindowCharacterProfile.Skin", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.Skin.Label", "Label.FormCaption"))
 			
 			editPath = EditPath.new(pModelPathSkin, ResourceLoaderType.skin, startDirectory)
 			editPath.setToolTip("@UI.WindowCharacterProfile.Skin.ToolTip")
@@ -302,7 +302,7 @@ class WindowCharacterProfile extends WindowDialog
 			editPath.addActionListener(actionReloadCharacterPreview)
 			
 			// path rig resource
-			p.addWidget(Label.new("@UI.WindowCharacterProfile.Rig", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.Rig.Label", "Label.FormCaption"))
 			
 			editPath = EditPath.new(pModelPathRig, ResourceLoaderType.rig, startDirectory)
 			editPath.setToolTip("@UI.WindowCharacterProfile.Rig.ToolTip")
@@ -310,7 +310,7 @@ class WindowCharacterProfile extends WindowDialog
 			editPath.addActionListener(actionReloadCharacterPreview)
 			
 			// path animation resource
-			p.addWidget(Label.new("@UI.WindowCharacterProfile.Animation", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.Animation.Label", "Label.FormCaption"))
 			
 			editPath = EditPath.new(pModelPathAnimation, ResourceLoaderType.animation, startDirectory)
 			editPath.setToolTip("@UI.WindowCharacterProfile.Animation.ToolTip")
@@ -318,7 +318,7 @@ class WindowCharacterProfile extends WindowDialog
 			editPath.addActionListener(actionReloadCharacterPreview)
 			
 			// origin bone
-			label = Label.new("@UI.WindowCharacterProfile.OriginBone", "Label.FormCaption")
+			label = Label.new("@UI.OriginBone.Label", "Label.FormCaption")
 			p.addWidget(label)
 			
 			comboBox = ComboBox.new(pModelListOriginBone, DefaultComboBoxEditor.new(pModelTextOriginBone))
@@ -329,7 +329,7 @@ class WindowCharacterProfile extends WindowDialog
 			CPEBone.new(pCharacterPreview, label, comboBox)
 			
 			// teleport bone
-			label = Label.new("@UI.WindowCharacterProfile.TeleportBone", "Label.FormCaption")
+			label = Label.new("@UI.TeleportBone.Label", "Label.FormCaption")
 			p.addWidget(label)
 			
 			comboBox = ComboBox.new(pModelListTeleportBone, DefaultComboBoxEditor.new(pModelTextTeleportBone))
@@ -340,7 +340,7 @@ class WindowCharacterProfile extends WindowDialog
 			CPEBone.new(pCharacterPreview, label, comboBox)
 			
 			// shoulder level
-			label = Label.new("@UI.WindowCharacterProfile.ShoulderLevel", "Label.FormCaption")
+			label = Label.new("@UI.ShoulderLevel.Label", "Label.FormCaption")
 			p.addWidget(label)
 			
 			textField = TextField.new(pModelShoulderLevel, 8)
@@ -352,7 +352,7 @@ class WindowCharacterProfile extends WindowDialog
 			CPELevel.new(pCharacterPreview, label, textField)
 			
 			// bone axis
-			label = Label.new("@UI.WindowCharacterProfile.BoneAxis", "Label.FormCaption")
+			label = Label.new("@UI.BoneAxis.Label", "Label.FormCaption")
 			p.addWidget(label)
 			
 			comboBox = ComboBox.new(pModelBoneAxis)
@@ -361,7 +361,7 @@ class WindowCharacterProfile extends WindowDialog
 			p.addWidget(comboBox)
 			
 			// scale
-			label = Label.new("@UI.WindowCharacterProfile.Scale", "Label.FormCaption")
+			label = Label.new("@UI.Scale.Label", "Label.FormCaption")
 			p.addWidget(label)
 			
 			textField = TextField.new(pModelScale, 8)
@@ -372,7 +372,7 @@ class WindowCharacterProfile extends WindowDialog
 			p.addWidget(textField)
 			
 			// preview move
-			p.addWidget(Label.new("@UI.WindowCharacterProfile.PreviewMove", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.PreviewMove.Label", "Label.FormCaption"))
 			
 			comboBox = ComboBox.new(pModelListPreviewMove, DefaultComboBoxEditor.new(pModelTextPreviewMove))
 			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")

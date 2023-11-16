@@ -71,8 +71,7 @@ class WMPPanelNetworkAccess extends CollapsibleGroup
 	
 	
 	/** Create panel. */
-	func new(WMPanelSettings panelSettings) super("Network Access",\
-	"uipanelsettings#network_access",\
+	func new(WMPanelSettings panelSettings) super("@UI.NetworkAccess", "uipanelsettings#network_access",\
 	CollapsibleGroup.persistModel(prefixUIOptions(panelSettings), false))
 		pPrefixUIOptions = prefixUIOptions(panelSettings)
 		pModelConnections = DefaultListModel.new()
@@ -129,42 +128,41 @@ class WMPPanelNetworkAccess extends CollapsibleGroup
 		content.setLayout(FlowLayout.new(LayoutAxis.y))
 		
 		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel gp
-			gp.addWidget(Label.new("Address:", "Label.FormText"))
+			gp.addWidget(Label.new("@UI.Address.Label", "Label.FormCaption.SingleLine"))
 			
-			gp.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
-				textField = TextField.new(sessionSettings.getModelServerAddress())
-				textField.setDisplayCharCount(20)
-				textField.setToolTip("Server address in the form 'hostname{:port}' or 'ip{:port}'")
-				p.addWidget(textField)
-				
-				p.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p2
-					pButtonListen = Button.new("Listen", BlockActionListener.new(block ActionEvent event
-						GameApp.getGameApp().getServer().listenOn(sessionSettings.getModelServerAddress().getText())
-						updateButtonEnabled()
-					end))
-					pButtonListen.setToolTip("Start server listening on 'Address' for incoming connections")
-					p2.addWidget(pButtonListen)
-					
-					/*
-					pButtonConnect = Button.new("Connect", BlockActionListener.new(block ActionEvent event
-						// onServerConnect
-					end))
-					pButtonConnect.setToolTip("Connect to another DEMoCap running at 'Address'")
-					p2.addWidget(pButtonConnect)
-					*/
-					
-					pButtonDisconnect = Button.new("Disconnect", BlockActionListener.new(block ActionEvent event
-						GameApp.getGameApp().getServer().stopListening()
-						updateButtonEnabled()
-					end))
-					pButtonDisconnect.setToolTip("Shut down server if listening or disconnect from DEMoCap if connected")
-					pButtonDisconnect.setEnabled(false)
-					p2.addWidget(pButtonDisconnect)
+			textField = TextField.new(sessionSettings.getModelServerAddress())
+			textField.setDisplayCharCount(20)
+			textField.setToolTip("@UI.WMPanelNetworkAccess.Address.ToolTip")
+			gp.addWidget(textField)
+			
+			gp.addWidget(Widget.new())
+			gp.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p
+				pButtonListen = Button.new("@UI.Listen", BlockActionListener.new(block ActionEvent event
+					GameApp.getGameApp().getServer().listenOn(sessionSettings.getModelServerAddress().getText())
+					updateButtonEnabled()
 				end))
+				pButtonListen.setToolTip("@UI.WMPanelNetworkAccess.Listen.ToolTip")
+				p.addWidget(pButtonListen)
+				
+				/*
+				pButtonConnect = Button.new("@UI.Connect", BlockActionListener.new(block ActionEvent event
+					// onServerConnect
+				end))
+				pButtonConnect.setToolTip("@UI.WMPanelNetworkAccess.Connect.ToolTip")
+				p.addWidget(pButtonConnect)
+				*/
+				
+				pButtonDisconnect = Button.new("@UI.Disconnect", BlockActionListener.new(block ActionEvent event
+					GameApp.getGameApp().getServer().stopListening()
+					updateButtonEnabled()
+				end))
+				pButtonDisconnect.setToolTip("@UI.WMPanelNetworkAccess.Disconnect.ToolTip")
+				pButtonDisconnect.setEnabled(false)
+				p.addWidget(pButtonDisconnect)
 			end))
 		end))
 		
-		content.addWidget(CollapsibleGroup.new("Connections", "", CollapsibleGroup.persistModel(\
+		content.addWidget(CollapsibleGroup.new("@UI.Connections", "", CollapsibleGroup.persistModel(\
 		pPrefixUIOptions + "/Connections", true), StackLayout.new(), block Panel p
 			var ListBox listBox = ListBox.new(pModelConnections, DNConnectionRenderer.new())
 			listBox.setNumberDisplayLines(3)

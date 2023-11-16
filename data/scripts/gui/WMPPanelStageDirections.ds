@@ -87,52 +87,52 @@ class WMPPanelStageDirections extends CollapsibleGroup
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
 			
-			menu.addWidget(MenuItemCommand.new("Add...", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.Add.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.addStageDirection()
 			end)))
 			
-			item = MenuItemCommand.new("Remove", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.Remove", BlockActionListener.new(block ActionEvent event
 				pPanel.removeStageDirection()
 			end))
 			item.setEnabled(pPanel.getStageDirection() != null)
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Remove All", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.RemoveAll", BlockActionListener.new(block ActionEvent event
 				pPanel.removeAllStageDirections()
 			end))
 			item.setEnabled(scene.getStageDirections().getCount() > 0)
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Rename...", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.Rename.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.renameStageDirection()
 			end))
 			item.setEnabled(pPanel.getStageDirection() != null)
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Cut", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.Cut", BlockActionListener.new(block ActionEvent event
 				pPanel.cutStageDirection()
 			end))
 			item.setEnabled(pPanel.getStageDirection() != null)
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Copy", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.Copy", BlockActionListener.new(block ActionEvent event
 				pPanel.copyStageDirection()
 			end))
 			item.setEnabled(pPanel.getStageDirection() != null)
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Paste", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.Paste", BlockActionListener.new(block ActionEvent event
 				pPanel.pasteStageDirection()
 			end))
 			item.setEnabled(pPanel.getClipboard().hasClip())
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Import...", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.Import.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.importStageDirections()
 			end))
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Export...", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.Export.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.exportStageDirections()
 			end))
 			menu.addWidget(item)
@@ -201,14 +201,12 @@ class WMPPanelStageDirections extends CollapsibleGroup
 	protected var StageDirectionModelChanged pStageDirectionModelChanged
 	protected var ReorderStageDirections pReorderStageDirections
 	
-	protected static var Array patternStageDirections = Array.newWith(\
-		FileExtension.new("Stage Directions", Array.newWith("*.stagedirs.xml"), ".stagedirs.xml"))
 	protected static var String lastPathStageDirections = null
 	
 	
 	
 	/** Create panel. */
-	func new(WMPanelSession panelSession) super("Stage directions",\
+	func new(WMPanelSession panelSession) super("@UI.StageDirections",\
 	"uipanelcapture#stage_directions", CollapsibleGroup.persistModel(prefixUIOptions(panelSession)))
 		pPanelSession = panelSession
 		pPrefixUIOptions = prefixUIOptions(panelSession)
@@ -312,7 +310,8 @@ class WMPPanelStageDirections extends CollapsibleGroup
 			return
 		end
 		
-		WindowDialog.input(getWindow(), "Add Stage Direction", "Name:", null, "Stage Direction",\
+		WindowDialog.input(getWindow(), "@UI.WMPanelStageDirections.AddStageDirection.Title",\
+		"@UI.Name.Label", null, "Stage Direction",\
 		null, null, WindowDialog.BlockResultListener.new(block String result
 			if result != null
 				var StageDirection direction = StageDirection.new()
@@ -395,7 +394,8 @@ class WMPPanelStageDirections extends CollapsibleGroup
 			return
 		end
 		
-		WindowDialog.input(getWindow(), "Rename Stage Direction", "Name:", null, direction.getName(),\
+		WindowDialog.input(getWindow(), "@UI.WMPanelStageDirections.RenameStageDirection.Title",\
+		"@UI.Name.Label", null, direction.getName(),\
 		null, null, WindowDialog.BlockResultListener.new(block String result
 			if result != null
 				if not result.equals(direction.getName())
@@ -415,7 +415,7 @@ class WMPPanelStageDirections extends CollapsibleGroup
 		if lastPathStageDirections == null
 			lastPathStageDirections = (GameApp.getGameApp().getProject().getDataDirectory() + "New.stagedirs.xml").getPath()
 		end
-		DialogFileSelect.showOpenFile(getWindow(), "Import Stage Directions", patternStageDirections, lastPathStageDirections,\
+		DialogFileSelect.showOpenFile(getWindow(), "Import Stage Directions", getPatternStageDirections(), lastPathStageDirections,\
 			WindowDialog.BlockResultListener.new(block Object result
 				if result != null
 					lastPathStageDirections = result cast String
@@ -433,7 +433,7 @@ class WMPPanelStageDirections extends CollapsibleGroup
 		if lastPathStageDirections == null
 			lastPathStageDirections = (GameApp.getGameApp().getProject().getDataDirectory() + "New.stagedirs.xml").getPath()
 		end
-		DialogFileSelect.showSaveFile(getWindow(), "Export Stage Directions", patternStageDirections, lastPathStageDirections,\
+		DialogFileSelect.showSaveFile(getWindow(), "Export Stage Directions", getPatternStageDirections(), lastPathStageDirections,\
 			WindowDialog.BlockResultListener.new(block Object result
 				if result != null
 					lastPathStageDirections = result cast String
@@ -477,5 +477,11 @@ class WMPPanelStageDirections extends CollapsibleGroup
 				textArea.addActionListener(ContentChanged.new(this, pModelContent))
 			end
 		end), BorderLayout.Area.content)
+	end
+	
+	protected func Array getPatternStageDirections()
+		return Array.newWith(\
+			FileExtension.new(TranslationManager.get().translate("UI.FileExtension.StageDirections").toUTF8(),\
+			Array.newWith("*.stagedirs.xml"), ".stagedirs.xml"))
 	end
 end
