@@ -91,17 +91,17 @@ class WCCPTrackerSlot extends Panel
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
 			
-			item = MenuItemCommand.new("Match actor position", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.MatchActorPosition", BlockActionListener.new(block ActionEvent event
 				pPanel.matchActorPosition()
 			end))
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Mirror from opposite slot", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.MirrorFromOppositeSlot", BlockActionListener.new(block ActionEvent event
 				pPanel.mirrorFromOppositeSlot()
 			end))
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Mirror to opposite slot", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.MirrorToOppositeSlot", BlockActionListener.new(block ActionEvent event
 				pPanel.mirrorToOppositeSlot()
 			end))
 			menu.addWidget(item)
@@ -124,11 +124,11 @@ class WCCPTrackerSlot extends Panel
 			var Widget widget = event.getSource() cast Widget
 			var MenuPopup menu = MenuPopup.new()
 			
-			menu.addWidget(MenuItemCommand.new("Index Controller", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.IndexController", BlockActionListener.new(block ActionEvent event
 				pEditOffsetPosition.setVector(Vector.new(0, -0.078, -0.078))
 			end)))
 			
-			menu.addWidget(MenuItemCommand.new("Vive Tracker", BlockActionListener.new(block ActionEvent event
+			menu.addWidget(MenuItemCommand.new("@UI.ViveTracker", BlockActionListener.new(block ActionEvent event
 				pEditOffsetPosition.setVector(Vector.new(0, 0, -0.06))
 			end)))
 			
@@ -331,6 +331,7 @@ class WCCPTrackerSlot extends Panel
 	/** Create window content. */
 	protected func void createContent()
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var EnumListElementRenderer renderer
 		var TextField textField
 		var ComboBox comboBox
 		var Button button
@@ -338,30 +339,31 @@ class WCCPTrackerSlot extends Panel
 		setLayout(FormLayout.new(true, 10, 2))
 		
 		// name
-		addWidget(Label.new("Name:", "Label.FormCaption"))
+		addWidget(Label.new("@UI.Name.Label", "Label.FormCaption"))
 		
 		textField = TextField.new(pModelName, 15)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-		textField.setToolTip("Unique slot name")
+		textField.setToolTip("@UI.ToolTip.SlotName")
 		textField.addFocusListener(NameChangedListener.new(this, pModelName))
 		addWidget(textField)
 		
 		// type
-		addWidget(Label.new("Type:", "Label.FormCaption"))
+		addWidget(Label.new("@UI.Type.Label", "Label.FormCaption"))
 		
-		comboBox = ComboBox.new(pModelType)
+		renderer = EnumListElementRenderer.new()
+		renderer.setTranslationPrefix("UI.Enum.TrackerSlotType.")
+		comboBox = ComboBox.new(pModelType, renderer)
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Type of slot. If not custom uses appropriate values derived from active actor profile.")
+		comboBox.setToolTip("@UI.ToolTip.SlotType")
 		addWidget(comboBox)
 		
 		// target position
-		var Label labelPosition = Label.new("Target Position:", "Label.FormCaption")
+		var Label labelPosition = Label.new("@UI.TargetPosition.Label", "Label.FormCaption")
 		addWidget(labelPosition)
 		
 		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
 			pEditTargetPosition = EditVector.new()
-			pEditTargetPosition.setToolTip("Target position VR device is mapped to. "\
-				+ "Used by motion transfers to calibrate against this slot.")
+			pEditTargetPosition.setToolTip("@UI.ToolTip.TargetPosition")
 			p.addWidget(pEditTargetPosition)
 			
 			button = Button.new("...", TargetPositionAction.new(this))
@@ -370,32 +372,32 @@ class WCCPTrackerSlot extends Panel
 		end))
 		
 		// target rotation
-		var Label labelRotation = Label.new("Target Rotation:", "Label.FormCaption")
+		var Label labelRotation = Label.new("@UI.TargetRotation.Label", "Label.FormCaption")
 		addWidget(labelRotation)
 		
 		pEditTargetRotation = EditVector.new()
-		pEditTargetRotation.setToolTip("Target rotation in degrees VR device is mapped to. "\
-			+ "Used by motion transfers to calibrate against this slot.")
+		pEditTargetRotation.setToolTip("@UI.ToolTip.TargetRotation")
 		addWidget(pEditTargetRotation)
 		
 		CPECoordinateSystem.new(preview, labelPosition, pEditTargetPosition,\
 			labelRotation, pEditTargetRotation, null, null, false)
 		
 		// input device type
-		addWidget(Label.new("Device Type:", "Label.FormCaption"))
+		addWidget(Label.new("@UI.DeviceType.Label", "Label.FormCaption"))
 		
-		comboBox = ComboBox.new(pModelInputDeviceType)
+		renderer = EnumListElementRenderer.new()
+		renderer.setTranslationPrefix("UI.Enum.InputDeviceType.")
+		comboBox = ComboBox.new(pModelInputDeviceType, renderer)
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Type of input device valid for this slot.")
+		comboBox.setToolTip("@UI.ToolTip.DeviceType")
 		addWidget(comboBox)
 		
 		// offset position
-		addWidget(Label.new("Track Position:", "Label.FormCaption"))
+		addWidget(Label.new("@UI.TrackPosition.Label", "Label.FormCaption"))
 		
 		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
 			pEditOffsetPosition = EditVector.new()
-			pEditOffsetPosition.setToolTip("Controller track position offset. Required for hand controllers "\
-				+ " since they typically have their position at the controller tip" )
+			pEditOffsetPosition.setToolTip("@UI.ToolTip.TrackPosition" )
 			p.addWidget(pEditOffsetPosition)
 			
 			button = Button.new("...", OffsetTemplatesAction.new(this, pEditOffsetPosition))
@@ -404,10 +406,10 @@ class WCCPTrackerSlot extends Panel
 		end))
 		
 		// offset rotation
-		addWidget(Label.new("Track Rotation:", "Label.FormCaption"))
+		addWidget(Label.new("@UI.TrackRotation.Label", "Label.FormCaption"))
 		
 		pEditOffsetRotation = EditVector.new()
-		pEditOffsetRotation.setToolTip("Controller track rotation offset in degrees.")
+		pEditOffsetRotation.setToolTip("@UI.ToolTip.TrackRotation")
 		addWidget(pEditOffsetRotation)
 	end
 end
