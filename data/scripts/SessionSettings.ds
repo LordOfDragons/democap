@@ -33,6 +33,8 @@ pin Dragengine.Scenery
  * Session settings.
  */
 class SessionSettings
+	static public var String globalEventLanguageChanged = "languageChanged"
+	
 	/** Record devices. */
 	enum RecordDevices
 		none /** None. */
@@ -238,10 +240,13 @@ class SessionSettings
 			end
 			
 			var LanguagePack langpack = listModel.getAt(listModel.getSelected()) cast LanguagePack
+			
+			GameApp.getGameApp().getSettings().setAt(pSettingPath, langpack.getIdentifier())
+			
 			TranslationManager.get().setActive(langpack)
 			EngineTranslations.get().setActiveWithIdIfPresent(langpack.getIdentifier())
 			GameApp.getGameApp().getDesktop().onTranslationChanged()
-			GameApp.getGameApp().getSettings().setAt(pSettingPath, langpack.getIdentifier())
+			GameApp.getGameApp().getGlobalEvents().sendEvent(SessionSettings.globalEventLanguageChanged)
 		end
 	end
 	

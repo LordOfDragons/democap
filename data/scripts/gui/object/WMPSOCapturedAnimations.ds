@@ -131,52 +131,52 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			var MenuPopup menu = MenuPopup.new()
 			var MenuItemCommand item
 			
-			item = MenuItemCommand.new("Add...", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.Add.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.addAnimation()
 			end))
-			item.setToolTip("Add animation")
+			item.setToolTip("@UI.ToolTip.AddAnimation")
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Remove", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.Remove", BlockActionListener.new(block ActionEvent event
 				pPanel.removeAnimation()
 			end))
-			item.setToolTip("Remove animation")
+			item.setToolTip("@UI.ToolTip.RemoveAnimation")
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Rename...", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.Rename.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.renameAnimation()
 			end))
-			item.setToolTip("Rename animation")
+			item.setToolTip("@UI.ToolTip.RenameAnimation")
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Clear", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.Clear", BlockActionListener.new(block ActionEvent event
 				pPanel.clearAnimation()
 			end))
-			item.setToolTip("Clear animation")
+			item.setToolTip("@UI.ToolTip.ClearAnimation")
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Save animation...", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.SaveAnimation.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.saveAnimation()
 			end))
-			item.setToolTip("Save animation")
+			item.setToolTip("@UI.SaveAnimation")
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Export animation...", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.ExportAnimation.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.exportAnimation()
 			end))
-			item.setToolTip("Export animation")
+			item.setToolTip("@UI.ToolTip.ExportAnimation")
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Import animation...", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.ImportAnimation.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.importAnimation()
 			end))
-			item.setToolTip("Import animation")
+			item.setToolTip("@UI.ToolTip.ImportAnimation")
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new("Browse exported...", BlockActionListener.new(block ActionEvent event
+			item = MenuItemCommand.new("@UI.BrowseExported.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.browseExportedAnimations()
 			end))
-			item.setToolTip("Open native file browser with directory containing exported animations")
+			item.setToolTip("@UI.ToolTip.BrowseExportedAnimations")
 			menu.addWidget(item)
 			
 			pPanel.getDesktop().addWindow(menu)
@@ -240,7 +240,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	
 	/** Create panel. */
 	func new(WMPanelProject panelProject, String bgpTypeId) super(panelProject, bgpTypeId,\
-	"", "Captured Animations", "WMPSOCapturedAnimations", "ppob_capturedanimations")
+	"", "@UI.CapturedAnimations", "WMPSOCapturedAnimations", "ppob_capturedanimations")
 		pModelAnimations = DefaultListModel.new()
 		pModelAnimationInfo = DefaultTextModel.new("")
 		pModelRecord = DefaultToggleModel.new()
@@ -340,16 +340,16 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			end
 			
 			if animation != null and animation.getMoveCount() > 0
-				pModelAnimationInfo.setText("{}: {:.1f}s, {} bones".format(Array.newWith(\
-					File.new(pAnimation.getPath()).getName(),\
-					animation.getMovePlaytime(animation.getMoveName(0)),\
-					animation.getBoneCount())))
+				pModelAnimationInfo.setText(TranslationManager.get().translate("UI.Info.AnimationBones")\
+					.toUTF8().format(Array.newWith(File.new(pAnimation.getPath()).getName(),\
+						animation.getMovePlaytime(animation.getMoveName(0)),\
+						animation.getBoneCount())))
 				
 			elif animationObject != null and animationObject.getMoveCount() > 0
-				pModelAnimationInfo.setText("{}: {:.1f}s, {} bones".format(Array.newWith(\
-					File.new(pAnimation.getPathObject()).getName(),\
-					animationObject.getMovePlaytime(animationObject.getMoveName(0)),\
-					animationObject.getBoneCount())))
+				pModelAnimationInfo.setText(TranslationManager.get().translate("UI.Info.AnimationBones")\
+					.toUTF8().format(Array.newWith(File.new(pAnimation.getPathObject()).getName(),\
+						animationObject.getMovePlaytime(animationObject.getMoveName(0)),\
+						animationObject.getBoneCount())))
 				
 			else
 				pModelAnimationInfo.setText("")
@@ -359,15 +359,15 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 	
 	/** Add animation. */
 	func void addAnimation()
-		WindowDialog.input(getWindow(), "Add Animation", "Name:", null,\
+		WindowDialog.input(getWindow(), "@UI.AddAnimation", "@UI.Name.Label", null,\
 			pBehaviorCapturedAnimations.getAnimationName(),\
-			WindowDialog.ButtonConfiguration.new("Add Animation"),\
-			WindowDialog.ButtonConfiguration.new("Cancel"),\
+			WindowDialog.ButtonConfiguration.new("@UI.AddAnimation"),\
+			WindowDialog.ButtonConfiguration.new("@UI.Cancel"),\
 			WindowDialog.BlockResultListener.new(block String result
 				if result != null
 					if pBehaviorCapturedAnimations.getAnimations().hasNamed(result)
-						WindowDialog.message(getWindow(), "Add Animation",\
-							"Animation with this name exists already.", null, null, null)
+						WindowDialog.message(getWindow(), "@UI.AddAnimation",\
+							"@UI.Message.DuplicateAnimation", null, null, null)
 						
 					else
 						var CharacterAnimation animation = CharacterAnimation.new(result)
@@ -384,10 +384,12 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			return
 		end
 		
-		WindowDialog.question(getWindow(), "Remove Animation", "Remove Animation '"\
-			+ pAnimation.getName() + "'?", null, Array.newWith(\
-				WindowDialog.ButtonConfiguration.new("Remove", true),\
-				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+		WindowDialog.question(getWindow(), "@UI.RemoveAnimation",\
+			TranslationManager.get().translate("UI.Message.RemoveAnimation")\
+				.toUTF8().format(Array.newWith(pAnimation.getName())),\
+			null, Array.newWith(\
+				WindowDialog.ButtonConfiguration.new("@UI.Remove", true),\
+				WindowDialog.ButtonConfiguration.new("@UI.Cancel", false)),\
 			WindowDialog.BlockResultListener.new(block bool result
 				if result
 					pBehaviorCapturedAnimations.getAnimations().remove(pAnimation)
@@ -401,7 +403,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			return
 		end
 		
-		WindowDialog.input(getWindow(), "Rename Animation", "Name:", null, pAnimation.getName(),\
+		WindowDialog.input(getWindow(), "@UI.RenameAnimation", "@UI.Name.Label", null, pAnimation.getName(),\
 		null, null, WindowDialog.BlockResultListener.new(block String result
 			if result != null
 				if not result.equals(pAnimation.getName())
@@ -428,7 +430,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			return
 		end
 		
-		WindowDialog.input(getWindow(), "Save Animation", "Name:", null, "Animation",\
+		WindowDialog.input(getWindow(), "@UI.SaveAnimation", "@UI.Name.Label", null, "Animation",\
 		null, null, WindowDialog.BlockResultListener.new(block String result
 			if result == null or result.empty()
 				return null
@@ -436,7 +438,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			
 			var Project project = GameApp.getGameApp().getProject()
 			if project.getSavedAnimations().hasNamed(result)
-				WindowDialog.message(getWindow(), "Save Animation", "Name exists already", null, null, null)
+				WindowDialog.message(getWindow(), "@UI.SaveAnimation", "@UI.Message.DuplicateAnimation", null, null, null)
 				return null
 			end
 			
@@ -455,7 +457,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			return
 		end
 		
-		WindowDialog.input(getWindow(), "Export Animation", "Name:", null, "Animation",\
+		WindowDialog.input(getWindow(), "@UI.ExportAnimation", "@UI.Name.Label", null, "Animation",\
 		null, null, WindowDialog.BlockResultListener.new(block String result
 			if result != null and not result.empty()
 				pAnimation.export(project, result)
@@ -470,8 +472,8 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			return
 		end
 		
-		DialogFileSelect.showOpenFile(getWindow(), "Import Animation",\
-			Array.newWith(FileExtension.new("DEMoCap Capture", Array.newWith("*.demca"), ".demca")),\
+		DialogFileSelect.showOpenFile(getWindow(), "@UI.ImportAnimation",\
+			Array.newWith(FileExtension.new("@UI.Extensions.DEMoCapCapture", Array.newWith("*.demca"), ".demca")),\
 			File.new(GameApp.getGameApp().getPathCaptureAnimations(), "capture.demca").getPath(),\
 			WindowDialog.BlockResultListener.new(block String result
 				if result == null or result.empty()
@@ -493,9 +495,9 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 						project.save()
 						
 					else
-						WindowDialog.message(getWindow(), "Import Animation",\
-							"Imported animation does not match character. Expected '{}' is '{}'".format(\
-							Array.newWith(characterCur, characterImp)), null, null, null)
+						WindowDialog.message(getWindow(), "@UI.ImportAnimation",\
+							TranslationManager.get().translate("UI.Message.ImportAnimationCharacterMismatch").toUTF8().format(\
+								Array.newWith(characterCur, characterImp)), null, null, null)
 					end
 					
 				catch Exception e
@@ -504,7 +506,8 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 					end
 					
 					GameApp.getGameApp().getConsole().addError("Failed importing animation", e)
-					WindowDialog.message(getWindow(), "Import Animation", "Failed importing animation:\n" + e, null, null, null)
+					WindowDialog.message(getWindow(), "@UI.ImportAnimation",\
+						TranslationManager.get().translate("UI.Message.ImportAnimationFailed").toUTF8() + "\n" + e, null, null, null)
 				end
 		end))
 	end
@@ -528,7 +531,7 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 		
 		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
 			// animations
-			p.addWidget(Label.new("Animation:", "Label.FormCaption"))
+			p.addWidget(Label.new("@UI.Animation.Label", "Label.FormCaption.SingleLine"))
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
 				p2.addWidget(ComboBox.new(pModelAnimations, AnimationElementRenderer.new()))
 				
@@ -538,18 +541,18 @@ class WMPSOCapturedAnimations extends WMPPanelSceneObject
 			end))
 			
 			// animation information
-			p.addWidget(Label.new("", "Label.FormCaption"))
+			p.addWidget(Label.new("", "Label.FormCaption.SingleLine"))
 			p.addWidget(Label.new(pModelAnimationInfo, "Label.FormText"))
 			
 			// recording
-			p.addWidget(Label.new("", "Label.FormCaption"))
+			p.addWidget(Label.new("", "Label.FormCaption.SingleLine"))
 			p.addWidget(Panel.new(GridLayout.new(2, 0), block Panel p2
-				checkBox = CheckBox.new(pModelRecord, "Record")
-				checkBox.setToolTip("Enable recording.")
+				checkBox = CheckBox.new(pModelRecord, "@UI.Record")
+				checkBox.setToolTip("@UI.ToolTip.EnableRecord")
 				p2.addWidget(checkBox)
 				
-				checkBox = CheckBox.new(pModelRecordObject, "Record Object")
-				checkBox.setToolTip("Enable recording object position and orientation.")
+				checkBox = CheckBox.new(pModelRecordObject, "@UI.RecordObject")
+				checkBox.setToolTip("@UI.ToolTip.EnableRecordObject")
 				p2.addWidget(checkBox)
 			end))
 		end))

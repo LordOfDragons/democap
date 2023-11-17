@@ -1,0 +1,113 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Gui
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior calling onTranslationChanged on ECBehaviorRenderableDesktop if language
+ * changed global event is send.
+ */
+class ECBDesktopLanguageChanged extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Language changed event receiver. */
+		class LanguageChangedReceived extends GlobalEvents.DefaultListener
+			var Instance pInstance
+			
+			/** Create receiver. */
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			/** Event received. */
+			func void onEvent(Object source, Object data)
+				var Desktop desktop = pInstance.getRenderableDesktop().getDesktop()
+				if desktop != null
+					desktop.onTranslationChanged()
+				end
+			end
+		end
+		
+		
+		var ECBDesktopLanguageChanged pECBehavior
+		var ECBehaviorRenderableDesktop.Instance pRenderableDesktop
+		var LanguageChangedReceived pReceiver
+		
+		
+		/** Create behavior instance. */
+		func new(ECBDesktopLanguageChanged ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pRenderableDesktop = ecbehavior.getRenderableDesktop().instance(element)
+			pReceiver = LanguageChangedReceived.new(this)
+			GameApp.getGameApp().getGlobalEvents().addListener(SessionSettings.globalEventLanguageChanged, pReceiver)
+		end
+		
+		/** Dispose of behavior. */
+		func void dispose()
+			if pReceiver != null
+				GameApp.getGameApp().getGlobalEvents().removeListener(SessionSettings.globalEventLanguageChanged, pReceiver)
+				pReceiver = null
+			end
+			
+			pRenderableDesktop = null
+			super.dispose()
+		end
+		
+		
+		/** Renderable desktop. */
+		func ECBehaviorRenderableDesktop.Instance getRenderableDesktop()
+			return pRenderableDesktop
+		end
+	end
+	
+	
+	var ECBehaviorRenderableDesktop pRenderableDesktop
+	
+	
+	/** Create behavior and add it to element class. */
+	func new(BehaviorElementClass eclass, ECBehaviorRenderableDesktop renderableDesktop) super(eclass)
+		pRenderableDesktop = renderableDesktop
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	func void dispose()
+		pRenderableDesktop = null
+		super.dispose()
+	end
+	
+	
+	/** Renderable desktop. */
+	func ECBehaviorRenderableDesktop getRenderableDesktop()
+		return pRenderableDesktop
+	end
+	
+	
+	/** Create behavior instance. */
+	func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
