@@ -50,7 +50,7 @@ class WCCPMTSecondary extends WCCPanelMotionTransfer
 	
 	/** Create window. */
 	func new(WindowCharacterConfiguration window) super(window)
-		pModelTypeName.setText("Secondary Motion")
+		pModelTypeName.setText("@UI.SecondaryMotion")
 		
 		pModelListSourceBone = SharedListModel.new(window.getModelBones())
 		pModelListSourceBone.setAutoSelect(false)
@@ -152,6 +152,7 @@ class WCCPMTSecondary extends WCCPanelMotionTransfer
 	/** Create window content. */
 	protected func void createContent()
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var EnumListElementRenderer renderer
 		var TextField textField
 		var ComboBox comboBox
 		var CheckBox checkBox
@@ -161,87 +162,89 @@ class WCCPMTSecondary extends WCCPanelMotionTransfer
 		createBaseContent("motiontransfersecondary")
 		
 		// source bone
-		label = Label.new("Source Bone:", "Label.FormCaption")
+		label = Label.new("@UI.SourceBone.Label", "Label.FormCaption")
 		pPanelForm.addWidget(label)
 		
 		comboBox = ComboBox.new(pModelListSourceBone, DefaultComboBoxEditor.new(pModelTextSourceBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Source bone to query parameter off to use to drive the Target Bones.")
+		comboBox.setToolTip("@UI.ToolTip.SourceBone.SecondaryMotion")
 		pPanelForm.addWidget(comboBox)
 		
 		CPEBone.new(preview, label, comboBox)
 		
 		// parameter
-		pPanelForm.addWidget(Label.new("Parameter:", "Label.FormCaption"))
+		pPanelForm.addWidget(Label.new("@UI.Parameter.Label", "Label.FormCaption"))
 		
-		comboBox = ComboBox.new(pModelParameter)
+		renderer = EnumListElementRenderer.new()
+		renderer.setTranslationPrefix("UI.Enum.MotionTransferSecondaryParameter.")
+		comboBox = ComboBox.new(pModelParameter, renderer)
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Parameter from Source Bone to use to drive Target Bones.")
+		comboBox.setToolTip("@UI.ToolTip.Parameter.SecondaryMotion")
 		pPanelForm.addWidget(comboBox)
 		
 		// minimum
-		pPanelForm.addWidget(Label.new("Minimum:", "Label.FormCaption"))
+		pPanelForm.addWidget(Label.new("@UI.Minimum.Label", "Label.FormCaption"))
 		
 		textField = TextField.new(pModelMinimum, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
-		textField.setToolTip("Minimum value of Source Bone Parameter mapping to start of Move animation.")
+		textField.setToolTip("@UI.ToolTip.Minimum.SecondaryMotion")
 		pPanelForm.addWidget(textField)
 		
 		// maximum
-		pPanelForm.addWidget(Label.new("Maximum:", "Label.FormCaption"))
+		pPanelForm.addWidget(Label.new("@UI.Maximum.Label", "Label.FormCaption"))
 		
 		textField = TextField.new(pModelMaximum, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
-		textField.setToolTip("Maximum value of Source Bone Parameter mapping to end of Move animation.")
+		textField.setToolTip("@UI.ToolTip.Maximum.SecondaryMotion")
 		pPanelForm.addWidget(textField)
 		
 		// target bones
-		label = Label.new("Target Bones:", "Label.FormCaption")
+		label = Label.new("@UI.TargetBones.Label", "Label.FormCaption")
 		pPanelForm.addWidget(label)
 		
 		listBox = ListBox.new(pModelTargetBones)
 		listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
-		listBox.setToolTip("Bones to affect by the secondary motion.")
+		listBox.setToolTip("@UI.ToolTip.TargetBones")
 		listBox.setNumberDisplayLines(5)
 		pPanelForm.addWidget(ScrollPanel.new(listBox))
 		
 		CPEBoneList.new(preview, label, listBox)
 		
 		// mode
-		pPanelForm.addWidget(Label.new("Mode:", "Label.FormCaption"))
+		pPanelForm.addWidget(Label.new("@UI.Mode.Label", "Label.FormCaption"))
 		
-		comboBox = ComboBox.new(pModelMode)
+		renderer = EnumListElementRenderer.new()
+		renderer.setTranslationPrefix("UI.Enum.MotionTransferSecondaryMode.")
+		comboBox = ComboBox.new(pModelMode, renderer)
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Secondary application mode.")
+		comboBox.setToolTip("@UI.ToolTip.ApplicationMode.SecondaryMotion")
 		pPanelForm.addWidget(comboBox)
 		
 		// move
-		pPanelForm.addWidget(Label.new("Move:", "Label.FormCaption"))
+		pPanelForm.addWidget(Label.new("@UI.Move.Label", "Label.FormCaption"))
 		
 		comboBox = ComboBox.new(pModelListMove, DefaultComboBoxEditor.new(pModelTextMove))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Animation move to apply to Target Bones using mapped input from Source Bone Parameter.")
+		comboBox.setToolTip("@UI.ToolTip.Move.SecondaryMotion")
 		pPanelForm.addWidget(comboBox)
 		
 		// reference time
-		pPanelForm.addWidget(Label.new("Reference Time:", "Label.FormCaption"))
+		pPanelForm.addWidget(Label.new("@UI.ReferenceTime.Label", "Label.FormCaption"))
 		
 		textField = TextField.new(pModelReferenceTime, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
-		textField.setToolTip("Animation frame time in seconds used as reference. "\
-			+ "Applied motion is the difference of the time mapped from the Source "\
-			+ "Bone Parameter and the reference frame. Used only for overlay mode.")
+		textField.setToolTip("@UI.ToolTip.ReferenceTime")
 		pPanelForm.addWidget(textField)
 		
 		// flip
 		pPanelForm.addWidget(Label.new(""))
 		
-		checkBox = CheckBox.new(pModelFlip, "Reverse Mapping")
+		checkBox = CheckBox.new(pModelFlip, "@UI.ReverseMapping")
 		checkBox.setDesignerSelector("CheckBox.WindowCharacterConfiguration")
-		checkBox.setToolTip("Reverse mapping. Maximum maps to start of animation and minimum to end.")
+		checkBox.setToolTip("@UI.ToolTip.ReverseMapping")
 		pPanelForm.addWidget(checkBox)
 	end
 end

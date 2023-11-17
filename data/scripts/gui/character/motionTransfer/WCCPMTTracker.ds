@@ -131,6 +131,7 @@ class WCCPMTTracker extends CollapsibleGroup
 	/** Create window content. */
 	protected func void createContent(Panel content)
 		var WidgetCharacterPreview preview = pPanelMotionTransfer.getWindowCharacterConfiguration().getCharacterPreview()
+		var EnumListElementRenderer renderer
 		var TextField textField
 		var ComboBox comboBox
 		var Button button
@@ -139,39 +140,40 @@ class WCCPMTTracker extends CollapsibleGroup
 		content.setLayout(FormLayout.new(true, 10, 2))
 		
 		// slot
-		content.addWidget(Label.new("Slot:", "Label.FormCaption"))
+		content.addWidget(Label.new("@UI.Slot.Label", "Label.FormCaption"))
 		
 		comboBox = ComboBox.new(pModelListSlot, DefaultComboBoxEditor.new(pModelTextSlot))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Tracker slot to use.")
+		comboBox.setToolTip("@UI.ToolTip.TrackerSlot")
 		content.addWidget(comboBox)
 		
 		// position
-		var Label labelPosition = Label.new("Position:", "Label.FormCaption")
+		var Label labelPosition = Label.new("@UI.Position", "Label.FormCaption")
 		content.addWidget(labelPosition)
 		
 		pEditOffsetPosition = EditVector.new()
-		pEditOffsetPosition.setToolTip("Position relative to slot.")
+		pEditOffsetPosition.setToolTip("@UI.ToolTip.Position.Slot")
 		content.addWidget(pEditOffsetPosition)
 		
 		// rotation
-		var Label labelRotation = Label.new("Rotation:", "Label.FormCaption")
+		var Label labelRotation = Label.new("@UI.Rotation", "Label.FormCaption")
 		content.addWidget(labelRotation)
 		
 		pEditOffsetRotation = EditVector.new()
-		pEditOffsetRotation.setToolTip("Rotation in degrees relative to slot.")
+		pEditOffsetRotation.setToolTip("@UI.ToolTip.Rotation.Slot")
 		content.addWidget(pEditOffsetRotation)
 		
 		CPECoordinateSystem.new(preview, labelPosition, pEditOffsetPosition, \
 			labelRotation, pEditOffsetRotation, null, comboBox, false)
 		
 		// auto transform
-		content.addWidget(Label.new("Auto Transform:", "Label.FormCaption"))
+		content.addWidget(Label.new("@UI.AutoTransform.Label", "Label.FormCaption"))
 		
-		comboBox = ComboBox.new(pModelAutoTransform)
+		renderer = EnumListElementRenderer.new()
+		renderer.setTranslationPrefix("UI.Enum.MotionTransferTrackerAutoTransform.")
+		comboBox = ComboBox.new(pModelAutoTransform, renderer)
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("What parts of the transform calculated from trackers to use. "\
-			+ "Apply position and rotation (full), only rotation (orientation) or none at all (none).")
+		comboBox.setToolTip("@UI.ToolTip.AutoTransform")
 		content.addWidget(comboBox)
 	end
 end

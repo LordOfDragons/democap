@@ -44,7 +44,7 @@ class WCCPMTAnimation extends WCCPanelMotionTransfer
 	
 	/** Create window. */
 	func new(WindowCharacterConfiguration window) super(window)
-		pModelTypeName.setText("Animation")
+		pModelTypeName.setText("@UI.Animation")
 		
 		pModelListMove = SharedListModel.new(window.getModelMoves())
 		pModelListMove.setAutoSelect(false)
@@ -119,6 +119,7 @@ class WCCPMTAnimation extends WCCPanelMotionTransfer
 	/** Create window content. */
 	protected func void createContent()
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var EnumListElementRenderer renderer
 		var TextField textField
 		var ComboBox comboBox
 		var Button button
@@ -128,40 +129,42 @@ class WCCPMTAnimation extends WCCPanelMotionTransfer
 		createBaseContent("motiontransferanimation")
 		
 		// move
-		pPanelForm.addWidget(Label.new("Move:", "Label.FormCaption"))
+		pPanelForm.addWidget(Label.new("@UI.Move.Label", "Label.FormCaption"))
 		
 		comboBox = ComboBox.new(pModelListMove, DefaultComboBoxEditor.new(pModelTextMove))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Animation move to use.")
+		comboBox.setToolTip("@UI.ToolTip.Move")
 		pPanelForm.addWidget(comboBox)
 		
 		// target bones
-		label = Label.new("Target Bones:", "Label.FormCaption")
+		label = Label.new("@UI.TargetBones.Label", "Label.FormCaption")
 		pPanelForm.addWidget(label)
 		
 		listBox = ListBox.new(pModelTargetBones)
 		listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
-		listBox.setToolTip("Bones to affect by the animation.")
+		listBox.setToolTip("@UI.ToolTip.TargetBones")
 		listBox.setNumberDisplayLines(5)
 		pPanelForm.addWidget(ScrollPanel.new(listBox))
 		
 		CPEBoneList.new(preview, label, listBox)
 		
 		// mode
-		pPanelForm.addWidget(Label.new("Mode:", "Label.FormCaption"))
+		pPanelForm.addWidget(Label.new("@UI.Mode.Label", "Label.FormCaption"))
 		
-		comboBox = ComboBox.new(pModelMode)
+		renderer = EnumListElementRenderer.new()
+		renderer.setTranslationPrefix("UI.Enum.MotionTransferAnimationMode.")
+		comboBox = ComboBox.new(pModelMode, renderer)
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Animation application mode.")
+		comboBox.setToolTip("@UI.ToolTip.AnimationApplicationMode")
 		pPanelForm.addWidget(comboBox)
 		
 		// playtime
-		pPanelForm.addWidget(Label.new("Playtime:", "Label.FormCaption"))
+		pPanelForm.addWidget(Label.new("@UI.Playtime.Label", "Label.FormCaption"))
 		
 		textField = TextField.new(pModelPlaytime, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
-		textField.setToolTip("Playtime of animation in seconds before looping back to the beginning.")
+		textField.setToolTip("@UI.ToolTip.PlaytimeAnimation")
 		pPanelForm.addWidget(textField)
 	end
 end

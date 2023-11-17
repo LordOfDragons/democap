@@ -50,7 +50,7 @@ class WCCPMTCopy extends WCCPanelMotionTransfer
 	
 	/** Create window. */
 	func new(WindowCharacterConfiguration window) super(window)
-		pModelTypeName.setText("Copy Bone States")
+		pModelTypeName.setText("@UI.CopyBoneStates")
 		
 		pModelListSourceBone = SharedListModel.new(window.getModelBones())
 		pModelListSourceBone.setAutoSelect(false)
@@ -154,6 +154,7 @@ class WCCPMTCopy extends WCCPanelMotionTransfer
 	/** Create window content. */
 	protected func void createContent()
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var EnumListElementRenderer renderer
 		var TextField textField
 		var ComboBox comboBox
 		var Button button
@@ -164,88 +165,89 @@ class WCCPMTCopy extends WCCPanelMotionTransfer
 		createBaseContent("motiontransfercopy")
 		
 		// source bone
-		label = Label.new("Source Bone:", "Label.FormCaption")
+		label = Label.new("@UI.SourceBone.Label", "Label.FormCaption")
 		pPanelForm.addWidget(label)
 		
 		comboBox = ComboBox.new(pModelListSourceBone, DefaultComboBoxEditor.new(pModelTextSourceBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Source bone to copy states from.")
+		comboBox.setToolTip("@UI.ToolTip.SourceBone.CopyBoneStates")
 		pPanelForm.addWidget(comboBox)
 		
 		CPEBone.new(preview, label, comboBox)
 		
 		// target bones
-		label = Label.new("Target Bones:", "Label.FormCaption")
+		label = Label.new("@UI.TargetBones.Label", "Label.FormCaption")
 		pPanelForm.addWidget(label)
 		
 		listBox = ListBox.new(pModelTargetBones)
 		listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
-		listBox.setToolTip("Bones to apply copied states to.")
+		listBox.setToolTip("@UI.ToolTip.TargetBones.CopyBoneStates")
 		listBox.setNumberDisplayLines(3)
 		pPanelForm.addWidget(ScrollPanel.new(listBox))
 		
 		CPEBoneList.new(preview, label, listBox)
 		
 		// scale
-		pPanelForm.addWidget(Label.new("Scale:", "Label.FormCaption"))
+		pPanelForm.addWidget(Label.new("@UI.Scale.Label", "Label.FormCaption"))
 		
 		pPanelForm.addWidget(Panel.new(GridLayout.new(0, 1, 5), block Panel p
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.last), block Panel p2
-				p2.addWidget(Label.new("Position"))
+				p2.addWidget(Label.new("@UI.Position"))
 				
 				textField = TextField.new(pModelScalePosition, 6)
 				textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 				textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
-				textField.setToolTip("Scaling to apply to copied position.")
+				textField.setToolTip("@UI.ToolTip.ScalePosition.CopyBoneStates")
 				p2.addWidget(textField)
 			end))
 			
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.last), block Panel p2
-				p2.addWidget(Label.new("Rotation"))
+				p2.addWidget(Label.new("@UI.Rotation"))
 				
 				textField = TextField.new(pModelScaleRotation, 6)
 				textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 				textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
-				textField.setToolTip("Scaling to apply to copied rotations.")
+				textField.setToolTip("@UI.ToolTip.ScaleRotation.CopyBoneStates")
 				p2.addWidget(textField)
 			end))
 		end))
 		
 		// mode
-		pPanelForm.addWidget(Label.new("Copy Mode:", "Label.FormCaption"))
+		pPanelForm.addWidget(Label.new("@UI.CopyMode.Label", "Label.FormCaption"))
 		
-		comboBox = ComboBox.new(pModelCopyMode)
+		renderer = EnumListElementRenderer.new()
+		renderer.setTranslationPrefix("UI.Enum.MotionTransferCopyMode.")
+		comboBox = ComboBox.new(pModelCopyMode, renderer)
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("Copy mode. Copy from component space to component space (component) "\
-			+ "or bone local space to bone local space (local).")
+		comboBox.setToolTip("@UI.ToolTip.CopyMode.CopyBoneStates")
 		pPanelForm.addWidget(comboBox)
 		
 		// restrictions
-		pPanelForm.addWidget(Label.new("Copy:", "Label.FormCaption"))
+		pPanelForm.addWidget(Label.new("@UI.Copy.Label", "Label.FormCaption"))
 		
 		pPanelForm.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p
-			checkBox = CheckBox.new(pModelCopyPosition, "Position")
-			checkBox.setToolTip("Copy position")
+			checkBox = CheckBox.new(pModelCopyPosition, "@UI.Position")
+			checkBox.setToolTip("@UI.ToolTip.CopyPosition")
 			p.addWidget(checkBox)
 			
-			checkBox = CheckBox.new(pModelCopyRotation, "Rotation")
-			checkBox.setToolTip("Copy rotation")
+			checkBox = CheckBox.new(pModelCopyRotation, "@UI.Rotation")
+			checkBox.setToolTip("@UI.ToolTip.CopyRotation")
 			p.addWidget(checkBox)
 		end))
 		
-		pPanelForm.addWidget(Label.new("Lock:", "Label.FormCaption"))
+		pPanelForm.addWidget(Label.new("@UI.Lock.Label", "Label.FormCaption"))
 		
 		pPanelForm.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p
-			checkBox = CheckBox.new(pModelLockX, "X")
-			checkBox.setToolTip("Do not modify X coordinates")
+			checkBox = CheckBox.new(pModelLockX, "@UI.X")
+			checkBox.setToolTip("@UI.ToolTip.NoModifyXCoord")
 			p.addWidget(checkBox)
 			
-			checkBox = CheckBox.new(pModelLockY, "Y")
-			checkBox.setToolTip("Do not modify Y coordinates")
+			checkBox = CheckBox.new(pModelLockY, "@UI.Y")
+			checkBox.setToolTip("@UI.ToolTip.NoModifyYCoord")
 			p.addWidget(checkBox)
 			
-			checkBox = CheckBox.new(pModelLockZ, "Z")
-			checkBox.setToolTip("Do not modify Z coordinates")
+			checkBox = CheckBox.new(pModelLockZ, "@UI.Z")
+			checkBox.setToolTip("@UI.ToolTip.NoModifyZCoord")
 			p.addWidget(checkBox)
 		end))
 	end
