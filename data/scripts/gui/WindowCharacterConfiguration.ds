@@ -620,6 +620,7 @@ class WindowCharacterConfiguration extends WindowDialog
 	protected func void createContent()
 		var String uioptPrefix = prefixUIOptions(pInVR)
 		var LabelledComboBox lcb, lcbtip, lcbbase
+		var EnumListElementRenderer renderer
 		var LabelledTextField ltf
 		var TextField textField
 		var ComboBox comboBox
@@ -644,14 +645,16 @@ class WindowCharacterConfiguration extends WindowDialog
 			CollapsibleGroup.persistModel(uioptPrefix + "/GroupCharacter"),\
 			FormLayout.new(true, 10, 2), block Panel p2
 				ltf = LabelledTextField.new(p2, "@UI.ConfigurationName.Label", pModelConfigName)
-				ltf.setToolTip("@UI.ToolTip.WindowCharacterConfiguration.ConfigurationName")
+				ltf.setToolTip("@UI.ToolTip.ConfigurationName")
 				
-				lcb = LabelledComboBox.new(p2, "@UI.ScaleMode.Label", pModelScaleMode)
-				lcb.setToolTip("@UI.ToolTip.WindowCharacterConfiguration.ScaleMode")
+				renderer = EnumListElementRenderer.new()
+				renderer.setTranslationPrefix("UI.Enum.CharacterScaleMode.")
+				lcb = LabelledComboBox.new(p2, "@UI.ScaleMode.Label", pModelScaleMode, renderer)
+				lcb.setToolTip("@UI.ToolTip.ScaleMode")
 				
 				lcb = LabelledComboBox.new(p2, "@UI.MoveCalibrate.Label", pModelListMoveCalibrate,\
 					pModelTextMoveCalibrate, MoveCalibrateChanged.new(this))
-				lcb.setToolTip("@UI.ToolTip.WindowCharacterConfiguration.MoveCalibrate")
+				lcb.setToolTip("@UI.ToolTip.MoveCalibrate")
 			end))
 			
 			// camera
@@ -661,9 +664,9 @@ class WindowCharacterConfiguration extends WindowDialog
 			FormLayout.new(true, 10, 2), block Panel p2
 				result = uiBuilder.formBonePositionRotation(p2, pCharacterPreview,\
 					"@UI.Bone.Label", "@UI.Position.Label", "@UI.Rotation.Label",\
-					"@UI.ToolTip.WindowCharacterConfiguration.Bone",\
-					"@UI.ToolTip.WindowCharacterConfiguration.Position",\
-					"@UI.ToolTip.WindowCharacterConfiguration.Rotation",\
+					"@UI.ToolTip.VRCameraBone",\
+					"@UI.ToolTip.VRCameraPosition",\
+					"@UI.ToolTip.VRCameraRotation",\
 					pModelListCameraBone, pModelTextCameraBone,\
 					pCharacterConfiguration.getCameraPosition(), pCharacterConfiguration.getCameraRotation())
 				
@@ -678,28 +681,28 @@ class WindowCharacterConfiguration extends WindowDialog
 			FormLayout.new(true, 10, 2), block Panel p2
 				// right hand
 				lcb = LabelledComboBox.new(p2, "@UI.BoneRight.Label", pModelListGrabBoneRight, pModelTextGrabBoneRight)
-				lcb.setToolTip("@UI.ToolTip.WindowCharacterConfiguration.BoneRight")
+				lcb.setToolTip("@UI.ToolTip.GrabRightHandBone")
 				CPEBone.new(pCharacterPreview, lcb)
 				
 				lcbtip = LabelledComboBox.new(p2, "@UI.TipBoneRight.Label", pModelListGrabTipBoneRight, pModelTextGrabTipBoneRight)
-				lcbtip.setToolTip("@UI.ToolTip.WindowCharacterConfiguration.TipBoneRight")
+				lcbtip.setToolTip("@UI.ToolTip.GrabRightHandTipBone")
 				
 				lcbbase = LabelledComboBox.new(p2, "@UI.BaseBoneRight.Label", pModelListGrabBaseBoneRight, pModelTextGrabBaseBoneRight)
-				lcbbase.setToolTip("@UI.ToolTip.WindowCharacterConfiguration.BaseBoneRight")
+				lcbbase.setToolTip("@UI.ToolTip.GrabRightHandBaseBone")
 				
 				CPEBoneChain.new(pCharacterPreview, lcbtip, lcbbase, false)
 				CPEBoneChain.new(pCharacterPreview, lcbtip, lcbbase, true)
 				
 				// left hand
 				lcb = LabelledComboBox.new(p2, "@UI.BoneLeft.Label", pModelListGrabBoneLeft, pModelTextGrabBoneLeft)
-				lcb.setToolTip("@UI.ToolTip.WindowCharacterConfiguration.BoneLeft")
+				lcb.setToolTip("@UI.ToolTip.GrabLeftHandBone")
 				CPEBone.new(pCharacterPreview, lcb)
 				
 				lcbtip = LabelledComboBox.new(p2, "@UI.TipBoneLeft.Label", pModelListGrabTipBoneLeft, pModelTextGrabTipBoneLeft)
-				lcbtip.setToolTip("@UI.ToolTip.WindowCharacterConfiguration.TipBoneLeft")
+				lcbtip.setToolTip("@UI.ToolTip.GrabLeftHandTipBone")
 				
 				lcbbase = LabelledComboBox.new(p2, "@UI.BaseBoneLeft.Label", pModelListGrabBaseBoneLeft, pModelTextGrabBaseBoneLeft)
-				lcbbase.setToolTip("@UI.ToolTip.WindowCharacterConfiguration.BaseBoneLeft")
+				lcbbase.setToolTip("@UI.ToolTip.GrabLeftHandBaseBone")
 				
 				CPEBoneChain.new(pCharacterPreview, lcbtip, lcbbase, false)
 				CPEBoneChain.new(pCharacterPreview, lcbtip, lcbbase, true)
