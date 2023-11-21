@@ -578,6 +578,12 @@ class WMPanelProject extends Panel
 			item.setEnabled(pPanel.getObject() != null)
 			menu.addWidget(item)
 			
+			item = MenuItemCommand.new("@UI.RemoveAll", BlockActionListener.new(block ActionEvent event
+				pPanel.removeAllObjects()
+			end))
+			item.setToolTip("@UI.ToolTip.RemoveAllObjects")
+			menu.addWidget(item)
+			
 			item = MenuItemCommand.new("@UI.ChangeClass.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.changeObjectClass()
 			end))
@@ -1742,6 +1748,38 @@ class WMPanelProject extends Panel
 			WindowDialog.BlockResultListener.new(block bool result
 				if result
 					pObject.getElement().safeDispose()
+				end
+		end))
+	end
+	
+	/** Remove all objects. */
+	func void removeAllObjects()
+		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+		if gameWorld == null
+			return
+		end
+		
+		var Array objects = Array.new()
+		gameWorld.forEachElement(block BehaviorElement each
+			var ECBSceneObject.Instance sceneObject = ECBSceneObject.getInstanceIn(each)
+			if sceneObject != null and sceneObject.getECBehavior().canRemove.getValue()
+				objects.add(sceneObject.getElement())
+			end
+		end)
+		
+		if objects.getCount() == 0
+			return
+		end
+		
+		WindowDialog.question(getWindow(), "@UI.RemoveAllSceneObjects",\
+			"@UI.Message.AskRemoveAllObjects", null, Array.newWith(\
+				WindowDialog.ButtonConfiguration.new("@UI.Remove", true),\
+				WindowDialog.ButtonConfiguration.new("@UI.Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					objects.forEach(block BehaviorElement each
+						each.safeDispose()
+					end)
 				end
 		end))
 	end
