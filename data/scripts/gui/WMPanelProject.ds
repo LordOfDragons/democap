@@ -1267,6 +1267,20 @@ class WMPanelProject extends Panel
 		app.getWorldSpawnCharacter().setGameWorld(null)
 		app.getWindowGameWorld().setGameWorld(null)
 		
+		// create copy of scene objects to restore them later on
+		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
+		var Array restoreObjects
+		
+		if gameWorld != null
+			restoreObjects = Array.new()
+			gameWorld.forEachElement(block BehaviorElement each
+				var ECBCopyObject.Instance copyObject = ECBCopyObject.getInstanceIn(each)
+				if copyObject != null
+					restoreObjects.add(copyObject.createCopyData())
+				end
+			end)
+		end
+		
 		// drop saved state
 		pScene.dropSaveState()
 		
@@ -1274,7 +1288,7 @@ class WMPanelProject extends Panel
 		pScene.setPathWorld(world.getPath())
 		pProject.save()
 		
-		pScene.loadWorld(pProject)
+		pScene.loadWorld(pProject, restoreObjects)
 	end
 	
 	

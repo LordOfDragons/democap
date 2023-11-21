@@ -21,6 +21,8 @@
 
 namespace Democap
 
+pin Democap.Behaviors
+
 pin Dragengine.CameraDirectors
 pin Dragengine.Gui
 pin Dragengine.Preloading
@@ -36,13 +38,15 @@ pin Dragengine.Utils
 class StartGame extends WindowGameWorld.Loader
 	var Project pProject
 	var Scene pScene
+	var Array pRestoreObjects
 	
 	
 	
 	/** Create start game loader. */
-	func new(WindowGameWorld window, Project project, Scene scene) super(window)
+	func new(WindowGameWorld window, Project project, Scene scene, Array restoreObjects) super(window)
 		pProject = project
 		pScene = scene
+		pRestoreObjects = restoreObjects
 		
 		setPathWorld(File.absolutePath(scene.getPathWorld(), project.getDataDirectory().toString()).getPath())
 		
@@ -100,7 +104,7 @@ class StartGame extends WindowGameWorld.Loader
 		remapPropertyPath()
 	end
 	
-	/** Relap properties with path inside. */
+	/** Remap properties with path inside. */
 	protected func void remapPropertyPath()
 		var String remapPath = getStubWorld().getPropertyValueFor("democap.remapPropertyPath", "")
 		if remapPath.empty()
@@ -120,6 +124,23 @@ class StartGame extends WindowGameWorld.Loader
 				end
 			end)
 		end)
+	end
+	
+	/** Create content from stub. */
+	protected func void createContentFromStub()
+		super.createContentFromStub()
+		
+		// restore objects is put aside and cleared to avoid dead-loop
+		// if recreating objects fails for whatever reason
+		var Array restoreObjects = pRestoreObjects
+		pRestoreObjects = null
+		
+		if restoreObjects != null
+			var GameWorld gameWorld = getStubWorld().getGameWorld()
+			restoreObjects.forEach(block ECBCopyObject.ObjectCopyData each
+				each.createCopy(gameWorld, null, DVector.new())
+			end)
+		end
 	end
 	
 	/** Loading world finished successfully. */
@@ -176,6 +197,22 @@ class StartGame extends WindowGameWorld.Loader
 		BaseGameApp.getApp().cancelLoadGameWorld()
 		
 		// this triggers another StartGame so it has to come last
-		scene.revertToDefaultState(project)
+		//
+		// two main reasons can lead to this function to be called.
+		//
+		// 1) a custom *.deworld is broken and can not be loaded.
+		//    in this case pRestoreObjects is potentially an Array holding objects
+		//    to be restored. by switching back to the default world and restoring
+		//    the objects we should be back to a working condition.
+		//
+		// 2) an object fails to load.
+		//    this should never happen. in case this still happens pRestoreObjects
+		//    will be always null (no matter if case 1 fired or not). in this case
+		//    world will be also set back to default but no objects will be
+		//    restored. this way the scene resets to default state. this is
+		//    the ultimate fallback if something goes horribly wrong.
+		//
+		// the possible sequence of actions can be 1->2 or 2
+		scene.revertWorldToDefault(project, pRestoreObjects)
 	end
 end

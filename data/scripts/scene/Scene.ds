@@ -224,14 +224,14 @@ class Scene
 	
 	
 	/** Load world. */
-	func void loadWorld(Project project)
+	func void loadWorld(Project project, Array restoreObjects)
 		var GameApp app = GameApp.getGameApp()
 		try
-			app.startLoadGameWorld(StartGame.new(app.getWindowGameWorld(), project, this))
+			app.startLoadGameWorld(StartGame.new(app.getWindowGameWorld(), project, this, restoreObjects))
 			
 		catch Exception e
 			app.getConsole().addError("Scene.loadWorld", e)
-			revertToDefaultState(project)
+			revertWorldToDefault(project, restoreObjects)
 		end
 	end
 	
@@ -277,13 +277,13 @@ class Scene
 		pSaveState = null
 	end
 	
-	/** Revert scene to default state. */
-	func void revertToDefaultState(Project project)
+	/** Revert scene world to default. */
+	func void revertWorldToDefault(Project project, Array restoreObjects)
 		GameApp.getGameApp().getConsole().addMessage("Reverting scene '" + pName + "' to default state")
 		pSaveState = null
 		pPathWorld = "/content/worlds/default.deworld"
 		project.save()
-		loadWorld(project)
+		loadWorld(project, restoreObjects)
 	end
 	
 	
