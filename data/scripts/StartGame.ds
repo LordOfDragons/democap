@@ -167,10 +167,15 @@ class StartGame extends WindowGameWorld.Loader
 	
 	/** Loading world failed. */
 	func void onLoadWorldFailed()
+		var Project project = pProject
+		var Scene scene = pScene
+		
 		super.onLoadWorldFailed()
 		
-		pScene.getFileUsage().setLocked(false)
-		
+		scene.getFileUsage().setLocked(false)
 		BaseGameApp.getApp().cancelLoadGameWorld()
+		
+		// this triggers another StartGame so it has to come last
+		scene.revertToDefaultState(project)
 	end
 end

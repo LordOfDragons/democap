@@ -225,8 +225,14 @@ class Scene
 	
 	/** Load world. */
 	func void loadWorld(Project project)
-		GameApp.getGameApp().startLoadGameWorld(StartGame.new(\
-			GameApp.getGameApp().getWindowGameWorld(), project, this))
+		var GameApp app = GameApp.getGameApp()
+		try
+			app.startLoadGameWorld(StartGame.new(app.getWindowGameWorld(), project, this))
+			
+		catch Exception e
+			app.getConsole().addError("Scene.loadWorld", e)
+			revertToDefaultState(project)
+		end
 	end
 	
 	/** Save state. */
@@ -271,6 +277,14 @@ class Scene
 		pSaveState = null
 	end
 	
+	/** Revert scene to default state. */
+	func void revertToDefaultState(Project project)
+		GameApp.getGameApp().getConsole().addMessage("Reverting scene '" + pName + "' to default state")
+		pSaveState = null
+		pPathWorld = "/content/worlds/default.deworld"
+		project.save()
+		loadWorld(project)
+	end
 	
 	
 	/** Add listener. */
