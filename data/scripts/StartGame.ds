@@ -38,15 +38,17 @@ pin Dragengine.Utils
 class StartGame extends WindowGameWorld.Loader
 	var Project pProject
 	var Scene pScene
-	var Array pRestoreObjects
+	var Array pKeepObjects
+	var bool pRevertOnFailure
 	
 	
 	
 	/** Create start game loader. */
-	func new(WindowGameWorld window, Project project, Scene scene, Array restoreObjects) super(window)
+	func new(WindowGameWorld window, Project project, Scene scene, Array keepObjects) super(window)
 		pProject = project
 		pScene = scene
-		pRestoreObjects = restoreObjects
+		pKeepObjects = keepObjects
+		pRevertOnFailure = true
 		
 		setPathWorld(File.absolutePath(scene.getPathWorld(), project.getDataDirectory().toString()).getPath())
 		
@@ -69,12 +71,40 @@ class StartGame extends WindowGameWorld.Loader
 			setIgnorePersistableElements(true)
 			
 		else
-			getIDGenerator().setFrom(UniqueID.new(1))
+			var UniqueID lastId = UniqueID.new()
+			
+			if keepObjects != null
+				lastId = keepObjects.inject(lastId, block UniqueID lastId, ECBSceneObject.Instance each
+					var UniqueID id = each.getElement().getID()
+					if id > lastId
+						lastId = id
+					end
+					return lastId
+				end) cast UniqueID
+			end
+			
+			getIDGenerator().setFrom(lastId + 1)
 		end
 		
 		pScene.getFileUsage().setLocked(true)
 	end
 	
+	/** Dispose of game loader. */
+	func void dispose()
+		if pKeepObjects != null
+			pKeepObjects.forEach(block ECBSceneObject.Instance each
+				try
+					each.getElement().safeDispose()
+				catch Exception e
+					getConsole().addError("Dispose of keep object failed.", e)
+				end
+			end)
+			pKeepObjects = null
+		end
+		pRevertOnFailure = false
+		
+		super.dispose()
+	end
 	
 	
 	/** Scene. */
@@ -91,6 +121,16 @@ class StartGame extends WindowGameWorld.Loader
 		// the base class implementation activates the desktop input processor.
 		// revert back to our split input processor
 		GameApp.getGameApp().setSplitInputProcessor()
+	end
+	
+	/** Load world. */
+	protected func void loadWorld()
+		super.loadWorld()
+		
+		if getPersistencyEnvironment() == null or getPersistencyReader() == null
+			// special code required to remap world elements if world changes
+			getStubWorld().remapObjectIDs(getStubWorld().getGameWorld().getUniqueIDRemapper())
+		end
 	end
 	
 	/** Create game world. */
@@ -132,13 +172,14 @@ class StartGame extends WindowGameWorld.Loader
 		
 		// restore objects is put aside and cleared to avoid dead-loop
 		// if recreating objects fails for whatever reason
-		var Array restoreObjects = pRestoreObjects
-		pRestoreObjects = null
+		var Array keepObjects = pKeepObjects
+		pKeepObjects = null
 		
-		if restoreObjects != null
+		if keepObjects != null
 			var GameWorld gameWorld = getStubWorld().getGameWorld()
-			restoreObjects.forEach(block ECBCopyObject.ObjectCopyData each
-				each.createCopy(gameWorld, null, DVector.new())
+			
+			keepObjects.forEach(block ECBSceneObject.Instance each
+				gameWorld.addElement(each.getElement())
 			end)
 		end
 	end
@@ -188,31 +229,39 @@ class StartGame extends WindowGameWorld.Loader
 	
 	/** Loading world failed. */
 	func void onLoadWorldFailed()
+		var bool revertOnFailure = pRevertOnFailure
+		pRevertOnFailure = false
+		
+		var Array keepObjects = pKeepObjects
+		pKeepObjects = null
+		
 		var Project project = pProject
 		var Scene scene = pScene
 		
 		super.onLoadWorldFailed()
 		
 		scene.getFileUsage().setLocked(false)
-		BaseGameApp.getApp().cancelLoadGameWorld()
+		BaseGameApp.getApp().cancelLoadGameWorld() // disposes of us
 		
-		// this triggers another StartGame so it has to come last
-		//
-		// two main reasons can lead to this function to be called.
-		//
-		// 1) a custom *.deworld is broken and can not be loaded.
-		//    in this case pRestoreObjects is potentially an Array holding objects
-		//    to be restored. by switching back to the default world and restoring
-		//    the objects we should be back to a working condition.
-		//
-		// 2) an object fails to load.
-		//    this should never happen. in case this still happens pRestoreObjects
-		//    will be always null (no matter if case 1 fired or not). in this case
-		//    world will be also set back to default but no objects will be
-		//    restored. this way the scene resets to default state. this is
-		//    the ultimate fallback if something goes horribly wrong.
-		//
-		// the possible sequence of actions can be 1->2 or 2
-		scene.revertWorldToDefault(project, pRestoreObjects)
+		if revertOnFailure
+			// this triggers another StartGame so it has to come last
+			//
+			// two main reasons can lead to this function to be called.
+			//
+			// 1) a custom *.deworld is broken and can not be loaded.
+			//    in this case pRestoreObjects is potentially an Array holding objects
+			//    to be restored. by switching back to the default world and restoring
+			//    the objects we should be back to a working condition.
+			//
+			// 2) an object fails to load.
+			//    this should never happen. in case this still happens pRestoreObjects
+			//    will be always null (no matter if case 1 fired or not). in this case
+			//    world will be also set back to default but no objects will be
+			//    restored. this way the scene resets to default state. this is
+			//    the ultimate fallback if something goes horribly wrong.
+			//
+			// the possible sequence of actions can be 1->2 or 2
+			scene.revertWorldToDefault(project, keepObjects)
+		end
 	end
 end

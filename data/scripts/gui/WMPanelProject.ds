@@ -1269,23 +1269,30 @@ class WMPanelProject extends Panel
 			return
 		end
 		
-		// dispose game world. this removes scene objects and clears held file usages
+		// remove special scene objects that should not be kept
 		app.getWorldSpawnCharacter().setGameWorld(null)
-		app.getWindowGameWorld().setGameWorld(null)
 		
-		// create copy of scene objects to restore them later on
+		// store scene objects to restore later on
 		var GameWorld gameWorld = GameApp.getGameApp().getWindowGameWorld().getGameWorld()
-		var Array restoreObjects
+		var Array keepObjects = Array.new()
 		
 		if gameWorld != null
-			restoreObjects = Array.new()
 			gameWorld.forEachElement(block BehaviorElement each
-				var ECBCopyObject.Instance copyObject = ECBCopyObject.getInstanceIn(each)
-				if copyObject != null
-					restoreObjects.add(copyObject.createCopyData())
+				if each.getID() != UniqueID.new()
+					var ECBSceneObject.Instance sceneObject = ECBSceneObject.getInstanceIn(each)
+					if sceneObject != null
+						keepObjects.add(sceneObject)
+					end
 				end
 			end)
+			
+			keepObjects.forEach(block ECBSceneObject.Instance each
+				gameWorld.removeElement(each.getElement())
+			end)
 		end
+		
+		// dispose game world. this removes scene objects and clears held file usages
+		app.getWindowGameWorld().setGameWorld(null)
 		
 		// drop saved state
 		pScene.dropSaveState()
@@ -1294,7 +1301,7 @@ class WMPanelProject extends Panel
 		pScene.setPathWorld(world.getPath())
 		pProject.save()
 		
-		pScene.loadWorld(pProject, restoreObjects)
+		pScene.loadWorld(pProject, keepObjects)
 	end
 	
 	

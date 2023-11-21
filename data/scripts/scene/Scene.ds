@@ -224,14 +224,26 @@ class Scene
 	
 	
 	/** Load world. */
-	func void loadWorld(Project project, Array restoreObjects)
+	func void loadWorld(Project project, Array keepObjects)
 		var GameApp app = GameApp.getGameApp()
+		var StartGame loader
 		try
-			app.startLoadGameWorld(StartGame.new(app.getWindowGameWorld(), project, this, restoreObjects))
+			loader = StartGame.new(app.getWindowGameWorld(), project, this, keepObjects)
 			
 		catch Exception e
 			app.getConsole().addError("Scene.loadWorld", e)
-			revertWorldToDefault(project, restoreObjects)
+			revertWorldToDefault(project, keepObjects)
+			return
+		end
+		
+		// only try-catched here since BaseGameApp.startLoadGameWorld does already call
+		// cancelLoading() on the loader in case of failure. doing it twice would cause
+		// re-entrant exceptions
+		try
+			app.startLoadGameWorld(loader)
+			
+		catch Exception e
+			return
 		end
 	end
 	
@@ -278,12 +290,12 @@ class Scene
 	end
 	
 	/** Revert scene world to default. */
-	func void revertWorldToDefault(Project project, Array restoreObjects)
-		GameApp.getGameApp().getConsole().addMessage("Reverting scene '" + pName + "' to default state")
+	func void revertWorldToDefault(Project project, Array keepObjects)
+		GameApp.getGameApp().getConsole().addMessage("Reverting scene '" + pName + "' world to default")
 		pSaveState = null
 		pPathWorld = "/content/worlds/default.deworld"
 		project.save()
-		loadWorld(project, restoreObjects)
+		loadWorld(project, keepObjects)
 	end
 	
 	
