@@ -34,6 +34,7 @@
 #include "DEMoCapLiveLinkSourceSettings.h"
 #include "Misc/CoreDelegates.h"
 #include "Misc/ScopeLock.h"
+#include "Misc/App.h"
 #include "Roles/LiveLinkAnimationRole.h"
 #include "Roles/LiveLinkTransformRole.h"
 
