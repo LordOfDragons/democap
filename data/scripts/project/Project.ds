@@ -108,7 +108,7 @@ class Project
 	var Scenes pScenes
 	var CharacterAnimations pSavedAnimations
 	var String pPostLoadActivateScene
-	
+	var ElementClassList pElementClassList
 	
 	
 	/** Create project. */
@@ -118,6 +118,7 @@ class Project
 		pAnimationIDGenerator = MutableID.new(1)
 		pScenes = Scenes.new(pFileUsage)
 		pSavedAnimations = CharacterAnimations.new(pFileUsage)
+		pElementClassList = ElementClassList.new()
 		updateDirectories()
 	end
 	
@@ -180,6 +181,10 @@ class Project
 		
 		pSavedAnimations.dispose()
 		pScenes.dispose()
+		
+		if pElementClassList != null
+			pElementClassList.dispose()
+		end
 	end
 	
 	
@@ -274,6 +279,52 @@ class Project
 	/** Saved animations. */
 	func CharacterAnimations getSavedAnimations()
 		return pSavedAnimations
+	end
+	
+	/** Element classes list. */
+	func ElementClassList getElementClassList()
+		return pElementClassList
+	end
+	
+	/** Load element classes. */
+	func void loadElementClasses()
+		var GameApp app = GameApp.getGameApp()
+		var ElementClassList eclistGlobal = app.getElementClassList()
+		var ElementClassList eclist = ElementClassList.new()
+		var Console console = app.getConsole()
+		
+		console.addMessage("loading project element classes: " + pDataDirectory.getPath())
+		try
+			// loading requires the global element class list to properly resolve element classes.
+			// the result though has to be written to a different list to avoid conflicts
+			loadElementClasses(app.getLoaders().getElementClass(), eclistGlobal, eclist, pDataDirectory.getPath())
+			
+		catch Exception e
+			eclist.dispose()
+			throw
+		end
+		
+		pElementClassList.dispose()
+		pElementClassList = eclist
+		
+		eclist.forEach(block ElementClass each
+// 			console.addMessage("- " + each.getClassname())
+			if not eclistGlobal.hasNamed(each.getClassname())
+				eclistGlobal.add(each)
+			end
+		end)
+		
+		app.storeECListHandles()
+		app.storeECListSceneObjects()
+	end
+	
+	protected func void loadElementClasses(LoadElementClass loader, ElementClassList globalList, ElementClassList list, String directory)
+		FileSystem.searchFiles(directory, true, block String each, FileType type
+			if type == FileType.file and FileSystem.pathMatchesPattern(File.new(each).getName(), "*.deeclass")
+				list.add(loader.loadFromFile(globalList, each))
+			end
+			return true
+		end)
 	end
 	
 	

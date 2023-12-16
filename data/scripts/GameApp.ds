@@ -102,6 +102,8 @@ class GameApp extends BaseGameApp
 	var DNServer pServer
 	var HmdDisabledWorld pHmdDisabledWorld
 	
+	var Array pGlobalElementClasses
+	
 	
 	/**
 	 * Create Game Application.
@@ -117,6 +119,7 @@ class GameApp extends BaseGameApp
 // 		defaultConsoleBufferSize = 100
 		
 		pPatternsProject = Array.newWith(FileExtension.new("DEMoCap Project", Array.newWith(".demcp"), ".demcp"))
+		pGlobalElementClasses = Array.new()
 	end
 	
 	
@@ -274,11 +277,25 @@ class GameApp extends BaseGameApp
 			return
 		end
 		
+		var ElementClassList eclist = getElementClassList()
+		
 		pWorldSpawnCharacter.setCharacter(null) // avoid problems
 		setScene(null) // saves project
+		removeNonGlobalElementClasses()
 		var Project disposeProject = pProject
 		
 		pProject = project
+		
+		if project != null
+			try
+				project.loadElementClasses()
+				
+			catch Exception e
+				getConsole().addError("open project failed (load element classes)", e)
+				WindowDialog.message(getWindowGameWorld(), "Open Project",\
+					"Failed opening project (load element classes)\n" + e, null, null, null)
+			end
+		end
 		
 		pListeners.forEach(block GameListener each
 			each.projectChanged(this)
@@ -362,6 +379,43 @@ class GameApp extends BaseGameApp
 		return pHmdDisabledWorld
 	end
 	
+	/** Remove all non-global element classes without disposing of them. */
+	func void removeNonGlobalElementClasses()
+		var ElementClassList eclist = getElementClassList()
+		var Array collect = Array.new()
+		
+		eclist.forEach(block ElementClass each
+			if not pGlobalElementClasses.has(each)
+				collect.add(each)
+			end
+		end)
+		
+		collect.forEach(block ElementClass each
+			eclist.removeNoDispose(each)
+		end)
+	end
+	
+	/** Add handle element classes. */
+	public func void storeECListHandles()
+		pECListHandles.removeAllNoDispose()
+		getElementClassList().forEachCastable(block BehaviorElementClass each
+			if ECBInteractHandle.getBehaviorIn(each) != null
+				pECListHandles.add(each)
+			end
+		end)
+	end
+	
+	/** Add scene object element classes. */
+	public func void storeECListSceneObjects()
+		pECListSceneObjects.removeAllNoDispose()
+		getElementClassList().forEachCastable(block BehaviorElementClass each
+			var ECBSceneObject sceneObject = ECBSceneObject.getBehaviorIn(each)
+			if sceneObject != null and sceneObject.addActorOffset.getVector() != null
+				pECListSceneObjects.add(each)
+			end
+		end)
+	end
+	
 	
 	/** Add listener. */
 	func void addListener(GameListener listener)
@@ -408,8 +462,12 @@ class GameApp extends BaseGameApp
 		
 		// has to come after super call since class list is filled not earlier
 		addInteractionBubbleButtonFactories()
-		addECListHandles()
-		addECListSceneObjects()
+		storeECListHandles()
+		storeECListSceneObjects()
+		
+		getElementClassList().forEach(block ElementClass each
+			pGlobalElementClasses.add(each)
+		end)
 		
 		pSessionSettings = SessionSettings.new()
 		pTrackControllerCaps = TrackControllerCaps.new()
@@ -623,26 +681,6 @@ class GameApp extends BaseGameApp
 		var LoadSave.LoadElementClass loadEClass = getLoaders().getElementClass()
 		loadEClass.addXmlElementClasses(eclist, "/content/models", true)
 		loadEClass.addXmlElementClasses(eclist, "/content/worlds", true)
-		loadEClass.addXmlElementClasses(eclist, pPathProjects, true)
-	end
-	
-	/** Add handle element classes. */
-	protected func void addECListHandles()
-		getElementClassList().forEachCastable(block BehaviorElementClass each
-			if ECBInteractHandle.getBehaviorIn(each) != null
-				pECListHandles.add(each)
-			end
-		end)
-	end
-	
-	/** Add scene object element classes. */
-	protected func void addECListSceneObjects()
-		getElementClassList().forEachCastable(block BehaviorElementClass each
-			var ECBSceneObject sceneObject = ECBSceneObject.getBehaviorIn(each)
-			if sceneObject != null and sceneObject.addActorOffset.getVector() != null
-				pECListSceneObjects.add(each)
-			end
-		end)
 	end
 	
 	/** Add interaction bubble button factories. */
@@ -766,6 +804,7 @@ class GameApp extends BaseGameApp
 		pListeners = null
 		pPlaybackScene = null
 		pRecordScene = null
+		pGlobalElementClasses = null
 		
 		if pHmdDisabledWorld != null
 			pHmdDisabledWorld.dispose()

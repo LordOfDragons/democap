@@ -115,6 +115,11 @@ class WMPanelProject extends Panel
 			end))
 			menu.addWidget(item)
 			
+			item = MenuItemCommand.new("@UI.ReloadProject", BlockActionListener.new(block ActionEvent event
+				pPanel.reloadProject()
+			end))
+			menu.addWidget(item)
+			
 			item = MenuItemCommand.new("@UI.BrowseData.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.browseProjectData()
 			end))
@@ -1015,10 +1020,9 @@ class WMPanelProject extends Panel
 						
 					catch Exception e
 						app.getConsole().addError("open project failed: " + result, e)
-						WindowDialog.message(getWindow(), "@UI.WMPanelProject.OpenProject.Title",\
-							"{}\n{}\n{}".format(Array.newWith(\
-								TranslationManager.get().translate("UI.Message.OpenProjectFailed").toUTF8(),\
-								result, e)), null, null, null)
+						WindowDialog.message(getWindow(), "@UI.OpenProject", "{}\n{}\n{}".format(Array.newWith(\
+							TranslationManager.get().translate("UI.Message.OpenProjectFailed").toUTF8(),\
+							result, e)), null, null, null)
 					end
 				end
 			end))
@@ -1046,6 +1050,27 @@ class WMPanelProject extends Panel
 			
 		else
 			FileSystem.browseOverlay(path)
+		end
+	end
+	
+	/** Reload project. */
+	func void reloadProject()
+		if pProject == null
+			return
+		end
+		
+		var GameApp app = GameApp.getGameApp()
+		
+		try
+			pProject.save()
+			
+			var Project project = Project.load(pProject.getPath())
+			app.setProject(project)
+			app.setScene(project.getScenes().getNamed(project.getPostLoadActivateScene()))
+			
+		catch Exception e
+			app.getConsole().addError("reload project failed", e)
+			WindowDialog.message(getWindow(), "@UI.ReloadProject", "@UI.Message.ReloadProjectFailed", null, null, null)
 		end
 	end
 	
