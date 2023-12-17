@@ -445,8 +445,11 @@ class WMPPanelStageDirections extends CollapsibleGroup
 	
 	/** Create panel content. */
 	protected func void createContent(Panel content)
-		var bool readOnly = pPanelSession.getInVR()
+		var SessionSettings sessionSettings = SessionSettings.get()
+		var bool inVR = pPanelSession.getInVR()
+		var bool readOnly = inVR and sessionSettings.getVRStageDirectionsReadOnly()
 		var TextArea textArea
+		var CheckBox checkBox
 		
 		content.setLayout(BorderLayout.new(5))
 		
@@ -465,6 +468,12 @@ class WMPPanelStageDirections extends CollapsibleGroup
 				var Button button = Button.new("...", StageDirectionPopupAction.new(this))
 				button.setDesignerSelector("Button.Popup")
 				p.addWidget(button)
+			end
+			
+			if not inVR
+				checkBox = CheckBox.new(sessionSettings.getModelVRStageDirectionsReadOnly(), "@UI.VRStageDirectionsReadOnly")
+				checkBox.setToolTip("@UI.ToolTip.VRStageDirectionsReadOnly")
+				p.addWidget(checkBox)
 			end
 		end), BorderLayout.Area.left)
 		
