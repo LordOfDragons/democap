@@ -155,6 +155,9 @@ class LIST_OT_DemcaBrowserScanFiles(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
+        dirlist = {}
+        filelist = {}
+
         dtlist = context.window_manager.democaptools_filelistdemca
         dtprops = context.window_manager.democaptools_properties
 
@@ -171,20 +174,25 @@ class LIST_OT_DemcaBrowserScanFiles(bpy.types.Operator):
 
         for root, dirs, files in os.walk(dtprops.currentDirectory):
             for name in dirs:
-                entry = dtlist.add()
-                entry.name = name
-                entry.path = os.path.join(root, name)
-                entry.isDirectory = True
-                entry.icon = 'FILE_FOLDER'
+                dirlist[name] = os.path.join(root, name)
             del dirs[:]
-
             for name in files:
                 if fnmatch(name, "*.demca"):
-                    entry = dtlist.add()
-                    entry.name = name
-                    entry.path = os.path.join(root, name)
-                    entry.isDirectory = False
-                    entry.icon = 'FILE'
+                    filelist[name] = os.path.join(root, name)
+
+        for key in sorted(dirlist.keys()):
+            entry = dtlist.add()
+            entry.name = key
+            entry.path = dirlist[key]
+            entry.isDirectory = True
+            entry.icon = 'FILE_FOLDER'
+
+        for key in sorted(filelist.keys()):
+            entry = dtlist.add()
+            entry.name = key
+            entry.path = filelist[key]
+            entry.isDirectory = False
+            entry.icon = 'FILE'
 
         for i in range(len(dtlist)):
             if not dtlist[i].isDirectory:
@@ -202,6 +210,7 @@ class LIST_OT_DemcaBrowserImportAnimation(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
+        object = context.active_object
         if not object:
             return False
         
