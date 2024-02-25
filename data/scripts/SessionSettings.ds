@@ -276,6 +276,7 @@ class SessionSettings
 	var DefaultTextModel pModelManualRotationStep
 	var DefaultToggleModel pModelTeleportMovement
 	var DefaultToggleModel pModelVRStageDirectionsReadOnly
+	var DefaultRangeModel pModelVRMenuScale
 	
 	var DefaultTextModel pModelServerAddress
 	
@@ -361,6 +362,10 @@ class SessionSettings
 		
 		pModelVRStageDirectionsReadOnly = DefaultToggleModel.new(s.getBoolAt("VRStageDirectionsReadOnly", false))
 		pModelVRStageDirectionsReadOnly.addListener(SaveToggleModelChanged.new("VRStageDirectionsReadOnly"))
+		
+		pModelVRMenuScale = DefaultRangeModel.new(10, 30, 5, 10, 1)
+		pModelVRMenuScale.setValue((s.getFloatAt("VRMenuScale", 1) * 20 + 0.5) cast int)
+		pModelVRMenuScale.addListener(SaveRangeModelChanged.new("VRMenuScale", 0.05))
 		
 		pModelServerAddress = DefaultTextModel.new(s.getStringAt("ServerAddress", "localhost"))
 		pModelServerAddress.addListener(SaveTextModelChanged.new("ServerAddress"))
@@ -594,6 +599,16 @@ class SessionSettings
 	/** VR stage directions read-only. */
 	func bool getVRStageDirectionsReadOnly()
 		return pModelVRStageDirectionsReadOnly.getToggled()
+	end
+	
+	/** VR menu scale model. */
+	func DefaultRangeModel getModelVRMenuScale()
+		return pModelVRMenuScale
+	end
+	
+	/** VR menu scale. */
+	func float getVRMenuScale()
+		return 0.05 * pModelVRMenuScale.getValue()
 	end
 	
 	

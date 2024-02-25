@@ -235,7 +235,7 @@ class LIST_OT_DemcaBrowserImportAnimation(bpy.types.Operator):
         object = context.active_object
         if not object:
             return {'CANCELLED'}
-        
+
         armature = None
         mesh = None
         if object.type == 'ARMATURE':
@@ -244,7 +244,7 @@ class LIST_OT_DemcaBrowserImportAnimation(bpy.types.Operator):
             mesh = object
             if mesh.parent and mesh.parent.type == 'ARMATURE':
                 armature = mesh.parent
-        
+
         if not armature:
             return {'CANCELLED'}
 

@@ -196,22 +196,31 @@ class ECBToggleVisibility extends DefaultECBehavior
 			matrix = DMatrix.newRotation(DVector.new(pRotation))\
 				* DMatrix.newTranslation(0, 0, -pDistance * scale) * matrix
 			
-			getElement().setGeometry(matrix.getPosition(),\
-				matrix.normalize().toQuaternion(), Vector.new(scale, scale, scale))
+			getElement().setGeometry(matrix.getPosition(), matrix.normalize().toQuaternion(), Vector.new(scale, scale, scale))
+		end
+		
+		/** Resize element. */
+		func void resize(BaseVRActor actor)
+			var float scale = getUseScaling(actor)
+			getElement().setScaling(Vector.new(scale, scale, scale))
 		end
 		
 		/** Scaling to use. */
 		func float getUseScaling(BaseVRActor actor)
-			if not pScaleWithActor
-				return 1
+			var float scale = 1
+			
+			if pScaleWithActor
+				var ECBCharacterConfiguration.Instance character = ECBCharacterConfiguration.getInstanceIn(actor)
+				if character != null
+					scale = character.getCharacter().worldScaling()
+				end
 			end
 			
-			var ECBCharacterConfiguration.Instance character = ECBCharacterConfiguration.getInstanceIn(actor)
-			if character == null
-				return 1
+			if pECBehavior.blockSettingsScale != null
+				scale *= pECBehavior.blockSettingsScale.run() cast float
 			end
 			
-			return character.getCharacter().worldScaling()
+			return scale
 		end
 	end
 	
@@ -224,29 +233,20 @@ class ECBToggleVisibility extends DefaultECBehavior
 	var ECPBoolean pLockZRotation
 	var ECPBoolean pScaleWithActor
 	
+	public var Block blockSettingsScale
+	
 	
 	
 	/** Create behavior and add it to element class. */
 	func new(BehaviorElementClass eclass) super(eclass)
 		var String prefix = "toggleVisibility."
 		
-		pLockUpAxis = ECPVector.new(prefix + "lockUpAxis", null)
-		eclass.addProperty(pLockUpAxis)
-		
-		pPivot = ECPVector.new(prefix + "pivot", null)
-		eclass.addProperty(pPivot)
-		
-		pRotation = ECPVector.new(prefix + "rotation", Vector.new())
-		eclass.addProperty(pRotation)
-		
-		pDistance = ECPFloat.new(prefix + "distance", 0.5, 0)
-		eclass.addProperty(pDistance)
-		
-		pLockZRotation = ECPBoolean.new(prefix + "lockZRotation", false)
-		eclass.addProperty(pLockZRotation)
-		
-		pScaleWithActor = ECPBoolean.new(prefix + "scaleWithActor", false)
-		eclass.addProperty(pScaleWithActor)
+		eclass.addProperty(pLockUpAxis = ECPVector.new(prefix + "lockUpAxis", null))
+		eclass.addProperty(pPivot = ECPVector.new(prefix + "pivot", null))
+		eclass.addProperty(pRotation = ECPVector.new(prefix + "rotation", Vector.new()))
+		eclass.addProperty(pDistance = ECPFloat.new(prefix + "distance", 0.5, 0))
+		eclass.addProperty(pLockZRotation = ECPBoolean.new(prefix + "lockZRotation", false))
+		eclass.addProperty(pScaleWithActor = ECPBoolean.new(prefix + "scaleWithActor", false))
 		
 		eclass.addBehavior(this)
 	end
