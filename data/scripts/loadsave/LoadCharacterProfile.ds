@@ -131,18 +131,26 @@ class LoadCharacterProfile extends BaseXmlLoader
 	func void readAppearance(EasyXMLElement root, CharacterAppearance appearance, String basePath)
 		root.forEachTag(block EasyXMLElement element, String tagName
 			if tagName.equals("model")
-				appearance.setPathModel(File.absolutePath(element.getFirstCData(), basePath).toString())
+				appearance.setPathModel(projectAbsolutePath(element, basePath))
 				
 			elif tagName.equals("skin")
-				appearance.setPathSkin(File.absolutePath(element.getFirstCData(), basePath).toString())
+				appearance.setPathSkin(projectAbsolutePath(element, basePath))
 				
 			elif tagName.equals("rig")
-				appearance.setPathRig(File.absolutePath(element.getFirstCData(), basePath).toString())
+				appearance.setPathRig(projectAbsolutePath(element, basePath))
 				
 			elif tagName.equals("animation")
-				appearance.setPathAnimation(File.absolutePath(element.getFirstCData(), basePath).toString())
+				appearance.setPathAnimation(projectAbsolutePath(element, basePath))
 			end
 		end)
+	end
+	
+	private func String projectAbsolutePath(EasyXMLElement tag, String basePath)
+		var String path = tag.getFirstCData()
+		if path.empty()
+			return ""
+		end
+		return File.absolutePath(path, basePath).toString()
 	end
 	
 	/** Read configuration tag. */
