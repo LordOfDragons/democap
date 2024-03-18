@@ -39,6 +39,7 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 	protected var WorldRenderer pWorldRenderer
 	protected var DisplayImage pImageReticle
 	protected var DefaultTextModel pModelName
+	protected var DefaultTextModel pModelPathParameters
 	
 	
 	
@@ -46,6 +47,7 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 	func new(WMPanelProject panelProject, String bgpTypeId, String behaviorId)\
 	super(panelProject, bgpTypeId, behaviorId, "@UI.RemoteCamera", "WMPSORemoteCamera", "ppob_remotecamera")
 		pModelName = DefaultTextModel.new()
+		pModelPathParameters = DefaultTextModel.new()
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
@@ -56,6 +58,7 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 	func void dispose()
 		setBehavior(null)
 		
+		pModelPathParameters = null
 		pModelName = null
 		pWorldRenderer = null
 		super.dispose()
@@ -76,6 +79,7 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 		
 		runWhileBlockingLayout(block
 			pModelName.setText(pBehaviorRemoteCamera.getName())
+			pModelPathParameters.setText(pBehaviorRemoteCamera.getPathParameters())
 		end)
 	end
 	
@@ -86,6 +90,7 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 		var TextField textField
 		var String toolTip
 		var Label label
+		var EditPath editPath
 		
 		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
@@ -101,6 +106,17 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 			p.addWidget(textField)
 			textField.addActionListener(BlockActionListener.new(block ActionEvent event
 				pBehaviorRemoteCamera.setName(pModelName.getText())
+			end))
+			
+			// path parameters
+			p.addWidget(Label.new("@UI.Parameter.Label", "Label.FormCaption.SingleLine"))
+			
+			editPath = EditPath.new(pModelPathParameters, EditPath.FileType.camera,\
+				(GameApp.getGameApp().getProject().getDataDirectory() + "camera").getPath())
+			editPath.setToolTip("@UI.ToolTip.CameraParameterFile")
+			p.addWidget(editPath)
+			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
+				pBehaviorRemoteCamera.setPathParameters(pModelPathParameters.getText())
 			end))
 		end))
 		

@@ -49,6 +49,8 @@ class ECBRemoteCamera extends DefaultECBehavior
 		var ECBehaviorCamera.Instance pCamera
 		var String pName
 		
+		var String pPathParameters
+		
 		
 		/** Create instance. */
 		func new(ECBRemoteCamera ecbehavior, BehaviorElement element) super(element)
@@ -65,6 +67,8 @@ class ECBRemoteCamera extends DefaultECBehavior
 		/** Init behavior. */
 		func void init(StubElement stub)
 			pName = pECBehavior.name.getValue(stub)
+			
+			pPathParameters = BehaviorStubHelper.stubParamPath(stub, pECBehavior.camera.getPathParameters())
 			
 			if pECBehavior.behaviorGuiPanels != null
 				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
@@ -106,6 +110,30 @@ class ECBRemoteCamera extends DefaultECBehavior
 			if inGameWorld
 				register()
 			end
+		end
+		
+		
+		func String getPathParameters()
+			return pPathParameters
+		end
+		
+		func bool setPathParameters(String path)
+			if path.equals(pPathParameters)
+				return false
+			end
+			pPathParameters = path
+			BehaviorStubHelper.setStubParamValue(getElement().getStub(),\
+				pECBehavior.camera.getPathParameters().getName(), path)
+			
+			if not path.empty()
+				try
+					getCamera().getECBehavior().getLoadCamera().loadFromFile(path, getCamera().getCamera())
+				catch Exception e
+					GameApp.getGameApp().getConsole().addError("Failed loading: " + path, e)
+				end
+			end
+			
+			return true
 		end
 		
 		

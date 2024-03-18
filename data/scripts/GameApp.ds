@@ -561,22 +561,16 @@ class GameApp extends BaseGameApp
 		pCharacterProfiles.loadAll()
 		pLoadableWorlds.scanWorlds()
 		
-		// create VR camera
+		// create VR camera and VR camera director
 		pVRCamera = Camera.new()
-		pVRCamera.setFov(80)
-		pVRCamera.setViewDistance(300)
-		pVRCamera.setLowestIntensity(20)
-		pVRCamera.setHighestIntensity(20)
-		pVRCamera.setAdaptionTime(30)
 		pVRCamera.setLayerMask(LayerMask.newWith(WorldLayerBit.default, WorldLayerBit.remoteView))
 		
-		// create VR camera director
 		pVRCameraDirector = VRCameraDirector.new()
-		pVRCameraDirector.setViewDistance(300)
-		pVRCameraDirector.setLowestIntensity(20)
-		pVRCameraDirector.setHighestIntensity(20)
-		pVRCameraDirector.setAdaptionTime(30)
 		pVRCameraDirector.setVRCamera(pVRCamera)
+		
+		getLoaders().getCamera().loadFromFile("/content/camera/default.decamera", pVRCameraDirector)
+		pVRCameraDirector.setEnableGI(SessionSettings.get().getModelCameraEnableGI().getToggled())
+		pVRCameraDirector.initCameraParameters()
 		
 		// add support to navigate the view. requires hud panel to be either set invisible
 		// or to not allow hovering. doing the later in case a hud is required later on
