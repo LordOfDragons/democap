@@ -12,3 +12,6 @@ can be used for all other purposes Blender can be used for.
 
 For Usage, Tutorial and Documentation see the Wiki:
 https://developer.dragondreams.ch/wiki/doku.php/democap:main
+
+Home page:
+https://dragondreams.ch/index.php/democap
