@@ -571,9 +571,9 @@ class WindowCharacterConfiguration extends WindowDialog
 		
 		pPanelTrackerSlot.saveValues()
 		
-		var int selection = pModelMotionTransferPanel.getValue() - 1
-		if selection >= 0
-			(pPanelsMotionTransfer.getAt(selection) cast WCCPanelMotionTransfer).saveValues()
+		var int selectionIndex = pModelMotionTransferPanel.getValue() - 1
+		if selectionIndex >= 0
+			(pPanelsMotionTransfer.getAt(selectionIndex) cast WCCPanelMotionTransfer).saveValues()
 		end
 		
 		// save changes
@@ -622,7 +622,6 @@ class WindowCharacterConfiguration extends WindowDialog
 		var LabelledComboBox lcb, lcbtip, lcbbase
 		var EnumListElementRenderer renderer
 		var LabelledTextField ltf
-		var TextField textField
 		var ComboBox comboBox
 		var Button button
 		var Array result
@@ -1134,11 +1133,11 @@ class WindowCharacterConfiguration extends WindowDialog
 	
 	/** Select motion transfer. */
 	func void selectMotionTransfer()
-		var int selection = pModelMotionTransferPanel.getValue()
+		var int selectionIndex = pModelMotionTransferPanel.getValue()
 		var WCCPanelMotionTransfer panel
 		
-		if selection > 0
-			panel = pPanelsMotionTransfer.getAt(selection - 1) cast WCCPanelMotionTransfer
+		if selectionIndex > 0
+			panel = pPanelsMotionTransfer.getAt(selectionIndex - 1) cast WCCPanelMotionTransfer
 			if panel != null
 				panel.saveValues()
 			end
@@ -1283,14 +1282,14 @@ class WindowCharacterConfiguration extends WindowDialog
 			return
 		end
 		
-		var String message = TranslationManager.get().translate("UI.Message.AskDecomposeMotionTransfer")\
+		var String messageText = TranslationManager.get().translate("UI.Message.AskDecomposeMotionTransfer")\
 			.toUTF8().format(Array.newWith(motionTransfer.getName()))
 		
 		if not pCharacterConfiguration.isCalibrated()
-			message = TranslationManager.get().translate("UI.Message.CharacterNotCalibrated").toUTF8() + "\n\n" + message
+			messageText = TranslationManager.get().translate("UI.Message.CharacterNotCalibrated").toUTF8() + "\n\n" + messageText
 		end
 		
-		WindowDialog.question(this, "@UI.DecomposeMotionTransfer", message,\
+		WindowDialog.question(this, "@UI.DecomposeMotionTransfer", messageText,\
 			null, Array.newWith(WindowDialog.ButtonConfiguration.new("@UI.Decompose", true), \
 				WindowDialog.ButtonConfiguration.new("@UI.Cancel", false)),\
 			WindowDialog.BlockResultListener.new(block bool result
