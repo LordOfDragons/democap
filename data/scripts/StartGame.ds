@@ -146,7 +146,8 @@ class StartGame extends WindowGameWorld.Loader
 	
 	/** Remap properties with path inside. */
 	protected func void remapPropertyPath()
-		var String remapPath = getStubWorld().getPropertyValueFor("democap.remapPropertyPath", "")
+		var StubGameWorld stubWorld = getStubWorld()
+		var String remapPath = stubWorld.getPropertyValueFor("democap.remapPropertyPath", "")
 		if remapPath.empty()
 			return
 		end
@@ -155,12 +156,28 @@ class StartGame extends WindowGameWorld.Loader
 		var int remapPathCut = remapPath.getLength()
 		var String value
 		
-		getStubWorld().forEachElement(block StubElement stub
+		stubWorld.getPropertyKeys().forEach(block String key
+			value = stubWorld.getPropertyValueFor(key, null)
+			
+			if value.startsWith(remapPath) and not key.equals("democap.remapPropertyPath")
+				stubWorld.setPropertyValueFor(key, (basePath + value.substring(remapPathCut)).toString())
+			end
+		end)
+		
+		stubWorld.forEachElement(block StubElement stub
 			stub.getPropertyKeys().forEach(block String key
 				value = stub.getPropertyValueFor(key, null)
 				
 				if value.startsWith(remapPath)
 					stub.setPropertyValueFor(key, (basePath + value.substring(remapPathCut)).toString())
+				end
+			end)
+			
+			stub.forEachTexture(block StubElementTexture texture
+				value = texture.getPathSkin()
+				
+				if value != null and value.startsWith(remapPath)
+					texture.setPathSkin((basePath + value.substring(remapPathCut)).toString())
 				end
 			end)
 		end)
@@ -190,8 +207,15 @@ class StartGame extends WindowGameWorld.Loader
 		
 		pScene.getFileUsage().setLocked(false)
 		
+		// apply camera settings. world can override default camera
+		var CameraDirector director = app.getVRCameraDirector()
+		
+		app.getLoaders().getCamera().loadFromFile(getStubWorld().getPropertyValueFor(\
+			"democap.cameraProperties", GameApp.defaultCameraParameters), director)
+		director.initCameraParameters()
+		
 		// assign camera director attaching the camera to the player controlled actor
-		getWindow().setCameraDirector(app.getVRCameraDirector())
+		getWindow().setCameraDirector(director)
 		
 		// apply settings
 		var GameWorld gameWorld = getStubWorld().getGameWorld()
