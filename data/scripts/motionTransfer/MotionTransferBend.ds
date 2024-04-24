@@ -81,6 +81,10 @@ class MotionTransferBend extends DefaultMotionTransfer
 	var float pTwistScale
 	var int pTwistBoneCount
 	var Vector pBendAxisRotation
+	var String pBendMoveX
+	var String pBendMoveY
+	var Vector2 pBendMoveRange
+	
 	
 	var ADController pADControllerBendX
 	var ADController pADControllerBendY
@@ -116,6 +120,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pTwistScale = 1
 		pTwistBoneCount = 0
 		pBendAxisRotation = Vector.new()
+		pBendMoveX = ""
+		pBendMoveY = ""
+		pBendMoveRange = Vector2.new(90, 90)
 		pCalibrateBones = Array.new()
 		pCalibrateBendAxisMatrix = Matrix.new()
 		pCalibrateZeroRotation = Vector.new()
@@ -145,6 +152,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pTwistScale = transfer.pTwistScale
 		pTwistBoneCount = transfer.pTwistBoneCount
 		pBendAxisRotation = transfer.pBendAxisRotation
+		pBendMoveX = transfer.pBendMoveX
+		pBendMoveY = transfer.pBendMoveY
+		pBendMoveRange = transfer.pBendMoveRange
 		pCalibrateBones = Array.new(transfer.pCalibrateBones)
 		pCalibrateBendAxisMatrix = transfer.pCalibrateBendAxisMatrix
 		pCalibrateZeroRotation = transfer.pCalibrateZeroRotation
@@ -323,6 +333,45 @@ class MotionTransferBend extends DefaultMotionTransfer
 			throw ENullPointer.new("rotation")
 		end
 		pBendAxisRotation = rotation
+	end
+	
+	/** Animation move to use for X axis bending or empty string. */
+	func String getBendMoveX()
+		return pBendMoveX
+	end
+	
+	/** Set animation move to use for X axis bending or empty string. */
+	func void setBendMoveX(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pBendMoveX = move
+	end
+	
+	/** Animation move to use for Y axis bending or empty string. */
+	func String getBendMoveY()
+		return pBendMoveY
+	end
+	
+	/** Set animation move to use for Y axis bending or empty string. */
+	func void setBendMoveY(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pBendMoveY = move
+	end
+	
+	/** Range in degrees of bending rotation to map to move based bending. */
+	func Vector2 getBendMoveRange()
+		return pBendMoveRange
+	end
+	
+	/** Set range in degrees of bending rotation to map to move based bending. */
+	func void setBendMoveRange(Vector2 range)
+		if range == null
+			throw ENullPointer.new("range")
+		end
+		pBendMoveRange = range
 	end
 	
 	
@@ -925,6 +974,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 		tag.addDataTag("twistScale", pTwistScale)
 		tag.addDataTag("twistBoneCount", pTwistBoneCount)
 		loader.writeVector(tag, "bendAxisRotation", pBendAxisRotation)
+		tag.addDataTag("bendMoveX", pBendMoveX)
+		tag.addDataTag("bendMoveY", pBendMoveY)
+		loader.writeVector2(tag, "bendMoveRange", pBendMoveRange)
 		saveCalibrated(loader, tag.addTag("calibrated"))
 	end
 	
@@ -953,6 +1005,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 			loader.writeVector(tag, "twistAxis", each)
 		end)
 		loader.writeVector(tag, "twistBoneAxisRotation", pCalibrateTwistBoneAxisRotation)
+		tag.addDataTag("bendMoveX", pBendMoveX)
+		tag.addDataTag("bendMoveY", pBendMoveY)
+		loader.writeVector2(tag, "bendAxisRange", pBendMoveRange)
 		lcp.writeMatrix(tag, "twistTransform", pCalibrateTwistTransform)
 	end
 end

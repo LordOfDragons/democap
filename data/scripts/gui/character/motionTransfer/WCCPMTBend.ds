@@ -52,6 +52,11 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	var DefaultTextModel pModelTwistPropagation
 	var DefaultTextModel pModelTwistScale
 	var DefaultTextModel pModelTwistBoneCount
+	var SharedListModel pModelListBendMoveX
+	var DefaultTextModel pModelTextBendMoveX
+	var SharedListModel pModelListBendMoveY
+	var DefaultTextModel pModelTextBendMoveY
+	var EditVector2 pEditBendMoveRange
 	
 	
 	
@@ -82,6 +87,14 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pModelTwistPropagation = DefaultTextModel.new()
 		pModelTwistScale = DefaultTextModel.new()
 		pModelTwistBoneCount = DefaultTextModel.new()
+		
+		pModelListBendMoveX = SharedListModel.new(window.getModelMoves())
+		pModelListBendMoveX.setAutoSelect(false)
+		pModelTextBendMoveX = DefaultTextModel.new()
+		
+		pModelListBendMoveY = SharedListModel.new(window.getModelMoves())
+		pModelListBendMoveY.setAutoSelect(false)
+		pModelTextBendMoveY = DefaultTextModel.new()
 		
 		runWhileBlockingLayout(block
 			createContent(window.getModelTrackerSlotNames(), optionPrefix)
@@ -118,6 +131,13 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		
 		pEditScaleRotation = null
 		pEditBendAxisRotation = null
+		
+		pModelListBendMoveX = null
+		pModelTextBendMoveX = null
+		pModelListBendMoveY = null
+		pModelTextBendMoveY = null
+		pEditBendMoveRange = null
+		
 		super.dispose()
 	end
 	
@@ -146,6 +166,9 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 				pModelTwistPropagation.setText(mt.getTwistPropagation().toString())
 				pModelTwistScale.setText(mt.getTwistScale().toString())
 				pModelTwistBoneCount.setText(mt.getTwistBoneCount().toString())
+				pModelTextBendMoveX.setText(mt.getBendMoveX())
+				pModelTextBendMoveY.setText(mt.getBendMoveY())
+				pEditBendMoveRange.setVector2(mt.getBendMoveRange())
 				
 			else
 				pModelTextTargetBone.setText("")
@@ -162,6 +185,9 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 				pModelTwistPropagation.setText("")
 				pModelTwistScale.setText("")
 				pModelTwistBoneCount.setText("")
+				pModelTextBendMoveX.setText("")
+				pModelTextBendMoveY.setText("")
+				pEditBendMoveRange.setVector2(Vector2.new(90, 90))
 			end
 		end)
 		doLayoutIfBlocked()
@@ -190,6 +216,9 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		mt.setTwistPropagation(pModelTwistPropagation.getText().toFloat())
 		mt.setTwistScale(pModelTwistScale.getText().toFloat())
 		mt.setTwistBoneCount(pModelTwistBoneCount.getText().toInt())
+		mt.setBendMoveX(pModelTextBendMoveX.getText())
+		mt.setBendMoveY(pModelTextBendMoveY.getText())
+		mt.setBendMoveRange(pEditBendMoveRange.getVector2())
 	end
 	
 	/** Supports motion transfer type. */
@@ -290,6 +319,29 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(pEditBendAxisRotation)
 		
 		CPECoordinateSystemAxis.new(preview, null, null, label, pEditBendAxisRotation, comboBoxBase, null, true)
+		
+		// bend move x
+		pPanelForm.addWidget(Label.new("@UI.BendXMove.Label", "Label.FormCaption.SingleLine"))
+		
+		comboBox = ComboBox.new(pModelListBendMoveX, DefaultComboBoxEditor.new(pModelTextBendMoveX))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("@UI.ToolTip.BendXMove")
+		pPanelForm.addWidget(comboBox)
+		
+		// bend move y
+		pPanelForm.addWidget(Label.new("@UI.BendYMove.Label", "Label.FormCaption.SingleLine"))
+		
+		comboBox = ComboBox.new(pModelListBendMoveY, DefaultComboBoxEditor.new(pModelTextBendMoveY))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("@UI.ToolTip.BendYMove")
+		pPanelForm.addWidget(comboBox)
+		
+		// bend move range
+		pPanelForm.addWidget(Label.new("@UI.BendMoveRange.Label", "Label.FormCaption.SingleLine"))
+		
+		pEditBendMoveRange = EditVector2.new()
+		pEditBendMoveRange.setToolTip("@UI.ToolTip.BendMoveRange")
+		pPanelForm.addWidget(pEditBendMoveRange)
 		
 		// fit curve to target
 		pPanelForm.addWidget(Label.new("", "Label.FormCaption.SingleLine"))
