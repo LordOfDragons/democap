@@ -86,7 +86,9 @@ class ECBMoCapAnimator extends DefaultECBehavior
 		
 		protected var ECBMoCapAnimator pECBehavior
 		protected var ECBehaviorActorAnimated.Instance pActorAnimated
+		protected var ECBehaviorCollider.Instance pCollider
 		
+		var AnimatorInstance pResetPhysicsAnimator
 		var int pRequiredPhaseCount
 		var float pElapsedControllerTime
 		var Array pListeners
@@ -100,22 +102,36 @@ class ECBMoCapAnimator extends DefaultECBehavior
 			pRequiredPhaseCount = 1
 			pListeners = Array.new()
 			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
+			pCollider = ecbehavior.getCollider().instance(element)
 		end
 		
 		/** Dispose of behavior instance. */
 		func void dispose()
 			pListeners = null
+			pCollider = null
+			pActorAnimated = null
 			
 			super.dispose()
 		end
 		
 		/** Init behavior instance. */
 		func void init(StubElement stub)
+			var Component component = pActorAnimated.getComponent().getComponent()
+			var Rig rig = component.getRig()
+			var Animation animation = pECBehavior.getAnimation().getAnimation()
+			
 			var Animator animator = pECBehavior.getAnimator()
-			animator.setRig(pActorAnimated.getComponent().getComponent().getRig())
-			animator.setAnimation(pECBehavior.getAnimation().getAnimation())
+			animator.setRig(rig)
+			animator.setAnimation(animation)
 			pActorAnimated.setAnimator(animator)
 			pActorAnimated.addListener(MultiPhaseAnimation.new(this))
+			
+			animator = pECBehavior.getResetPhysicsAnimator()
+			animator.setRig(rig)
+			animator.setAnimation(animation)
+			pResetPhysicsAnimator = AnimatorInstance.new()
+			pResetPhysicsAnimator.setComponent(component)
+			pResetPhysicsAnimator.setAnimator(animator)
 		end
 		
 		
@@ -133,6 +149,25 @@ class ECBMoCapAnimator extends DefaultECBehavior
 		/** Required phase count. */
 		func int getRequiredPhaseCount()
 			return pRequiredPhaseCount
+		end
+		
+		/**
+		 * Reset physics bones to animated state.
+		 * 
+		 * Applies first a separate animator with the calibration move if present.
+		 * Then the animated bone states are copied to the collider bone states.
+		 */
+		func void resetPhysicsBones()
+			pResetPhysicsAnimator.applyDirect()
+			
+			// if physics attachments are used init collider bone states from component.
+			// this is required since collider bone states are in world space and do not
+			// move if the actor moves due to teleportation
+			var Collider collider = pCollider.getCollider()
+			if collider.getResponseType() == CollisionResponse.dynamic\
+			and collider castable ColliderComponent
+				(collider cast ColliderComponent).copyStatesFromComponent()
+			end
 		end
 		
 		
@@ -212,14 +247,17 @@ class ECBMoCapAnimator extends DefaultECBehavior
 	
 	
 	protected var ECBehaviorActorAnimated pActorAnimated
+	protected var ECBehaviorCollider pCollider
 	protected var ECPAnimation pAnimation
 	protected var Animator pAnimator
+	protected var Animator pResetPhysicsAnimator
 	
 	
 	
 	/** Create behavior and add it to element class. */
 	func new(BaseVRActorClass eclass) super(eclass)
 		pActorAnimated = eclass.getActorAnimated()
+		pCollider = eclass.getCollider()
 		
 		pAnimation = ECPAnimation.new("mocapAnimation.animation")
 		eclass.addProperty(pAnimation)
@@ -240,6 +278,11 @@ class ECBMoCapAnimator extends DefaultECBehavior
 		return pActorAnimated
 	end
 	
+	/** Collider behavior. */
+	func ECBehaviorCollider getCollider()
+		return pCollider
+	end
+	
 	/** Animation. */
 	func ECPAnimation getAnimation()
 		return pAnimation
@@ -253,6 +296,16 @@ class ECBMoCapAnimator extends DefaultECBehavior
 	/** Set animator. */
 	func void setAnimator(Animator animator)
 		pAnimator = animator
+	end
+	
+	/** Reset physics animator. */
+	func Animator getResetPhysicsAnimator()
+		return pAnimator
+	end
+	
+	/** Set reset physics animator animator. */
+	func void setResetPhysicsAnimator(Animator animator)
+		pResetPhysicsAnimator = animator
 	end
 	
 	

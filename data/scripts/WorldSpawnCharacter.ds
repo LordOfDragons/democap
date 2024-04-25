@@ -94,6 +94,34 @@ class WorldSpawnCharacter
 		end
 	end
 	
+	class VRMenuWideSettingsChanged extends DefaultToggleModelListener
+		class ApplySettingsTimer extends Timer
+			func new() super(0.1, true)
+			end
+			
+			func void fire()
+				GameApp.getGameApp().getWorldSpawnCharacter().changeVRMenuWide()
+				giveUp()
+			end
+		end
+		
+		var WorldSpawnCharacter pWsc
+		var ApplySettingsTimer pApplySettingsTimer
+		
+		func new()
+		end
+		
+		func void toggledChanged(ToggleModel model)
+			if pApplySettingsTimer != null and pApplySettingsTimer.hasElapsed()
+				pApplySettingsTimer = null
+			end
+			
+			if pApplySettingsTimer == null
+				pApplySettingsTimer = ApplySettingsTimer.new()
+			end
+		end
+	end
+	
 	enum State
 		prepareElementClass
 		createActor
@@ -131,6 +159,7 @@ class WorldSpawnCharacter
 		pMoCapActorClass = GameApp.getGameApp().getElementClassList().getNamed("MoCapActor")
 		pListeners = Array.new()
 		pEstimatedFloorOffset = DefaultTextModel.new("0")
+		SessionSettings.get().getModelVRMenuWide().addListener(VRMenuWideSettingsChanged.new())
 	end
 	
 	/** Dispose. */
@@ -222,7 +251,7 @@ class WorldSpawnCharacter
 			
 			// add VR menus creating them if required
 			if pVRMenu == null
-				pVRMenu = createVRMenu()
+				pVRMenu = createVRMenu(SessionSettings.get().getVRMenuWide())
 			end
 			pVRMenu.setVisible(false)
 			pVRMenu.setTouchable(false)
@@ -350,6 +379,36 @@ class WorldSpawnCharacter
 	/** Estimated floor offset model. */
 	func DefaultTextModel getEstimatedFloorOffset()
 		return pEstimatedFloorOffset
+	end
+	
+	
+	
+	/** Change VR menu wide. */
+	func void changeVRMenuWide()
+		if pGameWorld == null
+			return
+		end
+		
+		var DVector position
+		var Quaternion orientation
+		var Vector scaling
+		var bool visible
+		
+		if pVRMenu != null
+			position = pVRMenu.getPosition()
+			orientation = pVRMenu.getOrientation()
+			scaling = pVRMenu.getScaling()
+			visible = pVRMenu.getVisible()
+			
+			pVRMenu.safeDispose()
+			pVRMenu = null
+		end
+		
+		pVRMenu = createVRMenu(SessionSettings.get().getVRMenuWide())
+		pVRMenu.setGeometry(position, orientation, scaling)
+		pVRMenu.setVisible(visible)
+		pVRMenu.setTouchable(visible)
+		pGameWorld.addElement(pVRMenu)
 	end
 	
 	
@@ -499,22 +558,16 @@ class WorldSpawnCharacter
 			pGameWorld.addElement(pActor)
 		end
 		
-		pActor.getActorAnimated().applyAnimations()
-		
 		if pLastActorPosition != null
 			pActor.setGeometry(pLastActorPosition, pLastActorOrientation)
 			
-			// if physics attachments are used init collider bone states from component.
-			// this is required since collider bone states are in world space and do not
-			// move if the actor moves due to teleportation
-			var Collider collider = pActor.getCollider().getCollider()
-			if collider.getResponseType() == CollisionResponse.dynamic\
-			and collider castable ColliderComponent
-				(collider cast ColliderComponent).copyStatesFromComponent()
-			end
-			
 			pLastActorPosition = null
 			pLastActorOrientation = null
+		end
+		
+		var ECBMoCapAnimator.Instance mocapAnimator = ECBMoCapAnimator.getInstanceIn(pActor)
+		if mocapAnimator != null
+			mocapAnimator.resetPhysicsBones()
 		end
 		
 		// select actor if required
@@ -529,8 +582,8 @@ class WorldSpawnCharacter
 	end
 	
 	/** Create VR menu. */
-	protected func BehaviorElement createVRMenu()
-		var ElementClass eclass = GameApp.getGameApp().getElementClassList().getNamed("VRMenu")
+	protected func BehaviorElement createVRMenu(bool wide)
+		var ElementClass eclass = GameApp.getGameApp().getElementClassList().getNamed(wide if "VRMenuWide" else "VRMenu")
 		var StubElement stub = StubElement.new(eclass) // no generated ID on purpose
 		
 		// add properties if required

@@ -486,35 +486,20 @@ class MotionTransferBend extends DefaultMotionTransfer
 		var int i, count, baseIndex
 		
 		// bending
-		var Animation animation = config.getProfile().getAppearance().getAnimation()
-		var float playtimeMoveX = 1, playtimeMoveY = 1
-		var bool hasBendMoveX = not pBendMoveX.empty()
-		var bool hasBendMoveY = not pBendMoveY.empty()
-		
-		if animation != null
-			if hasBendMoveX and animation.indexOfMoveNamed(pBendMoveX) != -1
-				playtimeMoveX = animation.getMovePlaytime(pBendMoveX)
-			end
-			if hasBendMoveY and animation.indexOfMoveNamed(pBendMoveY) != -1
-				playtimeMoveY = animation.getMovePlaytime(pBendMoveY)
-			end
-		end
-		var float reftimeMoveX = playtimeMoveX / 2, reftimeMoveY = playtimeMoveY / 2
-		
 		var String nameBendX = getName() + ".bendX"
 		var String nameBendY = getName() + ".bendY"
 		
 		count = pCalibrateBones.getCount()
 		baseIndex = count - 1
 		
-		if hasBendMoveX
+		if linkMoveBendX != null
 			var ADRuleAnimationDifference rule = ADRuleAnimationDifference.new()
 			rule.setName(nameBendX)
 			rule.setReferenceMoveName(pBendMoveX)
 			rule.setLeadingMoveName(pBendMoveX)
 			rule.setEnablePosition(false)
-			rule.setReferenceMoveTime(reftimeMoveX)
-			rule.setBlendMode(AnimatorRuleBlendMode.overlay)
+			rule.setEnableVertexPositionSet(false)
+			rule.setReferenceMoveTime(0.5)
 			rule.addTargetLink(ADRuleTargetLink.new(ARAnimationDifferenceTarget.leadingMoveTime, linkMoveBendX))
 			for i = 0 to count
 				rule.addBone(pCalibrateBones.getAt(baseIndex - i) cast String)
@@ -522,14 +507,14 @@ class MotionTransferBend extends DefaultMotionTransfer
 			adef.addRule(rule)
 		end
 		
-		if hasBendMoveY
+		if linkMoveBendY != null
 			var ADRuleAnimationDifference rule = ADRuleAnimationDifference.new()
 			rule.setName(nameBendY)
 			rule.setReferenceMoveName(pBendMoveY)
 			rule.setLeadingMoveName(pBendMoveY)
 			rule.setEnablePosition(false)
-			rule.setReferenceMoveTime(reftimeMoveY)
-			rule.setBlendMode(AnimatorRuleBlendMode.overlay)
+			rule.setEnableVertexPositionSet(false)
+			rule.setReferenceMoveTime(0.5)
 			rule.addTargetLink(ADRuleTargetLink.new(ARAnimationDifferenceTarget.leadingMoveTime, linkMoveBendY))
 			for i = 0 to count
 				rule.addBone(pCalibrateBones.getAt(baseIndex - i) cast String)
@@ -537,7 +522,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 			adef.addRule(rule)
 		end
 		
-		if not (hasBendMoveX or hasBendMoveY)
+		if linkMoveBendX == null or linkMoveBendY == null
 			var ADRuleBoneTransformator rule
 			
 			for i = 0 to count
@@ -545,7 +530,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 				var float weight = pCalibrateBendWeights.getAt(baseIndex - i) cast float
 				var float boneRotation = fullRotation * weight
 				
-				if not hasBendMoveX
+				if linkMoveBendX == null
 					rule = ADRuleBoneTransformator.new()
 					rule.setName(nameBendX)
 					rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
@@ -558,7 +543,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 					adef.addRule(rule)
 				end
 				
-				if not hasBendMoveY
+				if linkMoveBendY == null
 					rule = rule = ADRuleBoneTransformator.new()
 					rule.setName(nameBendY)
 					rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)

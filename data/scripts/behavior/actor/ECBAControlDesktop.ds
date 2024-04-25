@@ -78,6 +78,12 @@ class ECBAControlDesktop extends DefaultECBehavior
 		func bool pointAt(ECBehaviorVRHandPointAt.Instance behavior)
 			var DVector hitPoint = behavior.getPointAtHitPoint()
 			
+			if pControlDesktop != null and pControlDesktop.getElement() == null
+				// disposed while in use
+				pControlDesktop = null
+				pTriggerPulled = false
+			end
+			
 			if pControlDesktop != null
 				if behavior == pPointAt
 					if pTriggerPulled
@@ -133,7 +139,9 @@ class ECBAControlDesktop extends DefaultECBehavior
 				return false
 			end
 			
-			pControlDesktop.leftMouseRelease()
+			if pControlDesktop.getElement() != null // dispose protection
+				pControlDesktop.leftMouseRelease()
+			end
 			
 			pControlDesktop = null
 			pPointAt = null

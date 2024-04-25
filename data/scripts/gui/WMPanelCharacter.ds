@@ -371,6 +371,8 @@ class WMPanelCharacter extends Panel
 	protected var DefaultListModel pModelCharacterProfiles
 	protected var DefaultListModel pModelCharacterConfigurations
 	protected var ListenCharacterConfigurations pListenCharacterConfigurations
+	protected var ListenActorProfiles pListenActorProfiles
+	protected var ListenCharacterProfiles pListenCharacterProfiles
 	protected var ActorProfile pActorProfile
 	protected var CharacterProfile pCharacterProfile
 	protected var CharacterConfiguration pCharacterConfiguration
@@ -396,10 +398,12 @@ class WMPanelCharacter extends Panel
 		pModelCharacterProfiles.addListener(CharacterProfileSelection.new(this))
 		pModelCharacterConfigurations.addListener(CharacterConfigurationSelection.new(this))
 		
-		GameApp.getGameApp().getActorProfiles().addListener(ListenActorProfiles.new(this))
+		pListenActorProfiles = ListenActorProfiles.new(this)
+		GameApp.getGameApp().getActorProfiles().addListener(pListenActorProfiles)
 		updateActorProfiles()
 		
-		GameApp.getGameApp().getCharacterProfiles().addListener(ListenCharacterProfiles.new(this))
+		pListenCharacterProfiles = ListenCharacterProfiles.new(this)
+		GameApp.getGameApp().getCharacterProfiles().addListener(pListenCharacterProfiles)
 		updateCharacterProfiles()
 	end
 	
@@ -412,6 +416,16 @@ class WMPanelCharacter extends Panel
 		pModelCharacterProfiles = null
 		pModelCharacterConfigurations = null
 		pListenCharacterConfigurations = null
+		
+		if pListenActorProfiles != null
+			GameApp.getGameApp().getActorProfiles().removeListener(pListenActorProfiles)
+			pListenActorProfiles = null
+		end
+		
+		if pListenCharacterProfiles != null
+			GameApp.getGameApp().getCharacterProfiles().removeListener(pListenCharacterProfiles)
+			pListenCharacterProfiles = null
+		end
 		
 		super.dispose()
 	end
