@@ -78,6 +78,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	var Vector pNeckBendAxisRotation
 	var Vector pSpineBendAxisRotation
 	var bool pRelocateArms
+	var String pNeckBendMoveX
+	var String pNeckBendMoveY
+	var Vector2 pNeckBendMoveRange
 	
 	var MotionTransferChild pTransferWaist
 // 	var MotionTransferIK pTransferSpineHead
@@ -113,6 +116,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pNeckBendAxisRotation = Vector.new(90, 0, 0)
 		pSpineBendAxisRotation = Vector.new(90, 0, 0)
 		pRelocateArms = false
+		pNeckBendMoveX = ""
+		pNeckBendMoveY = ""
+		pNeckBendMoveRange = Vector2.new(90, 90)
 		
 		// create child motion transfers
 		var MotionTransferChild.Factory factoryChild = MotionTransferChild.Factory.new()
@@ -197,6 +203,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pNeckBendAxisRotation = transfer.pNeckBendAxisRotation
 		pSpineBendAxisRotation = transfer.pSpineBendAxisRotation
 		pRelocateArms = transfer.pRelocateArms
+		pNeckBendMoveX = transfer.pNeckBendMoveX
+		pNeckBendMoveY = transfer.pNeckBendMoveY
+		pNeckBendMoveRange = transfer.pNeckBendMoveRange
 		
 		pTransferWaist = MotionTransferChild.new(transfer.pTransferWaist)
 // 		pTransferSpineHead = MotionTransferIK.new(transfer.pTransferSpineHead)
@@ -472,6 +481,45 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	/** Set to relocate arms. */
 	func void setRelocateArms(bool relocate)
 		pRelocateArms = relocate
+	end
+	
+	/** Animation move to use for X axis neck bending or empty string. */
+	func String getNeckBendMoveX()
+		return pNeckBendMoveX
+	end
+	
+	/** Set animation move to use for X axis neck bending or empty string. */
+	func void setNeckBendMoveX(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pNeckBendMoveX = move
+	end
+	
+	/** Animation move to use for Y axis neck bending or empty string. */
+	func String getNeckBendMoveY()
+		return pNeckBendMoveY
+	end
+	
+	/** Set animation move to use for Y axis neck bending or empty string. */
+	func void setNeckBendMoveY(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pNeckBendMoveY = move
+	end
+	
+	/** Range in degrees of neck bending rotation to map to move based bending. */
+	func Vector2 getNeckBendMoveRange()
+		return pNeckBendMoveRange
+	end
+	
+	/** Set range in degrees of neck bending rotation to map to move based bending. */
+	func void setNeckBendMoveRange(Vector2 range)
+		if range == null
+			throw ENullPointer.new("range")
+		end
+		pNeckBendMoveRange = range
 	end
 	
 	
@@ -750,6 +798,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferNeck.setTwistPropagation(1)
 		pTransferNeck.setScaleRotation(Vector2.new(pScaleHeadRotation.getX(), pScaleHeadRotation.getZ()))
 		pTransferNeck.setTwistScale(pScaleHeadRotation.getY())
+		pTransferNeck.setBendMoveX(pNeckBendMoveX)
+		pTransferNeck.setBendMoveY(pNeckBendMoveY)
+		pTransferNeck.setBendMoveRange(pNeckBendMoveRange)
 		
 		if chainHead.getCount() > 1
 			pTransferNeck.setTipBone(chainHead.getAt(0) cast String)
@@ -1187,6 +1238,15 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			elif tagName.equals("relocateArms")
 				pRelocateArms = element.getFirstCDataBool()
 				
+			elif tagName.equals("neckBendMoveX")
+				setNeckBendMoveX(element.getFirstCData())
+				
+			elif tagName.equals("neckBendMoveY")
+				setNeckBendMoveY(element.getFirstCData())
+				
+			elif tagName.equals("neckBendMoveRange")
+				setNeckBendMoveRange(loader.readVector2(element))
+				
 			elif tagName.equals("transfers")
 				loadTransfers(loader, element)
 			end
@@ -1261,6 +1321,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		loader.writeVector(tag, "neckBendAxisRotation", pNeckBendAxisRotation)
 		loader.writeVector(tag, "spineBendAxisRotation", pSpineBendAxisRotation)
 		tag.addDataTag("relocateArms", pRelocateArms)
+		tag.addDataTag("neckBendMoveX", pNeckBendMoveX)
+		tag.addDataTag("neckBendMoveY", pNeckBendMoveY)
+		loader.writeVector2(tag, "neckBendMoveRange", pNeckBendMoveRange)
 		
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
 		pTransferWaist.save(loader, tagTransfers.addTag("waist"))

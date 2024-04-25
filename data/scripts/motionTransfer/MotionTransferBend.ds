@@ -455,41 +455,122 @@ class MotionTransferBend extends DefaultMotionTransfer
 		linkBendY.setController(pADControllerBendY)
 		adef.addLink(linkBendY)
 		
+		var ADLink linkMoveBendX
+		if not pBendMoveX.empty()
+			linkMoveBendX = ADLink.new()
+			linkMoveBendX.setController(pADControllerBendX)
+			
+			var float factor = pBendMoveRange.getX() / (fullRotation * 2)
+			var CurveBezier curve = CurveBezier.new()
+			curve.setInterpolationMode(CurveBezierInterpolation.linear)
+			curve.addPoint(0.5 - factor, 0)
+			curve.addPoint(0.5 + factor, 1)
+			linkMoveBendX.setCurve(curve)
+			adef.addLink(linkMoveBendX)
+		end
+		
+		var ADLink linkMoveBendY
+		if not pBendMoveY.empty()
+			linkMoveBendY = ADLink.new()
+			linkMoveBendY.setController(pADControllerBendY)
+			
+			var float factor = pBendMoveRange.getY() / (fullRotation * 2)
+			var CurveBezier curve = CurveBezier.new()
+			curve.setInterpolationMode(CurveBezierInterpolation.linear)
+			curve.addPoint(0.5 - factor, 0)
+			curve.addPoint(0.5 + factor, 1)
+			linkMoveBendY.setCurve(curve)
+			adef.addLink(linkMoveBendY)
+		end
+		
 		var int i, count, baseIndex
 		
 		// bending
-		count = pCalibrateBones.getCount()
+		var Animation animation = config.getProfile().getAppearance().getAnimation()
+		var float playtimeMoveX = 1, playtimeMoveY = 1
+		var bool hasBendMoveX = not pBendMoveX.empty()
+		var bool hasBendMoveY = not pBendMoveY.empty()
+		
+		if animation != null
+			if hasBendMoveX and animation.indexOfMoveNamed(pBendMoveX) != -1
+				playtimeMoveX = animation.getMovePlaytime(pBendMoveX)
+			end
+			if hasBendMoveY and animation.indexOfMoveNamed(pBendMoveY) != -1
+				playtimeMoveY = animation.getMovePlaytime(pBendMoveY)
+			end
+		end
+		var float reftimeMoveX = playtimeMoveX / 2, reftimeMoveY = playtimeMoveY / 2
+		
 		var String nameBendX = getName() + ".bendX"
 		var String nameBendY = getName() + ".bendY"
+		
+		count = pCalibrateBones.getCount()
 		baseIndex = count - 1
 		
-		for i = 0 to count
-			var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
-			var float weight = pCalibrateBendWeights.getAt(baseIndex - i) cast float
-			var float boneRotation = fullRotation * weight
+		if hasBendMoveX
+			var ADRuleAnimationDifference rule = ADRuleAnimationDifference.new()
+			rule.setName(nameBendX)
+			rule.setReferenceMoveName(pBendMoveX)
+			rule.setLeadingMoveName(pBendMoveX)
+			rule.setEnablePosition(false)
+			rule.setReferenceMoveTime(reftimeMoveX)
+			rule.setBlendMode(AnimatorRuleBlendMode.overlay)
+			rule.addTargetLink(ADRuleTargetLink.new(ARAnimationDifferenceTarget.leadingMoveTime, linkMoveBendX))
+			for i = 0 to count
+				rule.addBone(pCalibrateBones.getAt(baseIndex - i) cast String)
+			end
+			adef.addRule(rule)
+		end
+		
+		if hasBendMoveY
+			var ADRuleAnimationDifference rule = ADRuleAnimationDifference.new()
+			rule.setName(nameBendY)
+			rule.setReferenceMoveName(pBendMoveY)
+			rule.setLeadingMoveName(pBendMoveY)
+			rule.setEnablePosition(false)
+			rule.setReferenceMoveTime(reftimeMoveY)
+			rule.setBlendMode(AnimatorRuleBlendMode.overlay)
+			rule.addTargetLink(ADRuleTargetLink.new(ARAnimationDifferenceTarget.leadingMoveTime, linkMoveBendY))
+			for i = 0 to count
+				rule.addBone(pCalibrateBones.getAt(baseIndex - i) cast String)
+			end
+			adef.addRule(rule)
+		end
+		
+		if not (hasBendMoveX or hasBendMoveY)
 			var ADRuleBoneTransformator rule
 			
-			rule = ADRuleBoneTransformator.new()
-			rule.setName(nameBendX)
-			rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
-			rule.setUseAxis(true)
-			rule.setAxis(pCalibrateBendAxesX.getAt(i) cast Vector)
-			rule.setMinimumAngle(-boneRotation)
-			rule.setMaximumAngle(boneRotation)
-			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkBendX))
-			rule.addBone(bone)
-			adef.addRule(rule)
-			
-			rule = ADRuleBoneTransformator.new()
-			rule.setName(nameBendY)
-			rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
-			rule.setUseAxis(true)
-			rule.setAxis(pCalibrateBendAxesY.getAt(i) cast Vector)
-			rule.setMinimumAngle(-boneRotation)
-			rule.setMaximumAngle(boneRotation)
-			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkBendY))
-			rule.addBone(bone)
-			adef.addRule(rule)
+			for i = 0 to count
+				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
+				var float weight = pCalibrateBendWeights.getAt(baseIndex - i) cast float
+				var float boneRotation = fullRotation * weight
+				
+				if not hasBendMoveX
+					rule = ADRuleBoneTransformator.new()
+					rule.setName(nameBendX)
+					rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+					rule.setUseAxis(true)
+					rule.setAxis(pCalibrateBendAxesX.getAt(i) cast Vector)
+					rule.setMinimumAngle(-boneRotation)
+					rule.setMaximumAngle(boneRotation)
+					rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkBendX))
+					rule.addBone(bone)
+					adef.addRule(rule)
+				end
+				
+				if not hasBendMoveY
+					rule = rule = ADRuleBoneTransformator.new()
+					rule.setName(nameBendY)
+					rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+					rule.setUseAxis(true)
+					rule.setAxis(pCalibrateBendAxesY.getAt(i) cast Vector)
+					rule.setMinimumAngle(-boneRotation)
+					rule.setMaximumAngle(boneRotation)
+					rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkBendY))
+					rule.addBone(bone)
+					adef.addRule(rule)
+				end
+			end
 		end
 		
 		// twist
@@ -901,6 +982,15 @@ class MotionTransferBend extends DefaultMotionTransfer
 			elif tagName.equals("bendAxisRotation")
 				setBendAxisRotation(loader.readVector(element))
 				
+			elif tagName.equals("bendMoveX")
+				setBendMoveX(element.getFirstCData())
+				
+			elif tagName.equals("bendMoveY")
+				setBendMoveY(element.getFirstCData())
+				
+			elif tagName.equals("bendMoveRange")
+				setBendMoveRange(loader.readVector2(element))
+				
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
 			end
@@ -1005,9 +1095,6 @@ class MotionTransferBend extends DefaultMotionTransfer
 			loader.writeVector(tag, "twistAxis", each)
 		end)
 		loader.writeVector(tag, "twistBoneAxisRotation", pCalibrateTwistBoneAxisRotation)
-		tag.addDataTag("bendMoveX", pBendMoveX)
-		tag.addDataTag("bendMoveY", pBendMoveY)
-		loader.writeVector2(tag, "bendAxisRange", pBendMoveRange)
 		lcp.writeMatrix(tag, "twistTransform", pCalibrateTwistTransform)
 	end
 end

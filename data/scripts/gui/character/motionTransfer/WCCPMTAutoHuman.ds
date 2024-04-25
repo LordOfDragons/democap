@@ -63,6 +63,11 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 	var EditVector pEditScaleSpineBending
 	var EditVector pEditNeckBendAxisRotation
 	var EditVector pEditSpineBendAxisRotation
+	var SharedListModel pModelListNeckBendMoveX
+	var DefaultTextModel pModelTextNeckBendMoveX
+	var SharedListModel pModelListNeckBendMoveY
+	var DefaultTextModel pModelTextNeckBendMoveY
+	var EditVector2 pEditNeckBendMoveRange
 	
 	
 	
@@ -111,6 +116,14 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		
 		pModelRelocateArms = DefaultToggleModel.new()
 		
+		pModelListNeckBendMoveX = SharedListModel.new(window.getModelMoves())
+		pModelListNeckBendMoveX.setAutoSelect(false)
+		pModelTextNeckBendMoveX = DefaultTextModel.new()
+		
+		pModelListNeckBendMoveY = SharedListModel.new(window.getModelMoves())
+		pModelListNeckBendMoveY.setAutoSelect(false)
+		pModelTextNeckBendMoveY = DefaultTextModel.new()
+		
 		runWhileBlockingLayout(block
 			createContent(optionPrefix)
 		end)
@@ -158,6 +171,13 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		pEditScaleSpineBending = null
 		pEditNeckBendAxisRotation = null
 		pEditSpineBendAxisRotation = null
+		
+		pModelListNeckBendMoveX = null
+		pModelTextNeckBendMoveX = null
+		pModelListNeckBendMoveY = null
+		pModelTextNeckBendMoveY = null
+		pEditNeckBendMoveRange = null
+		
 		super.dispose()
 	end
 	
@@ -190,6 +210,9 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pEditScaleSpineBending.setVector(mt.getScaleSpineBending())
 				pEditNeckBendAxisRotation.setVector(mt.getNeckBendAxisRotation())
 				pEditSpineBendAxisRotation.setVector(mt.getSpineBendAxisRotation())
+				pModelTextNeckBendMoveX.setText(mt.getNeckBendMoveX())
+				pModelTextNeckBendMoveY.setText(mt.getNeckBendMoveY())
+				pEditNeckBendMoveRange.setVector2(mt.getNeckBendMoveRange())
 				
 			else
 				pModelTextBoneHead.setText("")
@@ -212,6 +235,9 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pEditScaleSpineBending.setVector(Vector.new(1, 1, 1))
 				pEditNeckBendAxisRotation.setVector(Vector.new(90, 0, 0))
 				pEditSpineBendAxisRotation.setVector(Vector.new(90, 0, 0))
+				pModelTextNeckBendMoveX.setText("")
+				pModelTextNeckBendMoveY.setText("")
+				pEditNeckBendMoveRange.setVector2(Vector2.new(90, 90))
 			end
 		end)
 		doLayoutIfBlocked()
@@ -245,6 +271,9 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		mt.setScaleSpineBending(pEditScaleSpineBending.getVector())
 		mt.setNeckBendAxisRotation(pEditNeckBendAxisRotation.getVector())
 		mt.setSpineBendAxisRotation(pEditSpineBendAxisRotation.getVector())
+		mt.setNeckBendMoveX(pModelTextNeckBendMoveX.getText())
+		mt.setNeckBendMoveY(pModelTextNeckBendMoveY.getText())
+		mt.setNeckBendMoveRange(pEditNeckBendMoveRange.getVector2())
 	end
 	
 	/** Supports motion transfer type. */
@@ -359,6 +388,22 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		comboBox.setToolTip("@UI.ToolTip.MoveCrouch")
 		pPanelForm.addWidget(comboBox)
 		
+		// neck bend move x
+		pPanelForm.addWidget(Label.new("@UI.NeckBendXMove.Label", "Label.FormCaption.SingleLine"))
+		
+		comboBox = ComboBox.new(pModelListNeckBendMoveX, DefaultComboBoxEditor.new(pModelTextNeckBendMoveX))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("@UI.ToolTip.BendXMove")
+		pPanelForm.addWidget(comboBox)
+		
+		// neck bend move y
+		pPanelForm.addWidget(Label.new("@UI.NeckBendYMove.Label", "Label.FormCaption.SingleLine"))
+		
+		comboBox = ComboBox.new(pModelListNeckBendMoveY, DefaultComboBoxEditor.new(pModelTextNeckBendMoveY))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("@UI.ToolTip.BendYMove")
+		pPanelForm.addWidget(comboBox)
+		
 		// fine tuning parameters
 		addWidget(CollapsibleGroup.new("@UI.FineTuning", "motiontransferautohuman#fine_tuning", CollapsibleGroup.persistModel(\
 		optionPrefix + "/GroupFineTuning", false), FormLayout.new(true, 10, 2), block Panel p
@@ -380,6 +425,17 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				p.addWidget(textField)
 				textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelBendShapeNeck))
 			end))
+			
+			// neck bend move range
+			toolTip = "@UI.ToolTip.BendMoveRange"
+			
+			label = Label.new("@UI.NeckBendMoveRange.Label", "Label.FormCaption.SingleLine")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			pEditNeckBendMoveRange = EditVector2.new()
+			pEditNeckBendMoveRange.setToolTip(toolTip)
+			p.addWidget(pEditNeckBendMoveRange)
 			
 			// bend shape spine
 			toolTip = "@UI.ToolTip.SpineBendShape"
