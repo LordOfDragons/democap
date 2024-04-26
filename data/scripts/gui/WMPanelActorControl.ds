@@ -112,6 +112,19 @@ class WMPanelActorControl extends Panel
 		end
 	end
 	
+	/** Reset physics to unstuck body parts. */
+	func void resetPhysics()
+		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
+		if actor == null
+			return
+		end
+		
+		var ECBMoCapAnimator.Instance mocapAnimator = ECBMoCapAnimator.getInstanceIn(actor)
+		if mocapAnimator != null
+			mocapAnimator.resetPhysicsBones()
+		end
+	end
+	
 	/** Move actor. */
 	func void moveActor(DVector direction)
 		var BaseVRActor actor = GameApp.getGameApp().getWorldSpawnCharacter().getActor()
@@ -150,12 +163,19 @@ class WMPanelActorControl extends Panel
 			p.addWidget(HelpButton.new("uipanelactorcontrol"), BorderLayout.Area.right)
 		end))
 		
-		addWidget(Panel.new(GridLayout.new(1, 0), block Panel p
+		addWidget(Panel.new(GridLayout.new(2, 0), block Panel p
 			// show/hide mirror
 			button = Button.new("@UI.ToggleVRMirror", BlockActionListener.new(block ActionEvent event
 				toggleLargeMirror()
 			end))
 			button.setToolTip("@UI.ToolTip.ToggleVRMirror")
+			p.addWidget(button)
+			
+			// reset physics
+			button = Button.new("@UI.ResetPhysics", BlockActionListener.new(block ActionEvent event
+				resetPhysics()
+			end))
+			button.setToolTip("@UI.ToolTip.ResetPhysics")
 			p.addWidget(button)
 		end))
 		

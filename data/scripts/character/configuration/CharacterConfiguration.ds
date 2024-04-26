@@ -374,6 +374,10 @@ class CharacterConfiguration
 	 */
 	func MoCapActorClass getElementClass()
 		if pElementClass == null
+			if not pIsCalibrated
+				resetCalibration(null, false) // avoids nasty problems
+			end
+			
 			prepareElementClass()
 			pPreloadCounter = PreloadCounter.new()
 			pElementClass.preloadResources(pPreloadCounter)
@@ -953,13 +957,12 @@ class CharacterConfiguration
 		// create reset physics animator
 		var Animator resetPhysicsAnimator = Animator.new()
 		
-		if pMoveCalibrate.empty()
-			var ARStateManipulator rule = ARStateManipulator.new()
-			rule.setEnablePosition(true)
-			rule.setEnableSize(true)
-			resetPhysicsAnimator.addRule(rule)
-			
-		else
+		var ARStateManipulator ruleRPInit = ARStateManipulator.new()
+		ruleRPInit.setEnablePosition(true)
+		ruleRPInit.setEnableSize(true)
+		resetPhysicsAnimator.addRule(ruleRPInit)
+		
+		if not pMoveCalibrate.empty()
 			var ARAnimation rule = ARAnimation.new()
 			rule.setMoveName(pMoveCalibrate)
 			rule.setEnableSize(true)

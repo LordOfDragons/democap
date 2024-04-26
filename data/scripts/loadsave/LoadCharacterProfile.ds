@@ -342,6 +342,7 @@ class LoadCharacterProfile extends BaseXmlLoader
 	
 	/** Write configuration. */
 	func void writeConfiguration(EasyXMLElement root, CharacterConfiguration configuration)
+		var bool calibrated = configuration.isCalibrated()
 		var EasyXMLElement tag = root.addTag("configuration")
 		tag.setAttribute("name", configuration.getName())
 		
@@ -359,16 +360,18 @@ class LoadCharacterProfile extends BaseXmlLoader
 		tag.addDataTag("grabBaseBoneLeft", configuration.getGrabBaseBoneLeft())
 		
 		configuration.getTrackerSlots().forEach(block CharacterTrackerSlot each
-			writeTrackerSlot(tag, each)
+			writeTrackerSlot(tag, each, calibrated)
 		end)
 		
 		configuration.getMotionTransfers().forEach(block MotionTransfer each
 			var EasyXMLElement childTag = tag.addTag("motionTransfer")
 			childTag.setAttribute("type", each.factoryID())
-			each.save(this, childTag)
+			each.save(this, childTag, calibrated)
 		end)
 		
-		writeConfigurationCalibrate(tag, configuration)
+		if calibrated
+			writeConfigurationCalibrate(tag, configuration)
+		end
 	end
 	
 	/** Write configuration calibration. */
@@ -406,7 +409,7 @@ class LoadCharacterProfile extends BaseXmlLoader
 	end
 	
 	/** Write tracker slot. */
-	func void writeTrackerSlot(EasyXMLElement root, CharacterTrackerSlot slot)
+	func void writeTrackerSlot(EasyXMLElement root, CharacterTrackerSlot slot, bool calibrated)
 		var EasyXMLElement tag = root.addTag("trackerSlot")
 		tag.setAttribute("name", slot.getName())
 		
@@ -423,7 +426,9 @@ class LoadCharacterProfile extends BaseXmlLoader
 			writeVector(tag, "forceCalibrateRotation", slot.getForceCalibrateRotation())
 		end
 		
-		writeTrackerSlotCalibrate(tag, slot)
+		if calibrated
+			writeTrackerSlotCalibrate(tag, slot)
+		end
 	end
 	
 	/** Write tracker slot calibrate. */
