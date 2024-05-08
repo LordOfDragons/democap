@@ -34,6 +34,12 @@ def createZipFile(env, target, source):
 
 contentVersion = env['releaseVersion']
 
+versionParts = [int(x) for x in contentVersion.split('.')]
+while len(versionParts) < 3:
+	versionParts.append(0)
+blenderVersionString = '.'.join([str(x) for x in versionParts])
+
+
 content = []
 
 dataFiles = []
@@ -42,6 +48,16 @@ globFiles(env, 'democap-tools', '*', dataFiles)
 for f in dataFiles:
 	path = f.split('/')
 	content.append(env.InstallAs(os.path.join('content', 'democap-tools', *path[1:]), f))
+
+def copyModifyFile(env, target, source):
+	with open(source[0].abspath, 'r') as f:
+		content = f.read()
+	content = content.replace('{RELEASE_VERSION}', blenderVersionString)
+	with open(target[0].abspath, 'w') as f:
+		f.write(content)
+
+dataFiles.extend(env.Command('content/democap-tools/blender_manifest.toml',
+	'blender_manifest.toml.in', env.Action(copyModifyFile, 'Copy-Modify $TARGET')))
 
 contentArchive = env.Command('blender-democap-tools-{}'.format(contentVersion),
 	'content', env.Action(createZipFile, 'Archive Blender Addon'))
