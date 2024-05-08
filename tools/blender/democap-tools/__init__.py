@@ -29,6 +29,7 @@ from .configuration import Configuration
 from .panel_demca_browser import panelDemcaBrowserRegister
 from .panel_correctionbones import panelCorrectionBonesRegister
 from .panel_live import panelLiveRegister
+from .utils import unregisterRegisteredClasses
 
 bl_info = {
     "name": "DEMoCap Tools",
@@ -54,7 +55,7 @@ def register():
 
 
 def unregister():
-    pass
+    unregisterRegisteredClasses()
 
 
 if __name__ == "__main__":
