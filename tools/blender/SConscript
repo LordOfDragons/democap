@@ -10,60 +10,77 @@ params.Update(env)
 
 # blender addon
 def globFiles(env, search, pattern, result, recursive=True):
-	oldcwd = os.getcwd()
-	os.chdir(env.Dir('.').srcnode().abspath)
-	
-	for root, dirs, files in os.walk(search):
-		if recursive:
-			if '.svn' in dirs:
-				dirs.remove('.svn')
-			if '.git' in dirs:
-				dirs.remove('.git')
-			if '__pycache__' in dirs:
-				dirs.remove('__pycache__')
-		else:
-			del dirs[:]
-		
-		for s in fnmatch.filter(files, pattern):
-			result.append(root + os.sep + s)
-	
-	os.chdir(oldcwd)
+    oldcwd = os.getcwd()
+    os.chdir(env.Dir('.').srcnode().abspath)
+
+    for root, dirs, files in os.walk(search):
+        if recursive:
+            if '.svn' in dirs:
+                dirs.remove('.svn')
+            if '.git' in dirs:
+                dirs.remove('.git')
+            if '__pycache__' in dirs:
+                dirs.remove('__pycache__')
+        else:
+            del dirs[:]
+
+        for s in fnmatch.filter(files, pattern):
+            result.append(root + os.sep + s)
+
+    os.chdir(oldcwd)
 
 def createZipFile(env, target, source):
-	shutil.make_archive(target[0].abspath, 'zip', source[0].abspath)
+    shutil.make_archive(target[0].abspath, 'zip', source[0].abspath)
 
-contentVersion = env['releaseVersion']
+versionString = env['releaseVersion']
 
 try:
-	versionParts = [int(x) for x in contentVersion.split('.')]
-	while len(versionParts) < 3:
-		versionParts.append(0)
-	blenderVersionString = '.'.join([str(x) for x in versionParts])
-except:
-	blenderVersionString = '9999.0.0'
+    blenderVersion = [int(x) for x in versionString.split('.')]
+    while len(blenderVersion) < 3:
+        blenderVersion.append(0)
+except ValueError:
+    blenderVersion = [9999, 0, 0]
 
-content = []
+blenderVersion = [str(x) for x in blenderVersion]
+
+
+def copyModifyFile(env, target, source):
+    with open(source[0].abspath, 'r', encoding='utf_8') as f:
+        content = f.read()
+    content = content.replace('{VERSION_MAJOR}', blenderVersion[0])
+    content = content.replace('{VERSION_MINOR}', blenderVersion[1])
+    content = content.replace('{VERSION_PATCH}', blenderVersion[2])
+    with open(target[0].abspath, 'w', encoding='utf_8') as f:
+        f.write(content)
+
+
+addonSrcDir = 'democap-tools'
+addonDestDir = os.path.join('content', 'democap-tools')
+
+addonFiles = []
 
 dataFiles = []
 globFiles(env, 'democap-tools', '*', dataFiles)
 
+specialFiles = [
+    '{}/__init__.py'.format(addonSrcDir),
+    '{}/version.py'.format(addonSrcDir),
+    '{}/blender_manifest.toml'.format(addonSrcDir)]
+
 for f in dataFiles:
-	path = f.split('/')
-	content.append(env.InstallAs(os.path.join('content', 'democap-tools', *path[1:]), f))
+    path = f.split('/')
+    
+    if f in specialFiles:
+        addonFiles.extend(env.Command(
+            '{}/{}'.format(addonDestDir, f[len(addonSrcDir)+1:]),
+            env.File(f).srcnode(),
+            env.Action(copyModifyFile, 'Copy-Modify $TARGET')))
+    else:
+        addonFiles.append(env.InstallAs(os.path.join(addonDestDir, *path[1:]), f))
 
-def copyModifyFile(env, target, source):
-	with open(source[0].abspath, 'r') as f:
-		content = f.read()
-	content = content.replace('{RELEASE_VERSION}', blenderVersionString)
-	with open(target[0].abspath, 'w') as f:
-		f.write(content)
-
-dataFiles.extend(env.Command('content/democap-tools/blender_manifest.toml',
-	'blender_manifest.toml.in', env.Action(copyModifyFile, 'Copy-Modify $TARGET')))
-
-contentArchive = env.Command('blender-democap-tools-{}'.format(contentVersion),
-	'content', env.Action(createZipFile, 'Archive Blender Addon'))
-env.Depends(contentArchive, content)
+contentArchive = env.Command('blender-democap-tools-{}'.format(versionString),
+    'content', env.Action(createZipFile, 'Archive Blender Addon'))
+env.Depends(contentArchive, addonFiles)
 
 Default(env.Alias('blenderAddon', contentArchive))
 

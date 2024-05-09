@@ -29,14 +29,19 @@ from .configuration import Configuration
 from .panel_demca_browser import panelDemcaBrowserRegister
 from .panel_correctionbones import panelCorrectionBonesRegister
 from .panel_live import panelLiveRegister
-from .utils import unregisterRegisteredClasses
+from .utils import registerKnownClasses, unregisterRegisteredClasses, delog
+from .version import addonVersion
+
+from . import DEAddonImportExport as deaie
+
+delog("Version {}".format(addonVersion))
 
 bl_info = {
     "name": "DEMoCap Tools",
     "description": "DEMoCapTools",
     "author": "DragonDreams",
-    "version": (1, 0),
-    "blender": (2, 90, 0),
+    "version": ({VERSION_MAJOR}, {VERSION_MINOR}),
+    "blender": (3, 0, 0),
     "location": "View3D > Tools > DEMoCap",
     "warning": "",
     "wiki_url": "https://developer.dragondreams.ch/wiki/doku.php/democap:blender_democaptools",
@@ -48,15 +53,17 @@ bl_info = {
 
 
 def register():
+    """ Register add-on. """
+    delog("Register classes")
+    deaie.register()
     Configuration.get()
     panelDemcaBrowserRegister()
     panelCorrectionBonesRegister()
     panelLiveRegister()
+    registerKnownClasses()
 
 
 def unregister():
+    """ Unregister add-on. """
     unregisterRegisteredClasses()
-
-
-if __name__ == "__main__":
-    register()
+    deaie.unregister()
