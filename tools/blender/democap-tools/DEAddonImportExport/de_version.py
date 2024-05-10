@@ -22,4 +22,4 @@
 # NOTE: For the GPL copy see http://www.gnu.org/licenses/gpl.html
 #
 
-addonVersion = (1, 23, 0)
+addonVersion = (1, 22, 2)

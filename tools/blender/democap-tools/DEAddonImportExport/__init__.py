@@ -35,7 +35,7 @@ bl_info = {
     "name": "Drag[en]gine Import/Export",
     "description": "Import/Export Drag[en]gine Resources including helper tools",
     "author": "Plüss Roland",
-    "version": (1, 23),
+    "version": (1, 22),
     "blender": (3, 0, 0),
     "api": 36079,
     "location": "File > Import-Export > Drag[en]gine",

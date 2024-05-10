@@ -86,6 +86,14 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
         scaleLength = self.scaleLength
         useWorldSpace = windowManager.democaptools_corrbones_worldspace
 
+        isB40 = bpy.app.version >= (4, 0)
+
+        # add bone collection if absent
+        if isB40:
+            if boneGroupName not in armature.collections:
+                armature.collections.new(boneGroupName)
+            boneCollection = armature.collections[boneGroupName]
+
         # add edit bone
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.armature.select_all(action='DESELECT')
@@ -106,9 +114,15 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
             bone.tail = orgEditBone.tail
             bone.roll = orgEditBone.roll
             bone.length = orgEditBone.length * scaleLength
-            bone.layers = orgEditBone.layers
             bone.parent = orgEditBone.parent
             bone.select = True
+
+            if isB40:
+                for c in orgEditBone.collections:
+                    c.assign(bone)
+                boneCollection.assign(bone)
+            else:
+                bone.layers = orgEditBone.layers
 
             if useWorldSpace:
                 bone.tail = bone.head + mathutils.Vector((0, bone.length, 0))
@@ -122,25 +136,25 @@ class ARMATURE_OT_AddCorrectionBones(bpy.types.Operator):
 
         pose = object.pose
 
-        if boneGroupName in pose.bone_groups:
-            boneGroup = pose.bone_groups[boneGroupName]
-        else:
-            colorSets = ['THEME{:02d}'.format(x) for x in range(1, 21)]
-            for boneGroup in pose.bone_groups:
-                try:
-                    colorSets.remove(colorSets.index(boneGroup.color_set))
-                except ValueError:
-                    pass  # not in list
+        if not isB40:
+            if boneGroupName in pose.bone_groups:
+                boneGroup = pose.bone_groups[boneGroupName]
+            else:
+                colorSets = ['THEME{:02d}'.format(x) for x in range(1, 21)]
+                for boneGroup in pose.bone_groups:
+                    try:
+                        colorSets.remove(colorSets.index(boneGroup.color_set))
+                    except ValueError:
+                        pass  # not in list
 
-            if not colorSets:
-                colorSets.add('THEME01')
+                if not colorSets:
+                    colorSets.add('THEME01')
 
-            boneGroup = pose.bone_groups.new(name=boneGroupName)
-            boneGroup.color_set = next(iter(colorSets))
+                boneGroup = pose.bone_groups.new(name=boneGroupName)
+                boneGroup.color_set = next(iter(colorSets))
 
-        for addedBone in addedBones:
-            poseBone = pose.bones[addedBone[1]]
-            poseBone.bone_group = boneGroup
+            for addedBone in addedBones:
+                pose.bones[addedBone[1]].bone_group = boneGroup
 
         # add constraint to original pose bone
         for addedBone in addedBones:
