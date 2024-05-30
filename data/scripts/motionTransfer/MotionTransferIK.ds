@@ -110,7 +110,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 	
 	var ADRuleInverseKinematic pADRuleIK
 	var ADRuleAnimation pADRuleBaseIK
-	var ADRuleAnimation pADRuleRetracted
 	
 	var Array pCalibrateBones
 	var float pCalibrateReach
@@ -587,7 +586,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pADControllerBlend = null
 		pADRuleIK = null
 		pADRuleBaseIK = null
-		pADRuleRetracted = null
 
 		var Array ignoreBones = Array.new()
 		
@@ -656,14 +654,28 @@ class MotionTransferIK extends DefaultMotionTransfer
 			link.setCurve(curve)
 			adef.addLink(link)
 			
-			pADRuleRetracted = ADRuleAnimation.new()
-			pADRuleRetracted.setName(getName() + ".retracted")
-			pADRuleRetracted.setMoveName(pMoveRetracted)
-			pCalibrateBones.forEach(block String each
-				pADRuleRetracted.addBone(each)
-			end)
-			pADRuleRetracted.addTargetLink(ADRuleTargetLink.new(ARAnimationTarget.blendFactor, link))
-			adef.addRule(pADRuleRetracted)
+			if adef.getAnimation().getMovePlaytime(pMoveRetracted) > 0.1
+				var ADRuleAnimationDifference rule = ADRuleAnimationDifference.new()
+				rule.setName(getName() + ".retracted")
+				rule.setReferenceMoveName(pMoveRetracted)
+				rule.setLeadingMoveName(pMoveRetracted)
+				rule.setEnableSize(true)
+				rule.addTargetLink(ADRuleTargetLink.new(ARAnimationDifferenceTarget.leadingMoveTime, link))
+				pCalibrateBones.forEach(block String each
+					rule.addBone(each)
+				end)
+				adef.addRule(rule)
+				
+			else
+				var ADRuleAnimation rule = ADRuleAnimation.new()
+				rule.setName(getName() + ".retracted")
+				rule.setMoveName(pMoveRetracted)
+				pCalibrateBones.forEach(block String each
+					rule.addBone(each)
+				end)
+				rule.addTargetLink(ADRuleTargetLink.new(ARAnimationTarget.blendFactor, link))
+				adef.addRule(rule)
+			end
 		end
 		
 		
@@ -1089,7 +1101,6 @@ class MotionTransferIK extends DefaultMotionTransfer
 		
 		pADRuleIK = null
 		pADRuleBaseIK = null
-		pADRuleRetracted = null
 		
 		pTipTracker.resetTransform()
 		pGuideTracker.resetTransform()
@@ -1364,6 +1375,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 			
 			var ARAnimation rule = ARAnimation.new()
 			rule.setMoveName(pMoveRetracted)
+			rule.setMoveTime(1)
 			tanimator.addRule(rule)
 			
 			var AnimatorInstance tainst = AnimatorInstance.new()
