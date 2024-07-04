@@ -35,6 +35,8 @@ pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Scenery
 pin Dragengine.Utils
+pin Dragengine.Services.Mods
+pin Dragengine.Services.User
 
 
 
@@ -106,6 +108,9 @@ class GameApp extends BaseGameApp
 	var HmdDisabledWorld pHmdDisabledWorld
 	
 	var Array pGlobalElementClasses
+	
+	var ServiceSteamSdk pServiceSteam
+	var ServiceModio pServiceModio
 	
 	
 	/**
@@ -269,6 +274,17 @@ class GameApp extends BaseGameApp
 	func DNServer getServer()
 		return pServer
 	end
+	
+	/** Steam SDK service or null. */
+	func ServiceSteamSdk getServiceSteam()
+		return pServiceSteam
+	end
+	
+	/** Mod.io service or null. */
+	func ServiceModio getServiceModio()
+		return pServiceModio
+	end
+	
 	
 	
 	/** Project. */
@@ -507,8 +523,12 @@ class GameApp extends BaseGameApp
 		// parse game arguments
 		parseGameArguments()
 		
+		if restoreRestarted()
+			return
+		end
+		
 		// show Drag[en]gine logo then launch the application
-		//WindowLogo.showDragengineLogo(this.getDesktop(), BlockActionListener.new(\
+		//WindowLogo.showDragengineLogo(this.getDesktop(), BlockActionListener.new(
 		if pGameArgsEnableVR
 			launchApplication()
 			
@@ -518,6 +538,25 @@ class GameApp extends BaseGameApp
 				launchApplication()
 			end))
 		end
+	end
+	
+	/**
+	 * \brief Restore to state prior to restart if possible.
+	 * \returns true if restored otherwise false.
+	 */
+	protected func bool restoreRestarted()
+		var String info = getRestartInfo()
+		if info.empty()
+			return false
+		end
+		
+		launchApplication()
+		
+		if info.equals("manageMods")
+			getConsole().addMessage("RESTORED")
+		end
+		
+		return true
 	end
 	
 	protected func void loadSettings()
@@ -791,6 +830,15 @@ class GameApp extends BaseGameApp
 		if pActorProfiles != null
 			pActorProfiles.dispose()
 			pActorProfiles = null
+		end
+		
+		if pServiceModio != null
+			pServiceModio.dispose()
+			pServiceModio = null
+		end
+		if pServiceSteam != null
+			pServiceSteam.dispose()
+			pServiceSteam = null
 		end
 		
 		pServer = null

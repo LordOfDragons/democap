@@ -1,0 +1,591 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+pin Dragengine.Gui
+pin Dragengine.Gui.Layouts
+pin Dragengine.Services.Mods
+pin Dragengine.Gui.Events
+pin Dragengine.Gui.Designers
+
+/**
+ * \brief Window managing modifications.
+ */
+class WindowModManagement extends WindowDialog
+	/**
+	 * \brief List model renderer for modification entries in the browse list.
+	 */
+	class ModListElementRenderer implements ListElementRenderer
+		/**
+		 * \brief Widget displaying modification information in the list.
+		 */
+		class ModWidget extends Panel
+			/**
+			 * \brief Listener updating logo image once loaded.
+			 */
+			class LoadLogoListener extends DefaultServiceModsListener
+				var DisplayImage pWidget
+				
+				func new(DisplayImage widget)
+					pWidget = widget
+				end
+				
+				func void onLoadResource(ServiceMods service, String url, Object resource, Exception exception)
+					if exception == null
+						pWidget.setImage(resource cast Image)
+						
+					else
+						GameApp.getApp().getConsole().addError("Load logo failed: " + url, exception)
+					end
+				end
+			end
+			
+			
+			var TextModel pModelName, pModelDownloads, pModelSize, pModelRating, pModelSubscribed
+			var DisplayImage pImageLogo
+			var Panel pPanelInfo
+			var DisplayIcon pIconDownloads, pIconSize, pIconRating
+			var Label pLabelName, pLabelDownloads, pLabelSize, pLabelRating, pLabelSubscribed
+			var String pModId
+			var bool pSubscribed
+			var String pDesignerSelectorBase, pDesignerSelectorSuffix
+			
+			
+			/**
+			 * \brief Create widget displaying modification information in the list.
+			 */
+			func new(String designerSelector) super(FlowLayout.new(LayoutAxis.y))
+				pModelName = DefaultTextModel.new()
+				pModelDownloads = DefaultTextModel.new()
+				pModelSize = DefaultTextModel.new()
+				pModelRating = DefaultTextModel.new()
+				pModelSubscribed = DefaultTextModel.new()
+				
+				runWhileBlockingLayout(block
+					createContent()
+					setAllDesignerSelectors(designerSelector, "")
+				end)
+			end
+			
+			/**
+			 * \brief Dispose of widget.
+			 */
+			func void dispose()
+				pModelName = null
+				pModelDownloads = null
+				pModelSize = null
+				pModelRating = null
+				pModelSubscribed = null
+				pImageLogo = null
+				pPanelInfo = null
+				pIconDownloads = null
+				pIconSize = null
+				pIconRating = null
+				pLabelName = null
+				pLabelDownloads = null
+				pLabelSize = null
+				pLabelRating = null
+				pLabelSubscribed = null
+				super.dispose()
+			end
+			
+			
+			/**
+			 * \brief Set all designer selectors.
+			 */
+			func void setAllDesignerSelectors(String selector, String suffix)
+				pDesignerSelectorBase = selector
+				pDesignerSelectorSuffix = suffix
+				
+				runWhileBlockingLayout(block
+					setDesignerSelector("Panel." + selector + suffix)
+					
+					pImageLogo.setDesignerSelector("Image." + selector + suffix)
+					pPanelInfo.setDesignerSelector("Panel." + selector + ".Info" + suffix)
+					
+					var String dslab = "Label." + selector
+					var String dsico = "Icon." + selector
+					pLabelName.setDesignerSelector(dslab + ".Name" + suffix)
+					pIconDownloads.setDesignerSelector(dsico + ".Downloads" + suffix)
+					pLabelDownloads.setDesignerSelector(dslab + ".Downloads" + suffix)
+					pIconSize.setDesignerSelector(dsico + ".Size" + suffix)
+					pLabelSize.setDesignerSelector(dslab + ".Size" + suffix)
+					pIconRating.setDesignerSelector(dsico + ".Rating" + suffix)
+					pLabelRating.setDesignerSelector(dslab + ".Rating" + suffix)
+					
+					pLabelSubscribed.setDesignerSelector(\
+						dslab + (pSubscribed if ".Subscribed" else ".Unsubscribed") + suffix)
+				end)
+				doLayoutIfBlocked()
+			end
+			
+			/**
+			 * \brief Update content from modification information.
+			 */
+			func void update(ServiceMods service, ServiceModInfo info)
+				if info.id.equals(pModId)
+					return
+				end
+				
+				pModId = info.id
+				
+				runWhileBlockingLayout(block
+					pImageLogo.setImage(info.logo != null if info.logo.image else null)
+					pModelName.setText(info.name != null if info.name else "?")
+					pModelDownloads.setText(formatCount(info.stats != null if info.stats.downloadCount else 0))
+					pModelSize.setText(formatSize(info.latestRelease != null if info.latestRelease.filesize else 0))
+					pModelRating.setText(formatRating(info.stats != null if info.stats.ratingWeighted else 0))
+					pModelSubscribed.setText(pSubscribed if "Subscribed" else "Not Subscribed")
+					updateStatusInfo(service)
+				end)
+				doLayoutIfBlocked()
+				
+				if pImageLogo.getImage() == null and info.logo != null
+					var String url = findLoadLogoImage(info.logo)
+					if url != null
+						service.loadResource(url, LoadLogoListener.new(pImageLogo))
+					end
+				end
+			end
+			
+			/**
+			 * \brief Update modification status information.
+			 */
+			func void updateStatusInfo(ServiceMods service)
+				var bool subscribed = service.getSubscribedMods().has(pModId)
+				if subscribed == pSubscribed
+					return
+				end
+				
+				pSubscribed = subscribed
+				
+				runWhileBlockingLayout(block
+					pModelSubscribed.setText(pSubscribed if "Subscribed" else "Not Subscribed")
+					pLabelSubscribed.setDesignerSelector("Label." + pDesignerSelectorBase\
+						+ (pSubscribed if ".Subscribed" else ".Unsubscribed")\
+						+ pDesignerSelectorSuffix)
+				end)
+				doLayoutIfBlocked()
+			end
+			
+			/**
+			 * \brief Find URL of best matching logo image to load.
+			 */
+			func String findLoadLogoImage(ServiceImage image)
+				var Point reqSize = pImageLogo.getMinimumSize()
+				
+				if image.thumbnails != null
+					var Array found = image.thumbnails.collect(block ServiceImage.Thumbnail each
+						return each.size >= reqSize
+					end).sorted(block ServiceImage.Thumbnail a, ServiceImage.Thumbnail b
+						return a.size.compare(b)
+					end)
+					if found.getCount() > 0
+						return (found.getAt(0) cast ServiceImage.Thumbnail).url
+					end
+				end
+				
+				return image.url
+			end
+			
+			/**
+			 * \brief Format count.
+			 */
+			func String formatCount(float count)
+				if count >= 1000000000
+					return "{:.1f}G".format(Array.newWith(count / 1000000000))
+					
+				elif count >= 1000000
+					return "{:.1f}M".format(Array.newWith(count / 1000000))
+					
+				elif count >= 1000
+					return "{:.1f}K".format(Array.newWith(count / 1000))
+					
+				else
+					return "{:.0f}".format(Array.newWith(count))
+				end
+			end
+			
+			/**
+			 * \brief Format size.
+			 */
+			func String formatSize(float size)
+				if size >= 1024000000
+					return "{:.1f}GB".format(Array.newWith(size / 1024000000))
+					
+				elif size >= 1024000
+					return "{:.1f}MB".format(Array.newWith(size / 1024000))
+					
+				elif size >= 1024
+					return "{:.1f}Kb".format(Array.newWith(size / 1024))
+					
+				else
+					return "{:.0f}b".format(Array.newWith(size))
+				end
+			end
+			
+			/**
+			 * \brief Format rating.
+			 */
+			func String formatRating(float rating)
+				return "{:0.1f}%".format(Array.newWith(rating))
+			end
+			
+			
+			/**
+			 * \brief Create content.
+			 */
+			protected func void createContent()
+				pImageLogo = DisplayImage.new(null, RepeatMode.stretchRatio)
+				addWidget(pImageLogo)
+				
+				pPanelInfo = Panel.new(FlowLayout.new(LayoutAxis.y, 10), block Panel p
+					pLabelName = Label.new(pModelName)
+					p.addWidget(pLabelName)
+					
+					p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 15), block Panel p2
+						p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p3
+							pIconDownloads = DisplayIcon.new(Image.new("/shareddata/guithemes/modern/icons/download.png"))
+							p3.addWidget(pIconDownloads)
+							
+							pLabelDownloads = Label.new(pModelDownloads)
+							p3.addWidget(pLabelDownloads)
+						end))
+						
+						p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p3
+							pIconSize = DisplayIcon.new(Image.new("/shareddata/guithemes/modern/icons/filesize.png"))
+							p3.addWidget(pIconSize)
+							
+							pLabelSize = Label.new(pModelSize)
+							p3.addWidget(pLabelSize)
+						end))
+						
+						p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p3
+							pIconRating = DisplayIcon.new(Image.new("/shareddata/guithemes/modern/icons/rating.png"))
+							p3.addWidget(pIconRating)
+							
+							pLabelRating = Label.new(pModelRating)
+							p3.addWidget(pLabelRating)
+						end))
+					end))
+					
+					pLabelSubscribed = Label.new(pModelSubscribed)
+					p.addWidget(pLabelSubscribed)
+				end)
+				addWidget(pPanelInfo)
+			end
+		end
+		
+		
+		var ServiceMods pServiceMods
+		var String pDesignerSelector
+		var ServiceModInfo pDefaultModInfo
+		var Point pDefaultMinimumSize
+		
+		
+		/**
+		 * \brief Create modification list model renderer.
+		 * 
+		 * Uses designer selector "ListRenderer.WindowModManagement.Mod".
+		 */
+		func new(ServiceMods serviceMods) this(serviceMods, "ListRenderer.WindowModManagement.Mod")
+		end
+		
+		/**
+		 * \brief Create modification list model renderer.
+		 */
+		func new(ServiceMods serviceMods, String designerSelector)
+			pServiceMods = serviceMods
+			pDesignerSelector = designerSelector
+			pDefaultMinimumSize = Point.new()
+			
+			pDefaultModInfo = ServiceModInfo.new()
+			pDefaultModInfo.descriptionText = "X"
+			pDefaultModInfo.id = ""
+			pDefaultModInfo.name = "X"
+			pDefaultModInfo.stats = ServiceModStats.new()
+			pDefaultModInfo.stats.downloadCount = 0
+			pDefaultModInfo.stats.ratingWeighted = 1
+			pDefaultModInfo.latestRelease = ServiceModRelease.new()
+			pDefaultModInfo.latestRelease.filesize = 1
+		end
+		
+		
+		
+		/**
+		 * \brief Designer selector.
+		 */
+		func String getDesignerSelector()
+			return pDesignerSelector
+		end
+		
+		/**
+		 * \brief Default modification information to use to measure default size.
+		 */
+		func ServiceModInfo getDefaultModInfo()
+			return pDefaultModInfo
+		end
+		
+		/**
+		 * \brief Minimum size to use unless default element is larger.
+		 */
+		public func Point getDefaultMinimumSize()
+			return pDefaultMinimumSize
+		end
+		
+		/**
+		 * \brief Set minimum size to use unless default element is larger.
+		 */
+		public func void setDefaultMinimumSize(Point size)
+			if size == null
+				throw ENullPointer.new("size")
+			end
+			pDefaultMinimumSize = Point.new().largest(size)
+		end
+		
+		
+		
+		/**
+		 * \brief Create widget representing modification in the list box.
+		 */
+		func Widget createRenderer(ListBox listBox)
+			return ModWidget.new(pDesignerSelector)
+		end
+		
+		/**
+		 * Update widget representing modification in the list box.
+		 */
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			var ServiceModInfo info = element cast ServiceModInfo
+			if info == null
+				
+			end
+			
+			var String selector = pDesignerSelector, suffix = ""
+			if selected
+				suffix = ".Selected"
+			end
+			
+			var ModWidget widget = renderer cast ModWidget
+			widget.update(pServiceMods, info)
+			widget.setAllDesignerSelectors(selector, suffix)
+		end
+		
+		/**
+		 * Default size of widget representing modification in the list box.
+		 */
+		func Point getDefaultSize(ListBox listBox)
+			// to properly measure the size a Container instance is created with the gui theme
+			// from the listBox. if the gui theme would be assigned directly to the renderer
+			// potentially use of gui theme selectors are skipped causing strange to find
+			// errors. the empty widget designer ensures the container has no padding nor any
+			// other unwanted designer parameters applied
+			var Container container = Container.new(BoxLayout.new(LayoutAxis.y), block Container c
+				c.setDesigner(DefaultWidgetDesigner.new())
+				c.setGuiTheme(listBox.getGuiTheme())
+				
+				var Widget renderer = createRenderer(listBox)
+				c.addWidget(renderer)
+				updateRenderer(listBox, renderer, pDefaultModInfo, false, false)
+			end)
+			container.doLayout()
+			
+			var Point size = container.getMinimumSize()
+			container.dispose()
+			return size.largest(pDefaultMinimumSize)
+		end
+	end
+	
+	/**
+	 * \brief Search mods listener.
+	 */
+	class SearchModsListener extends DefaultServiceModsListener
+		var WindowModManagement pWindow
+		
+		func new(WindowModManagement window)
+			pWindow = window
+		end
+		
+		func void onListMods(ServiceMods service, Array mods, Exception exception)
+			pWindow.onSearchResult(this, mods, exception)
+		end
+	end
+	
+	/**
+	 * \brief Show mod details when clicking on a list item.
+	 */
+	class ClickedModDetails extends ClickedActionListener
+		var WindowModManagement pWindow
+		var ListBox pListBox
+		
+		func new(WindowModManagement window, ListBox listBox)
+			pWindow = window
+			pListBox = listBox
+		end
+		
+		func void onAction()
+			var int index = pListBox.getElementAt(getPosition())
+			if index != -1
+				GameApp.getApp().getConsole().addMessage("CLICKED " + index)
+			end
+		end
+	end
+	
+	
+	var DefaultListModel pModelMods
+	var ListBox pListMods
+	var ServiceMods pServiceMods
+	var ServiceModsFeatures pServiceModFeatures
+	var SearchModsListener pSearchModsListener
+	
+	
+	/**
+	 * Create window managing modifications
+	 */
+	func new(Window window, ServiceMods serviceMods)
+		if serviceMods == null
+			throw ENullPointer.new("serviceMods")
+		end
+		
+		pServiceMods = serviceMods
+		pServiceModFeatures = serviceMods.getModsFeatures()
+		
+		pModelMods = DefaultListModel.new()
+		
+		runWhileBlockingLayout(block
+			setGuiTheme(window.getGuiTheme())
+			setTitle("@UI.Modifications")
+			setDesignerSelector("Window.Dialog.Modifications")
+			setSize(window.getDesktop().getContainerSize() - Point.new(100, 100))
+			
+			createContent()
+		end)
+		doLayout()
+		show(window, false, WindowModal.Placement.desktop)
+		
+		searchMods(ServiceModFilter.new())
+	end
+	
+	/** Dispose of window. */
+	func void dispose()
+		pModelMods = null
+		pListMods = null
+		
+		pSearchModsListener = null
+		pServiceMods = null
+		
+		super.dispose()
+	end
+	
+	
+	
+	/**
+	 * \brief Servide mods.
+	 */
+	func ServiceMods getServiceMods()
+		return pServiceMods
+	end
+	
+	/**
+	 * \brief Cached service mods features.
+	 */
+	func ServiceModsFeatures getServiceModsFeatures()
+		return pServiceModFeatures
+	end
+	
+	
+	/**
+	 * \brief Search for modifications.
+	 * 
+	 * Clears the list and starts searching for the first page of modifications.
+	 */
+	func void searchMods(ServiceModFilter filter)
+		pSearchModsListener = SearchModsListener.new(this)
+		pServiceMods.listAllMods(filter, pSearchModsListener)
+	end
+	
+	/**
+	 * \brief Search results retrieved from service provider.
+	 * 
+	 * For use by SearchModsListener only.
+	 */
+	func void onSearchResult(SearchModsListener listener, Array mods, Exception exception)
+		if listener != pSearchModsListener
+			return
+		end
+		
+		pSearchModsListener = null
+		if exception == null
+			pModelMods.addAll(mods)
+			
+		else
+			GameApp.getApp().getConsole().addError("onSearchResult", exception)
+			WindowDialog.message(getWindow(), "Failure", exception.toString(), null, null, null)
+		end
+	end
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		setLayout(BorderLayout.new(10))
+		
+		// top line
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 10), block Panel p
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 5), block Panel p2
+				p2.addWidget(Button.new("Available Mods", BlockActionListener.new(block ActionEvent e
+					BaseGameApp.getApp().getConsole().addMessage("Available Mods")
+				end)))
+				p2.addWidget(Button.new("Installed Mods", BlockActionListener.new(block ActionEvent e
+					BaseGameApp.getApp().getConsole().addMessage("Installed Mods")
+				end)))
+				p2.addWidget(Button.new("Tasks", BlockActionListener.new(block ActionEvent e
+					BaseGameApp.getApp().getConsole().addMessage("Tasks")
+				end)))
+			end))
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 5), block Panel p2
+				p2.addWidget(Label.new("[ All categories ]"))
+				p2.addWidget(Label.new("[ Sorting ]"))
+				p2.addWidget(Label.new("[ Search Box ]"))
+			end))
+		end), BorderLayout.Area.top)
+		
+		// listing
+		pListMods = ListBox.new(pModelMods, ModListElementRenderer.new(pServiceMods))
+		pListMods.setDesignerSelector("ListBox.WindowModManagement.Mods")
+		pListMods.setType(ListBox.Type.verticalWrap)
+		pListMods.setNumberDisplayLines(1)
+		pListMods.addMouseListener(ClickedModDetails.new(this, pListMods))
+		addWidget(ScrollPanel.new(pListMods, ScrollPanel.Policy.hidden, ScrollPanel.Policy.visible), BorderLayout.Area.content)
+		
+		// button line at bottom
+		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x), block Panel p
+			var Button button
+			
+			button = Button.new("@UI.Close", BlockActionListener.new(block ActionEvent e
+				// apply modifications showing dialogs if something went wrong
+				close()
+			end))
+			button.setDesignerSelector("Button.WindowModManagement.Close")
+			p.addWidget(button)
+		end ), BorderLayout.Area.bottom )
+	end
+end
