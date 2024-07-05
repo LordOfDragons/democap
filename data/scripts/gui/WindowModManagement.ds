@@ -31,6 +31,36 @@ pin Dragengine.Gui.Designers
  */
 class WindowModManagement extends WindowDialog
 	/**
+	 * \brief Entry in a mod listing.
+	 * 
+	 * Stores ServiceModInfo, ServiceModStatus and cached resources.
+	 */
+	class ModListEntry
+		/**
+		 * \brief Modification information.
+		 */
+		public var ServiceModInfo info
+		
+		/**
+		 * \brief Modification status or null.
+		 */
+		public var ServiceModStatus status
+		
+		/**
+		 * \brief Cached logo image or null.
+		 */
+		public var Image logo
+		
+		/**
+		 * \brief Create new instance of class ModListEntry.
+		 */
+		func new(ServiceModInfo info, ServiceModStatus status)
+			this.info = info
+			this.status = status
+		end
+	end
+	
+	/**
 	 * \brief List model renderer for modification entries in the browse list.
 	 */
 	class ModListElementRenderer implements ListElementRenderer
@@ -42,18 +72,24 @@ class WindowModManagement extends WindowDialog
 			 * \brief Listener updating logo image once loaded.
 			 */
 			class LoadLogoListener extends DefaultServiceModsListener
-				var DisplayImage pWidget
+				var ModWidget pWidget
+				var ModListEntry pEntry
 				
-				func new(DisplayImage widget)
+				func new(ModWidget widget, ModListEntry entry)
 					pWidget = widget
+					pEntry = entry
 				end
 				
 				func void onLoadResource(ServiceMods service, String url, Object resource, Exception exception)
-					if exception == null
-						pWidget.setImage(resource cast Image)
-						
-					else
+					if exception != null
 						GameApp.getApp().getConsole().addError("Load logo failed: " + url, exception)
+						return
+					end
+					
+					pEntry.logo = resource cast Image
+					
+					if pWidget.getEntry() == pEntry
+						pWidget.update()
 					end
 				end
 			end
@@ -64,9 +100,8 @@ class WindowModManagement extends WindowDialog
 			var Panel pPanelInfo
 			var DisplayIcon pIconDownloads, pIconSize, pIconRating
 			var Label pLabelName, pLabelDownloads, pLabelSize, pLabelRating, pLabelSubscribed
-			var String pModId
-			var bool pSubscribed
 			var String pDesignerSelectorBase, pDesignerSelectorSuffix
+			var ModListEntry pEntry
 			
 			
 			/**
@@ -109,6 +144,13 @@ class WindowModManagement extends WindowDialog
 			
 			
 			/**
+			 * \brief Modification list entry shown in the widget.
+			 */
+			func ModListEntry getEntry()
+				return pEntry
+			end
+			
+			/**
 			 * \brief Set all designer selectors.
 			 */
 			func void setAllDesignerSelectors(String selector, String suffix)
@@ -131,56 +173,64 @@ class WindowModManagement extends WindowDialog
 					pIconRating.setDesignerSelector(dsico + ".Rating" + suffix)
 					pLabelRating.setDesignerSelector(dslab + ".Rating" + suffix)
 					
-					pLabelSubscribed.setDesignerSelector(\
-						dslab + (pSubscribed if ".Subscribed" else ".Unsubscribed") + suffix)
+					pLabelSubscribed.setDesignerSelector(dslab + \
+						(pEntry != null and pEntry.status != null if ".Subscribed" else ".Unsubscribed") + suffix)
 				end)
 				doLayoutIfBlocked()
 			end
 			
 			/**
-			 * \brief Update content from modification information.
+			 * \brief Set modification entry to show.
 			 */
-			func void update(ServiceMods service, ServiceModInfo info)
-				if info.id.equals(pModId)
+			func void setEntry(ServiceMods service, ModListEntry entry)
+				if entry == pEntry
 					return
 				end
 				
-				pModId = info.id
+				pEntry = entry
 				
+				var ServiceModInfo info = entry.info
+				
+				if entry.logo != null and info.logo != null
+					entry.logo = info.logo.image
+					
+					if entry.logo == null and service != null
+						var String url = findLoadLogoImage(info.logo)
+						if url != null
+							service.loadResource(url, LoadLogoListener.new(this, entry))
+						end
+					end
+				end
+				
+				update()
+			end
+			
+			/**
+			 * \brief Update content from current modification entry.
+			 */
+			func void update()
+				var ServiceModInfo info = pEntry.info
 				runWhileBlockingLayout(block
-					pImageLogo.setImage(info.logo != null if info.logo.image else null)
+					pImageLogo.setImage(pEntry.logo)
 					pModelName.setText(info.name != null if info.name else "?")
 					pModelDownloads.setText(formatCount(info.stats != null if info.stats.downloadCount else 0))
 					pModelSize.setText(formatSize(info.latestRelease != null if info.latestRelease.filesize else 0))
 					pModelRating.setText(formatRating(info.stats != null if info.stats.ratingWeighted else 0))
-					pModelSubscribed.setText(pSubscribed if "Subscribed" else "Not Subscribed")
-					updateStatusInfo(service)
+					updateStatusInfo()
 				end)
 				doLayoutIfBlocked()
-				
-				if pImageLogo.getImage() == null and info.logo != null
-					var String url = findLoadLogoImage(info.logo)
-					if url != null
-						service.loadResource(url, LoadLogoListener.new(pImageLogo))
-					end
-				end
 			end
 			
 			/**
 			 * \brief Update modification status information.
 			 */
-			func void updateStatusInfo(ServiceMods service)
-				var bool subscribed = service.getSubscribedMods().has(pModId)
-				if subscribed == pSubscribed
-					return
-				end
-				
-				pSubscribed = subscribed
+			func void updateStatusInfo()
+				var bool subscribed = pEntry.status != null
 				
 				runWhileBlockingLayout(block
-					pModelSubscribed.setText(pSubscribed if "Subscribed" else "Not Subscribed")
+					pModelSubscribed.setText(subscribed if "Subscribed" else "Not Subscribed")
 					pLabelSubscribed.setDesignerSelector("Label." + pDesignerSelectorBase\
-						+ (pSubscribed if ".Subscribed" else ".Unsubscribed")\
+						+ (subscribed if ".Subscribed" else ".Unsubscribed")\
 						+ pDesignerSelectorSuffix)
 				end)
 				doLayoutIfBlocked()
@@ -297,7 +347,7 @@ class WindowModManagement extends WindowDialog
 		
 		var ServiceMods pServiceMods
 		var String pDesignerSelector
-		var ServiceModInfo pDefaultModInfo
+		var ModListEntry pDefaultModEntry
 		var Point pDefaultMinimumSize
 		
 		
@@ -317,15 +367,15 @@ class WindowModManagement extends WindowDialog
 			pDesignerSelector = designerSelector
 			pDefaultMinimumSize = Point.new()
 			
-			pDefaultModInfo = ServiceModInfo.new()
-			pDefaultModInfo.descriptionText = "X"
-			pDefaultModInfo.id = ""
-			pDefaultModInfo.name = "X"
-			pDefaultModInfo.stats = ServiceModStats.new()
-			pDefaultModInfo.stats.downloadCount = 0
-			pDefaultModInfo.stats.ratingWeighted = 1
-			pDefaultModInfo.latestRelease = ServiceModRelease.new()
-			pDefaultModInfo.latestRelease.filesize = 1
+			pDefaultModEntry = ModListEntry.new(ServiceModInfo.new(), null)
+			pDefaultModEntry.info.descriptionText = "X"
+			pDefaultModEntry.info.id = ""
+			pDefaultModEntry.info.name = "X"
+			pDefaultModEntry.info.stats = ServiceModStats.new()
+			pDefaultModEntry.info.stats.downloadCount = 0
+			pDefaultModEntry.info.stats.ratingWeighted = 1
+			pDefaultModEntry.info.latestRelease = ServiceModRelease.new()
+			pDefaultModEntry.info.latestRelease.filesize = 1
 		end
 		
 		
@@ -338,10 +388,10 @@ class WindowModManagement extends WindowDialog
 		end
 		
 		/**
-		 * \brief Default modification information to use to measure default size.
+		 * \brief Default modification entry to use to measure default size.
 		 */
-		func ServiceModInfo getDefaultModInfo()
-			return pDefaultModInfo
+		func ModListEntry getDefaultModEntry()
+			return pDefaultModEntry
 		end
 		
 		/**
@@ -374,9 +424,9 @@ class WindowModManagement extends WindowDialog
 		 * Update widget representing modification in the list box.
 		 */
 		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
-			var ServiceModInfo info = element cast ServiceModInfo
-			if info == null
-				
+			var ModListEntry entry = element cast ModListEntry
+			if entry == null
+				entry = pDefaultModEntry
 			end
 			
 			var String selector = pDesignerSelector, suffix = ""
@@ -385,7 +435,7 @@ class WindowModManagement extends WindowDialog
 			end
 			
 			var ModWidget widget = renderer cast ModWidget
-			widget.update(pServiceMods, info)
+			widget.setEntry(pServiceMods, entry)
 			widget.setAllDesignerSelectors(selector, suffix)
 		end
 		
@@ -404,7 +454,7 @@ class WindowModManagement extends WindowDialog
 				
 				var Widget renderer = createRenderer(listBox)
 				c.addWidget(renderer)
-				updateRenderer(listBox, renderer, pDefaultModInfo, false, false)
+				updateRenderer(listBox, renderer, pDefaultModEntry, false, false)
 			end)
 			container.doLayout()
 			
@@ -455,6 +505,7 @@ class WindowModManagement extends WindowDialog
 	var ServiceMods pServiceMods
 	var ServiceModsFeatures pServiceModFeatures
 	var SearchModsListener pSearchModsListener
+	var Dictionary pSubscribedMods
 	
 	
 	/**
@@ -469,6 +520,7 @@ class WindowModManagement extends WindowDialog
 		pServiceModFeatures = serviceMods.getModsFeatures()
 		
 		pModelMods = DefaultListModel.new()
+		pSubscribedMods = Dictionary.new()
 		
 		runWhileBlockingLayout(block
 			setGuiTheme(window.getGuiTheme())
@@ -481,6 +533,7 @@ class WindowModManagement extends WindowDialog
 		doLayout()
 		show(window, false, WindowModal.Placement.desktop)
 		
+		updateSubscribedMods()
 		searchMods(ServiceModFilter.new())
 	end
 	
@@ -513,6 +566,13 @@ class WindowModManagement extends WindowDialog
 	
 	
 	/**
+	 * \brief Update dictionary of subscribed modifications.
+	 */
+	func void updateSubscribedMods()
+		pSubscribedMods = pServiceMods.getSubscribedMods()
+	end
+	
+	/**
 	 * \brief Search for modifications.
 	 * 
 	 * Clears the list and starts searching for the first page of modifications.
@@ -534,7 +594,9 @@ class WindowModManagement extends WindowDialog
 		
 		pSearchModsListener = null
 		if exception == null
-			pModelMods.addAll(mods)
+			pModelMods.addAll(mods.map(block ServiceModInfo each
+				return ModListEntry.new(each, pSubscribedMods.getAt(each.id, null) cast ServiceModStatus)
+			end))
 			
 		else
 			GameApp.getApp().getConsole().addError("onSearchResult", exception)
