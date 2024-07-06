@@ -25,6 +25,7 @@ pin Dragengine.Gui.Layouts
 pin Dragengine.Services.Mods
 pin Dragengine.Gui.Events
 pin Dragengine.Gui.Designers
+pin Dragengine.Utils
 
 /**
  * \brief Window managing modifications.
@@ -191,7 +192,7 @@ class WindowModManagement extends WindowDialog
 				
 				var ServiceModInfo info = entry.info
 				
-				if entry.logo != null and info.logo != null
+				if entry.logo == null and info.logo != null
 					entry.logo = info.logo.image
 					
 					if entry.logo == null and service != null
@@ -480,6 +481,23 @@ class WindowModManagement extends WindowDialog
 	end
 	
 	/**
+	 * \brief Retrieve tags listener.
+	 */
+	class RetrieveTagsListener extends DefaultServiceModsListener
+		var WindowModManagement pWindow
+		
+		func new(WindowModManagement window)
+			pWindow = window
+		end
+		
+		func void onGetTags(ServiceMods service, Array categories, Exception exception)
+			if exception == null
+				pWindow.updateSearchTagCategories(categories)
+			end
+		end
+	end
+	
+	/**
 	 * \brief Show mod details when clicking on a list item.
 	 */
 	class ClickedModDetails extends ClickedActionListener
@@ -499,13 +517,186 @@ class WindowModManagement extends WindowDialog
 		end
 	end
 	
+	/**
+	 * \brief Start searching if selection changed.
+	 */
+	class SearchSelectionChanged extends DefaultListModelListener
+		var WindowModManagement pWindow
+		
+		func new(WindowModManagement window)
+			pWindow = window
+		end
+		
+		func void selectionChanged(ListModel listModel)
+			pWindow.searchMods()
+		end
+	end
+	
+	/**
+	 * \brief Start searching if toggle changed.
+	 */
+	class SearchToggleChanged extends DefaultToggleModelListener
+		var WindowModManagement pWindow
+		
+		func new(WindowModManagement window)
+			pWindow = window
+		end
+		
+		func void toggledChanged(ToggleModel model)
+			pWindow.searchMods()
+		end
+	end
+	
+	/**
+	 * \brief Interface for search tag categories.
+	 */
+	interface SearchTagCategory
+		/**
+		 * \brief Create and add widgets to container.
+		 */
+		func void createWidgets(Panel container)
+		
+		/**
+		 * \brief Update filter with current category tag state.
+		 */
+		func void updateFilter(ServiceModFilter filter)
+		
+		/**
+		 * \brief Reset tag category to initial state.
+		 */
+		func void reset()
+	end
+	
+	/**
+	 * \brief Single selection search category using a ComboBox.
+	 */
+	class SearchCategoryComboBox implements SearchTagCategory
+		var WindowModManagement pWindow
+		var ServiceModTagCategory pCategory
+		var DefaultListModel pModel
+		
+		func new(WindowModManagement window, ServiceModTagCategory category)
+			pWindow = window
+			pCategory = category
+			
+			var String lang = TranslationManager.get().getActive().getIdentifier()
+			var String text
+			
+			pModel = DefaultListModel.new()
+			pModel.add(window.translateEntry("UI.ModManagement.Value.NoTagSelected").toUTF8())
+			category.tags.forEach(block ServiceModTagCategory.Tag each
+				text = each.name
+				if each.nameTranslations != null
+					text = each.nameTranslations.getAt(lang, text) cast String
+				end
+				pModel.add(text)
+			end)
+			
+			pModel.addListener(SearchSelectionChanged.new(window))
+		end
+		
+		func void createWidgets(Panel container)
+			var String lang = TranslationManager.get().getActive().getIdentifier()
+			var String text
+			
+			text = pCategory.name
+			if pCategory.nameTranslations != null
+				text = pCategory.nameTranslations.getAt(lang, text) cast String
+			end
+			container.addWidget(Label.new(text + ":", "Label.WindowModManagement.Search.Label.TagCategory"))
+			
+			var ComboBox comboBox = pWindow.createComboBox(pModel, DefaultListElementRenderer.new(), ".Tags")
+			comboBox.setToolTip("@UI.ModManagement.Tags.ToolTip")
+			container.addWidget(comboBox)
+		end
+		
+		func void updateFilter(ServiceModFilter filter)
+			var int selection = pModel.getSelected()
+			if selection > 0
+				filter.withTags.add((pCategory.tags.getAt(DEMath.max(selection - 1, 0)) cast ServiceModTagCategory.Tag).id)
+			end
+		end
+		
+		func void reset()
+			pModel.setSelected(0)
+		end
+	end
+	
+	/**
+	 * \brief Multiple selection search category using a CheckBox.
+	 */
+	class SearchCategoryCheckBox implements SearchTagCategory
+		var WindowModManagement pWindow
+		var ServiceModTagCategory pCategory
+		var Array pModels
+		
+		func new(WindowModManagement window, ServiceModTagCategory category)
+			pWindow = window
+			pCategory = category
+			
+			var DefaultToggleModel model
+			pModels = Array.new(category.tags.map(block ServiceModTagCategory.Tag each
+				model = DefaultToggleModel.new()
+				model.addListener(SearchToggleChanged.new(window))
+				return model
+			end))
+		end
+		
+		func void createWidgets(Panel container)
+			var String lang = TranslationManager.get().getActive().getIdentifier()
+			var String text
+			
+			text = pCategory.name
+			if pCategory.nameTranslations != null
+				text = pCategory.nameTranslations.getAt(lang, text) cast String
+			end
+			container.addWidget(Label.new(text + ":", "Label.WindowModManagement.Search.Label.TagCategory"))
+			
+			var CheckBox checkBox
+			
+			pCategory.tags.forEach(block int index, ServiceModTagCategory.Tag each
+				text = each.name
+				if each.nameTranslations != null
+					text = each.nameTranslations.getAt(lang, text) cast String
+				end
+				
+				checkBox = pWindow.createCheckBox(text, pModels.getAt(index) cast ToggleModel, ".Tags")
+				checkBox.setToolTip("@UI.ModManagement.Tags.ToolTip")
+				container.addWidget(checkBox)
+			end)
+		end
+		
+		func void updateFilter(ServiceModFilter filter)
+			pCategory.tags.forEach(block int index, ServiceModTagCategory.Tag each
+				if (pModels.getAt(index) cast ToggleModel).getToggled()
+					filter.withTags.add(each.id)
+				end
+			end)
+		end
+		
+		func void reset()
+			pModels.forEach(block ToggleModel each
+				each.setToggled(false)
+			end)
+		end
+	end
+	
+	
 	
 	var DefaultListModel pModelMods
 	var ListBox pListMods
+	var Button pButtonSearchMore
+	var DefaultTextModel pModelSearchName
+	var DefaultListModel pModelSortBy
+	var Panel pPanelTags
 	var ServiceMods pServiceMods
 	var ServiceModsFeatures pServiceModFeatures
 	var SearchModsListener pSearchModsListener
 	var Dictionary pSubscribedMods
+	var ServiceModFilter pSearchFilter
+	var CodecPropertyString pCodecPropertyString
+	var Array pSearchTagCategories
+	var bool pPreventSearch
 	
 	
 	/**
@@ -518,9 +709,23 @@ class WindowModManagement extends WindowDialog
 		
 		pServiceMods = serviceMods
 		pServiceModFeatures = serviceMods.getModsFeatures()
+		pCodecPropertyString = CodecPropertyString.new()
+		pSearchTagCategories = Array.new()
 		
 		pModelMods = DefaultListModel.new()
+		pModelSearchName = DefaultTextModel.new()
 		pSubscribedMods = Dictionary.new()
+		
+		pModelSortBy = DefaultListModel.new()
+		pModelSortBy.add(ServiceModFilter.SortField.nameAscending)
+		pModelSortBy.add(ServiceModFilter.SortField.nameDescending)
+		pModelSortBy.add(ServiceModFilter.SortField.rating)
+		pModelSortBy.add(ServiceModFilter.SortField.subscriberCount)
+		pModelSortBy.add(ServiceModFilter.SortField.downloadsTotal)
+		pModelSortBy.add(ServiceModFilter.SortField.downloadsToday)
+		pModelSortBy.add(ServiceModFilter.SortField.dateUpdated)
+		pModelSortBy.add(ServiceModFilter.SortField.dateMarkedLive)
+		pModelSortBy.setSelectedElement(ServiceModFilter.SortField.rating)
 		
 		runWhileBlockingLayout(block
 			setGuiTheme(window.getGuiTheme())
@@ -533,7 +738,10 @@ class WindowModManagement extends WindowDialog
 		doLayout()
 		show(window, false, WindowModal.Placement.desktop)
 		
+		pModelSortBy.addListener(SearchSelectionChanged.new(this))
+		
 		updateSubscribedMods()
+		serviceMods.getTags(RetrieveTagsListener.new(this))
 		searchMods(ServiceModFilter.new())
 	end
 	
@@ -541,6 +749,11 @@ class WindowModManagement extends WindowDialog
 	func void dispose()
 		pModelMods = null
 		pListMods = null
+		pButtonSearchMore = null
+		pModelSearchName = null
+		pModelSortBy = null
+		pPanelTags = null
+		pSearchTagCategories = null
 		
 		pSearchModsListener = null
 		pServiceMods = null
@@ -564,6 +777,13 @@ class WindowModManagement extends WindowDialog
 		return pServiceModFeatures
 	end
 	
+	/**
+	 * \brief Search filter.
+	 */
+	func ServiceModFilter getSearchFilter()
+		return pSearchFilter
+	end
+	
 	
 	/**
 	 * \brief Update dictionary of subscribed modifications.
@@ -575,12 +795,75 @@ class WindowModManagement extends WindowDialog
 	/**
 	 * \brief Search for modifications.
 	 * 
+	 * Builds search filter from current widget states then calls
+	 * \ref #searchMods(ServiceModFilter).
+	 */
+	func void searchMods()
+		if pPreventSearch
+			return
+		end
+		
+		var ServiceModFilter filter = ServiceModFilter.new()
+		
+		filter.matchingName = Set.newFrom(pCodecPropertyString.decodeStringList(pModelSearchName.getText()))
+		filter.sortField = pModelSortBy.getSelectedElement() cast ServiceModFilter.SortField
+		filter.withTags = Set.new()
+		pSearchTagCategories.forEach(block SearchTagCategory each
+			each.updateFilter(filter)
+		end)
+		
+		searchMods(filter)
+	end
+	
+	/**
+	 * \brief Search for modifications.
+	 * 
 	 * Clears the list and starts searching for the first page of modifications.
 	 */
 	func void searchMods(ServiceModFilter filter)
+		pSearchFilter = ServiceModFilter.new(filter)
+		pModelMods.removeAll()
+		pButtonSearchMore.setEnabled(false)
 		pSearchModsListener = SearchModsListener.new(this)
 		pServiceMods.listAllMods(filter, pSearchModsListener)
 	end
+	
+	/**
+	 * \brief Continue searching modifications.
+	 */
+	func void searchMoreMods()
+		if pSearchFilter == null or pSearchModsListener != null
+			return
+		end
+		
+		pButtonSearchMore.setEnabled(false)
+		pSearchModsListener = SearchModsListener.new(this)
+		pServiceMods.listAllMods(pSearchFilter, pSearchModsListener)
+	end
+	
+	/**
+	 * \brief Clear search parameters then search again.
+	 */
+	func void clearSearchParameters()
+		try
+			pPreventSearch = true
+			pModelSearchName.setText("")
+			pPanelTags.runWhileBlockingLayout(block
+				pSearchTagCategories.forEach(block SearchTagCategory each
+					each.reset()
+				end)
+			end)
+			pPanelTags.doLayoutIfBlocked()
+			pPreventSearch = false
+			
+		catch Exception e
+			pPreventSearch = false
+			throw
+		end
+		
+		searchMods()
+	end
+	
 	
 	/**
 	 * \brief Search results retrieved from service provider.
@@ -593,23 +876,37 @@ class WindowModManagement extends WindowDialog
 		end
 		
 		pSearchModsListener = null
-		if exception == null
-			pModelMods.addAll(mods.map(block ServiceModInfo each
-				return ModListEntry.new(each, pSubscribedMods.getAt(each.id, null) cast ServiceModStatus)
-			end))
-			
-		else
+		pButtonSearchMore.setEnabled(true)
+		
+		if exception != null
 			GameApp.getApp().getConsole().addError("onSearchResult", exception)
 			WindowDialog.message(getWindow(), "Failure", exception.toString(), null, null, null)
+			return
 		end
+		
+		pModelMods.addAll(mods.map(block ServiceModInfo each
+			return ModListEntry.new(each, pSubscribedMods.getAt(each.id, null) cast ServiceModStatus)
+		end))
+		
+		var int count = pModelMods.getCount()
+		if pSearchFilter.startIndex < pModelMods.getCount()
+			pSearchFilter.startIndex = count
+			
+		else
+			//WindowDialog.message(getWindow(), "Search Mods", "No more search results", null, null, null)
+		end
+		pButtonSearchMore.setEnabled(true)
 	end
 	
 	
 	/** Create window content. */
 	protected func void createContent()
+		var TextField textField
+		var ComboBox comboBox
+		
 		setLayout(BorderLayout.new(10))
 		
-		// top line
+		// top: view buttons
 		addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 10), block Panel p
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 5), block Panel p2
 				p2.addWidget(Button.new("Available Mods", BlockActionListener.new(block ActionEvent e
@@ -630,7 +927,7 @@ class WindowModManagement extends WindowDialog
 			end))
 		end), BorderLayout.Area.top)
 		
-		// listing
+		// content: listing
 		pListMods = ListBox.new(pModelMods, ModListElementRenderer.new(pServiceMods))
 		pListMods.setDesignerSelector("ListBox.WindowModManagement.Mods")
 		pListMods.setType(ListBox.Type.verticalWrap)
@@ -638,16 +935,128 @@ class WindowModManagement extends WindowDialog
 		pListMods.addMouseListener(ClickedModDetails.new(this, pListMods))
 		addWidget(ScrollPanel.new(pListMods, ScrollPanel.Policy.hidden, ScrollPanel.Policy.visible), BorderLayout.Area.content)
 		
-		// button line at bottom
-		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x), block Panel p
-			var Button button
+		// right side: search parameters
+		addWidget(ScrollPanel.new(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+			// search name
+			p.addWidget(Label.new("@UI.ModManagement.SearchName", "Label.WindowModManagement.Search.Label.Name"))
 			
-			button = Button.new("@UI.Close", BlockActionListener.new(block ActionEvent e
-				// apply modifications showing dialogs if something went wrong
-				close()
+			textField = createTextField(pModelSearchName, ".Search.Name", 20)
+			textField.setToolTip("@UI.ModManagement.SearchName.ToolTip")
+			p.addWidget(textField)
+			textField.addActionListener(BlockActionListener.new(block ActionEvent event
+				searchMods()
 			end))
-			button.setDesignerSelector("Button.WindowModManagement.Close")
-			p.addWidget(button)
+			
+			// search button
+			p.addWidget(createButton("@UI.ModManagement.Search", "@UI.ModManagement.Search.ToolTip",\
+				".Search", BlockActionListener.new(block ActionEvent e
+					searchMods()
+				end)))
+			
+			// sort by
+			p.addWidget(Label.new("@UI.ModManagement.SortBy", "Label.WindowModManagement.Search.Label.Sort"))
+			
+			var EnumListElementRenderer renderer = EnumListElementRenderer.new()
+			renderer.setTranslationPrefix("UI.ModManagement.Enum.SortField.")
+			comboBox = createComboBox(pModelSortBy, renderer, ".SortBy")
+			comboBox.setToolTip("@UI.ModManagement.SortBy.ToolTip")
+			p.addWidget(comboBox)
+			
+			// tags. will be filled once data has been retrieved from service
+			pPanelTags = Panel.new(FlowLayout.new(LayoutAxis.y))
+			p.addWidget(pPanelTags)
+			
+		end), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed), BorderLayout.Area.right)
+		
+		// button line at bottom
+		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x, 20), block Panel p
+			pButtonSearchMore = createButton("@UI.ModManagement.SearchMore", "@UI.ModManagement.SearchMore.ToolTip",\
+				".MoreResults", BlockActionListener.new(block ActionEvent e
+					searchMoreMods()
+				end))
+			p.addWidget(pButtonSearchMore)
+			
+			p.addWidget(createButton("@UI.ModManagement.Close", "@UI.ModManagement.Close.ToolTip",\
+				".Close", BlockActionListener.new(block ActionEvent e
+					// apply modifications showing dialogs if something went wrong
+					pServiceMods.activateMods()
+					close()
+				end)))
 		end ), BorderLayout.Area.bottom )
+	end
+	
+	/**
+	 * \brief Create search tag widgets.
+	 */
+	func void updateSearchTagCategories(Array categories)
+		try
+			pPreventSearch = true
+			pPanelTags.runWhileBlockingLayout(block
+				pPanelTags.removeAllWidgets()
+				
+				pSearchTagCategories.removeAll()
+				categories.forEach(block ServiceModTagCategory category
+					pSearchTagCategories.add(createTagCategory(category))
+				end)
+				
+				pSearchTagCategories.forEach(block SearchTagCategory each
+					each.createWidgets(pPanelTags)
+				end)
+			end)
+			pPanelTags.doLayout()
+			pPreventSearch = false
+			
+		catch Exception e
+			pPreventSearch = false
+			throw
+		end
+	end
+	
+	/**
+	 * \brief Create service tag category.
+	 */
+	protected func SearchTagCategory createTagCategory(ServiceModTagCategory category)
+		if category.multiSelection
+			return SearchCategoryCheckBox.new(this, category)
+		else
+			return SearchCategoryComboBox.new(this, category)
+		end
+	end
+	
+	/**
+	 * \brief Create button.
+	 */
+	func Button createButton(String text, String toolTip, String designerSelectorSuffix, ActionListener action)
+		var Button button = Button.new(text, action)
+		button.setDesignerSelector("Button.WindowModManagement" + designerSelectorSuffix)
+		button.setToolTip(toolTip)
+		return button
+	end
+	
+	/**
+	 * \brief Create text field.
+	 */
+	func TextField createTextField(TextModel model, String designerSelectorSuffix, int displayCharCount)
+		var TextField textField = TextField.new(model, displayCharCount)
+		textField.setDesignerSelector("TextField.WindowModManagement" + designerSelectorSuffix)
+		return textField
+	end
+	
+	/**
+	 * \brief Create combo box.
+	 */
+	func ComboBox createComboBox(ListModel model, ListElementRenderer renderer, String designerSelectorSuffix)
+		var ComboBox comboBox = ComboBox.new(model, renderer)
+		comboBox.setDesignerSelector("ComboBox.WindowModManagement" + designerSelectorSuffix)
+		return comboBox
+	end
+	
+	/**
+	 * \brief Create check box.
+	 */
+	func CheckBox createCheckBox(String text, ToggleModel model, String designerSelectorSuffix)
+		var CheckBox checkBox = CheckBox.new(model, text)
+		checkBox.setDesignerSelector("CheckBox.WindowModManagement" + designerSelectorSuffix)
+		return checkBox
 	end
 end
