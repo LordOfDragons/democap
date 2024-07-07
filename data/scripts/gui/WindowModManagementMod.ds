@@ -1,0 +1,239 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+pin Dragengine.Gui
+pin Dragengine.Services.Mods
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Utils
+
+/**
+ * Class WindowModManagementMod.
+ */
+class WindowModManagementMod extends WindowDialog
+	/**
+	 * \brief Open URL in system browser if clicked.
+	 */
+	class ClickOpenUrl extends ClickedActionListener
+		var String pUrl
+		
+		func new(String url)
+			pUrl = url
+		end
+		
+		func void onAction()
+			FileSystem.openUrl(pUrl)
+		end
+	end
+	
+	
+	var ServiceMods pServiceMods
+	var ServiceModsFeatures pServiceModFeatures
+	var WindowModManagement.ModListEntry pModEntry
+	
+	
+	/**
+	 * \brief Create new instance of class WindowModManagementMod.
+	 */
+	func new(Window window, ServiceMods serviceMods, WindowModManagement.ModListEntry entry)
+		pServiceMods = serviceMods
+		pServiceModFeatures = serviceMods.getModsFeatures()
+		pModEntry = entry
+		
+		runWhileBlockingLayout(block
+			setGuiTheme(window.getGuiTheme())
+			setTitle("@UI.ModificationsMod")
+			setDesignerSelector("Window.Dialog.ModificationsMod")
+			setSize(window.getDesktop().getContainerSize() - Point.new(200, 200))
+			
+			createContent()
+		end)
+		doLayout()
+		show(window, false, WindowModal.Placement.window)
+	end
+	
+	
+	/**
+	 * \brief Modification list entry.
+	 */
+	protected func WindowModManagement.ModListEntry getModEntry()
+		return pModEntry
+	end
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var FormattingHelper fh = FormattingHelper.new()
+		var ProgressBar progressBar
+		
+		setLayout(BorderLayout.new(10))
+		
+		// top: header
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 10), block Panel p
+			p.setDesignerSelector("Panel.WindowModManagementMod.Header")
+			
+			p.addWidget(Label.new(pModEntry.info.name, "Label.WindowModManagementMod.Title"))
+		end), BorderLayout.Area.top)
+		
+		// content: description
+		addWidget(ScrollPanel.new(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+			p.setDesignerSelector("Panel.WindowModManagementMod.Description")
+			
+			p.addWidget(Label.new("Logo"))
+			p.addWidget(Label.new("Gallery Images"))
+			p.addWidget(Label.new("Title"))
+			p.addWidget(Label.new(pModEntry.info.descriptionText)) // use styled text for this
+			p.addWidget(Label.new("Comments"))
+		end), ScrollPanel.Policy.hidden, ScrollPanel.Policy.visible), BorderLayout.Area.content)
+		
+		// right side: details
+		addWidget(ScrollPanel.new(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+			p.setDesignerSelector("Panel.WindowModManagementMod.Details")
+			
+			p.addWidget(Label.new("Button Subscribe"))
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p2
+				p2.setDesignerSelector("Panel.WindowModManagementMod.Group.DetailsDetails")
+				p2.setTitle("@UI.ModManagementMod.DetailsDetails")
+				
+				p2.addWidget(Panel.new(BorderLayout.new(), block Panel p3
+					p3.addWidget(Label.new(pModEntry.info.stats.ratingDisplayText,\
+						"Label.WindowModManagementMod.Details.RatingText"), BorderLayout.Area.left)
+					p3.addWidget(Label.new("{:.0f}%".format(Array.newWith(pModEntry.info.stats.ratingAverage)),\
+						"Label.WindowModManagementMod.Details.Rating"), BorderLayout.Area.right)
+				end))
+				
+				progressBar = ProgressBar.new()
+				progressBar.getModel().setAll(0, 100, 10, (pModEntry.info.stats.ratingAverage * 100 + 0.5) cast int, 1)
+				progressBar.setDesignerSelector("ProgressBar.WindowModManagementMod.Rating")
+				p2.addWidget(progressBar)
+				
+				// the voting widget should be an own createWidget() creating this panel
+				p2.addWidget(Panel.new(GridLayout.new(2, 1), block Panel p3
+					p3.addWidget(Label.new("Vote Up"))
+					p3.addWidget(Label.new("Vote Down"))
+				end))
+				
+				p2.addWidget(Panel.new(FormLayout.new(), block Panel p3
+					p3.setDesignerSelector("Panel.WindowModManagementMod.DetailsDetailsForm")
+					
+					p3.addWidget(Label.new("@UI.ModManagementMod.Subscribers",\
+						"Label.WindowModManagementMod.DetailsForm.Label.Subscribers"))
+					p3.addWidget(Label.new(fh.formatCount(pModEntry.info.stats.subscriberCount),\
+						"Label.WindowModManagementMod.DetailsForm.Value.Subscribers"))
+					
+					p3.addWidget(Label.new("@UI.ModManagementMod.Downloads",\
+						"Label.WindowModManagementMod.DetailsForm.Label.Downloads"))
+					p3.addWidget(Label.new(fh.formatCount(pModEntry.info.stats.downloadCount),\
+						"Label.WindowModManagementMod.DetailsForm.Value.Downloads"))
+					
+					/*
+					p3.addWidget(Label.new("@UI.ModManagementMod.DownloadsToday",\
+						"Label.WindowModManagementMod.DetailsForm.Label.DownloadsToday"))
+					p3.addWidget(Label.new(formatCount(pModEntry.info.stats.downloadCount),\
+						"Label.WindowModManagementMod.DetailsForm.Value.DownloadsToday"))
+					*/
+					
+					p3.addWidget(Label.new("@UI.ModManagementMod.LastUpdated",\
+						"Label.WindowModManagementMod.DetailsForm.Label.DateUpdated"))
+					p3.addWidget(Label.new("1h",\
+						"Label.WindowModManagementMod.DetailsForm.Value.DateUpdated")) // aka time difference to now
+					
+					p3.addWidget(Label.new("@UI.ModManagementMod.Released",\
+						"Label.WindowModManagementMod.DetailsForm.Label.DateReleased"))
+					p3.addWidget(Label.new(pModEntry.info.dateReleased.format("%x"),\
+						"Label.WindowModManagementMod.DetailsForm.Value.DateReleased"))
+					
+					p3.addWidget(Label.new("@UI.ModManagementMod.Size",\
+						"Label.WindowModManagementMod.DetailsForm.Label.Size"))
+					p3.addWidget(Label.new(fh.formatSize(pModEntry.info.latestRelease.filesize),\
+						"Label.WindowModManagementMod.DetailsForm.Value.Size"))
+					
+					p3.addWidget(Label.new("@UI.ModManagementMod.Version",\
+						"Label.WindowModManagementMod.DetailsForm.Label.Version"))
+					p3.addWidget(Label.new(pModEntry.info.version,\
+						"Label.WindowModManagementMod.DetailsForm.Value.Version"))
+					
+					p3.addWidget(Label.new("@UI.ModManagementMod.Author",\
+						"Label.WindowModManagementMod.DetailsForm.Label.Author"))
+					p3.addWidget(createLabelUrlLink(pModEntry.info.submittedBy.displayName,\
+						pModEntry.info.submittedBy.profileUrl, ".DetailsForm.Value.Link.Author"))
+					
+					p3.addWidget(Label.new("@UI.ModManagementMod.Profile",\
+						"Label.WindowModManagementMod.DetailsForm.Label.Profile"))
+					p3.addWidget(createLabelUrlLink("Open in Browser", pModEntry.info.profileUrl,\
+						".DetailsForm.Value.Link.Profile"))
+					
+					p3.addWidget(Label.new("@UI.ModManagementMod.Id",\
+						"Label.WindowModManagementMod.DetailsForm.Label.Id"))
+					p3.addWidget(Label.new(pModEntry.info.id,\
+						"Label.WindowModManagementMod.DetailsForm.Value.Id"))
+				end))
+			end))
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p2
+				p2.setDesignerSelector("Panel.WindowModManagementMod.Group.DetailsTags")
+				p2.setTitle("@UI.ModManagementMod.DetailsTags")
+				
+				p2.addWidget(Label.new("Tag1, Tag2, ..."))
+			end))
+		end), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed), BorderLayout.Area.right)
+		
+		// button line at bottom
+		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x, 20), block Panel p
+			p.addWidget(createButton("@UI.ModManagementMod.Close", "@UI.ModManagementMod.Close.ToolTip",\
+				".Close", BlockActionListener.new(block ActionEvent e
+					close()
+				end)))
+		end ), BorderLayout.Area.bottom)
+	end
+	
+	
+	/**
+	 * \brief Create button.
+	 */
+	func Button createButton(String text, String toolTip, String designerSelectorSuffix, ActionListener action)
+		var Button button = Button.new(text, action)
+		button.setDesignerSelector("Button.WindowModManagementMod" + designerSelectorSuffix)
+		button.setToolTip(toolTip)
+		return button
+	end
+	
+	/**
+	 * \brief Create text field.
+	 */
+	func TextField createTextField(TextModel model, String designerSelectorSuffix, int displayCharCount)
+		var TextField textField = TextField.new(model, displayCharCount)
+		textField.setDesignerSelector("TextField.WindowModManagementMod" + designerSelectorSuffix)
+		return textField
+	end
+	
+	/**
+	 * \brief Create url link label.
+	 */
+	func Label createLabelUrlLink(String text, String url, String designerSelectorSuffix)
+		var Label label = Label.new(text, "Label.WindowModManagementMod" + designerSelectorSuffix)
+		label.addMouseListener(ClickOpenUrl.new(url))
+		label.setToolTip(url)
+		return label
+	end
+end
