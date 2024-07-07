@@ -502,7 +502,7 @@ class WindowModManagement extends WindowDialog
 		end
 		
 		func void onAction()
-			var int index = pListBox.getElementAt(getPosition())
+			var int index = pListBox.getElementAt(pListBox.getLocalMouseLocation())
 			if index != -1
 				pWindow.showModInfo(pListBox.getModel().getAt(index) cast ModListEntry)
 			end
@@ -941,6 +941,7 @@ class WindowModManagement extends WindowDialog
 	protected func void createContent()
 		var TextField textField
 		var ComboBox comboBox
+		var Viewport viewport
 		
 		setLayout(BorderLayout.new(10))
 		
@@ -970,7 +971,7 @@ class WindowModManagement extends WindowDialog
 		addWidget(ScrollPanel.new(pListMods, ScrollPanel.Policy.hidden, ScrollPanel.Policy.visible), BorderLayout.Area.content)
 		
 		// right side: search parameters
-		addWidget(ScrollPanel.new(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+		viewport = Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
 			// search button
 			p.addWidget(createButton("@UI.ModManagement.Search", "@UI.ModManagement.Search.ToolTip",\
 				".Search", BlockActionListener.new(block ActionEvent e
@@ -1008,8 +1009,9 @@ class WindowModManagement extends WindowDialog
 			// tags. will be filled once data has been retrieved from service
 			pPanelTags = Panel.new(FlowLayout.new(LayoutAxis.y))
 			p.addWidget(pPanelTags)
-			
-		end), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed), BorderLayout.Area.right)
+		end))
+		viewport.setLayout(FlowLayout.new(LayoutAxis.y))
+		addWidget(ScrollPanel.new(viewport, ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed), BorderLayout.Area.right)
 		
 		// button line at bottom
 		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x, 20), block Panel p

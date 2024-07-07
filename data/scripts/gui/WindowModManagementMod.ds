@@ -25,6 +25,10 @@ pin Dragengine.Services.Mods
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Utils
+pin Dragengine.Utils.StyledText
+pin Dragengine.Utils.StyledText.Definition
+pin Dragengine.Gui.Designers
+pin Dragengine.Utils.StyledText.Definition.Nodes
 
 /**
  * Class WindowModManagementMod.
@@ -84,29 +88,31 @@ class WindowModManagementMod extends WindowDialog
 	protected func void createContent()
 		var FormattingHelper fh = FormattingHelper.new()
 		var ProgressBar progressBar
+		var Viewport viewport
+		var Label label
 		
 		setLayout(BorderLayout.new(10))
 		
 		// top: header
-		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 10), block Panel p
+		addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p
 			p.setDesignerSelector("Panel.WindowModManagementMod.Header")
 			
-			p.addWidget(Label.new(pModEntry.info.name, "Label.WindowModManagementMod.Title"))
+			p.addWidget(Label.new(pModEntry.info.name, "Label.WindowModManagementMod.HeaderTitle"))
 		end), BorderLayout.Area.top)
 		
 		// content: description
-		addWidget(ScrollPanel.new(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+		viewport = Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
 			p.setDesignerSelector("Panel.WindowModManagementMod.Description")
 			
 			p.addWidget(Label.new("Logo"))
 			p.addWidget(Label.new("Gallery Images"))
-			p.addWidget(Label.new("Title"))
-			p.addWidget(Label.new(pModEntry.info.descriptionText)) // use styled text for this
+			p.addWidget(createStyledDocument(getDescriptionStyledText(), ".Description"))
 			p.addWidget(Label.new("Comments"))
-		end), ScrollPanel.Policy.hidden, ScrollPanel.Policy.visible), BorderLayout.Area.content)
+		end), FlowLayout.new(LayoutAxis.y))
+		addWidget(ScrollPanel.new(viewport, ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed), BorderLayout.Area.content)
 		
 		// right side: details
-		addWidget(ScrollPanel.new(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+		viewport = Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
 			p.setDesignerSelector("Panel.WindowModManagementMod.Details")
 			
 			p.addWidget(Label.new("Button Subscribe"))
@@ -190,13 +196,17 @@ class WindowModManagementMod extends WindowDialog
 				end))
 			end))
 			
-			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p2
+			p.addWidget(Panel.new(GridLayout.new(2, 0), block Panel p2
 				p2.setDesignerSelector("Panel.WindowModManagementMod.Group.DetailsTags")
 				p2.setTitle("@UI.ModManagementMod.DetailsTags")
 				
-				p2.addWidget(Label.new("Tag1, Tag2, ..."))
+				pModEntry.info.tags.forEachValue(block String tag
+					p2.addWidget(Label.new(tag, "Label.WindowModManagementMod.DetailsForm.Value.Tag"))
+				end)
 			end))
-		end), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed), BorderLayout.Area.right)
+		end))
+		viewport.setLayout(FlowLayout.new(LayoutAxis.y))
+		addWidget(ScrollPanel.new(viewport, ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed), BorderLayout.Area.right)
 		
 		// button line at bottom
 		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x, 20), block Panel p
@@ -233,7 +243,58 @@ class WindowModManagementMod extends WindowDialog
 	func Label createLabelUrlLink(String text, String url, String designerSelectorSuffix)
 		var Label label = Label.new(text, "Label.WindowModManagementMod" + designerSelectorSuffix)
 		label.addMouseListener(ClickOpenUrl.new(url))
-		label.setToolTip(url)
+		label.setToolTip("@UI.ModManagementMod.Link.ToolTip")
 		return label
+	end
+	
+	/**
+	 * \brief Create styled document widget.
+	 */
+	func DisplayStyledText createStyledDocument(StyledTextDefinition definition, String designerSelectorSuffix)
+		var DisplayStyledText dst = DisplayStyledText.new()
+		dst.setDesignerSelector("StyledText.WindowModManagementMod" + designerSelectorSuffix)
+		dst.setPagedMode(false)
+		dst.setStyledTextDefinition(definition)
+		return dst
+	end
+	
+	/**
+	 * \brief Modification description as styled text definition.
+	 */
+	func StyledTextDefinition getDescriptionStyledText()
+		var StyledTextDefinition std = StyledTextDefinition.new()
+		var GuiTheme guiTheme = getGuiTheme()
+		
+		var STDStyle baseStyle = STDStyle.new("default",\
+			(guiTheme.getWidgetDesigner("StyledTextStyle.WindowModManagementMod.Description.Base")\
+				cast DefaultLabelDesigner).getLabelDesignNormal())
+		std.addStyle(baseStyle)
+		std.setDefaultStyle(baseStyle)
+		
+		var STDStyle styleParagraph = STDStyle.new("paragraph",\
+			(guiTheme.getWidgetDesigner("StyledTextStyle.WindowModManagementMod.Description.Paragraph")\
+				cast DefaultLabelDesigner).getLabelDesignNormal())
+		std.addStyle(styleParagraph)
+		
+		var STDStyle styleHeader = STDStyle.new("header1",\
+			(guiTheme.getWidgetDesigner("StyledTextStyle.WindowModManagementMod.Description.Header1")\
+				cast DefaultLabelDesigner).getLabelDesignNormal())
+		std.addStyle(styleHeader)
+		
+		var Array paragraphs = pModEntry.info.descriptionText.split('\n')
+		var int i, paragraphCount = paragraphs.getCount()
+		var STDNText nodeText
+		var String paragraph
+		
+		for i = 0 to paragraphCount
+			paragraph = (paragraphs.getAt(i) cast String).trimBoth()
+			
+			nodeText = STDNText.new()
+			nodeText.setStyle("paragraph")
+			nodeText.addSpan(STDNTextSpan.new(paragraph))
+			std.addNode(nodeText)
+		end
+		
+		return std
 	end
 end
