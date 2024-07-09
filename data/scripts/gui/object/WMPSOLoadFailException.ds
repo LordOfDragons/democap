@@ -1,0 +1,99 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2024, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+pin Democap.Behaviors
+pin Dragengine.Gui
+pin Dragengine.Gui.Layouts
+
+
+/**
+ * ECBLoadFailException panel.
+ */
+class WMPSOLoadFailException extends WMPPanelSceneObject
+	protected var ECBLoadFailException.Instance pBehaviorLoadFailException
+	protected var DefaultTextModel pModelText
+	
+	
+	func new(WMPanelProject panelProject, String bgpTypeId) super(panelProject, bgpTypeId,\
+	"", "@UI.LoadFailException", "WMPSOLoadFailException", "ppob_loadfailexception")
+		pModelText = DefaultTextModel.new()
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+	end
+	
+	func void dispose()
+		setBehavior(null)
+		pModelText = null
+		super.dispose()
+	end
+	
+	
+	func ECBLoadFailException.Instance getBehaviorLoadFailException()
+		return pBehaviorLoadFailException
+	end
+	
+	func void updateBehavior()
+		if pBehaviorLoadFailException == null
+			return
+		end
+		
+		var Array lines = Array.new()
+		var Exception e = pBehaviorLoadFailException.exception
+		
+		if e != null
+			// var int i, count = e.getTraceCount()
+			lines.add(e.getReason())
+			lines.add("Class: " + pBehaviorLoadFailException.getElement().getClass().getClassname())
+			lines.add("Backtrace: See logs")
+			/*
+			lines.add("Backtrace:")
+			for i = 0 to count
+				lines.add("{}: {}.{}({})".format(Array.newWith(i + 1,\
+					e.getTraceClass(i), e.getTraceFunction(i), e.getTraceLine(i))))
+			end
+			*/
+		end
+		
+		if lines.getCount() > 0
+			pModelText.setText(lines.fold(block String a, String b
+				return a + '\n' + b
+			end) cast String)
+			
+		else
+			pModelText.setText("")
+		end
+	end
+	
+	
+	protected func void createContent(Panel content)
+		content.setLayout(BorderLayout.new(2))
+		
+		var TextArea textArea = TextArea.new(pModelText, 8, true)
+		content.addWidget(ScrollPanel.new(textArea), BorderLayout.Area.content)
+	end
+	
+	protected func void onBehaviorChanged()
+		pBehaviorLoadFailException = pBehavior cast ECBLoadFailException.Instance
+	end
+end

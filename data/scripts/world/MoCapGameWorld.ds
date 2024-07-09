@@ -100,7 +100,14 @@ class MoCapGameWorld extends GameWorld
 	 */
 	func StubElement onFailLoadAndAddPersistableElements(PersistencyEnvironment env,\
 	FileReader reader, StubElement stub, int dataSize, Exception exception)
-		return InvalidBrokenElementClass.new(stub.getClass().getClassname()).\
-			createAndAddElement(stub, this, reader, dataSize, exception)
+		var InvalidBrokenElementClass eclass = InvalidBrokenElementClass.new(stub.getClass().getClassname())
+		
+		var PreloadCounter counter = PreloadCounter.new()
+		eclass.preloadResources(counter)
+		while counter.isNotZero()
+			Engine.updateResourceLoading()
+		end
+		
+		return eclass.createAndAddElement(stub, this, reader, dataSize, exception)
 	end
 end
