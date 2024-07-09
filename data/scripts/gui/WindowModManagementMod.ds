@@ -459,6 +459,30 @@ class WindowModManagementMod extends WindowDialog
 		end
 	end
 	
+	/**
+	 * \brief Mod management event listener.
+	 */
+	class ModManagenentEventListener extends DefaultServiceModsListener
+		var WindowModManagementMod pWindow
+		
+		func new(WindowModManagementMod window)
+			pWindow = window
+		end
+		
+		func void onGetModInfo(ServiceMods service, String modId, ServiceModInfo info, Exception exception)
+			if info != null
+				pWindow.onGetModInfo(modId, info)
+			end
+		end
+		
+		func void onModManagement(ServiceMods service, ServiceMods.ManagementEvent event,\
+		String modId, ServiceModProgress progress, Exception exception)
+			if progress != null
+				pWindow.onModManagementEvent(event, modId, progress)
+			end
+		end
+	end
+	
 	
 	
 	var ServiceMods pServiceMods
@@ -466,6 +490,7 @@ class WindowModManagementMod extends WindowDialog
 	var WindowModManagement.ModListEntry pModEntry
 	var Button pButtonSubscribe
 	var Dictionary pSubscribedMods
+	var ModManagenentEventListener pModManagenentEventListener
 	
 	
 	/**
@@ -490,11 +515,20 @@ class WindowModManagementMod extends WindowDialog
 		doLayout()
 		setResultListener(listener)
 		show(window, false, WindowModal.Placement.window)
+		
+		pModManagenentEventListener = ModManagenentEventListener.new(this)
+		serviceMods.addModsListener(pModManagenentEventListener)
 	end
 	
 	func void dispose()
-		super.dispose()
+		if pModManagenentEventListener != null
+			pServiceMods.removeModsListener(pModManagenentEventListener)
+			pModManagenentEventListener = null
+		end
+		
 		pButtonSubscribe = null
+		
+		super.dispose()
 	end
 	
 	
@@ -548,6 +582,28 @@ class WindowModManagementMod extends WindowDialog
 			end
 		end)
 		pButtonSubscribe.doLayoutIfBlocked()
+	end
+	
+	/**
+	 * Modification information received
+	 */
+	func void onGetModInfo(String modId, ServiceModInfo info)
+		if not pModEntry.info.id.equals(modId)
+			return
+		end
+		
+		updateButtonSubscribe()
+	end
+	
+	/**
+	 * Modification management event received.
+	 */
+	func void onModManagementEvent(ServiceMods.ManagementEvent event, String modId, ServiceModProgress progress)
+		if not pModEntry.info.id.equals(modId)
+			return
+		end
+		
+		updateButtonSubscribe()
 	end
 	
 	

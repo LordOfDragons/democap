@@ -1,0 +1,139 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2024, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Elements
+pin Democap.Behaviors
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.LoadSave
+
+/**
+ * \brief Element class representing a invalid or broken element class.
+ * 
+ * Used as temporary element class if an unknown or incorrectly loading
+ * element class is encountered during loading. Typically this happens
+ * because of user modification changes or due to external factors
+ * causing element classes to become broken.
+ * 
+ * This element class contains a component and a collider showing a
+ * replacement model indicating the problem. The original element data
+ * is stored in the element. Upon saving the original element data is
+ * written to persistency. This way if the problem is resolved the
+ * element should load again properly the next time.
+ */
+class InvalidBrokenElementClass extends BehaviorElementClass
+	class InvalidBrokenElement extends BehaviorElement
+		public var MemoryFile data
+		public var Exception exception
+		
+		func new(InvalidBrokenElementClass eclass) super(eclass)
+			data = MemoryFile.new("")
+		end
+		
+		func void writeToFile(PersistencyEnvironment env, FileWriter writer)
+			writer.writeData(data.getReader(), data.getSize())
+		end
+	end
+	
+	
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
+	public var ECBehaviorComponent component
+	public var ECBehaviorCollider collider
+	public var ECBTemporaryGhost temporaryGhost
+	public var ECBehaviorVRHandPointedAt vrHandPointedAt
+	public var ECBHighlightPointedAt highlightPointedAt
+	public var ECBSceneObject sceneObject
+	public var ECBSelectable selectable
+	public var ECBShowInteractHandles showInteractHandles
+	public var ECBShowInteractionBubble showInteractionBubble
+	public var ECBHelpTopic helpTopic
+	public var ECBehaviorAttachments attachments
+	
+	
+	/** Create element class. */
+	func new(String name) super(name)
+		behaviorGuiPanels = ECBBehaviorGuiPanels.new(this)
+		
+		component = ECBehaviorComponent.new(this, null)
+		component.setCommonPath("/content/models/unknownObject",\
+			"object.demodel", "object.deskin", "object.derig")
+		
+		collider = ECBehaviorCollider.new(this, component)
+		collider.getCollider().getPhysicsType().setEnumeration(CollisionResponse.none)
+		collider.getCollider().getLocalGravity().setVector(Vector.new())
+		
+		var LayerMask cfcategory = LayerMask.newWith(BaseGameApp.CollisionFilterBit.geometry)
+		
+		var LayerMask cffilter = LayerMask.new()
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.actor)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.actorAI)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.dynamic)
+		cffilter.setBit(BaseGameApp.CollisionFilterBit.particle)
+		cffilter.setBit(GameApp.CollisionFilterBit.interaction)
+		
+		collider.getCollider().setCollisionFilter(CollisionFilter.new(cfcategory, cffilter))
+		
+		temporaryGhost = ECBTemporaryGhost.new(this, behaviorGuiPanels, component)
+		
+		vrHandPointedAt = ECBehaviorVRHandPointedAt.new(this)
+		highlightPointedAt = ECBHighlightPointedAt.new(this, component, collider, vrHandPointedAt)
+		
+		sceneObject = ECBSceneObject.new(this)
+		sceneObject.addActorOffset.setVector(Vector.new(0, 0, 0.5))
+		sceneObject.canRemove.setValue(true)
+		sceneObject.editPanelNoPhysics.setValue(true)
+		
+		selectable = ECBSelectable.new(this)
+		
+		showInteractHandles = ECBShowInteractHandles.new(this, behaviorGuiPanels, selectable)
+		
+		showInteractionBubble = ECBShowInteractionBubble.new(this)
+		showInteractionBubble.buttons.add("ghost")
+		showInteractionBubble.buttons.add("remove")
+		
+		helpTopic = ECBHelpTopic.new(this)
+		helpTopic.getHelpTopic().setValue("ocls_invalidbroken")
+		
+		attachments = ECBehaviorAttachments.new(this)
+	end
+	
+	protected func Element createElement()
+		throw EInvalidParam.new()
+	end
+	
+	/**
+	 * \brief Create and add element wrapping the problematic stub.
+	 * 
+	 * Creates a new stub which is returned.
+	 */
+	func StubElement createAndAddElement(StubElement problemStub, GameWorld gameWorld,\
+	FileReader reader, int dataSize, Exception exception)
+		var StubElement stub = StubElement.new(problemStub)
+		stub.setClass(this)
+		
+		var InvalidBrokenElement element = InvalidBrokenElement.new(this)
+		element.data.getWriter(false).writeData(reader, dataSize)
+		element.exception = exception
+		
+		gameWorld.addElement(element)
+		return stub
+	end
+end

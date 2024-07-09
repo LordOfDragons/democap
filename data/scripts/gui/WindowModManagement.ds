@@ -498,6 +498,30 @@ class WindowModManagement extends WindowDialog
 	end
 	
 	/**
+	 * \brief Mod management event listener.
+	 */
+	class ModManagenentEventListener extends DefaultServiceModsListener
+		var WindowModManagement pWindow
+		
+		func new(WindowModManagement window)
+			pWindow = window
+		end
+		
+		func void onGetModInfo(ServiceMods service, String modId, ServiceModInfo info, Exception exception)
+			if info != null
+				pWindow.onGetModInfo(modId, info)
+			end
+		end
+		
+		func void onModManagement(ServiceMods service, ServiceMods.ManagementEvent event,\
+		String modId, ServiceModProgress progress, Exception exception)
+			if progress != null
+				pWindow.onModManagementEvent(event, modId, progress)
+			end
+		end
+	end
+	
+	/**
 	 * \brief Search mods listener.
 	 */
 	class SearchModsListener extends DefaultServiceModsListener
@@ -734,6 +758,7 @@ class WindowModManagement extends WindowDialog
 	var CodecPropertyString pCodecPropertyString
 	var Array pSearchTagCategories
 	var bool pPreventSearch
+	var ModManagenentEventListener pModManagenentEventListener
 	
 	
 	/**
@@ -786,10 +811,18 @@ class WindowModManagement extends WindowDialog
 		searchMods(ServiceModFilter.new())
 		
 		pModelViewCategory.addListener(ViewCategoryChanged.new(this))
+		
+		pModManagenentEventListener = ModManagenentEventListener.new(this)
+		serviceMods.addModsListener(pModManagenentEventListener)
 	end
 	
 	/** Dispose of window. */
 	func void dispose()
+		if pModManagenentEventListener != null
+			pServiceMods.removeModsListener(pModManagenentEventListener)
+			pModManagenentEventListener = null
+		end
+		
 		pModelViewCategory = null
 		pModelMods = null
 		pListMods = null
@@ -1026,6 +1059,32 @@ class WindowModManagement extends WindowDialog
 			//WindowDialog.message(getWindow(), "Search Mods", "No more search results", null, null, null)
 		end
 		pButtonSearchMore.setEnabled(true)
+	end
+	
+	/**
+	 * Modification information received
+	 */
+	func void onGetModInfo(String modId, ServiceModInfo info)
+		var int i, count = pModelMods.getCount()
+		var ModListEntry entry
+		
+		for i = 0 to count
+			entry = pModelMods.getAt(i) cast ModListEntry
+			if entry.info.id.equals(modId)
+				updateSubscribedMods()
+				entry.info = info
+				entry.status = pSubscribedMods.getAt(modId, null) cast ServiceModStatus
+				pModelMods.notifyContentChanged(i, i)
+				return
+			end
+		end
+	end
+	
+	/**
+	 * Modification management event received.
+	 */
+	func void onModManagementEvent(ServiceMods.ManagementEvent event, String modId, ServiceModProgress progress)
+		// TODO
 	end
 	
 	

@@ -23,6 +23,8 @@ namespace Democap
 
 pin Dragengine.Scenery
 pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Democap.Elements
 
 
 /**
@@ -87,5 +89,18 @@ class MoCapGameWorld extends GameWorld
 	func void writeToFile(PersistencyEnvironment env, FileWriter writer)
 		setEnablePersistency(true)
 		super.writeToFile(env, writer)
+	end
+	
+	/**
+	 * \brief Loading element from persistency failed.
+	 * 
+	 * Replace element with InvalidBrokenElement wrapping element data.
+	 * This ensures the loading can continue and that the element can be
+	 * loaded again the next time if the breaking circumstances are fixed.
+	 */
+	func StubElement onFailLoadAndAddPersistableElements(PersistencyEnvironment env,\
+	FileReader reader, StubElement stub, int dataSize, Exception exception)
+		return InvalidBrokenElementClass.new(stub.getClass().getClassname()).\
+			createAndAddElement(stub, this, reader, dataSize, exception)
 	end
 end
