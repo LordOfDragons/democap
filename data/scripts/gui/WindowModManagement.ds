@@ -500,23 +500,41 @@ class WindowModManagement extends WindowDialog
 	/**
 	 * \brief Mod management event listener.
 	 */
-	class ModManagenentEventListener extends DefaultServiceModsListener
+	class ModEventListener extends DefaultServiceModsListener
 		var WindowModManagement pWindow
 		
 		func new(WindowModManagement window)
 			pWindow = window
 		end
 		
+		func void onGetTags(ServiceMods service, Array categories, Exception exception)
+			if exception == null
+				pWindow.updateSearchTagCategories(categories)
+			end
+		end
+		
 		func void onGetModInfo(ServiceMods service, String modId, ServiceModInfo info, Exception exception)
 			if info != null
-				pWindow.onGetModInfo(modId, info)
+				pWindow.updateModListEntry(modId, info, null)
+			end
+		end
+		
+		func void onSubscribeMod(ServiceMods service, String modId, Exception exception)
+			if exception == null
+				pWindow.updateModListEntry(modId, null, null)
+			end
+		end
+		
+		func void onUnsubscribeMod(ServiceMods service, String modId, Exception exception)
+			if exception == null
+				pWindow.updateModListEntry(modId, null, null)
 			end
 		end
 		
 		func void onModManagement(ServiceMods service, ServiceMods.ManagementEvent event,\
 		String modId, ServiceModProgress progress, Exception exception)
 			if progress != null
-				pWindow.onModManagementEvent(event, modId, progress)
+				pWindow.updateModListEntry(modId, null, progress)
 			end
 		end
 	end
@@ -533,23 +551,6 @@ class WindowModManagement extends WindowDialog
 		
 		func void onListMods(ServiceMods service, Array mods, Exception exception)
 			pWindow.onSearchResult(this, mods, exception)
-		end
-	end
-	
-	/**
-	 * \brief Retrieve tags listener.
-	 */
-	class RetrieveTagsListener extends DefaultServiceModsListener
-		var WindowModManagement pWindow
-		
-		func new(WindowModManagement window)
-			pWindow = window
-		end
-		
-		func void onGetTags(ServiceMods service, Array categories, Exception exception)
-			if exception == null
-				pWindow.updateSearchTagCategories(categories)
-			end
 		end
 	end
 	
@@ -758,7 +759,7 @@ class WindowModManagement extends WindowDialog
 	var CodecPropertyString pCodecPropertyString
 	var Array pSearchTagCategories
 	var bool pPreventSearch
-	var ModManagenentEventListener pModManagenentEventListener
+	var ModEventListener pModEventListener
 	
 	
 	/**
@@ -804,23 +805,23 @@ class WindowModManagement extends WindowDialog
 		
 		pModelSortBy.addListener(SearchSelectionChanged.new(this))
 		
+		pModEventListener = ModEventListener.new(this)
+		serviceMods.addModsListener(pModEventListener)
+		
 		updateSubscribedMods()
 		pOrgSubscribedMods = Dictionary.new(pSubscribedMods)
 		
-		serviceMods.getTags(RetrieveTagsListener.new(this))
+		serviceMods.getTags(null)
 		searchMods(ServiceModFilter.new())
 		
 		pModelViewCategory.addListener(ViewCategoryChanged.new(this))
-		
-		pModManagenentEventListener = ModManagenentEventListener.new(this)
-		serviceMods.addModsListener(pModManagenentEventListener)
 	end
 	
 	/** Dispose of window. */
 	func void dispose()
-		if pModManagenentEventListener != null
-			pServiceMods.removeModsListener(pModManagenentEventListener)
-			pModManagenentEventListener = null
+		if pModEventListener != null
+			pServiceMods.removeModsListener(pModEventListener)
+			pModEventListener = null
 		end
 		
 		pModelViewCategory = null
@@ -876,6 +877,23 @@ class WindowModManagement extends WindowDialog
 	 */
 	func void updateSubscribedMods()
 		pSubscribedMods = pServiceMods.getSubscribedMods()
+	end
+	
+	/**
+	 * \brief Index of ModListEntry matching id.
+	 */
+	func int indexOfModListEntry(String modId)
+		var int i, count = pModelMods.getCount()
+		var ModListEntry entry
+		
+		for i = 0 to count
+			entry = pModelMods.getAt(i) cast ModListEntry
+			if entry.info.id.equals(modId)
+				return i
+			end
+		end
+		
+		return -1
 	end
 	
 	/**
@@ -959,7 +977,6 @@ class WindowModManagement extends WindowDialog
 	 */
 	func void showModInfo(ModListEntry entry)
 		WindowModManagementMod.new(this, pServiceMods, entry, WindowDialog.BlockResultListener.new(block Object results
-			updateSubscribedMods()
 			var int index = pModelMods.indexOf(entry)
 			if index != -1
 				pModelMods.notifyContentChanged(index, index)
@@ -1062,29 +1079,28 @@ class WindowModManagement extends WindowDialog
 	end
 	
 	/**
-	 * Modification information received
+	 * Update modification list entry.
 	 */
-	func void onGetModInfo(String modId, ServiceModInfo info)
-		var int i, count = pModelMods.getCount()
-		var ModListEntry entry
-		
-		for i = 0 to count
-			entry = pModelMods.getAt(i) cast ModListEntry
-			if entry.info.id.equals(modId)
-				updateSubscribedMods()
-				entry.info = info
-				entry.status = pSubscribedMods.getAt(modId, null) cast ServiceModStatus
-				pModelMods.notifyContentChanged(i, i)
-				return
-			end
+	func void updateModListEntry(String modId, ServiceModInfo info, ServiceModProgress progress)
+		var int index = indexOfModListEntry(modId)
+		if index == -1
+			return
 		end
-	end
-	
-	/**
-	 * Modification management event received.
-	 */
-	func void onModManagementEvent(ServiceMods.ManagementEvent event, String modId, ServiceModProgress progress)
-		// TODO
+		
+		var ModListEntry entry = pModelMods.getAt(index) cast ModListEntry
+		
+		if info != null
+			entry.info = info
+		end
+		
+		updateSubscribedMods()
+		entry.status = pSubscribedMods.getAt(modId, null) cast ServiceModStatus
+		
+		if progress != null
+			// TODO
+		end
+		
+		pModelMods.notifyContentChanged(index, index)
 	end
 	
 	

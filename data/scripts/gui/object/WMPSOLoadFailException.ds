@@ -23,12 +23,77 @@ namespace Democap.Gui
 pin Democap.Behaviors
 pin Dragengine.Gui
 pin Dragengine.Gui.Layouts
+pin Dragengine.Scenery
+pin Dragengine.Gui.Events
 
 
 /**
  * ECBLoadFailException panel.
  */
 class WMPSOLoadFailException extends WMPPanelSceneObject
+	class ActionShowBacktrace implements ActionListener
+		var WMPSOLoadFailException pPanel
+		
+		func new(WMPSOLoadFailException panel)
+			pPanel = panel
+		end
+		
+		func void onAction(ActionEvent event)
+			var ECBLoadFailException.Instance behavior = pPanel.getBehaviorLoadFailException()
+			if behavior == null
+				return
+			end
+			
+			var Exception e = behavior.exception
+			if e == null
+				return
+			end
+			
+			var int i, count = e.getTraceCount()
+			var Array lines = Array.new()
+			
+			lines.add(e.getReason() + ":")
+			for i = 0 to count
+				lines.add("{}: {}.{}({})".format(Array.newWith(i + 1,\
+					e.getTraceClass(i), e.getTraceFunction(i), e.getTraceLine(i))))
+			end
+			if lines.getCount() == 0
+				return
+			end
+			
+			var String message = lines.fold(block String a, String b
+					return a + '\n' + b
+				end) cast String
+			
+			var Window window = pPanel.getWindow()
+			var WindowDialog dialog = WindowDialog.new(0, 0, 600, 400)
+			
+			dialog.runWhileBlockingLayout(block
+				dialog.setGuiTheme(window.getGuiTheme())
+				dialog.setLayout(BorderLayout.new())
+				dialog.setTitle("@UI.LoadFailException")
+				
+				var TextArea textArea = TextArea.new(message)
+				textArea.setReadOnly(true)
+				textArea.setMaximalWidth(500)
+				textArea.setRowCount(5)
+				textArea.setDesignerSelector("TextArea.WindowDialog")
+				dialog.addWidget(ScrollPanel.new(textArea), BorderLayout.Area.content)
+				
+				dialog.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x), block Panel p
+					p.setDesignerSelector("Panel.WindowDialogButtons")
+					
+					var Button widgetButton = Button.new("@UI.Close", WindowDialog.CloseDialog.new(dialog, null))
+					widgetButton.setDesignerSelector("Button.WindowDialog")
+					p.addWidget(widgetButton)
+				end), BorderLayout.Area.bottom)
+			end)
+			
+			dialog.show(window, true, WindowModal.Placement.window)
+		end
+	end
+	
+	
 	protected var ECBLoadFailException.Instance pBehaviorLoadFailException
 	protected var DefaultTextModel pModelText
 	
@@ -60,19 +125,21 @@ class WMPSOLoadFailException extends WMPPanelSceneObject
 		
 		var Array lines = Array.new()
 		var Exception e = pBehaviorLoadFailException.exception
+		var BehaviorElement element = pBehaviorLoadFailException.getElement()
+		var BehaviorElementClass eclass = element.getClass() cast BehaviorElementClass
+		
+		if GameApp.getApp().getElementClassList().has(eclass)
+			lines.add("Load element failed.")
+			
+		else
+			lines.add("Element class not found.")
+		end
+		
+		lines.add("")
+		lines.add("Class: " + eclass.getClassname())
 		
 		if e != null
-			// var int i, count = e.getTraceCount()
-			lines.add(e.getReason())
-			lines.add("Class: " + pBehaviorLoadFailException.getElement().getClass().getClassname())
-			lines.add("Backtrace: See logs")
-			/*
-			lines.add("Backtrace:")
-			for i = 0 to count
-				lines.add("{}: {}.{}({})".format(Array.newWith(i + 1,\
-					e.getTraceClass(i), e.getTraceFunction(i), e.getTraceLine(i))))
-			end
-			*/
+			lines.add("Exception: " + e.getReason())
 		end
 		
 		if lines.getCount() > 0
@@ -89,8 +156,11 @@ class WMPSOLoadFailException extends WMPPanelSceneObject
 	protected func void createContent(Panel content)
 		content.setLayout(BorderLayout.new(2))
 		
-		var TextArea textArea = TextArea.new(pModelText, 8, true)
+		var TextArea textArea = TextArea.new(pModelText, 5, true)
 		content.addWidget(ScrollPanel.new(textArea), BorderLayout.Area.content)
+		
+		content.addWidget(Button.new("Backtrace",\
+			ActionShowBacktrace.new(this)), BorderLayout.Area.bottom)
 	end
 	
 	protected func void onBehaviorChanged()
