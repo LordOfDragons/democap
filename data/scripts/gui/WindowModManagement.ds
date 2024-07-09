@@ -73,6 +73,39 @@ class WindowModManagement extends WindowDialog
 	 */
 	class ModListEntry
 		/**
+		 * \brief Gallery image.
+		 */
+		class GalleryImage
+			/**
+			 * \brief Modification gallery image.
+			 */
+			public var ServiceImage info
+			
+			/**
+			 * \brief Cached original image or null.
+			 */
+			public var Image imageOriginal
+			
+			/**
+			 * \brief Thumbnail.
+			 */
+			public var ServiceImage.Thumbnail thumbnail
+			
+			/**
+			 * \brief Cached thumbnail or null.
+			 */
+			public var Image imageThumbnail
+			
+			/**
+			 * \brief Create new instance of class GalleryImage.
+			 */
+			func new(ServiceImage info)
+				this.info = info
+			end
+		end
+		
+		
+		/**
 		 * \brief Modification information.
 		 */
 		public var ServiceModInfo info
@@ -86,6 +119,12 @@ class WindowModManagement extends WindowDialog
 		 * \brief Cached logo image or null.
 		 */
 		public var Image logo
+		
+		/**
+		 * \brief Gallery images as Array of GalleryImage or null if not loaded.
+		 */
+		public var Array galleryImages
+		
 		
 		/**
 		 * \brief Create new instance of class ModListEntry.
@@ -220,6 +259,7 @@ class WindowModManagement extends WindowDialog
 			 */
 			func void setEntry(ServiceMods service, ModListEntry entry)
 				if entry == pEntry
+					update()
 					return
 				end
 				
@@ -252,7 +292,7 @@ class WindowModManagement extends WindowDialog
 					pModelName.setText(info.name != null if info.name else "?")
 					pModelDownloads.setText(fh.formatCount(info.stats != null if info.stats.downloadCount else 0))
 					pModelSize.setText(fh.formatSize(info.latestRelease != null if info.latestRelease.filesize else 0))
-					pModelRating.setText(fh.formatRating(info.stats != null if info.stats.ratingWeighted else 0))
+					pModelRating.setText(fh.formatRating(info.stats != null if info.stats.ratingAverage else 0))
 					updateStatusInfo()
 				end)
 				doLayoutIfBlocked()
@@ -306,7 +346,7 @@ class WindowModManagement extends WindowDialog
 					
 					p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 15), block Panel p2
 						p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p3
-							pIconDownloads = DisplayIcon.new(Image.new("/shareddata/guithemes/modern/icons/download.png"))
+							pIconDownloads = DisplayIcon.new(Image.new("/shareddata/guithemes/modern/icons/16/download.webp"))
 							p3.addWidget(pIconDownloads)
 							
 							pLabelDownloads = Label.new(pModelDownloads)
@@ -314,7 +354,7 @@ class WindowModManagement extends WindowDialog
 						end))
 						
 						p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p3
-							pIconSize = DisplayIcon.new(Image.new("/shareddata/guithemes/modern/icons/filesize.png"))
+							pIconSize = DisplayIcon.new(Image.new("/shareddata/guithemes/modern/icons/16/filesize.webp"))
 							p3.addWidget(pIconSize)
 							
 							pLabelSize = Label.new(pModelSize)
@@ -322,7 +362,7 @@ class WindowModManagement extends WindowDialog
 						end))
 						
 						p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p3
-							pIconRating = DisplayIcon.new(Image.new("/shareddata/guithemes/modern/icons/rating.png"))
+							pIconRating = DisplayIcon.new(Image.new("/shareddata/guithemes/modern/icons/16/rating.webp"))
 							p3.addWidget(pIconRating)
 							
 							pLabelRating = Label.new(pModelRating)
@@ -689,7 +729,7 @@ class WindowModManagement extends WindowDialog
 	var ServiceMods pServiceMods
 	var ServiceModsFeatures pServiceModFeatures
 	var SearchModsListener pSearchModsListener
-	var Dictionary pSubscribedMods
+	var Dictionary pSubscribedMods, pOrgSubscribedMods
 	var ServiceModFilter pSearchFilter
 	var CodecPropertyString pCodecPropertyString
 	var Array pSearchTagCategories
@@ -740,6 +780,8 @@ class WindowModManagement extends WindowDialog
 		pModelSortBy.addListener(SearchSelectionChanged.new(this))
 		
 		updateSubscribedMods()
+		pOrgSubscribedMods = Dictionary.new(pSubscribedMods)
+		
 		serviceMods.getTags(RetrieveTagsListener.new(this))
 		searchMods(ServiceModFilter.new())
 		
@@ -883,7 +925,57 @@ class WindowModManagement extends WindowDialog
 	 * \brief Show modification information in a new window.
 	 */
 	func void showModInfo(ModListEntry entry)
-		WindowModManagementMod.new(this, pServiceMods, entry)
+		WindowModManagementMod.new(this, pServiceMods, entry, WindowDialog.BlockResultListener.new(block Object results
+			updateSubscribedMods()
+			var int index = pModelMods.indexOf(entry)
+			if index != -1
+				pModelMods.notifyContentChanged(index, index)
+			end
+		end))
+	end
+	
+	/**
+	 * \brief Check for modification changes and activate mods.
+	 * 
+	 * If there are no changes nothing is done. If there are changes activates the modifications
+	 * then checks for subscribed and unsubscribed modifications. Depending on the changes do
+	 * an update on the respective data. If script changes are required ask for restarting.
+	 */
+	func void activateMods()
+		var GameApp app = GameApp.getGameApp()
+		
+		pServiceMods.activateMods()
+		
+		var Array unsubscribed = pOrgSubscribedMods.getKeys().collect(block String each
+			return not pSubscribedMods.has(each)
+		end)
+		var Array subscribed = pSubscribedMods.getKeys().collect(block String each
+			return not pOrgSubscribedMods.has(each)
+		end)
+		var Array changed = subscribed
+		
+		if anyHasMatchingFiles(changed, "/scripts", Set.newWith("*.ds"))
+			WindowDialog.question(this, "Mod Management",\
+			"One or more modifications contains scripts. Restarting is required.", null,\
+			Array.newWith(WindowDialog.ButtonConfiguration.new("Restart", true),\
+				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block Object result
+				Engine.restart("manageMods")
+			end))
+		end
+		
+		if subscribed.getCount() > 0 or unsubscribed.getCount() > 0
+			app.reloadAfterModsChanged()
+		end
+	end
+	
+	/**
+	 * Function anyHasMatchingFiles.
+	 */
+	protected func bool anyHasMatchingFiles(Array mods, String directory, Set patterns)
+		return mods.find(block String each
+			return pServiceMods.modHasMatchingFiles(each, directory, true, patterns)
+		end) != null
 	end
 	
 	
@@ -1023,8 +1115,7 @@ class WindowModManagement extends WindowDialog
 			
 			p.addWidget(createButton("@UI.ModManagement.Close", "@UI.ModManagement.Close.ToolTip",\
 				".Close", BlockActionListener.new(block ActionEvent e
-					// apply modifications showing dialogs if something went wrong
-					pServiceMods.activateMods()
+					activateMods()
 					close()
 				end)))
 		end ), BorderLayout.Area.bottom)

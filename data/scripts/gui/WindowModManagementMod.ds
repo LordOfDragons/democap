@@ -49,19 +49,434 @@ class WindowModManagementMod extends WindowDialog
 		end
 	end
 	
+	/**
+	 * \brief Widget showing gallery images.
+	 */
+	class GalleryWidget extends Panel
+		/**
+		 * \brief Widget displaying image list.
+		 */
+		class PreviewImageWidget extends DisplayImage
+			/**
+			 * \brief Listener updating gallery image once loaded.
+			 */
+			class LoadImageListener extends DefaultServiceModsListener
+				var PreviewImageWidget pWidget
+				var WindowModManagement.ModListEntry.GalleryImage pEntry
+				
+				func new(PreviewImageWidget widget, WindowModManagement.ModListEntry.GalleryImage entry)
+					pWidget = widget
+					pEntry = entry
+				end
+				
+				func void onLoadResource(ServiceMods service, String url, Object resource, Exception exception)
+					if exception != null
+						GameApp.getApp().getConsole().addError("Load image failed: " + url, exception)
+						return
+					end
+					
+					if pEntry.info != null and url.equals(pEntry.info.url)
+						pEntry.imageOriginal = resource cast Image
+						pWidget.onOriginalImageChanged()
+						
+					elif pEntry.thumbnail != null and url.equals(pEntry.thumbnail.url)
+						pEntry.imageThumbnail = resource cast Image
+						pWidget.update()
+					end
+				end
+			end
+			
+			
+			var WindowModManagement.ModListEntry.GalleryImage pEntry
+			var ListModel pModelGalleryImages
+			
+			
+			/**
+			 * \brief Create widget displaying gallery image preview in the list.
+			 */
+			func new(String designerSelector, ListModel modelGalleryImages) super(null, RepeatMode.stretchRatio)
+				pModelGalleryImages = modelGalleryImages
+				setDesignerSelector(designerSelector)
+			end
+			
+			func void dispose()
+				pModelGalleryImages = null
+				super.dispose()
+			end
+			
+			func WindowModManagement.ModListEntry.GalleryImage getEntry()
+				return pEntry
+			end
+			
+			/**
+			 * \brief Set gallery image entry to show.
+			 */
+			func void setEntry(ServiceMods service, WindowModManagement.ModListEntry.GalleryImage entry)
+				if entry == pEntry
+					return
+				end
+				
+				pEntry = entry
+				
+				if entry == null
+					return
+				end
+				
+				if entry.imageThumbnail == null and entry.info != null
+					entry.imageThumbnail = entry.info.image
+					
+					if entry.imageThumbnail == null and service != null
+						entry.thumbnail = findLoadThumbnail(entry.info)
+						if entry.thumbnail != null
+							service.loadResource(entry.thumbnail.url, LoadImageListener.new(this, entry))
+						end
+					end
+				end
+				
+				if entry.imageOriginal == null and entry.info != null
+					entry.imageOriginal = entry.info.image
+					if entry.imageOriginal == null and service != null
+						service.loadResource(entry.info.url, LoadImageListener.new(this, entry))
+					end
+				end
+				
+				update()
+			end
+			
+			/**
+			 * \brief Update content from current modification entry.
+			 */
+			func void update()
+				if pEntry != null
+					var Image image = pEntry.imageThumbnail
+					if image == null
+						image = pEntry.imageOriginal
+					end
+					setImage(image)
+				end
+			end
+			
+			/**
+			 * \brief Original image changed.
+			 */
+			func void onOriginalImageChanged()
+				var int index = pModelGalleryImages.indexOf(pEntry)
+				if index != -1
+					pModelGalleryImages.notifyContentChanged(index, index)
+				end
+			end
+			
+			/**
+			 * \brief Find thumbnail best matching widget size.
+			 */
+			func ServiceImage.Thumbnail findLoadThumbnail(ServiceImage image)
+				var Point reqSize = getMinimumSize()
+				
+				if image.thumbnails != null
+					var Array found = image.thumbnails.collect(block ServiceImage.Thumbnail each
+						return each.size >= reqSize
+					end).sorted(block ServiceImage.Thumbnail a, ServiceImage.Thumbnail b
+						return a.size.compare(b)
+					end)
+					if found.getCount() > 0
+						return found.getAt(0) cast ServiceImage.Thumbnail
+					end
+				end
+				
+				return null
+			end
+		end
+		
+		/**
+		 * \brief Show gallery image listener.
+		 */
+		class ShowGalleryImage extends DefaultListModelListener
+			var DisplayImage pDisplayImage
+			var Array pPreviewWidgets
+			var String pPreviewImageDesignerSelector
+			
+			func new(DisplayImage displayImage, Array previewWidgets, String previewImageDesignerSelector)
+				pDisplayImage = displayImage
+				pPreviewWidgets = previewWidgets
+				pPreviewImageDesignerSelector = previewImageDesignerSelector
+			end
+			
+			func void selectionChanged(ListModel listModel)
+				var int selection = listModel.getSelected()
+				if selection == -1
+					return
+				end
+				
+				var WindowModManagement.ModListEntry.GalleryImage galleryImage = \
+					listModel.getAt(selection) cast WindowModManagement.ModListEntry.GalleryImage
+				
+				pDisplayImage.setImage(galleryImage.imageOriginal)
+				
+				pPreviewWidgets.forEach(block PreviewImageWidget each
+					if each.getEntry() == galleryImage
+						each.setDesignerSelector(pPreviewImageDesignerSelector + ".Selected")
+						
+					else
+						each.setDesignerSelector(pPreviewImageDesignerSelector)
+					end
+				end)
+			end
+			
+			func void contentChanged(ListModel listModel, int fromIndex, int toIndex)
+				selectionChanged(listModel)
+			end
+		end
+		
+		/**
+		 * \brief Show gallery image clicked listener.
+		 */
+		class ClickShowGalleryImage extends ClickedActionListener
+			var ListModel pModel
+			var WindowModManagement.ModListEntry.GalleryImage pGalleryImage
+			
+			func new(ListModel model, WindowModManagement.ModListEntry.GalleryImage galleryImage)
+				pModel = model
+				pGalleryImage = galleryImage
+			end
+			
+			func void onAction()
+				pModel.setSelected(pModel.indexOf(pGalleryImage))
+			end
+		end
+		
+		
+		var ServiceMods pServiceMods
+		var WindowModManagement.ModListEntry pModEntry
+		var DisplayImage pImageCurrent
+		var DefaultListModel pModelImages
+		var String pPreviewImageDesignerSelector
+		var Array pPreviewWidgets
+		
+		
+		func new(ServiceMods serviceMods, WindowModManagement.ModListEntry entry)
+			pServiceMods = serviceMods
+			pModEntry = entry
+			pModelImages = DefaultListModel.new()
+			pPreviewImageDesignerSelector = "Image.WindowModManagementMod.GalleryPreview"
+			pPreviewWidgets = Array.new()
+			
+			if entry.info.galleryImages != null
+				entry.info.galleryImages.forEach(block ServiceImage each
+					pModelImages.add(WindowModManagement.ModListEntry.GalleryImage.new(each))
+				end)
+			end
+			
+			runWhileBlockingLayout(block
+				createContent()
+			end)
+			
+			pModelImages.addListener(ShowGalleryImage.new(\
+				pImageCurrent, pPreviewWidgets, pPreviewImageDesignerSelector))
+		end
+		
+		func void dispose()
+			pImageCurrent = null
+			pModelImages = null
+			pPreviewWidgets = null
+			super.dispose()
+		end
+		
+		func void setParent(Container parent)
+			super.setParent(parent)
+			
+			if parent != null and pPreviewWidgets.getCount() > 0
+				pPreviewWidgets.forEach(block int index, PreviewImageWidget each
+					each.setEntry(pServiceMods, pModelImages.getAt(index) cast WindowModManagement.ModListEntry.GalleryImage)
+				end)
+				
+				pModelImages.notifyElementChanged(0)
+			end
+		end
+		
+		protected func void createContent()
+			setLayout(BorderLayout.new())
+			setDesignerSelector("Panel.WindowModManagementMod.ImageGallery")
+			
+			pImageCurrent = DisplayImage.new(null, RepeatMode.stretchRatio)
+			pImageCurrent.setDesignerSelector("Image.WindowModManagementMod.ImageGalleryImage")
+			addWidget(pImageCurrent, BorderLayout.Area.content)
+			
+			var PreviewImageWidget widget
+			var Panel panelImages = Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p
+				pModelImages.forEach(block WindowModManagement.ModListEntry.GalleryImage each
+					widget = PreviewImageWidget.new(pPreviewImageDesignerSelector, pModelImages)
+					widget.addMouseListener(ClickShowGalleryImage.new(pModelImages, each))
+					widget.addMouseListener(ParentWheelActionListener.new(this))
+					p.addWidget(widget)
+					pPreviewWidgets.add(widget)
+				end)
+				
+				p.addMouseListener(ParentWheelActionListener.new(this))
+			end)
+			
+			var Viewport viewport = Viewport.new(panelImages)
+			viewport.setLayout(FlowLayout.new(LayoutAxis.x))
+			addWidget(ScrollPanel.new(viewport, ScrollPanel.Policy.visible, ScrollPanel.Policy.hidden), BorderLayout.Area.bottom)
+		end
+	end
+	
+	/**
+	 * \brief Rating widget supporting up and down voting.
+	 */
+	class RatingUpDown extends Panel
+		var ServiceMods pServiceMods
+		var WindowModManagement.ModListEntry pModEntry
+		var int pRating
+		var float pCountUp, pCountDown
+		var ToggleButton pButtonUp, pButtonDown
+		var Array pActionListeners
+		
+		/**
+		 * \brief Create new instance of class RatingUpDown.
+		 */
+		func new(ServiceMods serviceMods, WindowModManagement.ModListEntry modEntry)
+			var Dictionary ratings = modEntry.info.stats.ratingCountPerType
+			
+			pServiceMods = serviceMods
+			pModEntry = modEntry
+			pCountUp = ratings.getAt(1, 0) cast float
+			pCountDown = ratings.getAt(0, 0) cast float
+			pRating = modEntry.info.userRating != null if modEntry.info.userRating.value() else -1
+			pActionListeners = Array.new()
+			
+			runWhileBlockingLayout(block
+				createContent()
+				updateButtonState()
+			end)
+		end
+		
+		func void dispose()
+			super.dispose()
+			pButtonUp = null
+			pButtonDown = null
+			pActionListeners = null
+		end
+		
+		
+		func void submitRating(int rating)
+			select pRating
+			case 1
+				pCountUp--
+				
+			case 0
+				pCountDown--
+			end
+			
+			select rating
+			case 1
+				if pRating == 1
+					pRating = -1
+					pServiceMods.revokeModRating(pModEntry.info.id, null)
+					
+				else
+					pRating = 1
+					pCountUp++
+					pServiceMods.submitModRating(pModEntry.info.id, 1, null)
+				end
+				
+			case 0
+				if pRating == 0
+					pRating = -1
+					pServiceMods.revokeModRating(pModEntry.info.id, null)
+					
+				else
+					pRating = 0
+					pCountDown++
+					pServiceMods.submitModRating(pModEntry.info.id, 0, null)
+				end
+			end
+			
+			pModEntry.info.stats.ratingCountPerType.setAt(1, pCountUp)
+			pModEntry.info.stats.ratingCountPerType.setAt(0, pCountDown)
+			pModEntry.info.stats.ratingWeighted = pCountUp / DEMath.max(pCountUp + pCountDown, 1.0)
+			
+			updateButtonState()
+			fireAction()
+		end
+		
+		func void updateButtonState()
+			runWhileBlockingLayout(block
+				var FormattingHelper fh = FormattingHelper.new()
+				
+				pButtonUp.setText(fh.formatCount(pCountUp))
+				pButtonUp.setToggled(pRating == 1)
+				
+				pButtonDown.setText(fh.formatCount(pCountDown))
+				pButtonDown.setToggled(pRating == 0)
+			end)
+		end
+		
+		
+		func void addActionListener(ActionListener listener)
+			if listener == null
+				throw EInvalidParam.new()
+			end
+			pActionListeners.add(listener)
+		end
+		
+		func void removeActionListener(ActionListener listener)
+			pActionListeners.remove(listener)
+		end
+		
+		func void fireAction()
+			if pActionListeners == null
+				return // disposed
+			end
+			
+			var ActionEvent event = ActionEvent.new(this, ActionEvent.idAction, 0)
+			pActionListeners.forEach(block ActionListener each
+				each.onAction(event)
+			end)
+		end
+		
+		
+		protected func void createContent()
+			var FormattingHelper fh = FormattingHelper.new()
+			var String iconPath = "/shareddata/guithemes/modern/icons/16/"
+			
+			setLayout(GridLayout.new(2, 1))
+			
+			pButtonUp = ToggleButton.new(fh.formatCount(pCountUp), Image.new(iconPath + "rate_up.webp"),\
+				BlockActionListener.new(block ActionEvent event
+					submitRating(1)
+				end))
+			pButtonUp.setLayout(CentrizedBoxLayout.new(LayoutAxis.x))
+			pButtonUp.setDesignerSelector("Button.RatingUpDown.Up")
+			addWidget(pButtonUp)
+			
+			pButtonDown = ToggleButton.new(fh.formatCount(pCountDown), Image.new(iconPath + "rate_down.webp"),\
+				BlockActionListener.new(block ActionEvent event
+					submitRating(0)
+				end))
+			pButtonDown.setLayout(CentrizedBoxLayout.new(LayoutAxis.x))
+			pButtonDown.setDesignerSelector("Button.RatingUpDown.Down")
+			addWidget(pButtonDown)
+		end
+	end
+	
+	
 	
 	var ServiceMods pServiceMods
 	var ServiceModsFeatures pServiceModFeatures
 	var WindowModManagement.ModListEntry pModEntry
+	var Button pButtonSubscribe
+	var Dictionary pSubscribedMods
 	
 	
 	/**
 	 * \brief Create new instance of class WindowModManagementMod.
 	 */
-	func new(Window window, ServiceMods serviceMods, WindowModManagement.ModListEntry entry)
+	func new(Window window, ServiceMods serviceMods, WindowModManagement.ModListEntry entry,\
+	WindowDialog.ResultListener listener)
 		pServiceMods = serviceMods
 		pServiceModFeatures = serviceMods.getModsFeatures()
 		pModEntry = entry
+		pSubscribedMods = serviceMods.getSubscribedMods()
 		
 		runWhileBlockingLayout(block
 			setGuiTheme(window.getGuiTheme())
@@ -70,17 +485,69 @@ class WindowModManagementMod extends WindowDialog
 			setSize(window.getDesktop().getContainerSize() - Point.new(200, 200))
 			
 			createContent()
+			updateButtonSubscribe()
 		end)
 		doLayout()
+		setResultListener(listener)
 		show(window, false, WindowModal.Placement.window)
+	end
+	
+	func void dispose()
+		super.dispose()
+		pButtonSubscribe = null
+	end
+	
+	
+	func void toggleSubscribe()
+		if pSubscribedMods.has(pModEntry.info.id)
+			var bool hasScripts = pServiceMods.modHasMatchingFiles(\
+				pModEntry.info.id, "/scripts", true, Set.newWith("*.ds"))
+			
+			pServiceMods.unsubscribeMod(pModEntry.info.id, null)
+			pSubscribedMods.remove(pModEntry.info.id)
+			pModEntry.status = null
+			
+			if hasScripts
+				WindowDialog.question(this, "Mod Management",\
+				"Modification contains scripts. Restarting is required.", null,\
+				Array.newWith(WindowDialog.ButtonConfiguration.new("Restart", true),\
+					WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+				WindowDialog.BlockResultListener.new(block Object result
+					Engine.restart("manageMods")
+				end))
+			end
+			
+		else
+			pServiceMods.subscribeMod(pModEntry.info.id, null)
+			// PROBLEM: pModEntry.status needs to be queried first
+			pSubscribedMods.setAt(pModEntry.info.id, pModEntry.status)
+		end
+		
+		updateButtonSubscribe()
 	end
 	
 	
 	/**
 	 * \brief Modification list entry.
 	 */
-	protected func WindowModManagement.ModListEntry getModEntry()
+	func WindowModManagement.ModListEntry getModEntry()
 		return pModEntry
+	end
+	
+	protected func void updateButtonSubscribe()
+		pButtonSubscribe.runWhileBlockingLayout(block
+			if pSubscribedMods.has(pModEntry.info.id)
+				pButtonSubscribe.setDesignerSelector("Button.WindowModManagementMod.Unsubscribe")
+				pButtonSubscribe.setText("@UI.ModManagementMod.Unsubscribe")
+				pButtonSubscribe.setToolTip("@UI.ModManagementMod.Unsubscribe.ToolTip")
+				
+			else
+				pButtonSubscribe.setDesignerSelector("Button.WindowModManagementMod.Subscribe")
+				pButtonSubscribe.setText("@UI.ModManagementMod.Subscribe")
+				pButtonSubscribe.setToolTip("@UI.ModManagementMod.Subscribe.ToolTip")
+			end
+		end)
+		pButtonSubscribe.doLayoutIfBlocked()
 	end
 	
 	
@@ -89,7 +556,6 @@ class WindowModManagementMod extends WindowDialog
 		var FormattingHelper fh = FormattingHelper.new()
 		var ProgressBar progressBar
 		var Viewport viewport
-		var Label label
 		
 		setLayout(BorderLayout.new(10))
 		
@@ -104,8 +570,7 @@ class WindowModManagementMod extends WindowDialog
 		viewport = Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
 			p.setDesignerSelector("Panel.WindowModManagementMod.Description")
 			
-			p.addWidget(Label.new("Logo"))
-			p.addWidget(Label.new("Gallery Images"))
+			p.addWidget(createGallery())
 			p.addWidget(createStyledDocument(getDescriptionStyledText(), ".Description"))
 			p.addWidget(Label.new("Comments"))
 		end), FlowLayout.new(LayoutAxis.y))
@@ -115,7 +580,11 @@ class WindowModManagementMod extends WindowDialog
 		viewport = Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
 			p.setDesignerSelector("Panel.WindowModManagementMod.Details")
 			
-			p.addWidget(Label.new("Button Subscribe"))
+			pButtonSubscribe = createButton("@UI.ModManagementMod.Subscribe", "@UI.ModManagementMod.Subscribe.ToolTip",\
+				".Subscribe", BlockActionListener.new(block ActionEvent e
+					toggleSubscribe()
+				end))
+			p.addWidget(pButtonSubscribe)
 			
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p2
 				p2.setDesignerSelector("Panel.WindowModManagementMod.Group.DetailsDetails")
@@ -133,66 +602,62 @@ class WindowModManagementMod extends WindowDialog
 				progressBar.setDesignerSelector("ProgressBar.WindowModManagementMod.Rating")
 				p2.addWidget(progressBar)
 				
-				// the voting widget should be an own createWidget() creating this panel
-				p2.addWidget(Panel.new(GridLayout.new(2, 1), block Panel p3
-					p3.addWidget(Label.new("Vote Up"))
-					p3.addWidget(Label.new("Vote Down"))
-				end))
+				p2.addWidget(createRating())
 				
 				p2.addWidget(Panel.new(FormLayout.new(), block Panel p3
 					p3.setDesignerSelector("Panel.WindowModManagementMod.DetailsDetailsForm")
 					
 					p3.addWidget(Label.new("@UI.ModManagementMod.Subscribers",\
-						"Label.WindowModManagementMod.DetailsForm.Label.Subscribers"))
+						"Label.WindowModManagementMod.DetailsFormLabel.Subscribers"))
 					p3.addWidget(Label.new(fh.formatCount(pModEntry.info.stats.subscriberCount),\
-						"Label.WindowModManagementMod.DetailsForm.Value.Subscribers"))
+						"Label.WindowModManagementMod.DetailsFormValue.Subscribers"))
 					
 					p3.addWidget(Label.new("@UI.ModManagementMod.Downloads",\
-						"Label.WindowModManagementMod.DetailsForm.Label.Downloads"))
+						"Label.WindowModManagementMod.DetailsFormLabel.Downloads"))
 					p3.addWidget(Label.new(fh.formatCount(pModEntry.info.stats.downloadCount),\
-						"Label.WindowModManagementMod.DetailsForm.Value.Downloads"))
+						"Label.WindowModManagementMod.DetailsFormValue.Downloads"))
 					
 					/*
 					p3.addWidget(Label.new("@UI.ModManagementMod.DownloadsToday",\
-						"Label.WindowModManagementMod.DetailsForm.Label.DownloadsToday"))
+						"Label.WindowModManagementMod.DetailsFormLabel.DownloadsToday"))
 					p3.addWidget(Label.new(formatCount(pModEntry.info.stats.downloadCount),\
-						"Label.WindowModManagementMod.DetailsForm.Value.DownloadsToday"))
+						"Label.WindowModManagementMod.DetailsFormValue.DownloadsToday"))
 					*/
 					
 					p3.addWidget(Label.new("@UI.ModManagementMod.LastUpdated",\
-						"Label.WindowModManagementMod.DetailsForm.Label.DateUpdated"))
+						"Label.WindowModManagementMod.DetailsFormLabel.DateUpdated"))
 					p3.addWidget(Label.new("1h",\
-						"Label.WindowModManagementMod.DetailsForm.Value.DateUpdated")) // aka time difference to now
+						"Label.WindowModManagementMod.DetailsFormValue.DateUpdated")) // aka time difference to now
 					
 					p3.addWidget(Label.new("@UI.ModManagementMod.Released",\
-						"Label.WindowModManagementMod.DetailsForm.Label.DateReleased"))
+						"Label.WindowModManagementMod.DetailsFormLabel.DateReleased"))
 					p3.addWidget(Label.new(pModEntry.info.dateReleased.format("%x"),\
-						"Label.WindowModManagementMod.DetailsForm.Value.DateReleased"))
+						"Label.WindowModManagementMod.DetailsFormValue.DateReleased"))
 					
 					p3.addWidget(Label.new("@UI.ModManagementMod.Size",\
-						"Label.WindowModManagementMod.DetailsForm.Label.Size"))
+						"Label.WindowModManagementMod.DetailsFormLabel.Size"))
 					p3.addWidget(Label.new(fh.formatSize(pModEntry.info.latestRelease.filesize),\
-						"Label.WindowModManagementMod.DetailsForm.Value.Size"))
+						"Label.WindowModManagementMod.DetailsFormValue.Size"))
 					
 					p3.addWidget(Label.new("@UI.ModManagementMod.Version",\
-						"Label.WindowModManagementMod.DetailsForm.Label.Version"))
+						"Label.WindowModManagementMod.DetailsFormLabel.Version"))
 					p3.addWidget(Label.new(pModEntry.info.version,\
-						"Label.WindowModManagementMod.DetailsForm.Value.Version"))
+						"Label.WindowModManagementMod.DetailsFormValue.Version"))
 					
 					p3.addWidget(Label.new("@UI.ModManagementMod.Author",\
-						"Label.WindowModManagementMod.DetailsForm.Label.Author"))
+						"Label.WindowModManagementMod.DetailsFormLabel.Author"))
 					p3.addWidget(createLabelUrlLink(pModEntry.info.submittedBy.displayName,\
-						pModEntry.info.submittedBy.profileUrl, ".DetailsForm.Value.Link.Author"))
+						pModEntry.info.submittedBy.profileUrl, ".DetailsFormValue.Link.Author"))
 					
 					p3.addWidget(Label.new("@UI.ModManagementMod.Profile",\
-						"Label.WindowModManagementMod.DetailsForm.Label.Profile"))
+						"Label.WindowModManagementMod.DetailsFormLabel.Profile"))
 					p3.addWidget(createLabelUrlLink("Open in Browser", pModEntry.info.profileUrl,\
-						".DetailsForm.Value.Link.Profile"))
+						".DetailsFormValue.Link.Profile"))
 					
 					p3.addWidget(Label.new("@UI.ModManagementMod.Id",\
-						"Label.WindowModManagementMod.DetailsForm.Label.Id"))
+						"Label.WindowModManagementMod.DetailsFormLabel.Id"))
 					p3.addWidget(Label.new(pModEntry.info.id,\
-						"Label.WindowModManagementMod.DetailsForm.Value.Id"))
+						"Label.WindowModManagementMod.DetailsFormValue.Id"))
 				end))
 			end))
 			
@@ -201,7 +666,7 @@ class WindowModManagementMod extends WindowDialog
 				p2.setTitle("@UI.ModManagementMod.DetailsTags")
 				
 				pModEntry.info.tags.forEachValue(block String tag
-					p2.addWidget(Label.new(tag, "Label.WindowModManagementMod.DetailsForm.Value.Tag"))
+					p2.addWidget(Label.new(tag, "Label.WindowModManagementMod.DetailsFormValue.Tag"))
 				end)
 			end))
 		end))
@@ -210,8 +675,8 @@ class WindowModManagementMod extends WindowDialog
 		
 		// button line at bottom
 		addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.x, 20), block Panel p
-			p.addWidget(createButton("@UI.ModManagementMod.Close", "@UI.ModManagementMod.Close.ToolTip",\
-				".Close", BlockActionListener.new(block ActionEvent e
+			p.addWidget(createButton("@UI.ModManagementMod.Close", null, ".Close",\
+				BlockActionListener.new(block ActionEvent e
 					close()
 				end)))
 		end ), BorderLayout.Area.bottom)
@@ -245,6 +710,31 @@ class WindowModManagementMod extends WindowDialog
 		label.addMouseListener(ClickOpenUrl.new(url))
 		label.setToolTip("@UI.ModManagementMod.Link.ToolTip")
 		return label
+	end
+	
+	/**
+	 * \brief Create gallery widget.
+	 */
+	func Widget createGallery()
+		return GalleryWidget.new(pServiceMods, pModEntry)
+	end
+	
+	/**
+	 * \brief Create rating widget.
+	 */
+	func Widget createRating()
+		if pServiceModFeatures.modRatingCount == 2
+			return RatingUpDown.new(pServiceMods, pModEntry)
+			
+		elif pServiceModFeatures.modRatingCount == 3
+			return RatingUpDown.new(pServiceMods, pModEntry)
+			
+		elif pServiceModFeatures.modRatingCount > 3
+			return Label.new("Rating type unsupported")
+			
+		else
+			return Label.new("Rating type unsupported")
+		end
 	end
 	
 	/**

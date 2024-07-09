@@ -391,15 +391,8 @@ class SessionSettings
 		pModelServerAddress = DefaultTextModel.new(s.getStringAt("ServerAddress", "localhost"))
 		pModelServerAddress.addListener(SaveTextModelChanged.new("ServerAddress"))
 		
-		var TranslationManager tm = TranslationManager.get()
-		pModelLanguage = DefaultListModel.new(tm.allSorted())
-		var LanguagePack langpack = tm.getWithId(GameApp.getGameApp().getSettings().getStringAt("Language", "en"))
-		if langpack == null
-			langpack = tm.getActive()
-		end
-		tm.setActive(langpack)
-		EngineTranslations.get().setActiveWithIdIfPresent(langpack.getIdentifier())
-		pModelLanguage.setSelectedElement(langpack)
+		pModelLanguage = DefaultListModel.new()
+		reloadLanguages()
 		pModelLanguage.addListener(SaveLanguageChanged.new("Language"))
 	end
 	
@@ -655,4 +648,19 @@ class SessionSettings
 	func DefaultListModel getModelLanguage()
 		return pModelLanguage
 	end
+	
+	/** Reload languages. */
+	func void reloadLanguages()
+		var String selection = GameApp.getGameApp().getSettings().getStringAt("Language", "en")
+		var TranslationManager tm = TranslationManager.get()
+		pModelLanguage.setContent(tm.allSorted())
+		var LanguagePack langpack = tm.getWithId(selection)
+		if langpack == null
+			langpack = tm.getActive()
+		end
+		tm.setActive(langpack)
+		EngineTranslations.get().setActiveWithIdIfPresent(langpack.getIdentifier())
+		pModelLanguage.setSelectedElement(langpack)
+	end
+	
 end
