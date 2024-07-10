@@ -650,8 +650,11 @@ class WindowModManagementMod extends WindowDialog
 	/** Create window content. */
 	protected func void createContent()
 		var FormattingHelper fh = FormattingHelper.new()
+		var TimeDate now = TimeDate.new()
 		var ProgressBar progressBar
 		var Viewport viewport
+		var int seconds
+		var String text
 		
 		setLayout(BorderLayout.new(10))
 		
@@ -722,12 +725,32 @@ class WindowModManagementMod extends WindowDialog
 					
 					p3.addWidget(Label.new("@UI.ModManagementMod.LastUpdated",\
 						"Label.WindowModManagementMod.DetailsFormLabel.DateUpdated"))
-					p3.addWidget(Label.new("1h",\
+					if pModEntry.info.dateUpdated != null
+						seconds = now.secondsSince(pModEntry.info.dateUpdated)
+						if seconds > 432000 // 5 days
+							text = pModEntry.info.dateUpdated.format("%x")
+						else
+							text = fh.formatTimeDifference(seconds)
+						end
+					else
+						text = "-"
+					end
+					p3.addWidget(Label.new(text,\
 						"Label.WindowModManagementMod.DetailsFormValue.DateUpdated")) // aka time difference to now
 					
 					p3.addWidget(Label.new("@UI.ModManagementMod.Released",\
 						"Label.WindowModManagementMod.DetailsFormLabel.DateReleased"))
-					p3.addWidget(Label.new(pModEntry.info.dateReleased.format("%x"),\
+					if pModEntry.info.dateReleased != null
+						seconds = now.secondsSince(pModEntry.info.dateReleased)
+						if seconds > 432000 // 5 days
+							text = pModEntry.info.dateReleased.format("%x")
+						else
+							text = fh.formatTimeDifference(seconds)
+						end
+					else
+						text = "-"
+					end
+					p3.addWidget(Label.new(text,\
 						"Label.WindowModManagementMod.DetailsFormValue.DateReleased"))
 					
 					p3.addWidget(Label.new("@UI.ModManagementMod.Size",\
