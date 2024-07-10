@@ -505,6 +505,7 @@ class WindowModManagementMod extends WindowDialog
 	var ModEventListener pModEventListener
 	var DefaultTextModel pModelStatus
 	var ProgressBar pProgressStatus
+	var Label pLabProgressRemaining
 	
 	
 	/**
@@ -545,6 +546,7 @@ class WindowModManagementMod extends WindowDialog
 		
 		pButtonSubscribe = null
 		pModelStatus = null
+		pLabProgressRemaining = null
 		pProgressStatus = null
 		
 		super.dispose()
@@ -633,8 +635,17 @@ class WindowModManagementMod extends WindowDialog
 			pProgressStatus.getModel().setValue((progress.progress * 100 + 0.5) cast int)
 			pProgressStatus.setVisible(true)
 			
+			if progress.remainingTime != null
+				pLabProgressRemaining.setText(FormattingHelper.new().formatTimeDifference(\
+					progress.remainingTime.value()))
+			else
+				pLabProgressRemaining.setText("-")
+			end
+			pLabProgressRemaining.setVisible(true)
+			
 		else
 			pProgressStatus.setVisible(false)
+			pLabProgressRemaining.setVisible(false)
 			
 			updateSystemMods()
 			var ServiceModStatus status = pSystemMods.getAt(modId, null) cast ServiceModStatus
@@ -800,6 +811,14 @@ class WindowModManagementMod extends WindowDialog
 				pProgressStatus.setDesignerSelector("ProgressBar.WindowModManagementMod.Details.StatusProgress")
 				pProgressStatus.setVisible(false)
 				p2.addWidget(pProgressStatus)
+				
+				p2.addWidget(Panel.new(FormLayout.new(), block Panel p3
+					p3.addWidget(Label.new("@UI.ModManagementMod.RemainingTime",\
+						"Label.WindowModManagementMod.DetailsFormLabel.RemainingTime"))
+					
+					pLabProgressRemaining = Label.new("", "Label.WindowModManagementMod.DetailsFormValue.RemainingTime")
+					p3.addWidget(pLabProgressRemaining)
+				end))
 			end))
 		end))
 		viewport.setLayout(FlowLayout.new(LayoutAxis.y))
