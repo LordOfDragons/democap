@@ -67,75 +67,6 @@ class WindowModManagement extends WindowDialog
 	end
 	
 	/**
-	 * \brief Entry in a mod listing.
-	 * 
-	 * Stores ServiceModInfo, ServiceModStatus and cached resources.
-	 */
-	class ModListEntry
-		/**
-		 * \brief Gallery image.
-		 */
-		class GalleryImage
-			/**
-			 * \brief Modification gallery image.
-			 */
-			public var ServiceImage info
-			
-			/**
-			 * \brief Cached original image or null.
-			 */
-			public var Image imageOriginal
-			
-			/**
-			 * \brief Thumbnail.
-			 */
-			public var ServiceImage.Thumbnail thumbnail
-			
-			/**
-			 * \brief Cached thumbnail or null.
-			 */
-			public var Image imageThumbnail
-			
-			/**
-			 * \brief Create new instance of class GalleryImage.
-			 */
-			func new(ServiceImage info)
-				this.info = info
-			end
-		end
-		
-		
-		/**
-		 * \brief Modification information.
-		 */
-		public var ServiceModInfo info
-		
-		/**
-		 * \brief Modification status or null.
-		 */
-		public var ServiceModStatus status
-		
-		/**
-		 * \brief Cached logo image or null.
-		 */
-		public var Image logo
-		
-		/**
-		 * \brief Gallery images as Array of GalleryImage or null if not loaded.
-		 */
-		public var Array galleryImages
-		
-		
-		/**
-		 * \brief Create new instance of class ModListEntry.
-		 */
-		func new(ServiceModInfo info, ServiceModStatus status)
-			this.info = info
-			this.status = status
-		end
-	end
-	
-	/**
 	 * \brief List model renderer for modification entries in the browse list.
 	 */
 	class ModListElementRenderer implements ListElementRenderer
@@ -148,9 +79,9 @@ class WindowModManagement extends WindowDialog
 			 */
 			class LoadLogoListener extends DefaultServiceModsListener
 				var ModWidget pWidget
-				var ModListEntry pEntry
+				var MMModification pEntry
 				
-				func new(ModWidget widget, ModListEntry entry)
+				func new(ModWidget widget, MMModification entry)
 					pWidget = widget
 					pEntry = entry
 				end
@@ -176,7 +107,7 @@ class WindowModManagement extends WindowDialog
 			var DisplayIcon pIconDownloads, pIconSize, pIconRating
 			var Label pLabelName, pLabelDownloads, pLabelSize, pLabelRating, pLabelSubscribed
 			var String pDesignerSelectorBase, pDesignerSelectorSuffix
-			var ModListEntry pEntry
+			var MMModification pEntry
 			
 			
 			/**
@@ -221,7 +152,7 @@ class WindowModManagement extends WindowDialog
 			/**
 			 * \brief Modification list entry shown in the widget.
 			 */
-			func ModListEntry getEntry()
+			func MMModification getEntry()
 				return pEntry
 			end
 			
@@ -257,7 +188,7 @@ class WindowModManagement extends WindowDialog
 			/**
 			 * \brief Set modification entry to show.
 			 */
-			func void setEntry(ServiceMods service, ModListEntry entry)
+			func void setEntry(ServiceMods service, MMModification entry)
 				if entry == pEntry
 					update()
 					return
@@ -346,7 +277,7 @@ class WindowModManagement extends WindowDialog
 					
 					p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 15), block Panel p2
 						p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p3
-							pIconDownloads = DisplayIcon.new(Image.new("/shareddata/guithemes/modern/icons/16/download.webp"))
+							pIconDownloads = DisplayIcon.new()
 							p3.addWidget(pIconDownloads)
 							
 							pLabelDownloads = Label.new(pModelDownloads)
@@ -354,7 +285,7 @@ class WindowModManagement extends WindowDialog
 						end))
 						
 						p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p3
-							pIconSize = DisplayIcon.new(Image.new("/shareddata/guithemes/modern/icons/16/filesize.webp"))
+							pIconSize = DisplayIcon.new()
 							p3.addWidget(pIconSize)
 							
 							pLabelSize = Label.new(pModelSize)
@@ -362,7 +293,7 @@ class WindowModManagement extends WindowDialog
 						end))
 						
 						p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x), block Panel p3
-							pIconRating = DisplayIcon.new(Image.new("/shareddata/guithemes/modern/icons/16/rating.webp"))
+							pIconRating = DisplayIcon.new()
 							p3.addWidget(pIconRating)
 							
 							pLabelRating = Label.new(pModelRating)
@@ -380,7 +311,7 @@ class WindowModManagement extends WindowDialog
 		
 		var ServiceMods pServiceMods
 		var String pDesignerSelector
-		var ModListEntry pDefaultModEntry
+		var MMModification pDefaultModEntry
 		var Point pDefaultMinimumSize
 		
 		
@@ -400,7 +331,7 @@ class WindowModManagement extends WindowDialog
 			pDesignerSelector = designerSelector
 			pDefaultMinimumSize = Point.new()
 			
-			pDefaultModEntry = ModListEntry.new(ServiceModInfo.new(), null)
+			pDefaultModEntry = MMModification.new(ServiceModInfo.new(), null)
 			pDefaultModEntry.info.descriptionText = "X"
 			pDefaultModEntry.info.id = ""
 			pDefaultModEntry.info.name = "X"
@@ -423,7 +354,7 @@ class WindowModManagement extends WindowDialog
 		/**
 		 * \brief Default modification entry to use to measure default size.
 		 */
-		func ModListEntry getDefaultModEntry()
+		func MMModification getDefaultModEntry()
 			return pDefaultModEntry
 		end
 		
@@ -457,7 +388,7 @@ class WindowModManagement extends WindowDialog
 		 * Update widget representing modification in the list box.
 		 */
 		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
-			var ModListEntry entry = element cast ModListEntry
+			var MMModification entry = element cast MMModification
 			if entry == null
 				entry = pDefaultModEntry
 			end
@@ -569,7 +500,7 @@ class WindowModManagement extends WindowDialog
 		func void onAction()
 			var int index = pListBox.getElementAt(pListBox.getLocalMouseLocation())
 			if index != -1
-				pWindow.showModInfo(pListBox.getModel().getAt(index) cast ModListEntry)
+				pWindow.showModInfo(pListBox.getModel().getAt(index) cast MMModification)
 			end
 		end
 	end
@@ -893,10 +824,10 @@ class WindowModManagement extends WindowDialog
 	 */
 	func int indexOfModListEntry(String modId)
 		var int i, count = pModelMods.getCount()
-		var ModListEntry entry
+		var MMModification entry
 		
 		for i = 0 to count
-			entry = pModelMods.getAt(i) cast ModListEntry
+			entry = pModelMods.getAt(i) cast MMModification
 			if entry.info.id.equals(modId)
 				return i
 			end
@@ -984,7 +915,7 @@ class WindowModManagement extends WindowDialog
 	/**
 	 * \brief Show modification information in a new window.
 	 */
-	func void showModInfo(ModListEntry entry)
+	func void showModInfo(MMModification entry)
 		WindowModManagementMod.new(this, pServiceMods, entry, WindowDialog.BlockResultListener.new(block Object results
 			var int index = pModelMods.indexOf(entry)
 			if index != -1
@@ -1073,7 +1004,7 @@ class WindowModManagement extends WindowDialog
 		end
 		
 		pModelMods.addAll(mods.map(block ServiceModInfo each
-			return ModListEntry.new(each, pSubscribedMods.getAt(each.id, null) cast ServiceModStatus)
+			return MMModification.new(each, pSubscribedMods.getAt(each.id, null) cast ServiceModStatus)
 		end))
 		
 		var int count = pModelMods.getCount()
@@ -1095,7 +1026,7 @@ class WindowModManagement extends WindowDialog
 			return
 		end
 		
-		var ModListEntry entry = pModelMods.getAt(index) cast ModListEntry
+		var MMModification entry = pModelMods.getAt(index) cast MMModification
 		
 		if info != null
 			entry.info = info
