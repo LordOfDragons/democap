@@ -1014,12 +1014,11 @@ class WindowModManagement extends WindowDialog
 		var Array changed = subscribed
 		
 		if anyHasMatchingFiles(changed, "/scripts", Set.newWith("*.ds"))
-			WindowDialog.question(this, "Mod Management",\
-			"One or more modifications contains scripts. Restarting is required.", null,\
-			Array.newWith(WindowDialog.ButtonConfiguration.new("Restart", true),\
-				WindowDialog.ButtonConfiguration.new("Cancel", false)),\
+			WindowDialog.question(this, "@UI.Modifications", "@UI.ModManagement.Message.RestartRequired",\
+			null, Array.newWith(WindowDialog.ButtonConfiguration.new("@UI.Restart", true),\
+				WindowDialog.ButtonConfiguration.new("@UI.Cancel", false)),\
 			WindowDialog.BlockResultListener.new(block Object result
-				Engine.restart("manageMods")
+				Engine.restart("modsRequiredRestart")
 			end))
 		end
 		
@@ -1069,7 +1068,7 @@ class WindowModManagement extends WindowDialog
 		
 		if exception != null
 			GameApp.getApp().getConsole().addError("onSearchResult", exception)
-			WindowDialog.message(getWindow(), "Failure", exception.toString(), null, null, null)
+			WindowDialog.message(getWindow(), "@UI.Error", exception.toString(), null, null, null)
 			return
 		end
 		
@@ -1136,15 +1135,18 @@ class WindowModManagement extends WindowDialog
 		// top: view buttons
 		addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 10), block Panel p
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 5), block Panel p2
-				p2.addWidget(createToggleButton("Available Mods", "Browse available modifications",\
+				p2.addWidget(createToggleButton("@UI.ModManagement.AvailableMods",\
+					"@UI.ModManagement.AvailableMods.ToolTip",\
 					OptionGroupModel.newFor(pModelViewCategory, ViewCategory.browseMods),\
 					".ViewCategory.BrowseMods"))
 				
-				p2.addWidget(createToggleButton("Subscribed Mods", "Browse subscribed modifications",\
+				p2.addWidget(createToggleButton("@UI.ModManagement.SubscribedMods",\
+					"@UI.ModManagement.SubscribedMods.ToolTip",\
 					OptionGroupModel.newFor(pModelViewCategory, ViewCategory.subscribedMods),\
 					".ViewCategory.SubscribedMods"))
 				
-				p2.addWidget(createToggleButton("Mods Transfer", "Modification transfer progress",\
+				p2.addWidget(createToggleButton("@UI.ModManagement.ModsTransfer",\
+					"@UI.ModManagement.ModsTransfer.ToolTip",\
 					OptionGroupModel.newFor(pModelViewCategory, ViewCategory.transfer),\
 					".ViewCategory.ModsTransfer"))
 			end))
@@ -1161,7 +1163,7 @@ class WindowModManagement extends WindowDialog
 		// right side: search parameters
 		viewport = Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
 			// search button
-			p.addWidget(createButton("@UI.ModManagement.Search", "@UI.ModManagement.Search.ToolTip",\
+			p.addWidget(createButton("@UI.Search", "@UI.ModManagement.Search.ToolTip",\
 				".Search", BlockActionListener.new(block ActionEvent e
 					searchMods()
 				end)))
@@ -1184,7 +1186,7 @@ class WindowModManagement extends WindowDialog
 			// sort by
 			pPanelSearchSort = Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p2
 				p2.setDesignerSelector("Panel.WindowModManagement.Group.Search.SortBy")
-				p2.setTitle("@UI.ModManagement.SortBy")
+				p2.setTitle("@UI.SortBy")
 				
 				var EnumListElementRenderer renderer = EnumListElementRenderer.new()
 				renderer.setTranslationPrefix("UI.ModManagement.Enum.SortField.")
@@ -1209,7 +1211,7 @@ class WindowModManagement extends WindowDialog
 				end))
 			p.addWidget(pButtonSearchMore)
 			
-			p.addWidget(createButton("@UI.ModManagement.Close", "@UI.ModManagement.Close.ToolTip",\
+			p.addWidget(createButton("@UI.Close", "@UI.ModManagement.Close.ToolTip",\
 				".Close", BlockActionListener.new(block ActionEvent e
 					activateMods()
 					close()
