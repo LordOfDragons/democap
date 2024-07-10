@@ -489,7 +489,7 @@ class WindowModManagementMod extends WindowDialog
 		
 		func void onModManagement(ServiceMods service, ServiceMods.ManagementEvent event,\
 		String modId, ServiceModProgress progress, Exception exception)
-			if progress != null
+			if exception == null
 				pWindow.updateModEntryProgress(modId, progress)
 			end
 		end
@@ -501,8 +501,10 @@ class WindowModManagementMod extends WindowDialog
 	var ServiceModsFeatures pServiceModFeatures
 	var WindowModManagement.ModListEntry pModEntry
 	var Button pButtonSubscribe
-	var Dictionary pSubscribedMods
+	var Dictionary pSubscribedMods, pSystemMods
 	var ModEventListener pModEventListener
+	var DefaultTextModel pModelStatus
+	var ProgressBar pProgressStatus
 	
 	
 	/**
@@ -514,6 +516,8 @@ class WindowModManagementMod extends WindowDialog
 		pServiceModFeatures = serviceMods.getModsFeatures()
 		pModEntry = entry
 		pSubscribedMods = serviceMods.getSubscribedMods()
+		pSystemMods = serviceMods.getSystemMods()
+		pModelStatus = DefaultTextModel.new()
 		
 		runWhileBlockingLayout(block
 			setGuiTheme(window.getGuiTheme())
@@ -523,6 +527,7 @@ class WindowModManagementMod extends WindowDialog
 			
 			createContent()
 			updateButtonSubscribe()
+			updateModEntryProgress(entry.info.id, null)
 		end)
 		doLayout()
 		setResultListener(listener)
@@ -539,6 +544,8 @@ class WindowModManagementMod extends WindowDialog
 		end
 		
 		pButtonSubscribe = null
+		pModelStatus = null
+		pProgressStatus = null
 		
 		super.dispose()
 	end
@@ -546,6 +553,10 @@ class WindowModManagementMod extends WindowDialog
 	
 	func void updateSubscribedMods()
 		pSubscribedMods = pServiceMods.getSubscribedMods()
+	end
+	
+	func void updateSystemMods()
+		pSystemMods = pServiceMods.getSystemMods()
 	end
 	
 	func void toggleSubscribe()
@@ -614,7 +625,25 @@ class WindowModManagementMod extends WindowDialog
 			return
 		end
 		
-		// TODO
+		var String textState = ""
+		
+		if progress != null
+			textState = "@UI.ModManagement.Enum.ModProgressState." + progress.state.name()
+			
+			pProgressStatus.getModel().setValue((progress.progress * 100 + 0.5) cast int)
+			pProgressStatus.setVisible(true)
+			
+		else
+			pProgressStatus.setVisible(false)
+			
+			updateSystemMods()
+			var ServiceModStatus status = pSystemMods.getAt(modId, null) cast ServiceModStatus
+			if status != null
+				textState = "@UI.ModManagement.Enum.ModStatus." + status.status.name()
+			end
+		end
+		
+		pModelStatus.setText(textState)
 	end
 	
 	
@@ -735,6 +764,19 @@ class WindowModManagementMod extends WindowDialog
 				pModEntry.info.tags.forEachValue(block String tag
 					p2.addWidget(Label.new(tag, "Label.WindowModManagementMod.DetailsFormValue.Tag"))
 				end)
+			end))
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 0, FlowLayout.Stretch.first), block Panel p2
+				p2.setDesignerSelector("Panel.WindowModManagementMod.Group.DetailsStatus")
+				p2.setTitle("@UI.ModManagementMod.DetailsStatus")
+				
+				p2.addWidget(Label.new(pModelStatus, "Label.WindowModManagementMod.Details.Status"))
+				
+				pProgressStatus = ProgressBar.new()
+				pProgressStatus.getModel().setAll(0, 100, 10, 0, 1)
+				pProgressStatus.setDesignerSelector("ProgressBar.WindowModManagementMod.Details.StatusProgress")
+				pProgressStatus.setVisible(false)
+				p2.addWidget(pProgressStatus)
 			end))
 		end))
 		viewport.setLayout(FlowLayout.new(LayoutAxis.y))
