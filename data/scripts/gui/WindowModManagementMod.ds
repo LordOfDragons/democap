@@ -35,146 +35,6 @@ pin Dragengine.Utils.StyledText.Definition.Nodes
  */
 class WindowModManagementMod extends WindowDialog
 	/**
-	 * \brief Rating widget supporting up and down voting.
-	 */
-	class RatingUpDown extends Panel
-		var ServiceMods pServiceMods
-		var MMModification pModEntry
-		var int pRating
-		var float pCountUp, pCountDown
-		var ToggleButton pButtonUp, pButtonDown
-		var Array pActionListeners
-		
-		/**
-		 * \brief Create new instance of class RatingUpDown.
-		 */
-		func new(ServiceMods serviceMods, MMModification modEntry)
-			var Dictionary ratings = modEntry.info.stats.ratingCountPerType
-			
-			pServiceMods = serviceMods
-			pModEntry = modEntry
-			pCountUp = ratings.getAt(1, 0) cast float
-			pCountDown = ratings.getAt(0, 0) cast float
-			pRating = modEntry.info.userRating != null if modEntry.info.userRating.value() else -1
-			pActionListeners = Array.new()
-			
-			runWhileBlockingLayout(block
-				createContent()
-				updateButtonState()
-			end)
-		end
-		
-		func void dispose()
-			super.dispose()
-			pButtonUp = null
-			pButtonDown = null
-			pActionListeners = null
-		end
-		
-		
-		func void submitRating(int rating)
-			select pRating
-			case 1
-				// pCountUp--
-				
-			case 0
-				// pCountDown--
-			end
-			
-			select rating
-			case 1
-				if pRating == 1
-					pRating = -1
-					pModEntry.info.userRating = null
-					pServiceMods.revokeModRating(pModEntry.info.id, null)
-					
-				else
-					pRating = 1
-					// pCountUp++
-					pModEntry.info.userRating = Integer.new(1)
-					pServiceMods.submitModRating(pModEntry.info.id, 1, null)
-				end
-				
-			case 0
-				if pRating == 0
-					pRating = -1
-					pModEntry.info.userRating = null
-					pServiceMods.revokeModRating(pModEntry.info.id, null)
-					
-				else
-					pRating = 0
-					// pCountDown++
-					pModEntry.info.userRating = Integer.new(0)
-					pServiceMods.submitModRating(pModEntry.info.id, 0, null)
-				end
-			end
-			
-			// pModEntry.info.stats.ratingCountPerType.setAt(1, pCountUp)
-			// pModEntry.info.stats.ratingCountPerType.setAt(0, pCountDown)
-			// pModEntry.info.stats.ratingWeighted = pCountUp / DEMath.max(pCountUp + pCountDown, 1.0)
-			
-			updateButtonState()
-			fireAction()
-		end
-		
-		func void updateButtonState()
-			runWhileBlockingLayout(block
-				var FormattingHelper fh = FormattingHelper.new()
-				
-				pButtonUp.setText(fh.formatCount(pCountUp))
-				pButtonUp.setToggled(pRating == 1)
-				
-				pButtonDown.setText(fh.formatCount(pCountDown))
-				pButtonDown.setToggled(pRating == 0)
-			end)
-		end
-		
-		
-		func void addActionListener(ActionListener listener)
-			if listener == null
-				throw EInvalidParam.new()
-			end
-			pActionListeners.add(listener)
-		end
-		
-		func void removeActionListener(ActionListener listener)
-			pActionListeners.remove(listener)
-		end
-		
-		func void fireAction()
-			if pActionListeners == null
-				return // disposed
-			end
-			
-			var ActionEvent event = ActionEvent.new(this, ActionEvent.idAction, 0)
-			pActionListeners.forEach(block ActionListener each
-				each.onAction(event)
-			end)
-		end
-		
-		
-		protected func void createContent()
-			var FormattingHelper fh = FormattingHelper.new()
-			
-			setLayout(GridLayout.new(2, 1))
-			
-			pButtonUp = ToggleButton.new(fh.formatCount(pCountUp), BlockActionListener.new(block ActionEvent event
-				submitRating(1)
-			end))
-			pButtonUp.setLayout(CentrizedBoxLayout.new(LayoutAxis.x))
-			pButtonUp.setDesignerSelector("Button.RatingUpDown.Up")
-			addWidget(pButtonUp)
-			
-			pButtonDown = ToggleButton.new(fh.formatCount(pCountDown), BlockActionListener.new(block ActionEvent event
-				submitRating(0)
-			end))
-			pButtonDown.setLayout(CentrizedBoxLayout.new(LayoutAxis.x))
-			pButtonDown.setDesignerSelector("Button.RatingUpDown.Down")
-			addWidget(pButtonDown)
-		end
-	end
-	
-	/**
 	 * \brief Mod management event listener.
 	 */
 	class ModEventListener extends DefaultServiceModsListener
@@ -231,6 +91,7 @@ class WindowModManagementMod extends WindowDialog
 	var Dictionary pSubscribedMods, pSystemMods
 	var ModEventListener pModEventListener
 	var DefaultTextModel pModelStatus
+	var DefaultRatingModel pModelRating
 	var ProgressBar pProgressStatus
 	var Label pLabProgressRemaining
 	
@@ -238,14 +99,17 @@ class WindowModManagementMod extends WindowDialog
 	/**
 	 * \brief Create new instance of class WindowModManagementMod.
 	 */
-	func new(Window window, ServiceMods serviceMods, MMModification entry,\
+	func new(Window window, ServiceMods serviceMods, MMModification mod,\
 	WindowDialog.ResultListener listener)
 		pServiceMods = serviceMods
 		pServiceModFeatures = serviceMods.getModsFeatures()
-		pModEntry = entry
+		pModEntry = mod
 		pSubscribedMods = serviceMods.getSubscribedMods()
 		pSystemMods = serviceMods.getSystemMods()
 		pModelStatus = DefaultTextModel.new()
+		
+		pModelRating = DefaultRatingModel.new(pServiceModFeatures.modRatingCount,\
+			mod.info.userRating, mod.info.stats.ratingCountPerType)
 		
 		runWhileBlockingLayout(block
 			setGuiTheme(window.getGuiTheme())
@@ -255,7 +119,7 @@ class WindowModManagementMod extends WindowDialog
 			
 			createContent()
 			updateButtonSubscribe()
-			updateModEntryProgress(entry.info.id, null)
+			updateModEntryProgress(mod.info.id, null)
 		end)
 		doLayout()
 		setResultListener(listener)
@@ -263,6 +127,8 @@ class WindowModManagementMod extends WindowDialog
 		
 		pModEventListener = ModEventListener.new(this)
 		serviceMods.addModsListener(pModEventListener)
+		
+		pModelRating.addListener(MMSubmitModRatingListener.new(serviceMods, mod))
 	end
 	
 	func void dispose()
@@ -273,6 +139,7 @@ class WindowModManagementMod extends WindowDialog
 		
 		pButtonSubscribe = null
 		pModelStatus = null
+		pModelRating = null
 		pLabProgressRemaining = null
 		pProgressStatus = null
 		
@@ -605,10 +472,10 @@ class WindowModManagementMod extends WindowDialog
 	 */
 	func Widget createRating()
 		if pServiceModFeatures.modRatingCount == 2
-			return RatingUpDown.new(pServiceMods, pModEntry)
+			return RatingUpDown.new(pModelRating)
 			
 		elif pServiceModFeatures.modRatingCount == 3
-			return RatingUpDown.new(pServiceMods, pModEntry)
+			return RatingUpDown.new(pModelRating)
 			
 		elif pServiceModFeatures.modRatingCount > 3
 			return Label.new("Rating type unsupported")
