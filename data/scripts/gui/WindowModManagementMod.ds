@@ -75,39 +75,43 @@ class WindowModManagementMod extends WindowDialog
 		func void submitRating(int rating)
 			select pRating
 			case 1
-				pCountUp--
+				// pCountUp--
 				
 			case 0
-				pCountDown--
+				// pCountDown--
 			end
 			
 			select rating
 			case 1
 				if pRating == 1
 					pRating = -1
+					pModEntry.info.userRating = null
 					pServiceMods.revokeModRating(pModEntry.info.id, null)
 					
 				else
 					pRating = 1
-					pCountUp++
+					// pCountUp++
+					pModEntry.info.userRating = Integer.new(1)
 					pServiceMods.submitModRating(pModEntry.info.id, 1, null)
 				end
 				
 			case 0
 				if pRating == 0
 					pRating = -1
+					pModEntry.info.userRating = null
 					pServiceMods.revokeModRating(pModEntry.info.id, null)
 					
 				else
 					pRating = 0
-					pCountDown++
+					// pCountDown++
+					pModEntry.info.userRating = Integer.new(0)
 					pServiceMods.submitModRating(pModEntry.info.id, 0, null)
 				end
 			end
 			
-			pModEntry.info.stats.ratingCountPerType.setAt(1, pCountUp)
-			pModEntry.info.stats.ratingCountPerType.setAt(0, pCountDown)
-			pModEntry.info.stats.ratingWeighted = pCountUp / DEMath.max(pCountUp + pCountDown, 1.0)
+			// pModEntry.info.stats.ratingCountPerType.setAt(1, pCountUp)
+			// pModEntry.info.stats.ratingCountPerType.setAt(0, pCountDown)
+			// pModEntry.info.stats.ratingWeighted = pCountUp / DEMath.max(pCountUp + pCountDown, 1.0)
 			
 			updateButtonState()
 			fireAction()
@@ -193,6 +197,18 @@ class WindowModManagementMod extends WindowDialog
 		end
 		
 		func void onUnsubscribeMod(ServiceMods service, String modId, Exception exception)
+			if exception == null
+				pWindow.updateModEntry(modId, null)
+			end
+		end
+		
+		func void onSubmitModRating(ServiceMods service, String modId, Exception exception)
+			if exception == null
+				pWindow.updateModEntry(modId, null)
+			end
+		end
+		
+		func void onRevokeModRating(ServiceMods service, String modId, Exception exception)
 			if exception == null
 				pWindow.updateModEntry(modId, null)
 			end
@@ -324,6 +340,10 @@ class WindowModManagementMod extends WindowDialog
 	func void updateModEntry(String modId, ServiceModInfo info)
 		if not pModEntry.info.id.equals(modId)
 			return
+		end
+		
+		if info != null
+			pModEntry.info = info
 		end
 		
 		updateSubscribedMods()
