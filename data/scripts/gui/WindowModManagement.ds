@@ -64,13 +64,20 @@ class MMWindowModManagement extends WindowDialog
 	/**
 	 * \brief Close button clicked.
 	 * 
-	 * Calls \ref MMPanelModManagement#activateMods() then closes the window.
+	 * Calls \ref MMPanelModManagement#activateMods() then closes the window depending on the result.
 	 */
 	func void onCloseModManagement()
-		if pPanelModManagement.activateMods()
-			GameApp.getGameApp().reloadAfterModsChanged()
-		end
-		close()
+		pPanelModManagement.activateMods(WindowDialog.BlockResultListener.new(\
+		block MMPanelModManagement.ActivateModsResult result
+			select result
+			case MMPanelModManagement.ActivateModsResult.activated
+				GameApp.getGameApp().reloadAfterModsChanged()
+				close()
+				
+			case MMPanelModManagement.ActivateModsResult.restart, MMPanelModManagement.ActivateModsResult.unchanged
+				close()
+			end
+		end))
 	end
 	
 	
