@@ -31,6 +31,7 @@ pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Scenery
 pin Dragengine.Utils
+pin Dragengine.Gui.ModManagement
 
 
 
@@ -130,7 +131,12 @@ class WMPanelSettings extends Panel
 				var Window window = getWindow()
 				var MMWindowModManagement windowModManagement = \
 					MMWindowModManagement.new(window, GameApp.getGameApp().getServiceModio())
-				// optionally set setResultListener for additional actions
+				windowModManagement.setResultListener(WindowDialog.BlockResultListener.new(\
+					block MMPanelModManagement.ActivateModsResult result
+						if result == MMPanelModManagement.ActivateModsResult.activated
+							GameApp.getGameApp().reloadAfterModsChanged()
+						end
+					end))
 				windowModManagement.show(window, false, WindowModal.Placement.desktop)
 			end))
 			button.setToolTip("@UI.Modifications.ToolTip")
