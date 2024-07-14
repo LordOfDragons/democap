@@ -35,8 +35,7 @@ pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Scenery
 pin Dragengine.Utils
-pin Dragengine.Services.Mods
-pin Dragengine.Services.User
+pin Dragengine.Services
 
 
 
@@ -108,9 +107,6 @@ class GameApp extends BaseGameApp
 	var HmdDisabledWorld pHmdDisabledWorld
 	
 	var Array pGlobalElementClasses
-	
-	var ServiceSteamSdk pServiceSteam
-	var ServiceModio pServiceModio
 	
 	
 	/**
@@ -273,16 +269,6 @@ class GameApp extends BaseGameApp
 	/** Server. */
 	func DNServer getServer()
 		return pServer
-	end
-	
-	/** Steam SDK service or null. */
-	func ServiceSteamSdk getServiceSteam()
-		return pServiceSteam
-	end
-	
-	/** Mod.io service or null. */
-	func ServiceModio getServiceModio()
-		return pServiceModio
 	end
 	
 	
@@ -675,32 +661,6 @@ class GameApp extends BaseGameApp
 		if pGameArgsEnableVR
 			pSessionSettings.getModelEnableVR().setToggled(true)
 		end
-		
-		// create modio service if present
-		if FileSystem.existsFile("/debug.ptree.xml")
-			try
-				var ParameterTree pt = getLoaders().getParameterTree().loadFromFile("/debug.ptree.xml")
-				
-				if pt.has("steam.appid")
-					var ServiceSteamSdk.InitParameters params = ServiceSteamSdk.InitParameters.new()
-					params.appId = pt.getStringAt("steam.appid", null)
-					try
-						pServiceSteam = ServiceSteamSdk.new(params)
-					catch Exception e
-						GameApp.getApp().getConsole().addError("Init Steam SDK failed", e)
-					end
-				end
-				
-				var ServiceModio.InitParameters mparams = ServiceModio.InitParameters.new()
-				mparams.apiKey = pt.getStringAt("modio.appkey", null)
-				mparams.gameId = pt.getStringAt("modio.gameid", null)
-				mparams.userId = "user"
-				mparams.portal = null
-				pServiceModio = ServiceModio.new(mparams, null)
-			catch Exception e
-				GameApp.getApp().getConsole().addError("Mod.io not supported", e)
-			end
-		end
 	end
 	
 	/** First run. */
@@ -890,15 +850,6 @@ class GameApp extends BaseGameApp
 		if pActorProfiles != null
 			pActorProfiles.dispose()
 			pActorProfiles = null
-		end
-		
-		if pServiceModio != null
-			pServiceModio.dispose()
-			pServiceModio = null
-		end
-		if pServiceSteam != null
-			pServiceSteam.dispose()
-			pServiceSteam = null
 		end
 		
 		pServer = null

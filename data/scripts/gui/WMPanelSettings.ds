@@ -127,17 +127,26 @@ class WMPanelSettings extends Panel
 			p.addWidget(button)
 			
 			button = Button.new("@UI.Modifications", BlockActionListener.new(block ActionEvent event
-				GameApp.getGameApp().getProject().save()
+				var GameApp app = GameApp.getGameApp()
 				var Window window = getWindow()
-				var MMWindowModManagement windowModManagement = \
-					MMWindowModManagement.new(window, GameApp.getGameApp().getServiceModio())
-				windowModManagement.setResultListener(WindowDialog.BlockResultListener.new(\
-					block MMPanelModManagement.ActivateModsResult result
-						if result == MMPanelModManagement.ActivateModsResult.activated
-							GameApp.getGameApp().reloadAfterModsChanged()
-						end
-					end))
-				windowModManagement.show(window, false, WindowModal.Placement.desktop)
+				
+				if app.getBaseGameServices().getUserServiceCount() > 0
+					app.getProject().save()
+					var MMWindowModManagement windowMM = MMWindowModManagement.new()
+					windowMM.setGuiTheme(window.getGuiTheme())
+					windowMM.setSize(window.getDesktop().getContainerSize() - Point.new(100, 100))
+					windowMM.setResultListener(WindowDialog.BlockResultListener.new(\
+						block MMPanelModManagement.ActivateModsResult result
+							if result == MMPanelModManagement.ActivateModsResult.activated
+								app.reloadAfterModsChanged()
+							end
+						end))
+					windowMM.show(window, false, WindowModal.Placement.desktop)
+					
+				else
+					WindowDialog.message(window, "@UI.Modifications",\
+						"@UI.ModManagement.Message.NoModService", null, null, null)
+				end
 			end))
 			button.setToolTip("@UI.Modifications.ToolTip")
 			p.addWidget(button)
