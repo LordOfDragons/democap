@@ -455,34 +455,27 @@ class GameApp extends BaseGameApp
 	
 	/** Find modificaitons. */
 	private func void findModifications()
-		var int ftm = Introspection.TypeModifier.PUBLIC | Introspection.TypeModifier.STATIC
 		var Class c, ns = Introspection.Class.new("Democap.Modifications")
-		var Class bc = Introspection.Class.new("Democap.Modification")
+		var String bc = "Democap.Modification"
 		var int i, count = ns.getClassCount()
-		var Console console = getConsole()
 		var Modification mod
-		var Function fc
 		
-		console.addMessage("Find modifications")
+		Engine.log("Find modifications")
 		
 		for i = 0 to count
 			c = ns.getClass(i)
-			if c.getClassType() == Class.CLASS and c.getBase() == bc
+			if c.getClassType() == Class.CLASS and c.getBase().getFullName().equals(bc)
 				try
-					fc = c.getFunction("new", Array.new())
-					if fc.getTypeModifiers() != ftm
-						throw EInvalidParam.new("Invalid modification constructor")
-					end
-					mod = fc.call(null, Array.new()) cast Modification
+					mod = c.getFunction("new", Array.new()).call(null, Array.new()) cast Modification
 					if mod == null
 						throw ENullPointer.new("constructor returned object")
 					end
 					
 					pModifications.add(mod)
-					console.addMessage("- " + c.getName())
+					Engine.log("- " + c.getName())
 					
 				catch Exception e
-					console.addError("Failed loading modification class " + c.getName(), e)
+					Engine.log("Failed loading modification class " + c.getName())
 					throw e
 				end
 			end
