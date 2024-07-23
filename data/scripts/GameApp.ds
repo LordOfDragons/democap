@@ -21,6 +21,8 @@
 
 namespace Democap
 
+requires "Introspection"
+
 pin Democap.Actors
 pin Democap.Behaviors
 pin Democap.Characters
@@ -36,6 +38,7 @@ pin Dragengine.Gui.Events
 pin Dragengine.Scenery
 pin Dragengine.Utils
 pin Dragengine.Services
+pin Introspection
 
 
 
@@ -108,6 +111,9 @@ class GameApp extends BaseGameApp
 	
 	var Array pGlobalElementClasses
 	
+	var Array pModifications
+	
+	
 	
 	/**
 	 * Create Game Application.
@@ -124,6 +130,9 @@ class GameApp extends BaseGameApp
 		
 		pPatternsProject = Array.newWith(FileExtension.new("DEMoCap Project", Array.newWith(".demcp"), ".demcp"))
 		pGlobalElementClasses = Array.new()
+		
+		pModifications = Array.new()
+		findModifications()
 		
 		Resources.load()
 	end
@@ -444,6 +453,42 @@ class GameApp extends BaseGameApp
 	
 	
 	
+	/** Find modificaitons. */
+	private func void findModifications()
+		var int ftm = 0h40 // Introspection.TypeModifier.PUBLIC | Introspection.TypeModifier.STATIC
+		var Class c, ns = Introspection.Class.new("Democap.Modifications")
+		var Class bc = Introspection.Class.new("Democap.Modification")
+		var int i, count = ns.getClassCount()
+		var Console console = getConsole()
+		var Modification mod
+		var Function fc
+		
+		console.addMessage("Find modifications")
+		
+		for i = 0 to count
+			c = ns.getClass(i)
+			if c.getClassType() == Class.CLASS and c.getBase() == bc
+				try
+					fc = c.getFunction("new", Array.new())
+					if fc.getTypeModifiers() != ftm
+						throw EInvalidParam.new("Invalid modification constructor")
+					end
+					mod = fc.call(null, Array.new()) cast Modification
+					if mod == null
+						throw ENullPointer.new("constructor returned object")
+					end
+					
+					pModifications.add(mod)
+					console.addMessage("- " + c.getName())
+					
+				catch Exception e
+					console.addError("Failed loading modification class " + c.getName(), e)
+					throw e
+				end
+			end
+		end
+	end
+	
 	/** Initialize game. */
 	func void initGame()
 		pListeners = Array.new()
@@ -592,7 +637,7 @@ class GameApp extends BaseGameApp
 		pVRCamera = Camera.new()
 		pVRCamera.setLayerMask(LayerMask.newWith(WorldLayerBit.default, WorldLayerBit.remoteView))
 		
-		pVRCameraDirector = VRCameraDirector.new()
+		pVRCameraDirector = createVRCameraDirector()
 		pVRCameraDirector.setVRCamera(pVRCamera)
 		
 		getLoaders().getCamera().loadFromFile(defaultCameraParameters, pVRCameraDirector)
@@ -705,6 +750,10 @@ class GameApp extends BaseGameApp
 		eclist.add(InteractionBubbleClass.new())
 		eclist.add(InvalidBrokenElementClass.new())
 		
+		pModifications.forEach(block Modification each
+			each.createAndAddElementClasses(eclist)
+		end)
+		
 		var LoadSave.LoadElementClass loadEClass = getLoaders().getElementClass()
 		loadEClass.addXmlElementClasses(eclist, "/content/models", true)
 		loadEClass.addXmlElementClasses(eclist, "/content/worlds", true)
@@ -807,6 +856,11 @@ class GameApp extends BaseGameApp
 		
 		pMotionTransferFactories.add(MotionTransferAutoHuman.Factory.new())
 		pMotionTransferFactories.add(MotionTransferAutoFPV.Factory.new())
+	end
+	
+	/** Create VR camera director. */
+	protected func VRCameraDirector createVRCameraDirector()
+		return VRCameraDirector.new()
 	end
 	
 	/**
