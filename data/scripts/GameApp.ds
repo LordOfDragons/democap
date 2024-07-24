@@ -430,6 +430,15 @@ class GameApp extends BaseGameApp
 		end)
 	end
 	
+	/**
+	 * Run block on each found modification.
+	 * 
+	 * Block is called with \ref Modification argument.
+	 */
+	func void forEachModification(Block ablock)
+		pModifications.forEach(ablock)
+	end
+	
 	
 	/** Add listener. */
 	func void addListener(GameListener listener)
@@ -464,26 +473,27 @@ class GameApp extends BaseGameApp
 			return
 		end
 		
-		var String bc = "Democap.Modification"
 		var int i, count = ns.getClassCount()
 		var Modification mod
 		
 		for i = 0 to count
 			c = ns.getClass(i)
-			if c.getClassType() == Class.CLASS and c.getBase().getFullName().equals(bc)
-				try
-					mod = c.getFunction("new", Array.new()).call(null, Array.new()) cast Modification
-					if mod == null
-						throw ENullPointer.new("constructor returned object")
-					end
-					
-					pModifications.add(mod)
-					Engine.log("- " + c.getName())
-					
-				catch Exception e
-					Engine.log("Failed loading modification class " + c.getName())
-					throw e
+			if c.getClassType() != Class.CLASS
+				continue
+			end
+			
+			try
+				mod = c.getFunction("new", Array.new()).call(null, Array.new()) cast Modification
+				if mod == null
+					throw ENullPointer.new("constructor returned object")
 				end
+				
+				pModifications.add(mod)
+				Engine.log("- " + c.getName())
+				
+			catch Exception e
+				Engine.log("Failed loading modification class " + c.getName())
+				throw e
 			end
 		end
 	end
@@ -552,6 +562,10 @@ class GameApp extends BaseGameApp
 		
 		// parse game arguments
 		parseGameArguments()
+		
+		pModifications.forEach(block Modification each
+			each.initGame(this)
+		end)
 		
 		if restoreRestarted()
 			return
@@ -701,6 +715,10 @@ class GameApp extends BaseGameApp
 			setScene(pProject.getScenes().getAt(0))
 		end
 		
+		pModifications.forEach(block Modification each
+			each.launchApplication(this)
+		end)
+		
 		// switch on VR if requested using game arguments
 		if pGameArgsEnableVR
 			pSessionSettings.getModelEnableVR().setToggled(true)
@@ -750,7 +768,7 @@ class GameApp extends BaseGameApp
 		eclist.add(InvalidBrokenElementClass.new())
 		
 		pModifications.forEach(block Modification each
-			each.createAndAddElementClasses(eclist)
+			each.createAndAddElementClasses(this)
 		end)
 		
 		var LoadSave.LoadElementClass loadEClass = getLoaders().getElementClass()
@@ -801,6 +819,10 @@ class GameApp extends BaseGameApp
 		pInteractionBubbleButtonFactories.setAt("capture", IBCapture.Factory.new())
 		pInteractionBubbleButtonFactories.setAt("ghost", IBGhost.Factory.new())
 		pInteractionBubbleButtonFactories.setAt("duplicate", IBDuplicate.Factory.new())
+		
+		pModifications.forEach(block Modification each
+			each.addInteractionBubbleButtonFactories(this)
+		end)
 	end
 	
 	/** Add commands. */
@@ -855,6 +877,10 @@ class GameApp extends BaseGameApp
 		
 		pMotionTransferFactories.add(MotionTransferAutoHuman.Factory.new())
 		pMotionTransferFactories.add(MotionTransferAutoFPV.Factory.new())
+		
+		pModifications.forEach(block Modification each
+			each.addMotionTransferFactories(this)
+		end)
 	end
 	
 	/** Create VR camera director. */
@@ -867,6 +893,10 @@ class GameApp extends BaseGameApp
 	 */
 	func void cleanUp()
 		saveSettings()
+		
+		pModifications.forEach(block Modification each
+			each.cleanUp(this)
+		end)
 		
 		if pServer != null
 			pServer.stopListening()
