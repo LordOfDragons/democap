@@ -1,0 +1,189 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Gui
+pin Dragengine.Gui.Borders
+pin Democap.Elements
+
+
+/**
+ * Behavior adding support to display a camera feed view.
+ * 
+ * Feed view adds a component resource attached to a bone in the owner collider. The component
+ * is oriented to face along the Z axis pointing towards the user. The view can be enabled
+ * independent of the owner element. If the owner element is hidden during capturing the feed
+ * view stays visible. The size of the view adjusts with the distance to the viewer to make
+ * the view always cover an equal amount of screen space. The feed view is oriented to always
+ * face the user similar to a decal.
+ */
+class ECBCameraFeedView extends DefaultECBehavior
+	/**
+	 * ECBCameraFeedView behavior instance.
+	 */
+	class Instance extends DefaultECBehaviorInstance
+		protected var ECBCameraFeedView pECBehavior
+		protected var Camera pCamera
+		protected var Component pComponent
+		protected var DynamicSkin pDynamicSkin
+		protected var float pViewAngle, pAspectRatio
+		protected var bool pVisible
+		
+		
+		func new(ECBCameraFeedView ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pVisible = false
+			setRequiresThink(true)
+		end
+		
+		func void init(StubElement stub)
+			var BehaviorElement element = getElement()
+			
+			var Point size = pECBehavior.feedSize.getPoint(stub, getElement().getClass().getCodecPropertyString())
+			
+			pCamera = pECBehavior.camera.instance(element).getCamera()
+			pComponent = pECBehavior.component.createComponent(element, stub)
+			pComponent.setVisible(pVisible)
+			
+			pDynamicSkin = DynamicSkin.new()
+			pDynamicSkin.addRenderable("screen", DynamicSkinRenderableType.canvas)
+			pDynamicSkin.setCanvasAt(0, createFeedCanvas(stub, size), 3, 8)
+			pComponent.setDynamicSkin(pDynamicSkin)
+			
+			pViewAngle = pECBehavior.viewAngle.getValue(stub)
+			pAspectRatio = (size.getY() cast float) / size.getX()
+		end
+		
+		protected func CanvasView createFeedCanvas(StubElement stub, Point size)
+			var CanvasView canvasContent = CanvasView.new()
+			canvasContent.setSize(size)
+			
+			var CanvasRenderWorld canvasWorld = CanvasRenderWorld.new()
+			canvasWorld.setSize(size)
+			canvasWorld.setCamera(pCamera)
+			canvasContent.addCanvas(canvasWorld)
+			
+			var CanvasImage canvasReticle = CanvasImage.new()
+			canvasReticle.setSize(size)
+			canvasReticle.setImage(Image.new("/content/models/videocamera/finder_reticle.webp"))
+			canvasReticle.setOrder(1)
+			canvasContent.addCanvas(canvasReticle)
+			
+			return canvasContent
+		end
+		
+		
+		/** Behavior. */
+		func ECBCameraFeedView getECBehavior()
+			return pECBehavior
+		end
+		
+		
+		/** Camera feed view is visible. */
+		func bool getVisible()
+			return pVisible
+		end
+		
+		/** Set if camera feed view is visible. */
+		func void setVisible(bool visible)
+			pComponent.setVisible(pVisible = visible)
+		end
+		
+		
+		func void addToGameWorld()
+			getElement().getGameWorld().getWorld().addComponent(pComponent)
+		end
+		
+		func void removeFromGameWorld()
+			getElement().getGameWorld().getWorld().removeComponent(pComponent)
+		end
+		
+		func void postThink(float elapsed)
+			if not pVisible
+				return
+			end
+			
+			var DVector position = pCamera.getPosition()
+			var DVector direction = GameApp.getGameApp().getVRCamera().getPosition() - position
+			var float distance = direction.getLength()
+			
+			pComponent.setPosition(position)
+			
+			if distance < 0.01
+				return
+			end
+			
+			var float targetHalfWidth = distance * DEMath.tan(pViewAngle / 2)
+			var float scale = targetHalfWidth / 0.5
+			
+			pComponent.setScaling(Vector.new(scale, scale * pAspectRatio, 1))
+			pComponent.setOrientation(DMatrix.newVU(direction.normalize(), pComponent.getMatrix().getUpVector()).toQuaternion())
+		end
+	end
+	
+	
+	public var ECBehaviorCamera camera
+	public var ECComposeComponent component
+	public var ECPPoint feedSize
+	public var ECPFloat viewAngle
+	
+	
+	func new(BehaviorElementClass eclass, ECBehaviorCamera camera) super(eclass)
+		if camera == null
+			throw ENullPointer.new("camera")
+		end
+		
+		this.camera = camera
+		
+		var String prefix = "cameraFeedView."
+		
+		component = ECComposeComponent.new(eclass, prefix)
+		component.getAffectsAudio().setValue(false)
+		component.getEnableGI().setValue(false)
+		component.getHintMovement().setValue(ComponentHintMovement.dynamic)
+		component.getModel().setPath("/content/models/videocamera/camerafeedview.demodel")
+		component.getSkin().setPath("/content/models/videocamera/camerafeedview.deskin")
+		
+		eclass.addProperty(feedSize = ECPPoint.new(prefix + "feedSize", Point.new(512, 320))) // 16:10
+		eclass.addProperty(viewAngle = ECPFloat.new(prefix + "viewAngle", 45, 10, 110))
+		
+		eclass.addBehavior(this)
+	end
+	
+	func void dispose()
+		camera = null
+		super.dispose()
+	end
+	
+	
+	/** Get instance with slot name in element or null if absent. */
+	static func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

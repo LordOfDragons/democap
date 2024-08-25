@@ -35,11 +35,29 @@ pin Dragengine.Utils
  * ECBRemoteCamera panel.
  */
 class WMPSORemoteCamera extends WMPPanelSceneObject
+	class CameraFeedViewVisibleChanged extends DefaultToggleModelListener
+		protected var WMPSORemoteCamera pPanel
+		
+		func new(WMPSORemoteCamera panel)
+			pPanel = panel
+		end
+		
+		func void toggledChanged(ToggleModel model)
+			if pPanel.getBehaviorCameraFeedView() != null
+				pPanel.getBehaviorCameraFeedView().setVisible(model.getToggled())
+			end
+		end
+	end
+	
+	
+	
 	protected var ECBRemoteCamera.Instance pBehaviorRemoteCamera
+	protected var ECBCameraFeedView.Instance pBehaviorCameraFeedView
 	protected var WorldRenderer pWorldRenderer
 	protected var DisplayImage pImageReticle
 	protected var DefaultTextModel pModelName
 	protected var DefaultTextModel pModelPathParameters
+	protected var DefaultToggleModel pModelCameraFeedViewVisible
 	
 	
 	
@@ -48,6 +66,9 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 	super(panelProject, bgpTypeId, behaviorId, "@UI.RemoteCamera", "WMPSORemoteCamera", "ppob_remotecamera")
 		pModelName = DefaultTextModel.new()
 		pModelPathParameters = DefaultTextModel.new()
+		pModelCameraFeedViewVisible = DefaultToggleModel.new(false)
+		
+		pModelCameraFeedViewVisible.addListener(CameraFeedViewVisibleChanged.new(this))
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
@@ -59,6 +80,7 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 		setBehavior(null)
 		
 		pModelPathParameters = null
+		pModelCameraFeedViewVisible = null
 		pModelName = null
 		pWorldRenderer = null
 		super.dispose()
@@ -71,6 +93,11 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 		return pBehaviorRemoteCamera
 	end
 	
+	/** CameraFeedView behavior. */
+	func ECBCameraFeedView.Instance getBehaviorCameraFeedView()
+		return pBehaviorCameraFeedView
+	end
+	
 	/** Update behavior. */
 	func void updateBehavior()
 		if pBehaviorRemoteCamera == null
@@ -80,6 +107,7 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 		runWhileBlockingLayout(block
 			pModelName.setText(pBehaviorRemoteCamera.getName())
 			pModelPathParameters.setText(pBehaviorRemoteCamera.getPathParameters())
+			pModelCameraFeedViewVisible.setToggled(pBehaviorCameraFeedView != null and pBehaviorCameraFeedView.getVisible())
 		end)
 	end
 	
@@ -91,6 +119,7 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 		var String toolTip
 		var Label label
 		var EditPath editPath
+		var CheckBox checkBox
 		
 		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
@@ -118,6 +147,13 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
 				pBehaviorRemoteCamera.setPathParameters(pModelPathParameters.getText())
 			end))
+			
+			// camera feed view visible
+			p.addWidget(Label.new("", "Label.FormCaption.SingleLine"))
+			
+			checkBox = CheckBox.new(pModelCameraFeedViewVisible, "@UI.CameraFeedViewVisible")
+			checkBox.setToolTip("@UI.ToolTip.CameraFeedViewVisible")
+			p.addWidget(checkBox)
 		end))
 		
 		content.addWidget(Panel.new(StackLayout.new(StackLayout.AspectRatio.fit), block Panel p
@@ -138,9 +174,12 @@ class WMPSORemoteCamera extends WMPPanelSceneObject
 		end
 		
 		pBehaviorRemoteCamera = pBehavior cast ECBRemoteCamera.Instance
+		pBehaviorCameraFeedView = null
 		
 		if pBehaviorRemoteCamera != null
 			pWorldRenderer.setCamera(pBehaviorRemoteCamera.getCamera().getCamera())
+			
+			pBehaviorCameraFeedView = ECBCameraFeedView.getInstanceIn(pBehaviorRemoteCamera.getElement())
 		end
 		
 		// TODO for performance do not assign camera unless panel is visible/unfolded
