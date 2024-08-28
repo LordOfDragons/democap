@@ -258,38 +258,53 @@ class WindowCharacterConfiguration extends WindowDialog
 			end)
 			menu.addWidget(MenuItemSubMenu.new(Resources.add.get(inVR), "@UI.Add", subMenu))
 			
-			item = MenuItemCommand.new(Resources.duplicate.get(inVR), "@UI.Duplicate.Dialog", BlockActionListener.new(block ActionEvent event
-				pWindow.duplicateMotionTransfer()
-			end))
+			item = MenuItemCommand.new(Resources.duplicate.get(inVR), "@UI.Duplicate.Dialog",\
+				BlockActionListener.new(block ActionEvent event
+					pWindow.duplicateMotionTransfer()
+				end))
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new(Resources.remove.get(inVR), "@UI.Remove", BlockActionListener.new(block ActionEvent event
-				pWindow.removeMotionTransfer()
-			end))
+			item = MenuItemCommand.new(Resources.remove.get(inVR), "@UI.Remove",\
+				BlockActionListener.new(block ActionEvent event
+					pWindow.removeMotionTransfer()
+				end))
 			item.setEnabled(pWindow.getMotionTransfer() != null)
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new(Resources.remove.get(inVR), "@UI.RemoveAll", BlockActionListener.new(block ActionEvent event
-				pWindow.removeAllMotionTransfers()
-			end))
+			item = MenuItemCommand.new(Resources.remove.get(inVR), "@UI.RemoveAll",\
+				BlockActionListener.new(block ActionEvent event
+					pWindow.removeAllMotionTransfers()
+				end))
 			item.setEnabled(pWindow.getTrackerSlot() != null)
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new(Resources.cut.get(inVR), "@UI.Cut", BlockActionListener.new(block ActionEvent event
-				pWindow.cutMotionTransfer()
-			end))
+			item = MenuItemCommand.new(Resources.cut.get(inVR), "@UI.Cut",\
+				BlockActionListener.new(block ActionEvent event
+					pWindow.cutMotionTransfer()
+				end))
 			item.setEnabled(pWindow.getMotionTransfer() != null)
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new(Resources.copy.get(inVR), "@UI.Copy", BlockActionListener.new(block ActionEvent event
-				pWindow.copyMotionTransfer()
-			end))
+			item = MenuItemCommand.new(Resources.copy.get(inVR), "@UI.Copy",\
+				BlockActionListener.new(block ActionEvent event
+					pWindow.copyMotionTransfer()
+				end))
 			item.setEnabled(pWindow.getMotionTransfer() != null)
 			menu.addWidget(item)
 			
-			item = MenuItemCommand.new(Resources.paste.get(inVR), "@UI.Paste.Dialog", BlockActionListener.new(block ActionEvent event
-				pWindow.pasteMotionTransfer()
-			end))
+			/*
+			item = MenuItemCommand.new(Resources.copy.get(inVR), "@UI.CopyMotionTransfers",\
+				BlockActionListener.new(block ActionEvent event
+					pWindow.copyMotionTransfers()
+				end))
+			item.setEnabled(pWindow.getMotionTransfer() != null)
+			menu.addWidget(item)
+			*/
+			
+			item = MenuItemCommand.new(Resources.paste.get(inVR), "@UI.Paste.Dialog",\
+				BlockActionListener.new(block ActionEvent event
+					pWindow.pasteMotionTransfer()
+				end))
 			item.setEnabled(pWindow.getClipboard().hasClip())
 			menu.addWidget(item)
 			
@@ -1128,6 +1143,10 @@ class WindowCharacterConfiguration extends WindowDialog
 	
 	
 	
+	func DefaultListModel getModelMotionTransfers()
+		return pModelMotionTransfers
+	end
+	
 	/** Active motion transfer. */
 	func MotionTransfer getMotionTransfer()
 		if pModelMotionTransfers.getSelected() != -1
@@ -1194,6 +1213,28 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 	end
 	
+	/** Copy motion transfers. */
+	func void copyMotionTransfers()
+		var Array transfers = pCharacterConfiguration.getMotionTransfers().toArray()
+		if transfers.getCount() == 0
+			return
+		end
+		
+		var Array names = transfers.map(block MotionTransfer each
+			return each.getName()
+		end)
+		
+		WindowDialog.selection(getWindow(), "@UI.Copy", "@UI.Message.CopyMotionTransfers",\
+		null, names, Array.new(), null, null, WindowDialog.BlockResultListener.new(\
+			block Array result
+				if result != null and result.getCount() > 0
+					getClipboard().setClipWith(result.map(block int index
+						return (transfers.getAt(index) cast MotionTransfer).createCopy()
+					end))
+				end
+			end))
+	end
+	
 	/** Cut motion transfer. */
 	func void cutMotionTransfer()
 		var MotionTransfer motionTransfer = getMotionTransfer()
@@ -1220,11 +1261,20 @@ class WindowCharacterConfiguration extends WindowDialog
 			return
 		end
 		
-		getClipboard().getClip().findCastable(block MotionTransfer motionTransfer
+		var int next = pModelMotionTransfers.getCount()
+		
+		var Block paste = block MotionTransfer motionTransfer
 			pModelMotionTransfers.add(motionTransfer.createCopy())
-			pModelMotionTransfers.setSelected(pModelMotionTransfers.getCount() - 1)
-			return true
+		end
+		
+		getClipboard().getClip().forEachCastable(paste)
+		getClipboard().getClip().forEachCastable(block Array list
+			list.forEachCastable(paste)
 		end)
+		
+		if pModelMotionTransfers.getCount() > next
+			pModelMotionTransfers.setSelected(next)
+		end
 	end
 	
 	/** Remove motion transfer. */

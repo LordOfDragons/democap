@@ -34,22 +34,6 @@ pin Dragengine.Scenery
  * Edit character config window motion transfer fingers panel.
  */
 class WCCPMTFingers extends WCCPanelMotionTransfer
-	class MotionTransferRenderer extends DefaultListElementRenderer
-		func new()
-		end
-		
-		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
-			if element != null
-				super.updateRenderer(listBox, renderer, (element cast MotionTransfer).getName(), selected, focused)
-				
-			else
-				super.updateRenderer(listBox, renderer, String.new('X', 30), selected, focused)
-			end
-		end
-	end
-	
-	
-	
 	var SharedListModel pModelListThumbTipBone
 	var DefaultTextModel pModelTextThumbTipBone
 	var SharedListModel pModelListThumbBaseBone
@@ -292,8 +276,8 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 	/** Mirror values from another motion transfer. */
 	func void mirrorValues()
 		var DefaultListModel model = DefaultListModel.new()
-		pWindowCharacterConfiguration.getCharacterConfiguration().getMotionTransfers().forEach(block MotionTransfer each
-			if each castable MotionTransferFingers and not each.getName().equals(pMotionTransfer.getName())
+		pWindowCharacterConfiguration.getModelMotionTransfers().forEach(block MotionTransfer each
+			if each castable MotionTransferFingers and each != pMotionTransfer
 				model.add(each)
 			end
 		end)
@@ -517,19 +501,24 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 	end
 	
 	protected func void onPanelContextMenu(MenuPopup menu)
-		var MenuItemCommand item = MenuItemCommand.new("@UI.InitRightHand", BlockActionListener.new(block ActionEvent event
-			initValues(true)
-		end))
+		var bool inVR = pWindowCharacterConfiguration.getInVR()
+		
+		var MenuItemCommand item = MenuItemCommand.new(Resources.handRight.get(inVR), "@UI.InitRightHand",\
+			BlockActionListener.new(block ActionEvent event
+				initValues(true)
+			end))
 		menu.addWidget(item)
 		
-		item = MenuItemCommand.new("@UI.InitLeftHand", BlockActionListener.new(block ActionEvent event
-			initValues(false)
-		end))
+		item = MenuItemCommand.new(Resources.handLeft.get(inVR), "@UI.InitLeftHand",\
+			BlockActionListener.new(block ActionEvent event
+				initValues(false)
+			end))
 		menu.addWidget(item)
 		
-		item = MenuItemCommand.new("@UI.MirrorHand.Dialog", BlockActionListener.new(block ActionEvent event
-			mirrorValues()
-		end))
+		item = MenuItemCommand.new(Resources.mirror.get(inVR), "@UI.MirrorHand.Dialog",\
+			BlockActionListener.new(block ActionEvent event
+				mirrorValues()
+			end))
 		menu.addWidget(item)
 	end
 end
