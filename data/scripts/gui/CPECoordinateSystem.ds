@@ -73,7 +73,7 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 				return
 			end
 			
-			var ECBPreviewCoordSystem.Instance previewCoordSystem = pEditor.getPreviewCoordSystem()
+			var ECBPreviewCoordSystem.Instance previewCoordSystem = pEditor.getUsePreviewCoordSystem()
 			
 			pHandle = hit.getObject() cast ECBPreviewCoordSystem.Handle
 			pCSMatrix = previewCoordSystem.getMatrix().toMatrix()
@@ -85,28 +85,40 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 			
 			select pHandle
 			case ECBPreviewCoordSystem.Handle.moveX
-				pInteractAxis = pCSMatrix.getRightVector().normalize()
-				pIsMove = true
+				if pEditor.getEditPosition() != null
+					pInteractAxis = pCSMatrix.getRightVector().normalize()
+					pIsMove = true
+				end
 				
 			case ECBPreviewCoordSystem.Handle.moveY
-				pInteractAxis = pCSMatrix.getUpVector().normalize()
-				pIsMove = true
+				if pEditor.getEditPosition() != null
+					pInteractAxis = pCSMatrix.getUpVector().normalize()
+					pIsMove = true
+				end
 				
 			case ECBPreviewCoordSystem.Handle.moveZ
-				pInteractAxis = pCSMatrix.getViewVector().normalize()
-				pIsMove = true
+				if pEditor.getEditPosition() != null
+					pInteractAxis = pCSMatrix.getViewVector().normalize()
+					pIsMove = true
+				end
 				
 			case ECBPreviewCoordSystem.Handle.rotateX
-				pInteractAxis = pCSMatrix.getRightVector().normalize()
-				pIsRotate = true
+				if pEditor.getEditRotation() != null
+					pInteractAxis = pCSMatrix.getRightVector().normalize()
+					pIsRotate = true
+				end
 				
 			case ECBPreviewCoordSystem.Handle.rotateY
-				pInteractAxis = pCSMatrix.getUpVector().normalize()
-				pIsRotate = true
+				if pEditor.getEditRotation() != null
+					pInteractAxis = pCSMatrix.getUpVector().normalize()
+					pIsRotate = true
+				end
 				
 			case ECBPreviewCoordSystem.Handle.rotateZ
-				pInteractAxis = pCSMatrix.getViewVector().normalize()
-				pIsRotate = true
+				if pEditor.getEditRotation() != null
+					pInteractAxis = pCSMatrix.getViewVector().normalize()
+					pIsRotate = true
+				end
 			end
 			
 			if pInteractAxis == null
@@ -360,7 +372,7 @@ class CPECoordinateSystem extends CharacterPreviewEditor
 	
 	
 	
-	protected func ECBPreviewCoordSystem.Instance getUsePreviewCoordSystem()
+	func ECBPreviewCoordSystem.Instance getUsePreviewCoordSystem()
 		return getPreviewCoordSystem()
 	end
 	
