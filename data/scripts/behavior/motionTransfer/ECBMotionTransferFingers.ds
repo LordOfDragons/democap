@@ -58,17 +58,14 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 		var ECBehaviorVRPlayspace.Instance pVRPlayspace
 		var ECBMoCapAnimator.Instance pMoCapAnimator
 		var ECBTrackerSlot.Instance pSlotTracker
-		var AnimatorController pControllerThumb
-		var AnimatorController pControllerIndex
-		var AnimatorController pControllerMiddle
-		var AnimatorController pControllerRing
-		var AnimatorController pControllerPinky
+		var AnimatorController pControllerThumb, pControllerThumb2, pControllerThumb3
+		var AnimatorController pControllerIndex, pControllerIndex2
+		var AnimatorController pControllerMiddle, pControllerMiddle2
+		var AnimatorController pControllerRing, pControllerRing2
+		var AnimatorController pControllerPinky, pControllerPinky2
 		var InputDevice pInputDevice
-		var InputDeviceAxis pInputAxisThumb
-		var InputDeviceAxis pInputAxisIndex
-		var InputDeviceAxis pInputAxisMiddle
-		var InputDeviceAxis pInputAxisRing
-		var InputDeviceAxis pInputAxisPinky
+		var InputDeviceAxis pInputAxisThumb, pInputAxisIndex, pInputAxisMiddle, pInputAxisRing, pInputAxisPinky
+		var bool pComplexMode
 		
 		
 		
@@ -98,10 +95,22 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 			var ECBehaviorActorAnimated.Instance actorAnimated = pMoCapAnimator.getActorAnimated()
 			
 			pControllerThumb = actorAnimated.getControllerNamed(pECBehavior.getControllerNameThumb())
+			pControllerThumb2 = actorAnimated.getControllerNamed(pECBehavior.getControllerNameThumb2())
+			pControllerThumb3 = actorAnimated.getControllerNamed(pECBehavior.getControllerNameThumb3())
+			
 			pControllerIndex = actorAnimated.getControllerNamed(pECBehavior.getControllerNameIndex())
+			pControllerIndex2 = actorAnimated.getControllerNamed(pECBehavior.getControllerNameIndex2())
+			
 			pControllerMiddle = actorAnimated.getControllerNamed(pECBehavior.getControllerNameMiddle())
+			pControllerMiddle2 = actorAnimated.getControllerNamed(pECBehavior.getControllerNameMiddle2())
+			
 			pControllerRing = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRing())
+			pControllerRing2 = actorAnimated.getControllerNamed(pECBehavior.getControllerNameRing2())
+			
 			pControllerPinky = actorAnimated.getControllerNamed(pECBehavior.getControllerNamePinky())
+			pControllerPinky2 = actorAnimated.getControllerNamed(pECBehavior.getControllerNamePinky2())
+			
+			pComplexMode = pECBehavior.getTransfer().getMoveHandsClosed().empty()
 			
 			pMoCapAnimator.addListener(UpdateControllers.new(this))
 		end
@@ -127,29 +136,48 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 			return pSlotTracker
 		end
 		
-		/** Animator controller thumb. */
 		func AnimatorController getControllerThumb()
 			return pControllerThumb
 		end
 		
-		/** Animator controller index. */
+		func AnimatorController getControllerThumb2()
+			return pControllerThumb2
+		end
+		
+		func AnimatorController getControllerThumb3()
+			return pControllerThumb3
+		end
+		
 		func AnimatorController getControllerIndex()
 			return pControllerIndex
 		end
 		
-		/** Animator controller middle. */
+		func AnimatorController getControllerIndex2()
+			return pControllerIndex2
+		end
+		
 		func AnimatorController getControllerMiddle()
 			return pControllerMiddle
 		end
 		
-		/** Animator controller ring. */
+		func AnimatorController getControllerMiddle2()
+			return pControllerMiddle2
+		end
+		
 		func AnimatorController getControllerRing()
 			return pControllerRing
 		end
 		
-		/** Animator controller pinky. */
+		func AnimatorController getControllerRing2()
+			return pControllerRing2
+		end
+		
 		func AnimatorController getControllerPinky()
 			return pControllerPinky
+		end
+		
+		func AnimatorController getControllerPinky2()
+			return pControllerPinky2
 		end
 		
 		
@@ -169,20 +197,78 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 				initInputDeviceMapping(inputDevice)
 			end
 			
-			if pInputAxisThumb != null
-				pControllerThumb.setValue(pInputAxisThumb.getValue())
-			end
-			if pInputAxisIndex != null
-				pControllerIndex.setValue(pInputAxisIndex.getValue())
-			end
-			if pInputAxisMiddle != null
-				pControllerMiddle.setValue(pInputAxisMiddle.getValue())
-			end
-			if pInputAxisRing != null
-				pControllerRing.setValue(pInputAxisRing.getValue())
-			end
-			if pInputAxisPinky != null
-				pControllerPinky.setValue(pInputAxisPinky.getValue())
+			if pComplexMode
+				if pControllerThumb != null
+					pControllerThumb.setRotation(inputDevice.getDeviceBonePoseOrientation(\
+						InputDeviceHandBone.thumb0, false).getEulerAngles())
+				end
+				
+				if pControllerThumb2 != null
+					pControllerThumb2.setRotation(inputDevice.getDeviceBonePoseOrientation(\
+						InputDeviceHandBone.thumb1, false).getEulerAngles())
+				end
+				
+				if pControllerThumb3 != null
+					pControllerThumb3.setRotation(inputDevice.getDeviceBonePoseOrientation(\
+						InputDeviceHandBone.thumb2, false).getEulerAngles())
+				end
+				
+				if pControllerIndex != null
+					pControllerIndex.setRotation(inputDevice.getDeviceBonePoseOrientation(\
+						InputDeviceHandBone.index1, false).getEulerAngles())
+				end
+				
+				if pControllerIndex2 != null
+					pControllerIndex2.setRotation(inputDevice.getDeviceBonePoseOrientation(\
+						InputDeviceHandBone.index2, false).getEulerAngles())
+				end
+				
+				if pControllerMiddle != null
+					pControllerMiddle.setRotation(inputDevice.getDeviceBonePoseOrientation(\
+						InputDeviceHandBone.middle1, false).getEulerAngles())
+				end
+				
+				if pControllerMiddle2 != null
+					pControllerMiddle2.setRotation(inputDevice.getDeviceBonePoseOrientation(\
+						InputDeviceHandBone.middle2, false).getEulerAngles())
+				end
+				
+				if pControllerRing != null
+					pControllerRing.setRotation(inputDevice.getDeviceBonePoseOrientation(\
+						InputDeviceHandBone.ring1, false).getEulerAngles())
+				end
+				
+				if pControllerRing2 != null
+					pControllerRing2.setRotation(inputDevice.getDeviceBonePoseOrientation(\
+						InputDeviceHandBone.ring2, false).getEulerAngles())
+				end
+				
+				if pControllerPinky != null
+					pControllerPinky.setRotation(inputDevice.getDeviceBonePoseOrientation(\
+						InputDeviceHandBone.pinky1, false).getEulerAngles())
+				end
+				
+				if pControllerPinky2 != null
+					pControllerPinky2.setRotation(inputDevice.getDeviceBonePoseOrientation(\
+						InputDeviceHandBone.pinky2, false).getEulerAngles())
+				end
+				
+			else
+				if pInputAxisThumb != null
+					pControllerThumb.setValue(pInputAxisThumb.getValue())
+				end
+				if pInputAxisIndex != null
+					pControllerIndex.setValue(pInputAxisIndex.getValue())
+				end
+				if pInputAxisMiddle != null
+					pControllerMiddle.setValue(pInputAxisMiddle.getValue())
+				end
+				if pInputAxisRing != null
+					pControllerRing.setValue(pInputAxisRing.getValue())
+				end
+				if pInputAxisPinky != null
+					pControllerPinky.setValue(pInputAxisPinky.getValue())
+				end
 			end
 		end
 		
@@ -234,11 +320,11 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 	var ECBehaviorVRPlayspace pVRPlayspace
 	var ECBMoCapAnimator pMoCapAnimator
 	var ECBTrackerSlot pSlotTracker
-	var String pControllerNameThumb
-	var String pControllerNameIndex
-	var String pControllerNameMiddle
-	var String pControllerNameRing
-	var String pControllerNamePinky
+	var String pControllerNameThumb, pControllerNameThumb2, pControllerNameThumb3
+	var String pControllerNameIndex, pControllerNameIndex2
+	var String pControllerNameMiddle, pControllerNameMiddle2
+	var String pControllerNameRing, pControllerNameRing2
+	var String pControllerNamePinky, pControllerNamePinky2
 	
 	
 	
@@ -256,10 +342,20 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 		end
 		
 		pControllerNameThumb = transfer.getName() + ".thumb"
+		pControllerNameThumb2 = transfer.getName() + ".thumb2"
+		pControllerNameThumb3 = transfer.getName() + ".thumb3"
+		
 		pControllerNameIndex = transfer.getName() + ".index"
+		pControllerNameIndex2 = transfer.getName() + ".index2"
+		
 		pControllerNameMiddle = transfer.getName() + ".middle"
+		pControllerNameMiddle2 = transfer.getName() + ".middle2"
+		
 		pControllerNameRing = transfer.getName() + ".ring"
+		pControllerNameRing2 = transfer.getName() + ".ring2"
+		
 		pControllerNamePinky = transfer.getName() + ".pinky"
+		pControllerNamePinky2 = transfer.getName() + ".pinky2"
 		
 		eclass.addBehavior(this)
 	end
@@ -294,29 +390,48 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 		return pSlotTracker
 	end
 	
-	/** Animator controller name thumb. */
 	func String getControllerNameThumb()
 		return pControllerNameThumb
 	end
 	
-	/** Animator controller name index. */
+	func String getControllerNameThumb2()
+		return pControllerNameThumb2
+	end
+	
+	func String getControllerNameThumb3()
+		return pControllerNameThumb3
+	end
+	
 	func String getControllerNameIndex()
 		return pControllerNameIndex
 	end
 	
-	/** Animator controller name middle. */
+	func String getControllerNameIndex2()
+		return pControllerNameIndex2
+	end
+	
 	func String getControllerNameMiddle()
 		return pControllerNameMiddle
 	end
 	
-	/** Animator controller name ring. */
+	func String getControllerNameMiddle2()
+		return pControllerNameMiddle2
+	end
+	
 	func String getControllerNameRing()
 		return pControllerNameRing
 	end
 	
-	/** Animator controller name pinky. */
+	func String getControllerNameRing2()
+		return pControllerNameRing2
+	end
+	
 	func String getControllerNamePinky()
 		return pControllerNamePinky
+	end
+	
+	func String getControllerNamePinky2()
+		return pControllerNamePinky2
 	end
 	
 	
