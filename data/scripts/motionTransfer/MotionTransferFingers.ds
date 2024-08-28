@@ -76,8 +76,11 @@ class MotionTransferFingers extends DefaultMotionTransfer
 	var String pMoveHandsClosed
 	var Vector pThumbRotation, pIndexRotation, pMiddleRotation, pRingRotation, pPinkyRotation
 	
-	var Array pCalibrateBonesThumb, pCalibrateBonesIndex, pCalibrateBonesMiddle, pCalibrateBonesRing, pCalibrateBonesPinky
-	var Array pCalibrateRotationThumb, pCalibrateRotationIndex, pCalibrateRotationMiddle, pCalibrateRotationRing, pCalibrateRotationPinky
+	var Array pCalibrateBonesThumb, pCalibrateBonesIndex, pCalibrateBonesMiddle,\
+		pCalibrateBonesRing, pCalibrateBonesPinky
+	
+	var Array pCalibrateRotationThumb, pCalibrateRotationIndex, pCalibrateRotationMiddle,\
+		pCalibrateRotationRing, pCalibrateRotationPinky
 	
 	
 	/** Create motion transfer. */
@@ -409,7 +412,7 @@ class MotionTransferFingers extends DefaultMotionTransfer
 			if pCalibrateBonesIndex.getCount() > 0
 				if pMoveHandsClosed.empty()
 					addRules(adef, behavior.getControllerNameIndex(), behavior.getControllerNameIndex2(),\
-						null, pCalibrateBonesIndex, pCalibrateRotationIndex)
+						behavior.getControllerNameIndex3(), pCalibrateBonesIndex, pCalibrateRotationIndex)
 					
 				else
 					addRules(adef, behavior.getControllerNameIndex(), pCalibrateBonesThumb)
@@ -422,7 +425,7 @@ class MotionTransferFingers extends DefaultMotionTransfer
 			if pCalibrateBonesMiddle.getCount() > 0
 				if pMoveHandsClosed.empty()
 					addRules(adef, behavior.getControllerNameMiddle(), behavior.getControllerNameIndex2(),\
-						null, pCalibrateBonesMiddle, pCalibrateRotationMiddle)
+						behavior.getControllerNameIndex3(), pCalibrateBonesMiddle, pCalibrateRotationMiddle)
 					
 				else
 					addRules(adef, behavior.getControllerNameMiddle(), pCalibrateBonesThumb)
@@ -435,7 +438,7 @@ class MotionTransferFingers extends DefaultMotionTransfer
 			if pCalibrateBonesRing.getCount() > 0
 				if pMoveHandsClosed.empty()
 					addRules(adef, behavior.getControllerNameRing(), behavior.getControllerNameRing2(),\
-						null, pCalibrateBonesRing, pCalibrateRotationRing)
+						behavior.getControllerNameRing3(), pCalibrateBonesRing, pCalibrateRotationRing)
 					
 				else
 					addRules(adef, behavior.getControllerNameRing(), pCalibrateBonesThumb)
@@ -448,7 +451,7 @@ class MotionTransferFingers extends DefaultMotionTransfer
 			if pCalibrateBonesPinky.getCount() > 0
 				if pMoveHandsClosed.empty()
 					addRules(adef, behavior.getControllerNamePinky(), behavior.getControllerNamePinky2(),\
-						null, pCalibrateBonesPinky, pCalibrateRotationPinky)
+						behavior.getControllerNamePinky3(), pCalibrateBonesPinky, pCalibrateRotationPinky)
 					
 				else
 					addRules(adef, behavior.getControllerNamePinky(), pCalibrateBonesThumb)
@@ -511,10 +514,6 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		*/
 		
 		// segment 1
-		if controllerName1 == null
-			return
-		end
-		
 		var ADController controller = addADController(adef, controllerName1, 0, 1)
 		var ADLink link = addADLink(adef, controller)
 		
@@ -524,21 +523,10 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		rule.setAdjustPosition(false)
 		rule.setLocalOrientation(rotations.getAt(0) cast Vector)
 		rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, link))
-		
 		rule.addBone(bones.getAt(0) cast String)
-		if controllerName2 == null
-			bones.forEach(1, bones.getCount(), block String each
-				rule.addBone(each)
-			end)
-		end
-		
 		adef.addRule(rule)
 		
 		// segment 2
-		if controllerName2 == null
-			return
-		end
-		
 		controller = addADController(adef, controllerName2, 0, 1)
 		link = addADLink(adef, controller)
 		
@@ -550,19 +538,9 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, link))
 		
 		rule.addBone(bones.getAt(1) cast String)
-		if controllerName3 == null
-			bones.forEach(2, bones.getCount(), block String each
-				rule.addBone(each)
-			end)
-		end
-		
 		adef.addRule(rule)
 		
 		// segment 3
-		if controllerName3 == null
-			return
-		end
-		
 		controller = addADController(adef, controllerName3, 0, 1)
 		link = addADLink(adef, controller)
 		
@@ -579,6 +557,20 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		end)
 		
 		adef.addRule(rule)
+		
+		// segments 4 and more
+		var ADRuleForeignState rule2
+		
+		bones.forEach(3, bones.getCount(), block String each
+			rule2 = ADRuleForeignState.new()
+			rule2.setName(controllerName3)
+			rule2.setBlendMode(AnimatorRuleBlendMode.overlay)
+			rule2.setEnablePosition(false)
+			rule2.setEnableVertexPositionSet(false)
+			rule2.setForeignBone(each)
+			rule2.addBone(each)
+			adef.addRule(rule2)
+		end)
 	end
 	
 	/** Reset calibration. */
@@ -613,145 +605,85 @@ class MotionTransferFingers extends DefaultMotionTransfer
 			var int count, indexBone
 			var Matrix invMat
 			var String bone
+			var int i
 			
 			// thumb
 			invMat = Matrix.newRotation(pThumbRotation).getInverse()
-			
 			count = pCalibrateBonesThumb.getCount()
-			if count > 0
-				bone = pCalibrateBonesThumb.getAt(count - 1) cast String
-				indexBone = component.indexOfBoneNamed(bone)
-				if indexBone != -1
-					pCalibrateRotationThumb.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-					
-				else
-					pCalibrateRotationThumb.add(Vector.new())
-				end
-			end
-			
-			if count > 1
-				bone = pCalibrateBonesThumb.getAt(count - 2) cast String
-				indexBone = component.indexOfBoneNamed(bone)
-				if indexBone != -1
-					pCalibrateRotationThumb.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-					
-				else
-					pCalibrateRotationThumb.add(Vector.new())
-				end
-			end
-			
-			if count > 2
-				bone = pCalibrateBonesThumb.getAt(count - 3) cast String
-				indexBone = component.indexOfBoneNamed(bone)
-				if indexBone != -1
-					pCalibrateRotationThumb.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-					
-				else
-					pCalibrateRotationThumb.add(Vector.new())
+			for i = 0 to 3
+				if count > i
+					bone = pCalibrateBonesThumb.getAt(count - i - 1) cast String
+					indexBone = component.indexOfBoneNamed(bone)
+					if indexBone != -1
+						pCalibrateRotationThumb.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
+						
+					else
+						pCalibrateRotationThumb.add(Vector.new())
+					end
 				end
 			end
 			
 			// index
 			invMat = Matrix.newRotation(pIndexRotation).getInverse()
-			
 			count = pCalibrateBonesIndex.getCount()
-			if count > 0
-				bone = pCalibrateBonesIndex.getAt(count - 1) cast String
-				indexBone = component.indexOfBoneNamed(bone)
-				if indexBone != -1
-					pCalibrateRotationIndex.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-					
-				else
-					pCalibrateRotationIndex.add(Vector.new())
-				end
-			end
-			
-			if count > 1
-				bone = pCalibrateBonesIndex.getAt(count - 2) cast String
-				indexBone = component.indexOfBoneNamed(bone)
-				if indexBone != -1
-					pCalibrateRotationIndex.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-					
-				else
-					pCalibrateRotationIndex.add(Vector.new())
+			for i = 0 to 3
+				if count > i
+					bone = pCalibrateBonesIndex.getAt(count - i - 1) cast String
+					indexBone = component.indexOfBoneNamed(bone)
+					if indexBone != -1
+						pCalibrateRotationIndex.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
+						
+					else
+						pCalibrateRotationIndex.add(Vector.new())
+					end
 				end
 			end
 			
 			// middle
 			invMat = Matrix.newRotation(pMiddleRotation).getInverse()
-			
 			count = pCalibrateBonesMiddle.getCount()
-			if count > 0
-				bone = pCalibrateBonesMiddle.getAt(count - 1) cast String
-				indexBone = component.indexOfBoneNamed(bone)
-				if indexBone != -1
-					pCalibrateRotationMiddle.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-					
-				else
-					pCalibrateRotationMiddle.add(Vector.new())
-				end
-			end
-			
-			if count > 1
-				bone = pCalibrateBonesMiddle.getAt(count - 2) cast String
-				indexBone = component.indexOfBoneNamed(bone)
-				if indexBone != -1
-					pCalibrateRotationMiddle.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-					
-				else
-					pCalibrateRotationMiddle.add(Vector.new())
+			for i = 0 to 3
+				if count > i
+					bone = pCalibrateBonesMiddle.getAt(count - i - 1) cast String
+					indexBone = component.indexOfBoneNamed(bone)
+					if indexBone != -1
+						pCalibrateRotationMiddle.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
+						
+					else
+						pCalibrateRotationMiddle.add(Vector.new())
+					end
 				end
 			end
 			
 			// ring
 			invMat = Matrix.newRotation(pRingRotation).getInverse()
-			
 			count = pCalibrateBonesRing.getCount()
-			if count > 0
-				bone = pCalibrateBonesRing.getAt(count - 1) cast String
-				indexBone = component.indexOfBoneNamed(bone)
-				if indexBone != -1
-					pCalibrateRotationRing.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-					
-				else
-					pCalibrateRotationRing.add(Vector.new())
-				end
-			end
-			
-			if count > 1
-				bone = pCalibrateBonesRing.getAt(count - 2) cast String
-				indexBone = component.indexOfBoneNamed(bone)
-				if indexBone != -1
-					pCalibrateRotationRing.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-					
-				else
-					pCalibrateRotationRing.add(Vector.new())
+			for i = 0 to 3
+				if count > i
+					bone = pCalibrateBonesRing.getAt(count - i - 1) cast String
+					indexBone = component.indexOfBoneNamed(bone)
+					if indexBone != -1
+						pCalibrateRotationRing.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
+						
+					else
+						pCalibrateRotationRing.add(Vector.new())
+					end
 				end
 			end
 			
 			// pinky
 			invMat = Matrix.newRotation(pPinkyRotation).getInverse()
-			
 			count = pCalibrateBonesPinky.getCount()
-			if count > 0
-				bone = pCalibrateBonesPinky.getAt(count - 1) cast String
-				indexBone = component.indexOfBoneNamed(bone)
-				if indexBone != -1
-					pCalibrateRotationPinky.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-					
-				else
-					pCalibrateRotationPinky.add(Vector.new())
-				end
-			end
-			
-			if count > 1
-				bone = pCalibrateBonesPinky.getAt(count - 2) cast String
-				indexBone = component.indexOfBoneNamed(bone)
-				if indexBone != -1
-					pCalibrateRotationPinky.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-					
-				else
-					pCalibrateRotationPinky.add(Vector.new())
+			for i = 0 to 3
+				if count > i
+					bone = pCalibrateBonesPinky.getAt(count - i - 1) cast String
+					indexBone = component.indexOfBoneNamed(bone)
+					if indexBone != -1
+						pCalibrateRotationPinky.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
+						
+					else
+						pCalibrateRotationPinky.add(Vector.new())
+					end
 				end
 			end
 		end

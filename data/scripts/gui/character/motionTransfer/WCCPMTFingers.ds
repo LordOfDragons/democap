@@ -34,6 +34,22 @@ pin Dragengine.Scenery
  * Edit character config window motion transfer fingers panel.
  */
 class WCCPMTFingers extends WCCPanelMotionTransfer
+	class MotionTransferRenderer extends DefaultListElementRenderer
+		func new()
+		end
+		
+		func void updateRenderer(ListBox listBox, Widget renderer, Object element, bool selected, bool focused)
+			if element != null
+				super.updateRenderer(listBox, renderer, (element cast MotionTransfer).getName(), selected, focused)
+				
+			else
+				super.updateRenderer(listBox, renderer, String.new('X', 30), selected, focused)
+			end
+		end
+	end
+	
+	
+	
 	var SharedListModel pModelListThumbTipBone
 	var DefaultTextModel pModelTextThumbTipBone
 	var SharedListModel pModelListThumbBaseBone
@@ -65,6 +81,11 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 	var SharedListModel pModelListMoveHandsClosed
 	var DefaultTextModel pModelTextMoveHandsClosed
 	
+	var EditVector pEditThumbRotation
+	var EditVector pEditIndexRotation
+	var EditVector pEditMiddleRotation
+	var EditVector pEditRingRotation
+	var EditVector pEditPinkyRotation
 	
 	
 	/** Create window. */
@@ -151,6 +172,13 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		pModelBendAngle = null
 		pModelListMoveHandsClosed = null
 		pModelTextMoveHandsClosed = null
+		
+		pEditThumbRotation = null
+		pEditIndexRotation = null
+		pEditMiddleRotation = null
+		pEditRingRotation = null
+		pEditPinkyRotation = null
+		
 		super.dispose()
 	end
 	
@@ -176,6 +204,11 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 				pModelTextTrackerSlot.setText(mt.getTracker())
 				pModelBendAngle.setText(mt.getBendAngle().toString())
 				pModelTextMoveHandsClosed.setText(mt.getMoveHandsClosed())
+				pEditThumbRotation.setVector(mt.getThumbRotation())
+				pEditIndexRotation.setVector(mt.getIndexRotation())
+				pEditMiddleRotation.setVector(mt.getMiddleRotation())
+				pEditRingRotation.setVector(mt.getRingRotation())
+				pEditPinkyRotation.setVector(mt.getPinkyRotation())
 				
 			else
 				pModelTextThumbTipBone.setText("")
@@ -191,6 +224,11 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 				pModelTextTrackerSlot.setText("")
 				pModelBendAngle.setText("")
 				pModelTextMoveHandsClosed.setText("")
+				pEditThumbRotation.setVector(Vector.new())
+				pEditIndexRotation.setVector(Vector.new())
+				pEditMiddleRotation.setVector(Vector.new())
+				pEditRingRotation.setVector(Vector.new())
+				pEditPinkyRotation.setVector(Vector.new())
 			end
 		end)
 		doLayoutIfBlocked()
@@ -217,6 +255,11 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		mt.setTracker(pModelTextTrackerSlot.getText())
 		mt.setBendAngle(pModelBendAngle.getText().toFloat())
 		mt.setMoveHandsClosed(pModelTextMoveHandsClosed.getText())
+		mt.setThumbRotation(pEditThumbRotation.getVector())
+		mt.setIndexRotation(pEditIndexRotation.getVector())
+		mt.setMiddleRotation(pEditMiddleRotation.getVector())
+		mt.setRingRotation(pEditRingRotation.getVector())
+		mt.setPinkyRotation(pEditPinkyRotation.getVector())
 	end
 	
 	/** Supports motion transfer type. */
@@ -226,12 +269,64 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 	
 	
 	
+	/** Init values for right/left hand use. */
+	func void initValues(bool rightHand)
+		var Vector v1, v2
+		
+		if rightHand
+			v1 = Vector.new(45, -90, 30)
+			v2 = Vector.new(0, -90, 90)
+			
+		else
+			v1 = Vector.new(45, 90, -30)
+			v2 = Vector.new(0, 90, -90)
+		end
+		
+		pEditThumbRotation.setVector(v1)
+		pEditIndexRotation.setVector(v2)
+		pEditMiddleRotation.setVector(v2)
+		pEditRingRotation.setVector(v2)
+		pEditPinkyRotation.setVector(v2)
+	end
+	
+	/** Mirror values from another motion transfer. */
+	func void mirrorValues()
+		var DefaultListModel model = DefaultListModel.new()
+		pWindowCharacterConfiguration.getCharacterConfiguration().getMotionTransfers().forEach(block MotionTransfer each
+			if each castable MotionTransferFingers and not each.getName().equals(pMotionTransfer.getName())
+				model.add(each)
+			end
+		end)
+		
+		if model.getCount() == 0
+			return
+		end
+		
+		WindowDialog.chooseList(getWindow(), "@UI.MirrorHand", "@UI.Message.Fingers.SelectTransfer",\
+		null, model, MotionTransferRenderer.new(), null, null, WindowDialog.BlockResultListener.new(\
+			block int result
+				if result != -1
+					var MotionTransferFingers mt = model.getAt(result) cast MotionTransferFingers
+					var Matrix matMirror = Matrix.newScaling(-1, 1, 1)
+					
+					pEditThumbRotation.setVector((Matrix.newRotation(mt.getThumbRotation()) * matMirror).normalize().getEulerAngles())
+					pEditIndexRotation.setVector((Matrix.newRotation(mt.getIndexRotation()) * matMirror).normalize().getEulerAngles())
+					pEditMiddleRotation.setVector((Matrix.newRotation(mt.getMiddleRotation()) * matMirror).normalize().getEulerAngles())
+					pEditRingRotation.setVector((Matrix.newRotation(mt.getRingRotation()) * matMirror).normalize().getEulerAngles())
+					pEditPinkyRotation.setVector((Matrix.newRotation(mt.getPinkyRotation()) * matMirror).normalize().getEulerAngles())
+				end
+			end))
+	end
+	
+	
+	
 	/** Create window content. */
 	protected func void createContent()
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var ComboBox comboBox, comboBoxTip, comboBoxBase
-		var Label labelTip, labelBase
+		var Label labelTip, labelBase, label
 		var TextField textField
+		var String toolTip
 		
 		createBaseContent("motiontransferfingers")
 		
@@ -255,6 +350,18 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
 		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
 		
+		// thumb rotation
+		toolTip = "@UI.ToolTip.FingerRotation"
+		label = Label.new("@UI.FingerRotation.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditThumbRotation = EditVector.new()
+		pEditThumbRotation.setToolTip(toolTip)
+		pPanelForm.addWidget(pEditThumbRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditThumbRotation, comboBoxBase, null, true)
+		
 		// index bone chain
 		labelTip = Label.new("@UI.IndexTipBone.Label", "Label.FormCaption.SingleLine")
 		pPanelForm.addWidget(labelTip)
@@ -274,6 +381,18 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		
 		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
 		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
+		
+		// index rotation
+		toolTip = "@UI.ToolTip.FingerRotation"
+		label = Label.new("@UI.FingerRotation.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditIndexRotation = EditVector.new()
+		pEditIndexRotation.setToolTip(toolTip)
+		pPanelForm.addWidget(pEditIndexRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditIndexRotation, comboBoxBase, null, true)
 		
 		// middle bone chain
 		labelTip = Label.new("@UI.MiddleTipBone.Label", "Label.FormCaption.SingleLine")
@@ -295,6 +414,18 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
 		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
 		
+		// middle rotation
+		toolTip = "@UI.ToolTip.FingerRotation"
+		label = Label.new("@UI.FingerRotation.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditMiddleRotation = EditVector.new()
+		pEditMiddleRotation.setToolTip(toolTip)
+		pPanelForm.addWidget(pEditMiddleRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditMiddleRotation, comboBoxBase, null, true)
+		
 		// ring bone chain
 		labelTip = Label.new("@UI.RingTipBone.Label", "Label.FormCaption.SingleLine")
 		pPanelForm.addWidget(labelTip)
@@ -315,6 +446,18 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
 		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
 		
+		// ring rotation
+		toolTip = "@UI.ToolTip.FingerRotation"
+		label = Label.new("@UI.FingerRotation.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditRingRotation = EditVector.new()
+		pEditRingRotation.setToolTip(toolTip)
+		pPanelForm.addWidget(pEditRingRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditRingRotation, comboBoxBase, null, true)
+		
 		// pinky bone chain
 		labelTip = Label.new("@UI.PinkyTipBone.Label", "Label.FormCaption.SingleLine")
 		pPanelForm.addWidget(labelTip)
@@ -334,6 +477,18 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		
 		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
 		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
+		
+		// pinky rotation
+		toolTip = "@UI.ToolTip.FingerRotation"
+		label = Label.new("@UI.FingerRotation.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditPinkyRotation = EditVector.new()
+		pEditPinkyRotation.setToolTip(toolTip)
+		pPanelForm.addWidget(pEditPinkyRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditPinkyRotation, comboBoxBase, null, true)
 		
 		// tracker slot
 		pPanelForm.addWidget(Label.new("@UI.TrackerSlot.Label", "Label.FormCaption.SingleLine"))
@@ -359,5 +514,22 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.MoveHandsClosed")
 		pPanelForm.addWidget(comboBox)
+	end
+	
+	protected func void onPanelContextMenu(MenuPopup menu)
+		var MenuItemCommand item = MenuItemCommand.new("@UI.InitRightHand", BlockActionListener.new(block ActionEvent event
+			initValues(true)
+		end))
+		menu.addWidget(item)
+		
+		item = MenuItemCommand.new("@UI.InitLeftHand", BlockActionListener.new(block ActionEvent event
+			initValues(false)
+		end))
+		menu.addWidget(item)
+		
+		item = MenuItemCommand.new("@UI.MirrorHand.Dialog", BlockActionListener.new(block ActionEvent event
+			mirrorValues()
+		end))
+		menu.addWidget(item)
 	end
 end

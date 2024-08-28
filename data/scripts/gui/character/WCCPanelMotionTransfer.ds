@@ -150,16 +150,39 @@ class WCCPanelMotionTransfer extends Panel
 			// name
 			p.addWidget(Label.new("@UI.Name.Label", "Label.FormCaption.SingleLine"))
 			
-			var TextField textField = TextField.new(pModelName, 15)
-			textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-			textField.setToolTip("@UI.ToolTip.MotionTransferName")
-			textField.addFocusListener(NameChangedListener.new(this, pModelName))
-			p.addWidget(textField)
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
+				var TextField textField = TextField.new(pModelName, 15)
+				textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+				textField.setToolTip("@UI.ToolTip.MotionTransferName")
+				textField.addFocusListener(NameChangedListener.new(this, pModelName))
+				p2.addWidget(textField)
+				
+				var Button button = Button.new("...", BlockActionListener.new(block ActionEvent event
+					var Widget widget = event.getSource() cast Widget
+					var MenuPopup menu = MenuPopup.new()
+					
+					onPanelContextMenu(menu)
+					
+					if menu.getWidgetCount() > 0
+						widget.getDesktop().addWindow(menu)
+						menu.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
+						
+					else
+						menu.dispose()
+					end
+				end))
+				button.setDesignerSelector("Button.Popup")
+				p2.addWidget(button)
+			end))
 		end)
 		addWidget(pPanelForm)
 	end
 	
 	/** Motion transfer changed. */
 	protected func void onMotionTransferChanged()
+	end
+	
+	/** Fill panel context menu. */
+	protected func void onPanelContextMenu(MenuPopup menu)
 	end
 end
