@@ -1,0 +1,327 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2023, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Tweak panel motion transfer.
+ */
+class WMPPTMTFingers extends WMPPMotionTransfer
+	class ThumbBendStrengthChanged extends DefaultRangeModelListener
+		protected var WMPPTMTFingers pPanel
+		
+		func new(WMPPTMTFingers panel)
+			pPanel = panel
+		end
+		
+		func void valueChanged(RangeModel rangeModel)
+			pPanel.onThumbBendStrengthChanged()
+		end
+	end
+	
+	class IndexBendStrengthChanged extends DefaultRangeModelListener
+		protected var WMPPTMTFingers pPanel
+		
+		func new(WMPPTMTFingers panel)
+			pPanel = panel
+		end
+		
+		func void valueChanged(RangeModel rangeModel)
+			pPanel.onIndexBendStrengthChanged()
+		end
+	end
+	
+	class MiddleBendStrengthChanged extends DefaultRangeModelListener
+		protected var WMPPTMTFingers pPanel
+		
+		func new(WMPPTMTFingers panel)
+			pPanel = panel
+		end
+		
+		func void valueChanged(RangeModel rangeModel)
+			pPanel.onMiddleBendStrengthChanged()
+		end
+	end
+	
+	class RingBendStrengthChanged extends DefaultRangeModelListener
+		protected var WMPPTMTFingers pPanel
+		
+		func new(WMPPTMTFingers panel)
+			pPanel = panel
+		end
+		
+		func void valueChanged(RangeModel rangeModel)
+			pPanel.onRingBendStrengthChanged()
+		end
+	end
+	
+	class PinkyBendStrengthChanged extends DefaultRangeModelListener
+		protected var WMPPTMTFingers pPanel
+		
+		func new(WMPPTMTFingers panel)
+			pPanel = panel
+		end
+		
+		func void valueChanged(RangeModel rangeModel)
+			pPanel.onPinkyBendStrengthChanged()
+		end
+	end
+	
+	
+	
+	var DefaultRangeModel pModelThumbBendStrength
+	var DefaultRangeModel pModelIndexBendStrength
+	var DefaultRangeModel pModelMiddleBendStrength
+	var DefaultRangeModel pModelRingBendStrength
+	var DefaultRangeModel pModelPinkyBendStrength
+	
+	
+	
+	/** Create panel. */
+	func new(WMPPanelTweaking panelTweaking) super(panelTweaking)
+		pModelTypeName.setText("@UI.Fingers")
+		
+		pModelThumbBendStrength = DefaultRangeModel.new(0, 100, 25, 100, 5)
+		pModelIndexBendStrength = DefaultRangeModel.new(0, 100, 25, 100, 5)
+		pModelMiddleBendStrength = DefaultRangeModel.new(0, 100, 25, 100, 5)
+		pModelRingBendStrength = DefaultRangeModel.new(0, 100, 25, 100, 5)
+		pModelPinkyBendStrength = DefaultRangeModel.new(0, 100, 25, 100, 5)
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+		
+		pModelThumbBendStrength.addListener(ThumbBendStrengthChanged.new(this))
+		pModelIndexBendStrength.addListener(IndexBendStrengthChanged.new(this))
+		pModelMiddleBendStrength.addListener(MiddleBendStrengthChanged.new(this))
+		pModelRingBendStrength.addListener(RingBendStrengthChanged.new(this))
+		pModelPinkyBendStrength.addListener(PinkyBendStrengthChanged.new(this))
+	end
+	
+	/** Dispose of panel. */
+	func void dispose()
+		pModelThumbBendStrength = null
+		pModelIndexBendStrength = null
+		pModelMiddleBendStrength = null
+		pModelRingBendStrength = null
+		pModelPinkyBendStrength = null
+		super.dispose()
+	end
+	
+	
+	
+	func void onTweaked()
+		if pMotionTransfer == null
+			return
+		end
+		
+		runWhileBlockingLayout(block
+			var MotionTransferFingers mt = pMotionTransfer cast MotionTransferFingers
+			pModelThumbBendStrength.setValue((mt.getThumbBendStrength() * 100 + 0.5) cast int)
+			pModelIndexBendStrength.setValue((mt.getIndexBendStrength() * 100 + 0.5) cast int)
+			pModelMiddleBendStrength.setValue((mt.getMiddleBendStrength() * 100 + 0.5) cast int)
+			pModelRingBendStrength.setValue((mt.getRingBendStrength() * 100 + 0.5) cast int)
+			pModelPinkyBendStrength.setValue((mt.getPinkyBendStrength() * 100 + 0.5) cast int)
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	func void onThumbBendStrengthChanged()
+		var MotionTransferFingers mt = pMotionTransfer cast MotionTransferFingers
+		if mt != null
+			var float value = 0.01 * pModelThumbBendStrength.getValue()
+			if DEMath.fabs(value - mt.getThumbBendStrength()) > 0.001
+				mt.setThumbBendStrength(value)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	func void onIndexBendStrengthChanged()
+		var MotionTransferFingers mt = pMotionTransfer cast MotionTransferFingers
+		if mt != null
+			var float value = 0.01 * pModelIndexBendStrength.getValue()
+			if DEMath.fabs(value - mt.getIndexBendStrength()) > 0.001
+				mt.setIndexBendStrength(value)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	func void onMiddleBendStrengthChanged()
+		var MotionTransferFingers mt = pMotionTransfer cast MotionTransferFingers
+		if mt != null
+			var float value = 0.01 * pModelMiddleBendStrength.getValue()
+			if DEMath.fabs(value - mt.getMiddleBendStrength()) > 0.001
+				mt.setMiddleBendStrength(value)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	func void onRingBendStrengthChanged()
+		var MotionTransferFingers mt = pMotionTransfer cast MotionTransferFingers
+		if mt != null
+			var float value = 0.01 * pModelRingBendStrength.getValue()
+			if DEMath.fabs(value - mt.getRingBendStrength()) > 0.001
+				mt.setRingBendStrength(value)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	func void onPinkyBendStrengthChanged()
+		var MotionTransferFingers mt = pMotionTransfer cast MotionTransferFingers
+		if mt != null
+			var float value = 0.01 * pModelPinkyBendStrength.getValue()
+			if DEMath.fabs(value - mt.getPinkyBendStrength()) > 0.001
+				mt.setPinkyBendStrength(value)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	/** Supports motion transfer type. */
+	func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferFingers
+	end
+	
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var TextField textField
+		var Label label
+		var String toolTip
+		var Slider slider
+		
+		createBaseContent("pct_Fingers")
+		
+		// thumb bend strength
+		toolTip = "@UI.ToolTip.FingerBendStrength"
+		
+		label = Label.new("@UI.ThumbBendStrength.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+			slider = Slider.new(Orientation.horizontal, pModelThumbBendStrength)
+			slider.setToolTip(toolTip)
+			p.addWidget(slider)
+			
+			textField = TextField.new(RangeTextModel.new(pModelThumbBendStrength), 2)
+			textField.setToolTip(toolTip)
+			textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+			p.addWidget(textField)
+			textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelThumbBendStrength))
+		end))
+		
+		// index bend strength
+		toolTip = "@UI.ToolTip.FingerBendStrength"
+		
+		label = Label.new("@UI.IndexBendStrength.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+			slider = Slider.new(Orientation.horizontal, pModelIndexBendStrength)
+			slider.setToolTip(toolTip)
+			p.addWidget(slider)
+			
+			textField = TextField.new(RangeTextModel.new(pModelIndexBendStrength), 2)
+			textField.setToolTip(toolTip)
+			textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+			p.addWidget(textField)
+			textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelIndexBendStrength))
+		end))
+		
+		// middle bend strength
+		toolTip = "@UI.ToolTip.FingerBendStrength"
+		
+		label = Label.new("@UI.MiddleBendStrength.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+			slider = Slider.new(Orientation.horizontal, pModelMiddleBendStrength)
+			slider.setToolTip(toolTip)
+			p.addWidget(slider)
+			
+			textField = TextField.new(RangeTextModel.new(pModelMiddleBendStrength), 2)
+			textField.setToolTip(toolTip)
+			textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+			p.addWidget(textField)
+			textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelMiddleBendStrength))
+		end))
+		
+		// ring bend strength
+		toolTip = "@UI.ToolTip.FingerBendStrength"
+		
+		label = Label.new("@UI.RingBendStrength.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+			slider = Slider.new(Orientation.horizontal, pModelRingBendStrength)
+			slider.setToolTip(toolTip)
+			p.addWidget(slider)
+			
+			textField = TextField.new(RangeTextModel.new(pModelRingBendStrength), 2)
+			textField.setToolTip(toolTip)
+			textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+			p.addWidget(textField)
+			textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelRingBendStrength))
+		end))
+		
+		// pinky bend strength
+		toolTip = "@UI.ToolTip.FingerBendStrength"
+		
+		label = Label.new("@UI.PinkyBendStrength.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+			slider = Slider.new(Orientation.horizontal, pModelPinkyBendStrength)
+			slider.setToolTip(toolTip)
+			p.addWidget(slider)
+			
+			textField = TextField.new(RangeTextModel.new(pModelPinkyBendStrength), 2)
+			textField.setToolTip(toolTip)
+			textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+			p.addWidget(textField)
+			textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelPinkyBendStrength))
+		end))
+	end
+end

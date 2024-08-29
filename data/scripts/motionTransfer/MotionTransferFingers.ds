@@ -75,6 +75,7 @@ class MotionTransferFingers extends DefaultMotionTransfer
 	var float pBendAngle
 	var String pMoveHandsClosed
 	var Vector pThumbRotation, pIndexRotation, pMiddleRotation, pRingRotation, pPinkyRotation
+	var float pThumbBendStrength, pIndexBendStrength, pMiddleBendStrength, pRingBendStrength, pPinkyBendStrength
 	
 	var Array pCalibrateBonesThumb, pCalibrateBonesIndex, pCalibrateBonesMiddle,\
 		pCalibrateBonesRing, pCalibrateBonesPinky
@@ -98,6 +99,11 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		pMiddleRotation = Vector.new()
 		pRingRotation = Vector.new()
 		pPinkyRotation = Vector.new()
+		pThumbBendStrength = 1
+		pIndexBendStrength = 1
+		pMiddleBendStrength = 1
+		pRingBendStrength = 1
+		pPinkyBendStrength = 1
 		pCalibrateBonesThumb = Array.new()
 		pCalibrateBonesIndex = Array.new()
 		pCalibrateBonesMiddle = Array.new()
@@ -130,6 +136,11 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		pMiddleRotation = transfer.pMiddleRotation
 		pRingRotation = transfer.pRingRotation
 		pPinkyRotation = transfer.pPinkyRotation
+		pThumbBendStrength = transfer.pThumbBendStrength
+		pIndexBendStrength = transfer.pIndexBendStrength
+		pMiddleBendStrength = transfer.pMiddleBendStrength
+		pRingBendStrength = transfer.pRingBendStrength
+		pPinkyBendStrength = transfer.pPinkyBendStrength
 		pCalibrateBonesThumb = Array.new(transfer.pCalibrateBonesThumb)
 		pCalibrateBonesIndex = Array.new(transfer.pCalibrateBonesIndex)
 		pCalibrateBonesMiddle = Array.new(transfer.pCalibrateBonesMiddle)
@@ -380,6 +391,56 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		pPinkyRotation = rotation
 	end
 	
+	/** Thumb bend strength. */
+	func float getThumbBendStrength()
+		return pThumbBendStrength
+	end
+	
+	/** Set thumb bend strength. */
+	func void setThumbBendStrength(float strength)
+		pThumbBendStrength = DEMath.clamp(strength, 0.0, 1.0)
+	end
+	
+	/** Index bend strength. */
+	func float getIndexBendStrength()
+		return pIndexBendStrength
+	end
+	
+	/** Set index bend strength. */
+	func void setIndexBendStrength(float strength)
+		pIndexBendStrength = DEMath.clamp(strength, 0.0, 1.0)
+	end
+	
+	/** Middle bend strength. */
+	func float getMiddleBendStrength()
+		return pMiddleBendStrength
+	end
+	
+	/** Set middle bend strength. */
+	func void setMiddleBendStrength(float strength)
+		pMiddleBendStrength = DEMath.clamp(strength, 0.0, 1.0)
+	end
+	
+	/** Ring bend strength. */
+	func float getRingBendStrength()
+		return pRingBendStrength
+	end
+	
+	/** Set ring bend strength. */
+	func void setRingBendStrength(float strength)
+		pRingBendStrength = DEMath.clamp(strength, 0.0, 1.0)
+	end
+	
+	/** Pinky bend strength. */
+	func float getPinkyBendStrength()
+		return pPinkyBendStrength
+	end
+	
+	/** Set pinky bend strength. */
+	func void setPinkyBendStrength(float strength)
+		pPinkyBendStrength = DEMath.clamp(strength, 0.0, 1.0)
+	end
+	
 	
 	
 	/** Init element clas. */
@@ -395,74 +456,74 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
 		var AnimatorDefinition adef = config.getAnimatorDefinition()
 		
-		if pMoveHandsClosed.empty()
-			if pCalibrateBonesThumb.getCount() > 0
-				if pMoveHandsClosed.empty()
-					addRules(adef, behavior.getControllerNameThumb(), behavior.getControllerNameThumb2(),\
-						behavior.getControllerNameThumb3(), pCalibrateBonesThumb, pCalibrateRotationThumb)
-					
-				else
-					addRules(adef, behavior.getControllerNameThumb(), pCalibrateBonesThumb)
-				end
-				if recordAnimation != null
-					recordAnimation.addBones(pCalibrateBonesThumb)
-				end
+		if pCalibrateBonesThumb.getCount() > 0
+			if pMoveHandsClosed.empty()
+				addRules(adef, behavior.getControllerNameThumb(), behavior.getControllerNameThumb2(),\
+					behavior.getControllerNameThumb3(), behavior.getControllerNameThumbStrength(),\
+					pCalibrateBonesThumb, pCalibrateRotationThumb)
+				
+			else
+				addRules(adef, behavior.getControllerNameThumb(), pCalibrateBonesThumb)
 			end
-			
-			if pCalibrateBonesIndex.getCount() > 0
-				if pMoveHandsClosed.empty()
-					addRules(adef, behavior.getControllerNameIndex(), behavior.getControllerNameIndex2(),\
-						behavior.getControllerNameIndex3(), pCalibrateBonesIndex, pCalibrateRotationIndex)
-					
-				else
-					addRules(adef, behavior.getControllerNameIndex(), pCalibrateBonesThumb)
-				end
-				if recordAnimation != null
-					recordAnimation.addBones(pCalibrateBonesIndex)
-				end
+			if recordAnimation != null
+				recordAnimation.addBones(pCalibrateBonesThumb)
 			end
-			
-			if pCalibrateBonesMiddle.getCount() > 0
-				if pMoveHandsClosed.empty()
-					addRules(adef, behavior.getControllerNameMiddle(), behavior.getControllerNameIndex2(),\
-						behavior.getControllerNameIndex3(), pCalibrateBonesMiddle, pCalibrateRotationMiddle)
-					
-				else
-					addRules(adef, behavior.getControllerNameMiddle(), pCalibrateBonesThumb)
-				end
-				if recordAnimation != null
-					recordAnimation.addBones(pCalibrateBonesMiddle)
-				end
+		end
+		
+		if pCalibrateBonesIndex.getCount() > 0
+			if pMoveHandsClosed.empty()
+				addRules(adef, behavior.getControllerNameIndex(), behavior.getControllerNameIndex2(),\
+					behavior.getControllerNameIndex3(), behavior.getControllerNameIndexStrength(),\
+					pCalibrateBonesIndex, pCalibrateRotationIndex)
+				
+			else
+				addRules(adef, behavior.getControllerNameIndex(), pCalibrateBonesThumb)
 			end
-			
-			if pCalibrateBonesRing.getCount() > 0
-				if pMoveHandsClosed.empty()
-					addRules(adef, behavior.getControllerNameRing(), behavior.getControllerNameRing2(),\
-						behavior.getControllerNameRing3(), pCalibrateBonesRing, pCalibrateRotationRing)
-					
-				else
-					addRules(adef, behavior.getControllerNameRing(), pCalibrateBonesThumb)
-				end
-				if recordAnimation != null
-					recordAnimation.addBones(pCalibrateBonesRing)
-				end
+			if recordAnimation != null
+				recordAnimation.addBones(pCalibrateBonesIndex)
 			end
-			
-			if pCalibrateBonesPinky.getCount() > 0
-				if pMoveHandsClosed.empty()
-					addRules(adef, behavior.getControllerNamePinky(), behavior.getControllerNamePinky2(),\
-						behavior.getControllerNamePinky3(), pCalibrateBonesPinky, pCalibrateRotationPinky)
-					
-				else
-					addRules(adef, behavior.getControllerNamePinky(), pCalibrateBonesThumb)
-				end
-				if recordAnimation != null
-					recordAnimation.addBones(pCalibrateBonesPinky)
-				end
+		end
+		
+		if pCalibrateBonesMiddle.getCount() > 0
+			if pMoveHandsClosed.empty()
+				addRules(adef, behavior.getControllerNameMiddle(), behavior.getControllerNameMiddle2(),\
+					behavior.getControllerNameMiddle3(), behavior.getControllerNameMiddleStrength(),\
+					pCalibrateBonesMiddle, pCalibrateRotationMiddle)
+				
+			else
+				addRules(adef, behavior.getControllerNameMiddle(), pCalibrateBonesThumb)
 			end
-			
-		else
-			
+			if recordAnimation != null
+				recordAnimation.addBones(pCalibrateBonesMiddle)
+			end
+		end
+		
+		if pCalibrateBonesRing.getCount() > 0
+			if pMoveHandsClosed.empty()
+				addRules(adef, behavior.getControllerNameRing(), behavior.getControllerNameRing2(),\
+					behavior.getControllerNameRing3(), behavior.getControllerNameRingStrength(),\
+					pCalibrateBonesRing, pCalibrateRotationRing)
+				
+			else
+				addRules(adef, behavior.getControllerNameRing(), pCalibrateBonesThumb)
+			end
+			if recordAnimation != null
+				recordAnimation.addBones(pCalibrateBonesRing)
+			end
+		end
+		
+		if pCalibrateBonesPinky.getCount() > 0
+			if pMoveHandsClosed.empty()
+				addRules(adef, behavior.getControllerNamePinky(), behavior.getControllerNamePinky2(),\
+					behavior.getControllerNamePinky3(), behavior.getControllerNamePinkyStrength(),\
+					pCalibrateBonesPinky, pCalibrateRotationPinky)
+				
+			else
+				addRules(adef, behavior.getControllerNamePinky(), pCalibrateBonesThumb)
+			end
+			if recordAnimation != null
+				recordAnimation.addBones(pCalibrateBonesPinky)
+			end
 		end
 	end
 	
@@ -477,11 +538,22 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		return controller
 	end
 	
-	/** Add animator definition link. */
 	protected func ADLink addADLink(AnimatorDefinition adef, ADController controller)
 		var ADLink link = ADLink.new()
 		link.setController(controller)
 		link.setCurve(CurveBezier.newDefaultLinear()) // TODO set curve from calibrated finger bending
+		adef.addLink(link)
+		return link
+	end
+	
+	protected func ADLink addADLink(AnimatorDefinition adef, ADController controller, float factor)
+		var ADLink link = ADLink.new()
+		link.setController(controller)
+		var CurveBezier curve = CurveBezier.new()
+		curve.setInterpolationMode(CurveBezierInterpolation.linear)
+		curve.addPoint(Vector2.new())
+		curve.addPoint(Vector2.new(1, factor))
+		link.setCurve(curve)
 		adef.addLink(link)
 		return link
 	end
@@ -501,8 +573,8 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		adef.addRule(rule)
 	end
 	
-	protected func void addRules(AnimatorDefinition adef, String controllerName1,\
-	String controllerName2, String controllerName3, Array bones, Array rotations)
+	protected func void addRules(AnimatorDefinition adef, String controllerName1, String controllerName2,\
+	String controllerName3, String controllerNameStrength, Array bones, Array rotations)
 		/*
 		var ADRuleBoneTransformator rule = ADRuleBoneTransformator.new()
 		rule.setName(link.getController().getName())
@@ -513,7 +585,15 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		adrule = rule
 		*/
 		
+		var ADController controllerStrength = addADController(adef, controllerNameStrength, 0, 1)
+		var ADLink linkStrength = addADLink(adef, controllerStrength)
+		var int boneCount = bones.getCount()
+		
 		// segment 1
+		if boneCount < 1
+			return
+		end
+		
 		var ADController controller = addADController(adef, controllerName1, 0, 1)
 		var ADLink link = addADLink(adef, controller)
 		
@@ -523,10 +603,15 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		rule.setAdjustPosition(false)
 		rule.setLocalOrientation(rotations.getAt(0) cast Vector)
 		rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, link))
-		rule.addBone(bones.getAt(0) cast String)
+		rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.blendFactor, linkStrength))
+		rule.addBone(bones.getAt(boneCount - 1) cast String)
 		adef.addRule(rule)
 		
 		// segment 2
+		if boneCount < 2
+			return
+		end
+		
 		controller = addADController(adef, controllerName2, 0, 1)
 		link = addADLink(adef, controller)
 		
@@ -536,40 +621,34 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		rule.setAdjustPosition(false)
 		rule.setLocalOrientation(rotations.getAt(1) cast Vector)
 		rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, link))
+		rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.blendFactor, linkStrength))
 		
-		rule.addBone(bones.getAt(1) cast String)
+		rule.addBone(bones.getAt(boneCount - 2) cast String)
 		adef.addRule(rule)
 		
-		// segment 3
+		// segment 3 and higher. the orientation has to be spread evenly across them
+		if boneCount < 3
+			return
+		end
+		
+		var float factor = 1.0 / (boneCount - 2)
+		
 		controller = addADController(adef, controllerName3, 0, 1)
 		link = addADLink(adef, controller)
 		
-		rule = ADRuleInverseKinematic.new()
-		rule.setName(controllerName3)
-		rule.setAdjustOrientation(true)
-		rule.setAdjustPosition(false)
-		rule.setLocalOrientation(rotations.getAt(2) cast Vector)
-		rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, link))
-		
-		rule.addBone(bones.getAt(2) cast String)
-		bones.forEach(3, bones.getCount(), block String each
-			rule.addBone(each)
-		end)
-		
-		adef.addRule(rule)
-		
-		// segments 4 and more
-		var ADRuleForeignState rule2
-		
-		bones.forEach(3, bones.getCount(), block String each
-			rule2 = ADRuleForeignState.new()
-			rule2.setName(controllerName3)
-			rule2.setBlendMode(AnimatorRuleBlendMode.overlay)
-			rule2.setEnablePosition(false)
-			rule2.setEnableVertexPositionSet(false)
-			rule2.setForeignBone(each)
-			rule2.addBone(each)
-			adef.addRule(rule2)
+		rotations.forEach(2, boneCount, block int index, Vector rotation
+			linkStrength = addADLink(adef, controllerStrength, factor * (index - 1))
+			
+			rule = ADRuleInverseKinematic.new()
+			rule.setName(controllerName3)
+			rule.setAdjustOrientation(true)
+			rule.setAdjustPosition(false)
+			rule.setLocalOrientation(rotation)
+			rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, link))
+			rule.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.blendFactor, linkStrength))
+			rule.addBone(bones.getAt(boneCount - 1 - index) cast String)
+			
+			adef.addRule(rule)
 		end)
 	end
 	
@@ -602,90 +681,68 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		pTrackerSlot = config.getTrackerSlots().getNamed(pTracker)
 		
 		if pMoveHandsClosed.empty()
-			var int count, indexBone
+			var int indexBone
 			var Matrix invMat
-			var String bone
-			var int i
 			
 			// thumb
 			invMat = Matrix.newRotation(pThumbRotation).getInverse()
-			count = pCalibrateBonesThumb.getCount()
-			for i = 0 to 3
-				if count > i
-					bone = pCalibrateBonesThumb.getAt(count - i - 1) cast String
-					indexBone = component.indexOfBoneNamed(bone)
-					if indexBone != -1
-						pCalibrateRotationThumb.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-						
-					else
-						pCalibrateRotationThumb.add(Vector.new())
-					end
+			pCalibrateBonesThumb.forEachReverse(block String bone
+				indexBone = component.indexOfBoneNamed(bone)
+				if indexBone != -1
+					pCalibrateRotationThumb.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
+					
+				else
+					pCalibrateRotationThumb.add(Vector.new())
 				end
-			end
+			end)
 			
 			// index
 			invMat = Matrix.newRotation(pIndexRotation).getInverse()
-			count = pCalibrateBonesIndex.getCount()
-			for i = 0 to 3
-				if count > i
-					bone = pCalibrateBonesIndex.getAt(count - i - 1) cast String
-					indexBone = component.indexOfBoneNamed(bone)
-					if indexBone != -1
-						pCalibrateRotationIndex.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-						
-					else
-						pCalibrateRotationIndex.add(Vector.new())
-					end
+			pCalibrateBonesIndex.forEachReverse(block String bone
+				indexBone = component.indexOfBoneNamed(bone)
+				if indexBone != -1
+					pCalibrateRotationIndex.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
+					
+				else
+					pCalibrateRotationIndex.add(Vector.new())
 				end
-			end
+			end)
 			
 			// middle
 			invMat = Matrix.newRotation(pMiddleRotation).getInverse()
-			count = pCalibrateBonesMiddle.getCount()
-			for i = 0 to 3
-				if count > i
-					bone = pCalibrateBonesMiddle.getAt(count - i - 1) cast String
-					indexBone = component.indexOfBoneNamed(bone)
-					if indexBone != -1
-						pCalibrateRotationMiddle.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-						
-					else
-						pCalibrateRotationMiddle.add(Vector.new())
-					end
+			pCalibrateBonesMiddle.forEachReverse(block String bone
+				indexBone = component.indexOfBoneNamed(bone)
+				if indexBone != -1
+					pCalibrateRotationMiddle.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
+					
+				else
+					pCalibrateRotationMiddle.add(Vector.new())
 				end
-			end
+			end)
 			
 			// ring
 			invMat = Matrix.newRotation(pRingRotation).getInverse()
-			count = pCalibrateBonesRing.getCount()
-			for i = 0 to 3
-				if count > i
-					bone = pCalibrateBonesRing.getAt(count - i - 1) cast String
-					indexBone = component.indexOfBoneNamed(bone)
-					if indexBone != -1
-						pCalibrateRotationRing.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-						
-					else
-						pCalibrateRotationRing.add(Vector.new())
-					end
+			pCalibrateBonesRing.forEachReverse(block String bone
+				indexBone = component.indexOfBoneNamed(bone)
+				if indexBone != -1
+					pCalibrateRotationRing.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
+					
+				else
+					pCalibrateRotationRing.add(Vector.new())
 				end
-			end
+			end)
 			
 			// pinky
 			invMat = Matrix.newRotation(pPinkyRotation).getInverse()
-			count = pCalibrateBonesPinky.getCount()
-			for i = 0 to 3
-				if count > i
-					bone = pCalibrateBonesPinky.getAt(count - i - 1) cast String
-					indexBone = component.indexOfBoneNamed(bone)
-					if indexBone != -1
-						pCalibrateRotationPinky.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
-						
-					else
-						pCalibrateRotationPinky.add(Vector.new())
-					end
+			pCalibrateBonesPinky.forEachReverse(block String bone
+				indexBone = component.indexOfBoneNamed(bone)
+				if indexBone != -1
+					pCalibrateRotationPinky.add((component.boneGetMatrix(indexBone) * invMat).normalize().getEulerAngles())
+					
+				else
+					pCalibrateRotationPinky.add(Vector.new())
 				end
-			end
+			end)
 		end
 	end
 	
@@ -754,6 +811,21 @@ class MotionTransferFingers extends DefaultMotionTransfer
 			elif tagName.equals("pinkyRotation")
 				setPinkyRotation(loader.readVector(element))
 				
+			elif tagName.equals("thumbBendStrength")
+				pThumbBendStrength = element.getFirstCDataFloat()
+				
+			elif tagName.equals("indexBendStrength")
+				pIndexBendStrength = element.getFirstCDataFloat()
+				
+			elif tagName.equals("middleBendStrength")
+				pMiddleBendStrength = element.getFirstCDataFloat()
+				
+			elif tagName.equals("ringBendStrength")
+				pRingBendStrength = element.getFirstCDataFloat()
+				
+			elif tagName.equals("pinkyBendStrength")
+				pPinkyBendStrength = element.getFirstCDataFloat()
+				
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
 			end
@@ -821,6 +893,11 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		loader.writeVector(tag, "middleRotation", pMiddleRotation)
 		loader.writeVector(tag, "ringRotation", pRingRotation)
 		loader.writeVector(tag, "pinkyRotation", pPinkyRotation)
+		tag.addDataTag("thumbBendStrength", pThumbBendStrength)
+		tag.addDataTag("indexBendStrength", pIndexBendStrength)
+		tag.addDataTag("middleBendStrength", pMiddleBendStrength)
+		tag.addDataTag("ringBendStrength", pRingBendStrength)
+		tag.addDataTag("pinkyBendStrength", pPinkyBendStrength)
 		
 		if calibrated
 			saveCalibrated(loader, tag.addTag("calibrated"))

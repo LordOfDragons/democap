@@ -71,9 +71,15 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 	var EditVector pEditRingRotation
 	var EditVector pEditPinkyRotation
 	
+	var DefaultRangeModel pModelThumbBendStrength
+	var DefaultRangeModel pModelIndexBendStrength
+	var DefaultRangeModel pModelMiddleBendStrength
+	var DefaultRangeModel pModelRingBendStrength
+	var DefaultRangeModel pModelPinkyBendStrength
+	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window) super(window)
+	func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
 		pModelTypeName.setText("@UI.Fingers")
 		
 		pModelListThumbTipBone = SharedListModel.new(window.getModelBones())
@@ -119,8 +125,14 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		pModelListMoveHandsClosed.setAutoSelect(false)
 		pModelTextMoveHandsClosed = DefaultTextModel.new()
 		
+		pModelThumbBendStrength = DefaultRangeModel.new(0, 100, 25, 100, 5)
+		pModelIndexBendStrength = DefaultRangeModel.new(0, 100, 25, 100, 5)
+		pModelMiddleBendStrength = DefaultRangeModel.new(0, 100, 25, 100, 5)
+		pModelRingBendStrength = DefaultRangeModel.new(0, 100, 25, 100, 5)
+		pModelPinkyBendStrength = DefaultRangeModel.new(0, 100, 25, 100, 5)
+		
 		runWhileBlockingLayout(block
-			createContent()
+			createContent(optionPrefix)
 		end)
 	end
 	
@@ -163,6 +175,12 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		pEditRingRotation = null
 		pEditPinkyRotation = null
 		
+		pModelThumbBendStrength = null
+		pModelIndexBendStrength = null
+		pModelMiddleBendStrength = null
+		pModelRingBendStrength = null
+		pModelPinkyBendStrength = null
+		
 		super.dispose()
 	end
 	
@@ -193,6 +211,11 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 				pEditMiddleRotation.setVector(mt.getMiddleRotation())
 				pEditRingRotation.setVector(mt.getRingRotation())
 				pEditPinkyRotation.setVector(mt.getPinkyRotation())
+				pModelThumbBendStrength.setValue((mt.getThumbBendStrength() * 100 + 0.5) cast int)
+				pModelIndexBendStrength.setValue((mt.getIndexBendStrength() * 100 + 0.5) cast int)
+				pModelMiddleBendStrength.setValue((mt.getMiddleBendStrength() * 100 + 0.5) cast int)
+				pModelRingBendStrength.setValue((mt.getRingBendStrength() * 100 + 0.5) cast int)
+				pModelPinkyBendStrength.setValue((mt.getPinkyBendStrength() * 100 + 0.5) cast int)
 				
 			else
 				pModelTextThumbTipBone.setText("")
@@ -213,6 +236,11 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 				pEditMiddleRotation.setVector(Vector.new())
 				pEditRingRotation.setVector(Vector.new())
 				pEditPinkyRotation.setVector(Vector.new())
+				pModelThumbBendStrength.setValue(20)
+				pModelIndexBendStrength.setValue(20)
+				pModelMiddleBendStrength.setValue(20)
+				pModelRingBendStrength.setValue(20)
+				pModelPinkyBendStrength.setValue(20)
 			end
 		end)
 		doLayoutIfBlocked()
@@ -244,6 +272,11 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		mt.setMiddleRotation(pEditMiddleRotation.getVector())
 		mt.setRingRotation(pEditRingRotation.getVector())
 		mt.setPinkyRotation(pEditPinkyRotation.getVector())
+		mt.setThumbBendStrength(0.01 * pModelThumbBendStrength.getValue())
+		mt.setIndexBendStrength(0.01 * pModelIndexBendStrength.getValue())
+		mt.setMiddleBendStrength(0.01 * pModelMiddleBendStrength.getValue())
+		mt.setRingBendStrength(0.01 * pModelRingBendStrength.getValue())
+		mt.setPinkyBendStrength(0.01 * pModelPinkyBendStrength.getValue())
 	end
 	
 	/** Supports motion transfer type. */
@@ -305,12 +338,13 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent()
+	protected func void createContent(String optionPrefix)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var ComboBox comboBox, comboBoxTip, comboBoxBase
 		var Label labelTip, labelBase, label
 		var TextField textField
 		var String toolTip
+		var Slider slider
 		
 		createBaseContent("motiontransferfingers")
 		
@@ -336,7 +370,7 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		
 		// thumb rotation
 		toolTip = "@UI.ToolTip.FingerRotation"
-		label = Label.new("@UI.FingerRotation.Label", "Label.FormCaption.SingleLine")
+		label = Label.new("@UI.ThumbFingerRotation.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
@@ -368,7 +402,7 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		
 		// index rotation
 		toolTip = "@UI.ToolTip.FingerRotation"
-		label = Label.new("@UI.FingerRotation.Label", "Label.FormCaption.SingleLine")
+		label = Label.new("@UI.IndexFingerRotation.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
@@ -400,7 +434,7 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		
 		// middle rotation
 		toolTip = "@UI.ToolTip.FingerRotation"
-		label = Label.new("@UI.FingerRotation.Label", "Label.FormCaption.SingleLine")
+		label = Label.new("@UI.MiddleFingerRotation.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
@@ -432,7 +466,7 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		
 		// ring rotation
 		toolTip = "@UI.ToolTip.FingerRotation"
-		label = Label.new("@UI.FingerRotation.Label", "Label.FormCaption.SingleLine")
+		label = Label.new("@UI.RingFingerRotation.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
@@ -464,7 +498,7 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		
 		// pinky rotation
 		toolTip = "@UI.ToolTip.FingerRotation"
-		label = Label.new("@UI.FingerRotation.Label", "Label.FormCaption.SingleLine")
+		label = Label.new("@UI.PinkyFingerRotation.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
@@ -498,6 +532,105 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.MoveHandsClosed")
 		pPanelForm.addWidget(comboBox)
+		
+		// fine tuning parameters
+		addWidget(CollapsibleGroup.new("@UI.FineTuning", "motiontransferfingers#fine_tuning", CollapsibleGroup.persistModel(\
+		optionPrefix + "/GroupFineTuning", false), FormLayout.new(true, 10, 2), block Panel p
+			// thumb bend strength
+			toolTip = "@UI.ToolTip.FingerBendStrength"
+			
+			label = Label.new("@UI.ThumbBendStrength.Label", "Label.FormCaption.SingleLine")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
+				slider = Slider.new(Orientation.horizontal, pModelThumbBendStrength)
+				slider.setToolTip(toolTip)
+				p2.addWidget(slider)
+				
+				textField = TextField.new(RangeTextModel.new(pModelThumbBendStrength), 2)
+				textField.setToolTip(toolTip)
+				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+				p2.addWidget(textField)
+				textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelThumbBendStrength))
+			end))
+			
+			// index bend strength
+			toolTip = "@UI.ToolTip.FingerBendStrength"
+			
+			label = Label.new("@UI.IndexBendStrength.Label", "Label.FormCaption.SingleLine")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
+				slider = Slider.new(Orientation.horizontal, pModelIndexBendStrength)
+				slider.setToolTip(toolTip)
+				p2.addWidget(slider)
+				
+				textField = TextField.new(RangeTextModel.new(pModelIndexBendStrength), 2)
+				textField.setToolTip(toolTip)
+				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+				p2.addWidget(textField)
+				textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelIndexBendStrength))
+			end))
+			
+			// middle bend strength
+			toolTip = "@UI.ToolTip.FingerBendStrength"
+			
+			label = Label.new("@UI.MiddleBendStrength.Label", "Label.FormCaption.SingleLine")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
+				slider = Slider.new(Orientation.horizontal, pModelMiddleBendStrength)
+				slider.setToolTip(toolTip)
+				p2.addWidget(slider)
+				
+				textField = TextField.new(RangeTextModel.new(pModelMiddleBendStrength), 2)
+				textField.setToolTip(toolTip)
+				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+				p2.addWidget(textField)
+				textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelMiddleBendStrength))
+			end))
+			
+			// ring bend strength
+			toolTip = "@UI.ToolTip.FingerBendStrength"
+			
+			label = Label.new("@UI.RingBendStrength.Label", "Label.FormCaption.SingleLine")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
+				slider = Slider.new(Orientation.horizontal, pModelRingBendStrength)
+				slider.setToolTip(toolTip)
+				p2.addWidget(slider)
+				
+				textField = TextField.new(RangeTextModel.new(pModelRingBendStrength), 2)
+				textField.setToolTip(toolTip)
+				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+				p2.addWidget(textField)
+				textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelRingBendStrength))
+			end))
+			
+			// pinky bend strength
+			toolTip = "@UI.ToolTip.FingerBendStrength"
+			
+			label = Label.new("@UI.PinkyBendStrength.Label", "Label.FormCaption.SingleLine")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p2
+				slider = Slider.new(Orientation.horizontal, pModelPinkyBendStrength)
+				slider.setToolTip(toolTip)
+				p2.addWidget(slider)
+				
+				textField = TextField.new(RangeTextModel.new(pModelPinkyBendStrength), 2)
+				textField.setToolTip(toolTip)
+				textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+				p2.addWidget(textField)
+				textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelPinkyBendStrength))
+			end))
+		end))
 	end
 	
 	protected func void onPanelContextMenu(MenuPopup menu)
