@@ -24,6 +24,8 @@ namespace Democap.Elements
 pin Democap.Behaviors
 
 pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Debugging
 
 
 /**
@@ -68,5 +70,14 @@ class MoCapActor extends BaseVRActor
 		movementHelper = eclass.movementHelper.instance(this)
 		
 		recordAnimation = ECBRecordAnimation.getInstanceIn(this)
+	end
+	
+	func void init(StubElement stub)
+		super.init(stub)
+		
+		if GameApp.getGameApp().getSettings().getBoolAt("Debug/MoCapActor/Hands", false)
+			addAttachableBehavior(DebugBehaviorVRHandPose.new(getVRRightHandPose()))
+			addAttachableBehavior(DebugBehaviorVRHandPose.new(getVRLeftHandPose()))
+		end
 	end
 end
