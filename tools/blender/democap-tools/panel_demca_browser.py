@@ -266,6 +266,8 @@ class LIST_OT_DemcaBrowserImportAnimation(bpy.types.Operator):
 
         path = dtprops.browserSelectionInfo.pathAnimation
         path = Demca.getAbsPath(dtlist[index].path, path)
+        if not hasattr(bpy.types, "VIEW3D_MT_DragengineExport"):
+            raise Exception("Required extension 'dragengine-tools' not present")
         bpy.ops.dragengine.import_animation('EXEC_DEFAULT', filepath=path)
         return {'FINISHED'}
 
@@ -300,7 +302,9 @@ class LIST_OT_DemcaBrowserImportDevicesRig(bpy.types.Operator):
             return {'CANCELLED'}
 
         bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.dragengine.import_rig('EXEC_DEFAULT', filepath=Demca.getAbsPath(
+        if not hasattr(bpy.types, "VIEW3D_MT_DragengineExport"):
+            raise Exception("Required extension 'dragengine-tools' not present")
+        bpy.ops.dragengine.import_animation('EXEC_DEFAULT', filepath=Demca.getAbsPath(
             dtlist[index].path, dtprops.browserSelectionInfo.pathDevicesRig))
         return {'FINISHED'}
 
@@ -341,6 +345,8 @@ class LIST_OT_DemcaBrowserImportDevicesAnimation(bpy.types.Operator):
 
         path = dtprops.browserSelectionInfo.pathDevicesAnimation
         path = Demca.getAbsPath(dtlist[index].path, path)
+        if not hasattr(bpy.types, "VIEW3D_MT_DragengineExport"):
+            raise Exception("Required extension 'dragengine-tools' not present")
         bpy.ops.dragengine.import_animation('EXEC_DEFAULT', filepath=path)
         return {'FINISHED'}
 
@@ -375,6 +381,8 @@ class LIST_OT_DemcaBrowserImportObjectRig(bpy.types.Operator):
             return {'CANCELLED'}
 
         bpy.ops.object.mode_set(mode='OBJECT')
+        if not hasattr(bpy.types, "VIEW3D_MT_DragengineExport"):
+            raise Exception("Required extension 'dragengine-tools' not present")
         bpy.ops.dragengine.import_rig('EXEC_DEFAULT', filepath=Demca.getAbsPath(
             dtlist[index].path, dtprops.browserSelectionInfo.pathObjectRig))
         return {'FINISHED'}
@@ -416,6 +424,8 @@ class LIST_OT_DemcaBrowserImportObjectAnimation(bpy.types.Operator):
 
         path = dtprops.browserSelectionInfo.pathObjectAnimation
         path = Demca.getAbsPath(dtlist[index].path, path)
+        if not hasattr(bpy.types, "VIEW3D_MT_DragengineExport"):
+            raise Exception("Required extension 'dragengine-tools' not present")
         bpy.ops.dragengine.import_animation('EXEC_DEFAULT', filepath=path)
         return {'FINISHED'}
 

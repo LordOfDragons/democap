@@ -32,8 +32,6 @@ from .panel_live import panelLiveRegister
 from .utils import registerKnownClasses, unregisterRegisteredClasses, delog
 from .version import addonVersion
 
-from . import DEAddonImportExport as deaie
-
 delog("Version {}".format(addonVersion))
 
 bl_info = {
@@ -55,7 +53,6 @@ bl_info = {
 def register():
     """ Register add-on. """
     delog("Register classes")
-    deaie.register()
     Configuration.get()
     panelDemcaBrowserRegister()
     panelCorrectionBonesRegister()
@@ -66,4 +63,3 @@ def register():
 def unregister():
     """ Unregister add-on. """
     unregisterRegisteredClasses()
-    deaie.unregister()
