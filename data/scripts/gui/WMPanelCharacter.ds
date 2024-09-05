@@ -367,9 +367,7 @@ class WMPanelCharacter extends Panel
 	
 	
 	
-	protected var DefaultListModel pModelActorProfiles
-	protected var DefaultListModel pModelCharacterProfiles
-	protected var DefaultListModel pModelCharacterConfigurations
+	protected var DefaultListModel pModelActorProfiles, pModelCharacterProfiles, pModelCharacterConfigurations
 	protected var ListenCharacterConfigurations pListenCharacterConfigurations
 	protected var ListenActorProfiles pListenActorProfiles
 	protected var ListenCharacterProfiles pListenCharacterProfiles
@@ -412,9 +410,7 @@ class WMPanelCharacter extends Panel
 		setCharacterProfile(null)
 		setActorProfile(null)
 		
-		pModelActorProfiles = null
-		pModelCharacterProfiles = null
-		pModelCharacterConfigurations = null
+		pModelActorProfiles = pModelCharacterProfiles = pModelCharacterConfigurations = null
 		pListenCharacterConfigurations = null
 		
 		if pListenActorProfiles != null
@@ -919,7 +915,10 @@ class WMPanelCharacter extends Panel
 	
 	/** Create panel content. */
 	protected func void createContent()
+		var SessionSettings settings = SessionSettings.get()
 		var Button button
+		var Slider slider
+		var ProgressBar progressBar
 		
 		setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
@@ -994,6 +993,29 @@ class WMPanelCharacter extends Panel
 			end))
 			button.setToolTip("@UI.ToolTip.ResetCharacter")
 			p.addWidget(button)
+		end))
+		
+		addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			p.addWidget(Label.new("@UI.CalibratePrepareTimeout", "Label.FormCaption.SingleLine"))
+			
+			slider = Slider.new(Orientation.horizontal, settings.getModelCalibratePrepareTimeout())
+			slider.setShowTicks(true)
+			slider.setToolTip("@UI.ToolTip.CalibratePrepareTimeout")
+			p.addWidget(slider)
+		end))
+		
+		addWidget(Panel.new(FlowLayout, block Panel p
+			progressBar = ProgressBar.new(Orientation.horizontal, settings.getModelCalibrateProgressPrepare())
+			progressBar.setDesignerSelector("ProgressBar.WMPanelCharacter.CalibratePrepare")
+			progressBar.setShowPercentage(false)
+			progressBar.setToolTip("@UI.ToolTip.CalibrateCharacterProgressPrepare")
+			p.addWidget(progressBar)
+			
+			progressBar = ProgressBar.new(Orientation.horizontal, settings.getModelCalibrateProgress())
+			progressBar.setDesignerSelector("ProgressBar.WMPanelCharacter.Calibrate")
+			progressBar.setShowPercentage(false)
+			progressBar.setToolTip("@UI.ToolTip.CalibrateCharacterProgress")
+			p.addWidget(progressBar)
 		end))
 		
 		addWidget(WMPPanelTweaking.new(this))

@@ -296,6 +296,8 @@ class SessionSettings
 	var DefaultRangeModel pModelVRMenuScale
 	var DefaultToggleModel pModelVRMenuWide
 	
+	var DefaultRangeModel pModelCalibratePrepareTimeout, pModelCalibrateProgress, pModelCalibrateProgressPrepare
+	
 	var DefaultTextModel pModelServerAddress
 	
 	var DefaultListModel pModelLanguage
@@ -394,6 +396,13 @@ class SessionSettings
 		pModelLanguage = DefaultListModel.new()
 		reloadLanguages()
 		pModelLanguage.addListener(SaveLanguageChanged.new("Language"))
+		
+		pModelCalibratePrepareTimeout = DefaultRangeModel.new(0, 10, 2, 1, 1)
+		pModelCalibratePrepareTimeout.setValue(s.getIntAt("CalibratePrepareTimeout", 1))
+		pModelCalibratePrepareTimeout.addListener(SaveRangeModelChanged.new("CalibratePrepareTimeout", 1))
+		
+		pModelCalibrateProgress = DefaultRangeModel.new(0, 100, 20, 0, 1)
+		pModelCalibrateProgressPrepare = DefaultRangeModel.new(0, 100, 20, 0, 1)
 	end
 	
 	
@@ -633,6 +642,28 @@ class SessionSettings
 	/** VR menu wide. */
 	func bool getVRMenuWide()
 		return pModelVRMenuWide.getToggled()
+	end
+	
+	
+	
+	/** Calibrate prepare timeout model. */
+	func DefaultRangeModel getModelCalibratePrepareTimeout()
+		return pModelCalibratePrepareTimeout
+	end
+	
+	/** Calibrate prepare timeout. */
+	func float getCalibratePrepareTimeout()
+		return pModelCalibratePrepareTimeout.getValue() cast float
+	end
+	
+	/** Calibrate progress model. */
+	func DefaultRangeModel getModelCalibrateProgress()
+		return pModelCalibrateProgress
+	end
+	
+	/** Calibrate progress prepare model. */
+	func DefaultRangeModel getModelCalibrateProgressPrepare()
+		return pModelCalibrateProgressPrepare
 	end
 	
 	

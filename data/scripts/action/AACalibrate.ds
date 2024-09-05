@@ -45,7 +45,6 @@ class AACalibrate extends AABase
 	
 	protected var ECBVRHudInfo.Instance vrHudInfo
 	protected var Panel panelCalibrate
-	protected var RangeModel modelProgress
 	protected var State state
 	protected var float calibrateElapsed
 	protected var float calibrateDelayTime
@@ -90,15 +89,19 @@ class AACalibrate extends AABase
 		character.resetCalibration(actor cast BaseVRActor, true)
 		
 		if vrHudInfo != null
-			modelProgress = DefaultRangeModel.new(0, 100, 1, 0, 1)
-			
 			panelCalibrate = Panel.new(StackLayout.new(), block Panel p
 				p.setDesignerSelector("Panel.HudInfo.Calibrate")
 				
 				p.addWidget(DisplayRotatingImage.new(Image.new("/content/gui/images/calibrate.png")))
 				
 				p.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.y, 0.5, 0.615), block Panel p2
-					var ProgressBar progressBar = ProgressBar.new(Orientation.horizontal, modelProgress)
+					var ProgressBar progressBar = ProgressBar.new(Orientation.horizontal,\
+						SessionSettings.get().getModelCalibrateProgressPrepare())
+					progressBar.setDesignerSelector("ProgressBar.HudInfo.CalibratePrepare")
+					progressBar.setShowPercentage(false)
+					p2.addWidget(progressBar)
+					
+					progressBar = ProgressBar.new(Orientation.horizontal, SessionSettings.get().getModelCalibrateProgress())
 					progressBar.setDesignerSelector("ProgressBar.HudInfo.Calibrate")
 					progressBar.setShowPercentage(false)
 					p2.addWidget(progressBar)
@@ -117,7 +120,8 @@ class AACalibrate extends AABase
 			panelCalibrate = null
 		end
 		
-		modelProgress = null
+		SessionSettings.get().getModelCalibrateProgress().setValue(0)
+		SessionSettings.get().getModelCalibrateProgressPrepare().setValue(0)
 		
 		showActorModel()
 	end
@@ -143,6 +147,7 @@ class AACalibrate extends AABase
 		select state
 		case State.waiting
 			log("Delay calibration")
+			calibrateDelayTime = SessionSettings.get().getCalibratePrepareTimeout()
 			character.beginCalibration(actor cast BaseVRActor, actorProfile)
 			state = State.delayCalibrating
 			triggerPressCount++
@@ -154,6 +159,7 @@ class AACalibrate extends AABase
 	
 	/** Trigger released. */
 	func void triggerRelease(bool rightHand)
+		/*
 		select state
 		case State.delayCalibrating, State.calibrating
 			triggerPressCount--
@@ -161,6 +167,17 @@ class AACalibrate extends AABase
 				log("Trigger released. Reset to waiting")
 				resetToWaiting()
 			end
+		end
+		*/
+	end
+	
+	func bool startCalibrate()
+		if state == State.waiting
+			triggerPull(true)
+			return state == State.delayCalibrating
+			
+		else
+			return false
 		end
 	end
 	
@@ -203,9 +220,8 @@ class AACalibrate extends AABase
 			// wait until timeout
 			calibrateElapsed += elapsed
 			
-			if modelProgress != null
-				modelProgress.setValue(DEMath.linearStep(calibrateElapsed, 0, calibrateWaitTime, 0, 100) cast int)
-			end
+			SessionSettings.get().getModelCalibrateProgressPrepare().setValue(\
+				DEMath.linearStep(calibrateElapsed, 0, calibrateDelayTime, 0, 100) cast int)
 			
 			// once timout elapsed calibrate and finish
 			if calibrateElapsed >= calibrateDelayTime
@@ -229,9 +245,8 @@ class AACalibrate extends AABase
 			// wait until timeout
 			calibrateElapsed += elapsed
 			
-			if modelProgress != null
-				modelProgress.setValue(DEMath.linearStep(calibrateElapsed, 0, calibrateWaitTime, 0, 100) cast int)
-			end
+			SessionSettings.get().getModelCalibrateProgress().setValue(\
+				DEMath.linearStep(calibrateElapsed, calibrateDelayTime, calibrateWaitTime, 0, 100) cast int)
 			
 			// once timout elapsed calibrate and finish
 			if calibrateElapsed >= calibrateWaitTime
@@ -258,9 +273,8 @@ class AACalibrate extends AABase
 	protected func void resetToWaiting()
 		state = State.waiting
 		calibrateElapsed = 0
-		if modelProgress != null
-			modelProgress.setValue(0)
-		end
+		SessionSettings.get().getModelCalibrateProgress().setValue(0)
+		SessionSettings.get().getModelCalibrateProgressPrepare().setValue(0)
 	end
 	
 	/**
