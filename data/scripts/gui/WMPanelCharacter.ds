@@ -923,6 +923,14 @@ class WMPanelCharacter extends Panel
 	/** Reset character. */
 	func void resetCharacter()
 		var WorldSpawnCharacter wsc = GameApp.getGameApp().getWorldSpawnCharacter()
+		var BaseVRActor actor = wsc.getActor()
+		if actor != null
+			var AAControlCommands aacc = actor.getAIAction().getAction() cast AAControlCommands
+			if aacc != null
+				aacc.cancelCalibrate()
+			end
+		end
+		
 		var CharacterConfiguration character = wsc.getCharacter()
 		if character == null or not character.isCalibrated() or not character.hasElementClass()
 			return
@@ -948,9 +956,10 @@ class WMPanelCharacter extends Panel
 	protected func void createContent()
 		var SessionSettings settings = SessionSettings.get()
 		var SessionState state = SessionState.get()
+		var ProgressBar progressBar
 		var Button button
 		var Slider slider
-		var ProgressBar progressBar
+		var Label label
 		
 		setLayout(FlowLayout.new(LayoutAxis.y, 2))
 		
@@ -1008,7 +1017,7 @@ class WMPanelCharacter extends Panel
 		end))
 		
 		addWidget(CollapsibleGroup.new("@UI.Calibrate", "", CollapsibleGroup.persistModel(\
-		pPrefixUIOptions + "/Calibrate", false), FlowLayout.new(LayoutAxis.y, 2), block Panel p
+		pPrefixUIOptions + "/Calibrate", true), FlowLayout.new(LayoutAxis.y, 2), block Panel p
 			p.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p2
 				button = Button.new("@UI.Calibrate", BlockActionListener.new(block ActionEvent event
 					calibrateCharacter()
@@ -1030,7 +1039,9 @@ class WMPanelCharacter extends Panel
 			end))
 			
 			p.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p2
-				p2.addWidget(Label.new("@UI.CalibratePrepareTimeout", "Label.FormCaption.SingleLine"))
+				label = Label.new("@UI.CalibratePrepareTimeout", "Label.FormCaption.SingleLine")
+				label.setToolTip("@UI.ToolTip.CalibratePrepareTimeout")
+				p2.addWidget(label)
 				
 				slider = Slider.new(Orientation.horizontal, settings.getModelCalibratePrepareTimeout())
 				slider.setShowTicks(true)
@@ -1038,7 +1049,7 @@ class WMPanelCharacter extends Panel
 				p2.addWidget(slider)
 			end))
 			
-			p.addWidget(Panel.new(FlowLayout, block Panel p2
+			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 2), block Panel p2
 				progressBar = ProgressBar.new(Orientation.horizontal, state.getModelCalibrateProgressPrepare())
 				progressBar.setDesignerSelector("ProgressBar.WMPanelCharacter.CalibratePrepare")
 				progressBar.setShowPercentage(false)
