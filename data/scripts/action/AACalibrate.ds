@@ -96,12 +96,12 @@ class AACalibrate extends AABase
 				
 				p.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.y, 0.5, 0.615), block Panel p2
 					var ProgressBar progressBar = ProgressBar.new(Orientation.horizontal,\
-						SessionSettings.get().getModelCalibrateProgressPrepare())
+						SessionState.get().getModelCalibrateProgressPrepare())
 					progressBar.setDesignerSelector("ProgressBar.HudInfo.CalibratePrepare")
 					progressBar.setShowPercentage(false)
 					p2.addWidget(progressBar)
 					
-					progressBar = ProgressBar.new(Orientation.horizontal, SessionSettings.get().getModelCalibrateProgress())
+					progressBar = ProgressBar.new(Orientation.horizontal, SessionState.get().getModelCalibrateProgress())
 					progressBar.setDesignerSelector("ProgressBar.HudInfo.Calibrate")
 					progressBar.setShowPercentage(false)
 					p2.addWidget(progressBar)
@@ -110,18 +110,22 @@ class AACalibrate extends AABase
 			
 			vrHudInfo.addPanel(panelCalibrate)
 		end
+		
+		SessionState.get().getModelIsCalibrating().setToggled(true)
 	end
 	
 	/** Deactivate action. */
 	func void deactivate()
+		SessionState.get().getModelIsCalibrating().setToggled(false)
+		
 		if vrHudInfo != null and panelCalibrate != null
 			vrHudInfo.removePanel(panelCalibrate)
 			panelCalibrate.safeDispose()
 			panelCalibrate = null
 		end
 		
-		SessionSettings.get().getModelCalibrateProgress().setValue(0)
-		SessionSettings.get().getModelCalibrateProgressPrepare().setValue(0)
+		SessionState.get().getModelCalibrateProgress().setValue(0)
+		SessionState.get().getModelCalibrateProgressPrepare().setValue(0)
 		
 		showActorModel()
 	end
@@ -220,7 +224,7 @@ class AACalibrate extends AABase
 			// wait until timeout
 			calibrateElapsed += elapsed
 			
-			SessionSettings.get().getModelCalibrateProgressPrepare().setValue(\
+			SessionState.get().getModelCalibrateProgressPrepare().setValue(\
 				DEMath.linearStep(calibrateElapsed, 0, calibrateDelayTime, 0, 100) cast int)
 			
 			// once timout elapsed calibrate and finish
@@ -245,7 +249,7 @@ class AACalibrate extends AABase
 			// wait until timeout
 			calibrateElapsed += elapsed
 			
-			SessionSettings.get().getModelCalibrateProgress().setValue(\
+			SessionState.get().getModelCalibrateProgress().setValue(\
 				DEMath.linearStep(calibrateElapsed, calibrateDelayTime, calibrateWaitTime, 0, 100) cast int)
 			
 			// once timout elapsed calibrate and finish
@@ -273,8 +277,8 @@ class AACalibrate extends AABase
 	protected func void resetToWaiting()
 		state = State.waiting
 		calibrateElapsed = 0
-		SessionSettings.get().getModelCalibrateProgress().setValue(0)
-		SessionSettings.get().getModelCalibrateProgressPrepare().setValue(0)
+		SessionState.get().getModelCalibrateProgress().setValue(0)
+		SessionState.get().getModelCalibrateProgressPrepare().setValue(0)
 	end
 	
 	/**

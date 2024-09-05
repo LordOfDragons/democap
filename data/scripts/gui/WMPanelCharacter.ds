@@ -365,6 +365,19 @@ class WMPanelCharacter extends Panel
 		end
 	end
 	
+	/** Is calibrating changed. */
+	class IsCalibratingChanged extends DefaultToggleModelListener
+		var WMPanelCharacter pPanel
+		
+		func new(WMPanelCharacter panel)
+			pPanel = panel
+		end
+		
+		func void toggledChanged(ToggleModel model)
+			pPanel.onIsCalibratingChanged()
+		end
+	end
+	
 	
 	
 	protected var DefaultListModel pModelActorProfiles, pModelCharacterProfiles, pModelCharacterConfigurations
@@ -376,6 +389,8 @@ class WMPanelCharacter extends Panel
 	protected var CharacterConfiguration pCharacterConfiguration
 	protected var bool pInVR
 	protected var String pPrefixUIOptions
+	protected var Button pButtonRecalibrate
+	protected var IsCalibratingChanged pIsCalibratingChanged
 	
 	
 	/** Create character panel. */
@@ -403,10 +418,18 @@ class WMPanelCharacter extends Panel
 		pListenCharacterProfiles = ListenCharacterProfiles.new(this)
 		GameApp.getGameApp().getCharacterProfiles().addListener(pListenCharacterProfiles)
 		updateCharacterProfiles()
+		
+		pIsCalibratingChanged = IsCalibratingChanged.new(this)
+		SessionState.get().getModelIsCalibrating().addListener(pIsCalibratingChanged)
 	end
 	
 	/** Dispose of widget. */
 	func void dispose()
+		if pIsCalibratingChanged != null
+			SessionState.get().getModelIsCalibrating().removeListener(pIsCalibratingChanged)
+			pIsCalibratingChanged = null
+		end
+		
 		setCharacterProfile(null)
 		setActorProfile(null)
 		
@@ -422,6 +445,8 @@ class WMPanelCharacter extends Panel
 			GameApp.getGameApp().getCharacterProfiles().removeListener(pListenCharacterProfiles)
 			pListenCharacterProfiles = null
 		end
+		
+		pButtonRecalibrate = null
 		
 		super.dispose()
 	end
@@ -911,11 +936,18 @@ class WMPanelCharacter extends Panel
 		end
 	end
 	
+	/** Is calibrating changed. */
+	func void onIsCalibratingChanged()
+		var bool isCalibrating = SessionState.get().getModelIsCalibrating().getToggled()
+		pButtonRecalibrate.setEnabled(not isCalibrating)
+	end
+	
 	
 	
 	/** Create panel content. */
 	protected func void createContent()
 		var SessionSettings settings = SessionSettings.get()
+		var SessionState state = SessionState.get()
 		var Button button
 		var Slider slider
 		var ProgressBar progressBar
@@ -975,47 +1007,50 @@ class WMPanelCharacter extends Panel
 			p.addWidget(button)
 		end))
 		
-		addWidget(Panel.new(GridLayout.new(0, 1), block Panel p
-			button = Button.new("@UI.Calibrate", BlockActionListener.new(block ActionEvent event
-				calibrateCharacter()
+		addWidget(CollapsibleGroup.new("@UI.Calibrate", "", CollapsibleGroup.persistModel(\
+		pPrefixUIOptions + "/Calibrate", false), FlowLayout.new(LayoutAxis.y, 2), block Panel p
+			p.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p2
+				button = Button.new("@UI.Calibrate", BlockActionListener.new(block ActionEvent event
+					calibrateCharacter()
+				end))
+				button.setToolTip("@UI.ToolTip.CalibrateCharacter")
+				p2.addWidget(button)
+				
+				pButtonRecalibrate = Button.new("@UI.Recalibrate", BlockActionListener.new(block ActionEvent event
+					recalibrateCharacter()
+				end))
+				pButtonRecalibrate.setToolTip("@UI.ToolTip.RecalibrateCharacter")
+				p2.addWidget(pButtonRecalibrate)
+				
+				button = Button.new("@UI.Reset", BlockActionListener.new(block ActionEvent event
+					resetCharacter()
+				end))
+				button.setToolTip("@UI.ToolTip.ResetCharacter")
+				p2.addWidget(button)
 			end))
-			button.setToolTip("@UI.ToolTip.CalibrateCharacter")
-			p.addWidget(button)
 			
-			button = Button.new("@UI.Recalibrate", BlockActionListener.new(block ActionEvent event
-				recalibrateCharacter()
+			p.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p2
+				p2.addWidget(Label.new("@UI.CalibratePrepareTimeout", "Label.FormCaption.SingleLine"))
+				
+				slider = Slider.new(Orientation.horizontal, settings.getModelCalibratePrepareTimeout())
+				slider.setShowTicks(true)
+				slider.setToolTip("@UI.ToolTip.CalibratePrepareTimeout")
+				p2.addWidget(slider)
 			end))
-			button.setToolTip("@UI.ToolTip.RecalibrateCharacter")
-			p.addWidget(button)
 			
-			button = Button.new("@UI.Reset", BlockActionListener.new(block ActionEvent event
-				resetCharacter()
+			p.addWidget(Panel.new(FlowLayout, block Panel p2
+				progressBar = ProgressBar.new(Orientation.horizontal, state.getModelCalibrateProgressPrepare())
+				progressBar.setDesignerSelector("ProgressBar.WMPanelCharacter.CalibratePrepare")
+				progressBar.setShowPercentage(false)
+				progressBar.setToolTip("@UI.ToolTip.CalibrateCharacterProgressPrepare")
+				p2.addWidget(progressBar)
+				
+				progressBar = ProgressBar.new(Orientation.horizontal, state.getModelCalibrateProgress())
+				progressBar.setDesignerSelector("ProgressBar.WMPanelCharacter.Calibrate")
+				progressBar.setShowPercentage(false)
+				progressBar.setToolTip("@UI.ToolTip.CalibrateCharacterProgress")
+				p2.addWidget(progressBar)
 			end))
-			button.setToolTip("@UI.ToolTip.ResetCharacter")
-			p.addWidget(button)
-		end))
-		
-		addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
-			p.addWidget(Label.new("@UI.CalibratePrepareTimeout", "Label.FormCaption.SingleLine"))
-			
-			slider = Slider.new(Orientation.horizontal, settings.getModelCalibratePrepareTimeout())
-			slider.setShowTicks(true)
-			slider.setToolTip("@UI.ToolTip.CalibratePrepareTimeout")
-			p.addWidget(slider)
-		end))
-		
-		addWidget(Panel.new(FlowLayout, block Panel p
-			progressBar = ProgressBar.new(Orientation.horizontal, settings.getModelCalibrateProgressPrepare())
-			progressBar.setDesignerSelector("ProgressBar.WMPanelCharacter.CalibratePrepare")
-			progressBar.setShowPercentage(false)
-			progressBar.setToolTip("@UI.ToolTip.CalibrateCharacterProgressPrepare")
-			p.addWidget(progressBar)
-			
-			progressBar = ProgressBar.new(Orientation.horizontal, settings.getModelCalibrateProgress())
-			progressBar.setDesignerSelector("ProgressBar.WMPanelCharacter.Calibrate")
-			progressBar.setShowPercentage(false)
-			progressBar.setToolTip("@UI.ToolTip.CalibrateCharacterProgress")
-			p.addWidget(progressBar)
 		end))
 		
 		addWidget(WMPPanelTweaking.new(this))
