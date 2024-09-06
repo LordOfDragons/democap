@@ -140,6 +140,8 @@ class AACalibrate extends AABase
 	
 	/** Trigger pulled. */
 	func void triggerPull(bool rightHand)
+		triggerPressCount++
+		
 		var GameApp app = GameApp.getGameApp()
 		var ActorProfile actorProfile = app.getActiveActorProfile()
 		var CharacterConfiguration character = app.getWorldSpawnCharacter().getCharacter()
@@ -154,19 +156,16 @@ class AACalibrate extends AABase
 			calibrateDelayTime = SessionSettings.get().getCalibratePrepareTimeout()
 			character.beginCalibration(actor cast BaseVRActor, actorProfile)
 			state = State.delayCalibrating
-			triggerPressCount++
-			
-		case State.delayCalibrating, State.calibrating
-			triggerPressCount++
 		end
 	end
 	
 	/** Trigger released. */
 	func void triggerRelease(bool rightHand)
+		triggerPressCount--
+		
 		/*
 		select state
 		case State.delayCalibrating, State.calibrating
-			triggerPressCount--
 			if triggerPressCount == 0
 				log("Trigger released. Reset to waiting")
 				resetToWaiting()
