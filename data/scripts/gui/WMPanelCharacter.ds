@@ -957,6 +957,7 @@ class WMPanelCharacter extends Panel
 		var SessionSettings settings = SessionSettings.get()
 		var SessionState state = SessionState.get()
 		var ProgressBar progressBar
+		var TextField textField
 		var Button button
 		var Slider slider
 		var Label label
@@ -1043,10 +1044,18 @@ class WMPanelCharacter extends Panel
 				label.setToolTip("@UI.ToolTip.CalibratePrepareTimeout")
 				p2.addWidget(label)
 				
-				slider = Slider.new(Orientation.horizontal, settings.getModelCalibratePrepareTimeout())
-				slider.setShowTicks(true)
-				slider.setToolTip("@UI.ToolTip.CalibratePrepareTimeout")
-				p2.addWidget(slider)
+				p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p3
+					slider = Slider.new(Orientation.horizontal, settings.getModelCalibratePrepareTimeout())
+					slider.setShowTicks(true)
+					slider.setToolTip("@UI.ToolTip.CalibratePrepareTimeout")
+					p3.addWidget(slider)
+					
+					textField = TextField.new(RangeTextModel.new(settings.getModelCalibratePrepareTimeout()), 2)
+					textField.setToolTip("@UI.ToolTip.CalibratePrepareTimeout")
+					textField.setValidator(SimpleTextValidator.new(2, SimpleTextValidator.CharacterClass.digits))
+					p3.addWidget(textField)
+					textField.addMouseListener(ScrollModelWheelMouseListener.new(settings.getModelCalibratePrepareTimeout()))
+				end))
 			end))
 			
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 2), block Panel p2
