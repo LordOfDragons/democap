@@ -155,8 +155,8 @@ class DemocapLiveCaptureActor:
         self._captureActor(True)
 
     def _captureActor(self, insertKeyframes):
-        self.object = bpy.context.scene.democaptoolslive_actor
-        self.objectMesh = bpy.context.scene.democaptoolslive_actormesh
+        self.object = bpy.context.scene.democaptoolslive_params.actor
+        self.objectMesh = bpy.context.scene.democaptoolslive_params.actormesh
         if self._object is None and self._objectMesh is None:
             return
         self._updateMappings()

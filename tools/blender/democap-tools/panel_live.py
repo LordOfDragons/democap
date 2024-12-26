@@ -132,10 +132,10 @@ class VIEW3D_PT_DemocapToolsLiveActor(bpy.types.Panel):
         layout = self.layout
 
         block = layout.column(align=True)
-        block.row(align=True).prop(context.scene,
-                                   "democaptoolslive_actor", expand=True)
-        block.row(align=True).prop(context.scene,
-                                   "democaptoolslive_actormesh", expand=True)
+        block.row(align=True).prop(context.scene.democaptoolslive_params,
+                                   "actor", expand=True)
+        block.row(align=True).prop(context.scene.democaptoolslive_params,
+                                   "actormesh", expand=True)
 
 
 class WM_OT_DemocapLiveCaptureFrame(bpy.types.Operator):
@@ -178,8 +178,8 @@ class VIEW3D_PT_DemocapToolsLiveRecord(bpy.types.Panel):
         block = layout.column(align=True)
         row = block.row(align=True)
         row.column(align=True).prop(params, "preview", expand=True, toggle=True)
-        row.column(align=True).prop(context.scene,
-                                    "democaptoolslive_previewrate", expand=True)
+        row.column(align=True).prop(context.scene.democaptoolslive_params,
+                                    "previewrate", expand=True)
         row = block.row(align=True)
         row.operator(operator="democaplive.captureframe")
 
@@ -198,7 +198,7 @@ def onTimerPreview():
     params = bpy.context.window_manager.democaptoolslive_params
     if not params.preview:
         return None
-    nextTimeout = 1 / bpy.context.scene.democaptoolslive_previewrate
+    nextTimeout = 1 / bpy.context.scene.democaptoolslive_params.previewrate
     screen = bpy.context.screen
     if screen.is_scrubbing:
         return nextTimeout
@@ -304,32 +304,35 @@ def filterOnlyMeshes(self, object):
 
 def actorChanged(self, context):
     """"logger.info("Actor changed to {}".format(
-        context.scene.democaptoolslive_actor))"""
+        context.scene.democaptoolslive_params.actor))"""
     pass
 
 
-bpy.types.Scene.democaptoolslive_actor = bpy.props.PointerProperty(
-    type=bpy.types.Object,
-    name="Actor",
-    description="Armature to link MoCap actor to",
-    poll=filterOnlyArmatures,
-    update=actorChanged)
 
-bpy.types.Scene.democaptoolslive_actormesh = bpy.props.PointerProperty(
-    type=bpy.types.Object,
-    name="Mesh",
-    description="Mesh to link MoCap actor to",
-    poll=filterOnlyMeshes,
-    update=actorChanged)
+class DemocapSceneParameters(bpy.types.PropertyGroup):
+    actor: bpy.props.PointerProperty(
+        type=bpy.types.Object,
+        name="Actor",
+        description="Armature to link MoCap actor to",
+        poll=filterOnlyArmatures,
+        update=actorChanged)
 
-bpy.types.Scene.democaptoolslive_previewrate = bpy.props.IntProperty(
-    name="Rate",
-    description="Frame rate of live preview",
-    default=25,
-    soft_min=10,
-    min=1,
-    soft_max=50,
-    max=100)
+    actormesh: bpy.props.PointerProperty(
+        type=bpy.types.Object,
+        name="Mesh",
+        description="Mesh to link MoCap actor to",
+        poll=filterOnlyMeshes,
+        update=actorChanged)
+
+    previewrate: bpy.props.IntProperty(
+        name="Rate",
+        description="Frame rate of live preview",
+        default=25,
+        soft_min=10,
+        min=1,
+        soft_max=50,
+        max=100)
+
 
 
 @persistent
@@ -343,6 +346,7 @@ def panelLiveRegister():
     registerAsyncioOperator()
     registerFrameUpdaterHandlers()
     registerClass(DemocapLiveParameters)
+    registerClass(DemocapSceneParameters)
     registerClass(WM_OT_DemocapLiveConnect)
     registerClass(WM_OT_DemocapLiveDisconnect)
     registerClass(VIEW3D_PT_DemocapToolsLiveConnect)
@@ -352,6 +356,10 @@ def panelLiveRegister():
 
     bpy.types.WindowManager.democaptoolslive_params = \
         bpy.props.PointerProperty(type=DemocapLiveParameters)
+
+    bpy.types.Scene.democaptoolslive_params = \
+        bpy.props.PointerProperty(type=DemocapSceneParameters)
+    
     bpy.app.handlers.load_post.append(onPostLoad)
     logger.info("registered")
 
