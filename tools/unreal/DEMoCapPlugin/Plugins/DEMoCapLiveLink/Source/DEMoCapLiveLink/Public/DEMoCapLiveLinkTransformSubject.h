@@ -26,6 +26,7 @@
 
 #include <string>
 #include <memory>
+#include "CoreMinimal.h"
 
 #include "../ThirdParty/DENetwork/Include/denetwork/state/denState.h"
 
