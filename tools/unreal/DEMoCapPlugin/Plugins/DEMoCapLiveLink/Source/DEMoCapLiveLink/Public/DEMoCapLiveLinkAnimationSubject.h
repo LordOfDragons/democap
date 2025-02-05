@@ -26,6 +26,7 @@
 
 #include <string>
 #include <memory>
+#include "CoreMinimal.h"
 
 class FDEMoCapLiveLinkSource;
 class FDEMoCapLiveLinkCaptureBoneLayout;

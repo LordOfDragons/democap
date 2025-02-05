@@ -25,6 +25,7 @@
 #pragma once
 
 #include <memory>
+#include "CoreMinimal.h"
 
 class DEMOCAPLIVELINK_API FDEMoCapLiveLinkCaptureBoneLayout{
 public:
