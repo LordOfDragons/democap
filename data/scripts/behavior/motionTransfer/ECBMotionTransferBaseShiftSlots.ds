@@ -1,0 +1,319 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2025, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Commands
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior for MotionTransferBaseShiftSlots.
+ */
+class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Shift slots. */
+		class ShiftSlots extends ECBMoCapAnimator.DefaultListener
+			var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func void updateControllers(ECBMoCapAnimator.Instance instance, float elapsed, int phase)
+				if phase == 0
+					pInstance.shiftSlots()
+				end
+			end
+		end
+		
+		
+		var ECBMotionTransferBaseShiftSlots pECBehavior
+		var ECBMoCapAnimator.Instance pMoCapAnimator
+		var ECBTrackerSlot.Instance pSlotReference, pSlotBase1, pSlotBase2
+		var Array pShiftSlots
+		var Matrix pTransformReference, pTransformBase1, pTransformBase2
+		
+		
+		/** Create instance. */
+		func new(ECBMotionTransferBaseShiftSlots ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			
+			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
+			
+			if ecbehavior.getSlotReference() != null
+				pSlotReference = ecbehavior.getSlotReference().instance(element)
+				pTransformReference = ecbehavior.getTransfer().getReference().getTransformMatrix()
+			end
+			
+			if ecbehavior.getSlotBase1() != null
+				pSlotBase1 = ecbehavior.getSlotBase1().instance(element)
+				pTransformBase1 = ecbehavior.getTransfer().getBase1().getTransformMatrix()
+			end
+			
+			if ecbehavior.getSlotBase2() != null
+				pSlotBase2 = ecbehavior.getSlotBase2().instance(element)
+				pTransformBase2 = ecbehavior.getTransfer().getBase2().getTransformMatrix()
+			end
+			
+			pShiftSlots = ecbehavior.getShiftSlots().map(block ECBTrackerSlot each
+				return each.instance(element)
+			end)
+		end
+		
+		/** Dispose of instance. */
+		func void dispose()
+			pSlotReference = pSlotBase1 = pSlotBase2 = null
+			pShiftSlots = null
+			pMoCapAnimator = null
+			super.dispose()
+		end
+		
+		
+		/** Init behavior instance. */
+		func void init(StubElement stub)
+			pMoCapAnimator.addListener(ShiftSlots.new(this))
+		end
+		
+		
+		/** Behavior. */
+		func ECBMotionTransferBaseShiftSlots getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Motion capture animator. */
+		func ECBMoCapAnimator.Instance getMoCapAnimator()
+			return pMoCapAnimator
+		end
+		
+		/** Reference slot behavior instance or null. */
+		func ECBTrackerSlot.Instance getSlotReference()
+			return pSlotReference
+		end
+		
+		/** Base 1 slot behavior instance or null. */
+		func ECBTrackerSlot.Instance getSlotBase1()
+			return pSlotBase1
+		end
+		
+		/** Base 2 slot behavior instance or null. */
+		func ECBTrackerSlot.Instance getSlotBase2()
+			return pSlotBase2
+		end
+		
+		/** Shift slot behavior instances as Array of \ref ECBTrackerSlot#Instance. */
+		func Array getShiftSlots()
+			return pShiftSlots
+		end
+		
+		
+		/** Shift slots. */
+		func void shiftSlots()
+			if pSlotReference == null or pSlotReference.isDetached()
+				return
+			end
+			
+			var float scaleShift = pECBehavior.getTransfer().getScaleShift()
+			var Vector posBase, shift, normDir
+			var float targetDistance
+			var Matrix transform
+			
+			if pSlotBase1 != null or pSlotBase1 != null
+				var Vector posBaseRef, posRef, posRefRef
+				posRef = (pTransformReference * pSlotReference.getMatrixCharacter()).getPosition()
+				posRefRef = pSlotReference.getMatrixReference().getPosition()
+				
+				if pSlotBase1 != null and pSlotBase2 != null
+					posBase = ((pTransformBase1 * pSlotBase1.getMatrixCharacter()).getPosition()\
+						+ (pTransformBase2 * pSlotBase2.getMatrixCharacter()).getPosition()) / 2
+					posBaseRef = (pSlotBase1.getMatrixReference().getPosition()\
+						+ pSlotBase2.getMatrixReference().getPosition()) / 2
+					
+				elif pSlotBase1 != null
+					posBase = (pTransformBase1 * pSlotBase1.getMatrixCharacter()).getPosition()
+					posBaseRef = pSlotBase1.getMatrixReference().getPosition()
+					
+				else
+					posBase = (pTransformBase2 * pSlotBase2.getMatrixCharacter()).getPosition()
+					posBaseRef = pSlotBase2.getMatrixReference().getPosition()
+				end
+				
+				var Vector direction = posRef - posBase
+				targetDistance = direction.getLength()
+				if targetDistance < 0.01
+					return
+				end
+				normDir = direction / targetDistance
+				
+				direction = posRefRef - posBaseRef
+				var float referenceDistance = direction.getLength()
+				if referenceDistance < 0.01
+					return
+				end
+				
+				shift = normDir * (targetDistance - referenceDistance)
+				transform = Matrix.newTranslation(shift)
+				
+			else
+				// TODO
+				return
+			end
+			
+			if scaleShift > 0
+				var float length, scale, fullScale
+				var Matrix matrix
+				
+				pShiftSlots.forEach(block ECBTrackerSlot.Instance each
+					matrix = each.getMatrixCharacter()
+					length = normDir * (matrix.getPosition() - posBase)
+					fullScale = DEMath.min(DEMath.fabs(length / targetDistance), 1.0)
+					scale = DEMath.mix(1, fullScale, scaleShift)
+					transform = Matrix.newTranslation(shift * scale)
+					each.setMatrixCharacter(matrix * transform)
+				end)
+				
+			else
+				pShiftSlots.forEach(block ECBTrackerSlot.Instance each
+					each.setMatrixCharacter(each.getMatrixCharacter() * transform)
+				end)
+			end
+		end
+	end
+	
+	
+	var MotionTransferBaseShiftSlots pTransfer
+	var ECBMoCapAnimator pMoCapAnimator
+	var ECBTrackerSlot pSlotReference, pSlotBase1, pSlotBase2
+	var Array pShiftSlots
+	
+	
+	/** Create behavior element class. */
+	func new(BaseVRActorClass eclass, MotionTransferBaseShiftSlots transfer) super(eclass, transfer.getName())
+		pTransfer = transfer
+		pMoCapAnimator = ECBMoCapAnimator.getBehaviorIn(eclass)
+		if transfer.getReference() != null
+			pSlotReference = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getReference().getSlot())
+		end
+		if transfer.getBase1() != null
+			pSlotBase1 = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getBase1().getSlot())
+		end
+		if transfer.getBase2() != null
+			pSlotBase2 = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getBase2().getSlot())
+		end
+		pShiftSlots = Array.new()
+		transfer.getShiftSlots().forEach(block String each
+			var ECBTrackerSlot slot = ECBTrackerSlot.getBehaviorIn(eclass, each)
+			if slot != null
+				pShiftSlots.add(slot)
+			end
+		end)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	func void dispose()
+		pTransfer = null
+		pMoCapAnimator = null
+		pSlotReference = pSlotBase1 = pSlotBase2 = null
+		pShiftSlots = null
+		super.dispose()
+	end
+	
+	
+	/** Motion transfer. */
+	func MotionTransferBaseShiftSlots getTransfer()
+		return pTransfer
+	end
+	
+	/** Motion capture animator behavior. */
+	func ECBMoCapAnimator getMoCapAnimator()
+		return pMoCapAnimator
+	end
+	
+	/** Reference slot behavior or null. */
+	func ECBTrackerSlot getSlotReference()
+		return pSlotReference
+	end
+	
+	/** Base 1 slot behavior or null. */
+	func ECBTrackerSlot getSlotBase1()
+		return pSlotBase1
+	end
+	
+	/** Base 2 slot behavior or null. */
+	func ECBTrackerSlot getSlotBase2()
+		return pSlotBase2
+	end
+	
+	/** Shift slot behaviors as Array of \ref ECBTrackerSlot. */
+	func Array getShiftSlots()
+		return pShiftSlots
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	func Instance instance( BehaviorElement element )
+		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
+	end
+	
+	
+	/** Get behavior with slot name in element class or null if absent. */
+	static func ECBMotionTransferBaseShiftSlots getBehaviorIn(BehaviorElementClass eclass, String slotName)
+		return eclass.findBehavior(block ECBMotionTransferBaseShiftSlots each
+			return each.getTransfer().getName().equals(slotName)
+		end) cast ECBMotionTransferBaseShiftSlots
+	end
+	
+	/** Get list of all behaviors in element. */
+	static func Array getAllBehaviorsIn(BehaviorElementClass eclass)
+		return eclass.collectBehaviors(block ECBMotionTransferBaseShiftSlots each
+			return true
+		end)
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static func Instance getInstanceIn(BehaviorElement element, String slotName)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getTransfer().getName().equals(slotName)
+		end) cast Instance
+	end
+	
+	/** Get list of all instances in element. */
+	static func Array getAllInstancesIn(BehaviorElement element)
+		return element.collectInstances(block Instance each
+			return true
+		end)
+	end
+	
+	
+	/** Create Behavior instance. */
+	func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

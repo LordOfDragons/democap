@@ -1,0 +1,214 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2025, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Democap.Actors
+pin Democap.Behaviors
+pin Democap.Characters
+
+pin Dragengine.Animators
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+/**
+ * Motion transfer shifting slot positions by distance to base.
+ * 
+ * The reference slot is used to calculate the distance to the base. The base is calculate from
+ * the center of up to two base slots. The distance of the reference slot target position to
+ * the base is the target distance. The distance of the reference slot reference position to
+ * the base is the reference distance. The shift offset is the difference between the target
+ * distance and reference distance. The calculated shift is applied to all shift slots along
+ * the normalized vector from reference slot reference position to base position.
+ */
+class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
+	/** Factory. */
+	class Factory implements MotionTransferFactory
+		func new()
+		end
+		
+		func String factoryID()
+			return "baseShiftSlots"
+		end
+		
+		func MotionTransfer createMotionTransfer()
+			return MotionTransferBaseShiftSlots.new(factoryID())
+		end
+		
+		func String displayName()
+			return "@UI.BaseShiftSlots"
+		end
+	end
+	
+	
+	var MotionTransferTracker pReference, pBase1, pBase2
+	var Array pShiftSlots
+	var float pScaleShift
+	
+	
+	/** Create motion transfer. */
+	func new(String factoryID) super(factoryID)
+		pReference = MotionTransferTracker.new()
+		pBase1 = MotionTransferTracker.new()
+		pBase2 = MotionTransferTracker.new()
+		pShiftSlots = Array.new()
+		pScaleShift = 0
+	end
+	
+	/** Create copy of motion transfer. */
+	func new(MotionTransferBaseShiftSlots transfer) super(transfer)
+		pReference = MotionTransferTracker.new(transfer.pReference)
+		pBase1 = MotionTransferTracker.new(transfer.pBase1)
+		pBase2 = MotionTransferTracker.new(transfer.pBase2)
+		pShiftSlots = Array.new(transfer.pShiftSlots)
+		pScaleShift = transfer.pScaleShift
+	end
+	
+	
+	/** Reference slot. */
+	func MotionTransferTracker getReference()
+		return pReference
+	end
+	
+	/** Base slot 1. */
+	func MotionTransferTracker getBase1()
+		return pBase1
+	end
+	
+	/** Base slot 2. */
+	func MotionTransferTracker getBase2()
+		return pBase2
+	end
+	
+	/** Shift slots as Array of String slot names. */
+	func Array getShiftSlots()
+		return pShiftSlots
+	end
+	
+	/** Scale shift factor. */
+	func float getScaleShift()
+		return pScaleShift
+	end
+	
+	/** Set scale shift factor. */
+	func void setScaleShift(float factor)
+		pScaleShift = DEMath.clamp(factor, 0.0, 1.0)
+	end
+	
+	
+	
+	/** Init element clas. */
+	func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
+		ECBMotionTransferBaseShiftSlots.new(eclass, this)
+	end
+	
+	/** Reset calibration. */
+	func void resetCalibration()
+		pReference.resetTransform()
+		pBase1.resetTransform()
+		pBase2.resetTransform()
+	end
+	
+	/** Calibrate character. */
+	func void calibrate(CharacterConfiguration config, ActorProfile actorProfile,\
+	BaseVRActor actor, Component component)
+		pReference.resolveRealSlot(config)
+		pReference.setTransform(config, component, "")
+		pBase1.resolveRealSlot(config)
+		pBase1.setTransform(config, component, "")
+		pBase2.resolveRealSlot(config)
+		pBase2.setTransform(config, component, "")
+	end
+	
+	/** Create copy of motion transfer. */
+	func MotionTransfer createCopy()
+		return MotionTransferBaseShiftSlots.new(this)
+	end
+	
+	/** Load from XML. */
+	func void load(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("name")
+				setName(element.getFirstCData())
+				
+			elif tagName.equals("reference")
+				pReference.load(loader, element)
+				
+			elif tagName.equals("base1")
+				pBase1.load(loader, element)
+				
+			elif tagName.equals("base2")
+				pBase2.load(loader, element)
+				
+			elif tagName.equals("shift")
+				pShiftSlots.add(element.getFirstCData())
+				
+			elif tagName.equals("scaleShift")
+				setScaleShift(element.getFirstCDataFloat())
+				
+			elif tagName.equals("calibrated")
+				loadCalibrated(loader, element)
+			end
+		end)
+	end
+	
+	protected func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("reference")
+				pReference.loadCalibrated(loader, element)
+				
+			elif tagName.equals("base1")
+				pBase1.loadCalibrated(loader, element)
+				
+			elif tagName.equals("base2")
+				pBase2.loadCalibrated(loader, element)
+			end
+		end)
+	end
+	
+	/** Post load initialize. */
+	func void postLoadInit(CharacterConfiguration config)
+		pReference.resolveRealSlot(config)
+		pBase1.resolveRealSlot(config)
+		pBase2.resolveRealSlot(config)
+	end
+	
+	/** Save to XML. */
+	func void save(BaseXmlLoader loader, EasyXMLElement tag, bool calibrated)
+		tag.addDataTag("name", getName())
+		pReference.save(loader, tag.addTag("reference"))
+		pBase1.save(loader, tag.addTag("base1"))
+		pBase2.save(loader, tag.addTag("base2"))
+		tag.addDataTag("scaleShift", pScaleShift)
+		pShiftSlots.forEach(block String each
+			tag.addDataTag("shift", each)
+		end)
+	end
+	
+	protected func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+		pReference.saveCalibrated(loader, tag.addTag("reference"))
+		pBase1.saveCalibrated(loader, tag.addTag("base1"))
+		pBase2.saveCalibrated(loader, tag.addTag("base2"))
+	end
+end
