@@ -65,20 +65,6 @@ class ECBTrackerSlot extends DefaultECBehavior
 			end
 		end
 		
-		/** Update controllers. */
-		class UpdateControllers extends ECBehaviorActorAnimated.DefaultListener
-			var Instance pInstance
-			
-			func new(Instance instance)
-				pInstance = instance
-			end
-			
-			func void updateControllers(ECBehaviorActorAnimated.Instance instance, float elapsed)
-				pInstance.updateControllers()
-			end
-		end
-		
-		
 		
 		var ECBTrackerSlot pECBehavior
 		var ECBehaviorVRPlayspace.Instance pVRPlayspace
@@ -140,7 +126,10 @@ class ECBTrackerSlot extends DefaultECBehavior
 			pControllerPosition = pActorAnimated.getControllerNamed(pECBehavior.getControllerNamePosition())
 			pControllerRotation = pActorAnimated.getControllerNamed(pECBehavior.getControllerNameRotation())
 			
-			pActorAnimated.addListener(UpdateControllers.new(this))
+			// it is not possible to update controllers by adding a listener to
+			// ECBehaviorActorAnimated here because ECBMoCapAnimator adds his listener
+			// before the first tracker slot behavior is added. this would break the result
+			//pActorAnimated.addListener(UpdateControllers.new(this))
 			
 			updateVisibile()
 		end

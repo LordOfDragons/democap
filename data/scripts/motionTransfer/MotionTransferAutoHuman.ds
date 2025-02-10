@@ -113,9 +113,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		var MotionTransferBend.Factory factoryBend = MotionTransferBend.Factory.new()
 		var MotionTransferBaseShiftSlots.Factory factoryBaseShiftSlots = MotionTransferBaseShiftSlots.Factory.new()
 		
-		pTransferWaist = MotionTransferChild.new(factoryChild.factoryID())
-		pTransferWaist.setName("AutoHuman: Waist")
-		
 		pTransferShiftUpper = MotionTransferBaseShiftSlots.new(factoryBaseShiftSlots.factoryID())
 		pTransferShiftUpper.setName("AutoHuman: Shift Upper")
 		
@@ -126,6 +123,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferShiftLegRight = MotionTransferBaseShiftSlots.new(factoryBaseShiftSlots.factoryID())
 		pTransferShiftLegRight.setName("AutoHuman: Shift Leg Right")
 		pTransferShiftLegRight.setScaleShift(1)
+		
+		pTransferWaist = MotionTransferChild.new(factoryChild.factoryID())
+		pTransferWaist.setName("AutoHuman: Waist")
 		
 		/*
 		pTransferSpineHead = MotionTransferIK.new(factoryIK.factoryID())
@@ -206,10 +206,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pNeckBendMoveY = transfer.pNeckBendMoveY
 		pNeckBendMoveRange = transfer.pNeckBendMoveRange
 		
-		pTransferWaist = MotionTransferChild.new(transfer.pTransferWaist)
 		pTransferShiftUpper = MotionTransferBaseShiftSlots.new(transfer.pTransferShiftUpper)
 		pTransferShiftLegLeft = MotionTransferBaseShiftSlots.new(transfer.pTransferShiftLegLeft)
 		pTransferShiftLegRight = MotionTransferBaseShiftSlots.new(transfer.pTransferShiftLegRight)
+		pTransferWaist = MotionTransferChild.new(transfer.pTransferWaist)
 // 		pTransferSpineHead = MotionTransferIK.new(transfer.pTransferSpineHead)
 		pTransferNeck = MotionTransferBend.new(transfer.pTransferNeck)
 		pTransferSpine = MotionTransferBend.new(transfer.pTransferSpine)
@@ -527,10 +527,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	
 	
 	/** Child motion transfer. */
-	func MotionTransferChild getTransferWaist()
-		return pTransferWaist
-	end
-	
 	func MotionTransferBaseShiftSlots getTransferShiftUpper()
 		return pTransferShiftUpper
 	end
@@ -541,6 +537,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	
 	func MotionTransferBaseShiftSlots getTransferShiftLegRight()
 		return pTransferShiftLegRight
+	end
+	
+	func MotionTransferChild getTransferWaist()
+		return pTransferWaist
 	end
 	
 	/*
@@ -581,10 +581,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	
 	/** Init element class. */
 	func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
-		pTransferWaist.initElementClass(config, eclass, modifyRig)
 		pTransferShiftUpper.initElementClass(config, eclass, modifyRig)
 		pTransferShiftLegLeft.initElementClass(config, eclass, modifyRig)
 		pTransferShiftLegRight.initElementClass(config, eclass, modifyRig)
+		pTransferWaist.initElementClass(config, eclass, modifyRig)
 // 		pTransferSpineHead.initElementClass(config, eclass, modifyRig)
 		pTransferSpine.initElementClass(config, eclass, modifyRig)
 		pTransferNeck.initElementClass(config, eclass, modifyRig)
@@ -597,10 +597,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	
 	/** Reset calibration. */
 	func void resetCalibration()
-		pTransferWaist.resetCalibration()
 		pTransferShiftUpper.resetCalibration()
 		pTransferShiftLegLeft.resetCalibration()
 		pTransferShiftLegRight.resetCalibration()
+		pTransferWaist.resetCalibration()
 // 		pTransferSpineHead.resetCalibration()
 		pTransferSpine.resetCalibration()
 		pTransferNeck.resetCalibration()
@@ -641,8 +641,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		// determine what devices are attached. it is important to resolve all trackers
 		// that are used to determine motion transfer parameters or first time calibrate
 		// can yield wrong results
-		pTransferWaist.getTracker().resolveRealSlot(config)
-		
 		pTransferShiftUpper.getReference().resolveRealSlot(config)
 		pTransferShiftUpper.getBase1().resolveRealSlot(config)
 		pTransferShiftUpper.getBase2().resolveRealSlot(config)
@@ -654,6 +652,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferShiftLegRight.getReference().resolveRealSlot(config)
 		pTransferShiftLegRight.getBase1().resolveRealSlot(config)
 		pTransferShiftLegRight.getBase2().resolveRealSlot(config)
+		
+		pTransferWaist.getTracker().resolveRealSlot(config)
 		
 		pTransferSpine.getTargetTracker().resolveRealSlot(config)
 		
@@ -703,9 +703,21 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		
 		
+		// shifts
+		pTransferShiftUpper.getReference().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+		pTransferShiftLegLeft.getReference().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+		pTransferShiftLegRight.getReference().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+		
+		
 		// waist
 		pTransferWaist.setBone(pBoneHip)
 		
+		if isSlotWaistAttached
+			pTransferWaist.getTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
+			
+		else
+			pTransferWaist.getTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		end
 		
 		
 		// spine, head. base is hip which we use to find chains but it should not be
@@ -1147,10 +1159,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	func Array decompose()
 		var Array list = Array.new()
 		
-		if not pTransferWaist.getTracker().getSlot().empty()
-			list.add(pTransferWaist.createCopy())
-		end
-		
 		if not pTransferShiftUpper.getReference().getSlot().empty()\
 		and not pTransferShiftUpper.getBase1().getSlot().empty()\
 		and not pTransferShiftUpper.getBase2().getSlot().empty()
@@ -1165,6 +1173,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		if not pTransferShiftLegRight.getReference().getSlot().empty()\
 		and not pTransferShiftLegRight.getBase1().getSlot().empty()
 			list.add(pTransferShiftLegRight.createCopy())
+		end
+		
+		if not pTransferWaist.getTracker().getSlot().empty()
+			list.add(pTransferWaist.createCopy())
 		end
 		
 // 		list.add(pTransferSpineHead.createCopy())
@@ -1311,10 +1323,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	
 	protected func void loadTransfers(BaseXmlLoader loader, EasyXMLElement root)
 		root.forEachTag(block EasyXMLElement element, String tagName
-			if tagName.equals("waist")
-				pTransferWaist.load(loader, element)
-				
-			elif tagName.equals("shiftUpper")
+			if tagName.equals("shiftUpper")
 				pTransferShiftUpper.load(loader, element)
 				
 			elif tagName.equals("shiftLegLeft")
@@ -1322,6 +1331,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 				
 			elif tagName.equals("shiftLegRight")
 				pTransferShiftLegRight.load(loader, element)
+				
+			elif tagName.equals("waist")
+				pTransferWaist.load(loader, element)
 				
 // 			elif tagName.equals("spineHead")
 // 				pTransferSpineHead.load(loader, element)
@@ -1352,10 +1364,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	
 	/** Post load initialize. */
 	func void postLoadInit(CharacterConfiguration config)
-		pTransferWaist.postLoadInit(config)
 		pTransferShiftUpper.postLoadInit(config)
 		pTransferShiftLegLeft.postLoadInit(config)
 		pTransferShiftLegRight.postLoadInit(config)
+		pTransferWaist.postLoadInit(config)
 // 		pTransferSpineHead.postLoadInit(config)
 		pTransferSpine.postLoadInit(config)
 		pTransferNeck.postLoadInit(config)
@@ -1394,10 +1406,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		loader.writeVector2(tag, "neckBendMoveRange", pNeckBendMoveRange)
 		
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
-		pTransferWaist.save(loader, tagTransfers.addTag("waist"), calibrated)
 		pTransferShiftUpper.save(loader, tagTransfers.addTag("shiftUpper"), calibrated)
 		pTransferShiftLegLeft.save(loader, tagTransfers.addTag("shiftLegLeft"), calibrated)
 		pTransferShiftLegRight.save(loader, tagTransfers.addTag("shiftLegRight"), calibrated)
+		pTransferWaist.save(loader, tagTransfers.addTag("waist"), calibrated)
 // 		pTransferSpineHead.save(loader, tagTransfers.addTag("spineHead"), calibrated)
 		pTransferSpine.save(loader, tagTransfers.addTag("spine"), calibrated)
 		pTransferNeck.save(loader, tagTransfers.addTag("neck"), calibrated)
@@ -1462,8 +1474,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		var String slotKneeRight = firstSlotWithType(config, CharacterTrackerSlot.Type.rightKnee)
 		var String slotKneeLeft = firstSlotWithType(config, CharacterTrackerSlot.Type.leftKnee)
 		
-		pTransferWaist.getTracker().setSlot(slotWaist)
-		
 		pTransferShiftUpper.getReference().setSlot(slotWaist)
 		pTransferShiftUpper.getBase1().setSlot(slotFootRight)
 		pTransferShiftUpper.getBase2().setSlot(slotFootLeft)
@@ -1498,6 +1508,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 				pTransferShiftLegRight.getShiftSlots().add(each.getName())
 			end
 		end)
+		
+		pTransferWaist.getTracker().setSlot(slotWaist)
 		
 // 		pTransferSpineHead.getTipTracker().setSlot(slotHead)
 // 		pTransferSpineHead.getBaseTracker().setSlot(slotWaist)

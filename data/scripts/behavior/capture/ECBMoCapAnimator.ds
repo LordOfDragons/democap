@@ -83,7 +83,6 @@ class ECBMoCapAnimator extends DefaultECBehavior
 		end
 		
 		
-		
 		protected var ECBMoCapAnimator pECBehavior
 		protected var ECBehaviorActorAnimated.Instance pActorAnimated
 		protected var ECBehaviorCollider.Instance pCollider
@@ -92,8 +91,8 @@ class ECBMoCapAnimator extends DefaultECBehavior
 		var int pRequiredPhaseCount
 		var float pElapsedControllerTime
 		var Array pListeners
-		
-		
+		var Array pTrackerSlots
+
 		
 		/** Create behavior instance. */
 		func new(ECBMoCapAnimator ecbehavior, BehaviorElement element) super(element)
@@ -110,6 +109,7 @@ class ECBMoCapAnimator extends DefaultECBehavior
 			pListeners = null
 			pCollider = null
 			pActorAnimated = null
+			pTrackerSlots = null
 			
 			super.dispose()
 		end
@@ -205,6 +205,15 @@ class ECBMoCapAnimator extends DefaultECBehavior
 			end
 			
 			pElapsedControllerTime = elapsed
+			
+			// update tracker slot controllers
+			if pTrackerSlots == null
+				pTrackerSlots = ECBTrackerSlot.getAllInstancesIn(getElement())
+			end
+			
+			pTrackerSlots.forEach(block ECBTrackerSlot.Instance each
+				each.updateControllers()
+			end)
 			
 			// find count of required phases
 			pRequiredPhaseCount = pListeners.inject(1, block int count, Listener listener

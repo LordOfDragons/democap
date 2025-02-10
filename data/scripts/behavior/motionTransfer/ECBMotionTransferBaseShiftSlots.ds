@@ -143,8 +143,9 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 			var float targetDistance
 			var Matrix transform
 			
-			if pSlotBase1 != null or pSlotBase1 != null
+			if pSlotBase1 != null or pSlotBase2 != null
 				var Vector posBaseRef, posRef, posRefRef
+				
 				posRef = (pTransformReference * pSlotReference.getMatrixCharacter()).getPosition()
 				posRefRef = pSlotReference.getMatrixReference().getPosition()
 				
@@ -175,8 +176,12 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 				if referenceDistance < 0.01
 					return
 				end
+				var Vector normDirRef = direction / referenceDistance
 				
-				shift = normDir * (targetDistance - referenceDistance)
+				var float refDiff = normDirRef * (pSlotReference.getTrackerSlot().getTargetPosition() - posRefRef)
+				targetDistance = referenceDistance + refDiff
+				
+				shift = normDir * refDiff
 				transform = Matrix.newTranslation(shift)
 				
 			else
