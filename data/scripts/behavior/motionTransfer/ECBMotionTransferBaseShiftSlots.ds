@@ -58,28 +58,33 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 		var ECBTrackerSlot.Instance pSlotReference, pSlotBase1, pSlotBase2
 		var Array pShiftSlots
 		var Matrix pTransformReference, pTransformBase1, pTransformBase2
+		var float pShiftDistance, pTargetDistance
 		
 		
 		/** Create instance. */
 		func new(ECBMotionTransferBaseShiftSlots ecbehavior, BehaviorElement element) super(element)
+			var MotionTransferBaseShiftSlots transfer = ecbehavior.getTransfer()
 			pECBehavior = ecbehavior
 			
 			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
 			
 			if ecbehavior.getSlotReference() != null
 				pSlotReference = ecbehavior.getSlotReference().instance(element)
-				pTransformReference = ecbehavior.getTransfer().getReference().getTransformMatrix()
+				pTransformReference = transfer.getReference().getTransformMatrix()
 			end
 			
 			if ecbehavior.getSlotBase1() != null
 				pSlotBase1 = ecbehavior.getSlotBase1().instance(element)
-				pTransformBase1 = ecbehavior.getTransfer().getBase1().getTransformMatrix()
+				pTransformBase1 = transfer.getBase1().getTransformMatrix()
 			end
 			
 			if ecbehavior.getSlotBase2() != null
 				pSlotBase2 = ecbehavior.getSlotBase2().instance(element)
-				pTransformBase2 = ecbehavior.getTransfer().getBase2().getTransformMatrix()
+				pTransformBase2 = transfer.getBase2().getTransformMatrix()
 			end
+			
+			pShiftDistance = transfer.getCalibrateShiftDistance()
+			pTargetDistance = transfer.getCalibrateTargetDistance()
 			
 			pShiftSlots = ecbehavior.getShiftSlots().map(block ECBTrackerSlot each
 				return each.instance(element)
@@ -134,13 +139,12 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 		
 		/** Shift slots. */
 		func void shiftSlots()
-			if pSlotReference == null or pSlotReference.isDetached()
+			if pShiftDistance == 0 or pSlotReference == null or pSlotReference.isDetached()
 				return
 			end
 			
 			var float scaleShift = pECBehavior.getTransfer().getScaleShift()
 			var Vector posBase, shift, normDir
-			var float targetDistance
 			var Matrix transform
 			
 			if pSlotBase1 != null or pSlotBase2 != null
