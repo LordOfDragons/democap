@@ -58,7 +58,10 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 		var ECBTrackerSlot.Instance pSlotReference, pSlotBase1, pSlotBase2
 		var Array pShiftSlots
 		var Matrix pTransformReference, pTransformBase1, pTransformBase2
-		var float pShiftDistance, pTargetDistance
+		//var float pShiftDistance, pTargetDistance
+		var Vector pCalibOffsetBase1, pCalibOffsetTip1
+		var Vector pCalibOffsetBase2, pCalibOffsetTip2
+		var float pCalibDistance1, pCalibDistance2, pCalibBaseShift
 		
 		
 		/** Create instance. */
@@ -83,8 +86,15 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 				pTransformBase2 = transfer.getBase2().getTransformMatrix()
 			end
 			
-			pShiftDistance = transfer.getCalibrateShiftDistance()
-			pTargetDistance = transfer.getCalibrateTargetDistance()
+			//pShiftDistance = transfer.getCalibrateShiftDistance()
+			//pTargetDistance = transfer.getCalibrateTargetDistance()
+			pCalibOffsetBase1 = transfer.getCalibrateOffsetBase1()
+			pCalibOffsetTip1 = transfer.getCalibrateOffsetTip1()
+			pCalibOffsetBase2 = transfer.getCalibrateOffsetBase2()
+			pCalibOffsetTip2 = transfer.getCalibrateOffsetTip2()
+			pCalibDistance1 = transfer.getCalibrateDistance1()
+			pCalibDistance2 = transfer.getCalibrateDistance2()
+			pCalibBaseShift = transfer.getCalibrateBaseShift()
 			
 			pShiftSlots = ecbehavior.getShiftSlots().map(block ECBTrackerSlot each
 				return each.instance(element)
@@ -139,68 +149,129 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 		
 		/** Shift slots. */
 		func void shiftSlots()
+			if pSlotReference == null or pSlotReference.isDetached()
+				return
+			end
+			
+			var Matrix matRef = pTransformReference * pSlotReference.getMatrixCharacter()
+			var Vector posBase1, posTip1, posBase2, posTip2
+			var Vector centerBase = Vector.new(), centerTip = Vector.new()
+			var float length, pullDistance1, pullDistance2
+			var Vector direction
+			var int slotCount
+			
+			// calculate base and tip positions
+			if pSlotBase1 != null
+				posBase1 = matRef * pCalibOffsetBase1
+				posTip1 = (pTransformBase1 * pSlotBase1.getMatrixCharacter()) * pCalibOffsetTip1
+				centerBase = centerBase + posBase1
+				centerTip = centerTip + posTip1
+				slotCount++
+			end
+			
+			if pSlotBase2 != null
+				posBase2 = matRef * pCalibOffsetBase2
+				posTip2 = (pTransformBase2 * pSlotBase2.getMatrixCharacter()) * pCalibOffsetTip2
+				centerBase = centerBase + posBase2
+				centerTip = centerTip + posTip2
+				slotCount++
+			end
+			
+			// calculate center base and tip
+			if slotCount > 1
+				centerBase = centerBase / slotCount
+				centerTip = centerTip / slotCount
+				
+			elif slotCount == 0
+				return
+			end
+			
+			// shift direction is normalized direction from center base to center tip
+			direction = centerTip - centerBase
+			var float centerDistance = direction.getLength()
+			if centerDistance < 0.01
+				return
+			end
+			
+			var Vector normDir = direction / centerDistance
+			
+			// base-shift base positions and calculate pull distance. base-shift contains
+			// the shift required to move from the actor reference slot to the character
+			// reference slot. the pull distance pulls the reference slot towards the base
+			// slots to avoid bone chains over stretching
+			var Vector shift = normDir * pCalibBaseShift
+			
+			centerBase = centerBase + shift
+			
+			if pSlotBase1 != null and pCalibDistance1 != 0
+				direction = posTip1 - (posBase1 + shift)
+				length = direction.getLength()
+				if length > 0.01
+					pullDistance1 = normDir * ((direction / length) * DEMath.max(length - pCalibDistance1, 0.0))
+				end
+			end
+			
+			if pSlotBase2 != null and pCalibDistance2 != 0
+				direction = posTip2 - (posBase2 + shift)
+				length = direction.getLength()
+				if length > 0.01
+					pullDistance2 = normDir * ((direction / length) * DEMath.max(length - pCalibDistance2, 0.0))
+				end
+			end
+			
+			var float pullDistance = DEMath.max(pullDistance1, pullDistance2)
+			
+			// final shift is base-shift plus pull-shift
+			shift = shift + normDir * pullDistance
+			var Matrix transform = Matrix.newTranslation(shift)
+			
+			/*
 			if pShiftDistance == 0 or pSlotReference == null or pSlotReference.isDetached()
 				return
 			end
 			
-			var float scaleShift = pECBehavior.getTransfer().getScaleShift()
 			var Vector posBase, shift, normDir
 			var Matrix transform
 			
 			if pSlotBase1 != null or pSlotBase2 != null
-				var Vector posBaseRef, posRef, posRefRef
-				
-				posRef = (pTransformReference * pSlotReference.getMatrixCharacter()).getPosition()
-				posRefRef = pSlotReference.getMatrixReference().getPosition()
+				var Vector posRef = (pTransformReference * pSlotReference.getMatrixCharacter()).getPosition()
 				
 				if pSlotBase1 != null and pSlotBase2 != null
 					posBase = ((pTransformBase1 * pSlotBase1.getMatrixCharacter()).getPosition()\
 						+ (pTransformBase2 * pSlotBase2.getMatrixCharacter()).getPosition()) / 2
-					posBaseRef = (pSlotBase1.getMatrixReference().getPosition()\
-						+ pSlotBase2.getMatrixReference().getPosition()) / 2
 					
 				elif pSlotBase1 != null
 					posBase = (pTransformBase1 * pSlotBase1.getMatrixCharacter()).getPosition()
-					posBaseRef = pSlotBase1.getMatrixReference().getPosition()
 					
 				else
 					posBase = (pTransformBase2 * pSlotBase2.getMatrixCharacter()).getPosition()
-					posBaseRef = pSlotBase2.getMatrixReference().getPosition()
 				end
 				
 				var Vector direction = posRef - posBase
-				targetDistance = direction.getLength()
-				if targetDistance < 0.01
+				var float distance = direction.getLength()
+				if distance < 0.01
 					return
 				end
-				normDir = direction / targetDistance
+				normDir = direction / distance
 				
-				direction = posRefRef - posBaseRef
-				var float referenceDistance = direction.getLength()
-				if referenceDistance < 0.01
-					return
-				end
-				var Vector normDirRef = direction / referenceDistance
-				
-				var float refDiff = normDirRef * (pSlotReference.getTrackerSlot().getTargetPosition() - posRefRef)
-				targetDistance = referenceDistance + refDiff
-				
-				shift = normDir * refDiff
+				shift = normDir * pShiftDistance
 				transform = Matrix.newTranslation(shift)
 				
 			else
 				// TODO
 				return
 			end
+			*/
 			
+			var float scaleShift = pECBehavior.getTransfer().getScaleShift()
 			if scaleShift > 0
-				var float length, scale, fullScale
+				var float scale, fullScale
 				var Matrix matrix
 				
 				pShiftSlots.forEach(block ECBTrackerSlot.Instance each
 					matrix = each.getMatrixCharacter()
-					length = normDir * (matrix.getPosition() - posBase)
-					fullScale = DEMath.min(DEMath.fabs(length / targetDistance), 1.0)
+					length = normDir * (matrix.getPosition() - centerBase)
+					fullScale = DEMath.min(DEMath.fabs(length / centerDistance), 1.0)
 					scale = DEMath.mix(1, fullScale, scaleShift)
 					transform = Matrix.newTranslation(shift * scale)
 					each.setMatrixCharacter(matrix * transform)

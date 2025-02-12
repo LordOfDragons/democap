@@ -113,9 +113,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		var MotionTransferBend.Factory factoryBend = MotionTransferBend.Factory.new()
 		var MotionTransferBaseShiftSlots.Factory factoryBaseShiftSlots = MotionTransferBaseShiftSlots.Factory.new()
 		
-		pTransferShiftUpper = MotionTransferBaseShiftSlots.new(factoryBaseShiftSlots.factoryID())
-		pTransferShiftUpper.setName("AutoHuman: Shift Upper")
-		
 		pTransferShiftLegLeft = MotionTransferBaseShiftSlots.new(factoryBaseShiftSlots.factoryID())
 		pTransferShiftLegLeft.setName("AutoHuman: Shift Leg Left")
 		pTransferShiftLegLeft.setScaleShift(1)
@@ -123,6 +120,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferShiftLegRight = MotionTransferBaseShiftSlots.new(factoryBaseShiftSlots.factoryID())
 		pTransferShiftLegRight.setName("AutoHuman: Shift Leg Right")
 		pTransferShiftLegRight.setScaleShift(1)
+		
+		pTransferShiftUpper = MotionTransferBaseShiftSlots.new(factoryBaseShiftSlots.factoryID())
+		pTransferShiftUpper.setName("AutoHuman: Shift Upper")
 		
 		pTransferWaist = MotionTransferChild.new(factoryChild.factoryID())
 		pTransferWaist.setName("AutoHuman: Waist")
@@ -206,9 +206,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pNeckBendMoveY = transfer.pNeckBendMoveY
 		pNeckBendMoveRange = transfer.pNeckBendMoveRange
 		
-		pTransferShiftUpper = MotionTransferBaseShiftSlots.new(transfer.pTransferShiftUpper)
 		pTransferShiftLegLeft = MotionTransferBaseShiftSlots.new(transfer.pTransferShiftLegLeft)
 		pTransferShiftLegRight = MotionTransferBaseShiftSlots.new(transfer.pTransferShiftLegRight)
+		pTransferShiftUpper = MotionTransferBaseShiftSlots.new(transfer.pTransferShiftUpper)
 		pTransferWaist = MotionTransferChild.new(transfer.pTransferWaist)
 // 		pTransferSpineHead = MotionTransferIK.new(transfer.pTransferSpineHead)
 		pTransferNeck = MotionTransferBend.new(transfer.pTransferNeck)
@@ -581,9 +581,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	
 	/** Init element class. */
 	func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
-		pTransferShiftUpper.initElementClass(config, eclass, modifyRig)
 		pTransferShiftLegLeft.initElementClass(config, eclass, modifyRig)
 		pTransferShiftLegRight.initElementClass(config, eclass, modifyRig)
+		pTransferShiftUpper.initElementClass(config, eclass, modifyRig)
 		pTransferWaist.initElementClass(config, eclass, modifyRig)
 // 		pTransferSpineHead.initElementClass(config, eclass, modifyRig)
 		pTransferSpine.initElementClass(config, eclass, modifyRig)
@@ -597,9 +597,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	
 	/** Reset calibration. */
 	func void resetCalibration()
-		pTransferShiftUpper.resetCalibration()
 		pTransferShiftLegLeft.resetCalibration()
 		pTransferShiftLegRight.resetCalibration()
+		pTransferShiftUpper.resetCalibration()
 		pTransferWaist.resetCalibration()
 // 		pTransferSpineHead.resetCalibration()
 		pTransferSpine.resetCalibration()
@@ -619,6 +619,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferWaist.calibrate(config, actorProfile, actor, component)
 		pTransferShiftLegLeft.calibrate(config, actorProfile, actor, component)
 		pTransferShiftLegRight.calibrate(config, actorProfile, actor, component)
+		pTransferShiftUpper.calibrate(config, actorProfile, actor, component)
 // 		pTransferSpineHead.calibrate(config, actorProfile, actor, component)
 		pTransferSpine.calibrate(config, actorProfile, actor, component)
 		pTransferNeck.calibrate(config, actorProfile, actor, component)
@@ -641,10 +642,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		// determine what devices are attached. it is important to resolve all trackers
 		// that are used to determine motion transfer parameters or first time calibrate
 		// can yield wrong results
-		pTransferShiftUpper.getReference().resolveRealSlot(config)
-		pTransferShiftUpper.getBase1().resolveRealSlot(config)
-		pTransferShiftUpper.getBase2().resolveRealSlot(config)
-		
 		pTransferShiftLegLeft.getReference().resolveRealSlot(config)
 		pTransferShiftLegLeft.getBase1().resolveRealSlot(config)
 		pTransferShiftLegLeft.getBase2().resolveRealSlot(config)
@@ -652,6 +649,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferShiftLegRight.getReference().resolveRealSlot(config)
 		pTransferShiftLegRight.getBase1().resolveRealSlot(config)
 		pTransferShiftLegRight.getBase2().resolveRealSlot(config)
+		
+		pTransferShiftUpper.getReference().resolveRealSlot(config)
+		pTransferShiftUpper.getBase1().resolveRealSlot(config)
+		pTransferShiftUpper.getBase2().resolveRealSlot(config)
 		
 		pTransferWaist.getTracker().resolveRealSlot(config)
 		
@@ -702,11 +703,64 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		var bool isSlotLeftElbowAttached = hasSlotLeftElbow and pTransferArmLeft.getGuideTracker().getRealSlot().isDeviceAttached()
 		
 		
+		// chains
+		var Array chainSpine = Array.new()
+		findBoneChain(rig, pBoneChest, pBoneHip, chainSpine)
+		
+		var Array chainHead = Array.new()
+		findBoneChain(rig, pBoneHead, pBoneChest, chainHead)
+		
+		
+		var Array chainRightLeg = Array.new()
+		findBoneChain(rig, pBoneFootRight, pBoneHip, chainRightLeg)
+		
+		var Array chainLeftLeg = Array.new()
+		findBoneChain(rig, pBoneFootLeft, pBoneHip, chainLeftLeg)
+		
+		index = firstBoneInChain(chainRightLeg, chainSpine)
+		chainRightLeg = chainRightLeg.slice(0, index)
+		
+		index = firstBoneInChain(chainLeftLeg, chainSpine)
+		chainLeftLeg = chainLeftLeg.slice(0, index)
+		
+		while chainRightLeg.getCount() > 0 and chainLeftLeg.getCount() > 0\
+		and chainRightLeg.getAt(-1).equals(chainLeftLeg.getAt(-1))
+			chainRightLeg = chainRightLeg.slice(0, -1)
+			chainLeftLeg = chainLeftLeg.slice(0, -1)
+		end
+		
+		
 		
 		// shifts
-		pTransferShiftUpper.getReference().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
 		pTransferShiftLegLeft.getReference().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+		if chainLeftLeg.getCount() > 0
+			pTransferShiftLegLeft.setBaseBone1(chainLeftLeg.getAt(-1) cast String)
+		else
+			pTransferShiftLegLeft.setBaseBone1("")
+		end
+		pTransferShiftLegLeft.setTipBone1(pBoneFootLeft)
+		
 		pTransferShiftLegRight.getReference().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+		if chainRightLeg.getCount() > 0
+			pTransferShiftLegRight.setBaseBone1(chainRightLeg.getAt(-1) cast String)
+		else
+			pTransferShiftLegRight.setBaseBone1("")
+		end
+		pTransferShiftLegRight.setTipBone1(pBoneFootRight)
+		
+		pTransferShiftUpper.getReference().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
+		if chainRightLeg.getCount() > 0
+			pTransferShiftUpper.setBaseBone1(chainRightLeg.getAt(-1) cast String)
+		else
+			pTransferShiftUpper.setBaseBone1("")
+		end
+		pTransferShiftUpper.setTipBone1(pBoneFootRight)
+		if chainLeftLeg.getCount() > 0
+			pTransferShiftUpper.setBaseBone2(chainLeftLeg.getAt(-1) cast String)
+		else
+			pTransferShiftUpper.setBaseBone2("")
+		end
+		pTransferShiftUpper.setTipBone2(pBoneFootLeft)
 		
 		
 		// waist
@@ -722,12 +776,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		// spine, head. base is hip which we use to find chains but it should not be
 		// included in anything but the waist. start one bone down the chain
-		var Array chainSpine = Array.new()
-		var Array chainHead = Array.new()
-		
-		findBoneChain(rig, pBoneChest, pBoneHip, chainSpine)
-		findBoneChain(rig, pBoneHead, pBoneChest, chainHead)
-		
 		/*
 		pTransferSpineHead.setTipBone(pBoneHead)
 		pTransferSpineHead.setGuideBone(pBoneChest)
@@ -1064,27 +1112,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		
 		
-		// legs
-		var Array chainRightLeg = Array.new()
-		findBoneChain(rig, pBoneFootRight, pBoneHip, chainRightLeg)
-		
-		index = firstBoneInChain(chainRightLeg, chainSpine)
-		chainRightLeg = chainRightLeg.slice(0, index)
-		
-		var Array chainLeftLeg = Array.new()
-		findBoneChain(rig, pBoneFootLeft, pBoneHip, chainLeftLeg)
-		
-		index = firstBoneInChain(chainLeftLeg, chainSpine)
-		chainLeftLeg = chainLeftLeg.slice(0, index)
-		
-		while chainRightLeg.getCount() > 0 and chainLeftLeg.getCount() > 0\
-		and chainRightLeg.getAt(-1).equals(chainLeftLeg.getAt(-1))
-			chainRightLeg = chainRightLeg.slice(0, -1)
-			chainLeftLeg = chainLeftLeg.slice(0, -1)
-		end
-		
-		
-		
 		// right leg
 		pTransferLegRight.setTipBone(pBoneFootRight)
 		pTransferLegRight.setMoveBaseIK(pMoveBaseIK)
@@ -1159,12 +1186,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	func Array decompose()
 		var Array list = Array.new()
 		
-		if not pTransferShiftUpper.getReference().getSlot().empty()\
-		and not pTransferShiftUpper.getBase1().getSlot().empty()\
-		and not pTransferShiftUpper.getBase2().getSlot().empty()
-			list.add(pTransferShiftUpper.createCopy())
-		end
-		
 		if not pTransferShiftLegLeft.getReference().getSlot().empty()\
 		and not pTransferShiftLegLeft.getBase1().getSlot().empty()
 			list.add(pTransferShiftLegLeft.createCopy())
@@ -1173,6 +1194,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		if not pTransferShiftLegRight.getReference().getSlot().empty()\
 		and not pTransferShiftLegRight.getBase1().getSlot().empty()
 			list.add(pTransferShiftLegRight.createCopy())
+		end
+		
+		if not pTransferShiftUpper.getReference().getSlot().empty()\
+		and not pTransferShiftUpper.getBase1().getSlot().empty()\
+		and not pTransferShiftUpper.getBase2().getSlot().empty()
+			list.add(pTransferShiftUpper.createCopy())
 		end
 		
 		if not pTransferWaist.getTracker().getSlot().empty()
@@ -1364,9 +1391,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	
 	/** Post load initialize. */
 	func void postLoadInit(CharacterConfiguration config)
-		pTransferShiftUpper.postLoadInit(config)
 		pTransferShiftLegLeft.postLoadInit(config)
 		pTransferShiftLegRight.postLoadInit(config)
+		pTransferShiftUpper.postLoadInit(config)
 		pTransferWaist.postLoadInit(config)
 // 		pTransferSpineHead.postLoadInit(config)
 		pTransferSpine.postLoadInit(config)
@@ -1406,9 +1433,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		loader.writeVector2(tag, "neckBendMoveRange", pNeckBendMoveRange)
 		
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
-		pTransferShiftUpper.save(loader, tagTransfers.addTag("shiftUpper"), calibrated)
 		pTransferShiftLegLeft.save(loader, tagTransfers.addTag("shiftLegLeft"), calibrated)
 		pTransferShiftLegRight.save(loader, tagTransfers.addTag("shiftLegRight"), calibrated)
+		pTransferShiftUpper.save(loader, tagTransfers.addTag("shiftUpper"), calibrated)
 		pTransferWaist.save(loader, tagTransfers.addTag("waist"), calibrated)
 // 		pTransferSpineHead.save(loader, tagTransfers.addTag("spineHead"), calibrated)
 		pTransferSpine.save(loader, tagTransfers.addTag("spine"), calibrated)
@@ -1474,11 +1501,6 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		var String slotKneeRight = firstSlotWithType(config, CharacterTrackerSlot.Type.rightKnee)
 		var String slotKneeLeft = firstSlotWithType(config, CharacterTrackerSlot.Type.leftKnee)
 		
-		pTransferShiftUpper.getReference().setSlot(slotWaist)
-		pTransferShiftUpper.getBase1().setSlot(slotFootRight)
-		pTransferShiftUpper.getBase2().setSlot(slotFootLeft)
-		pTransferShiftUpper.getShiftSlots().removeAll()
-		
 		pTransferShiftLegLeft.getReference().setSlot(slotWaist)
 		pTransferShiftLegLeft.getBase1().setSlot(slotFootLeft)
 		pTransferShiftLegLeft.getShiftSlots().removeAll()
@@ -1487,16 +1509,21 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferShiftLegRight.getBase1().setSlot(slotFootRight)
 		pTransferShiftLegRight.getShiftSlots().removeAll()
 		
+		pTransferShiftUpper.getReference().setSlot(slotWaist)
+		pTransferShiftUpper.getBase1().setSlot(slotFootRight)
+		pTransferShiftUpper.getBase2().setSlot(slotFootLeft)
+		pTransferShiftUpper.getShiftSlots().removeAll()
+		
 		config.getTrackerSlots().forEach(block CharacterTrackerSlot each
 			select each.getType()
 			case CharacterTrackerSlot.Type.headHmd,\
 				CharacterTrackerSlot.Type.headTracker,\
 				CharacterTrackerSlot.Type.chest,\
-				CharacterTrackerSlot.Type.rightHandController,\
-				CharacterTrackerSlot.Type.rightHandTracker,\
+				/*CharacterTrackerSlot.Type.rightHandController,*/\
+				/*CharacterTrackerSlot.Type.rightHandTracker,*/\
 				CharacterTrackerSlot.Type.rightElbow,\
-				CharacterTrackerSlot.Type.leftHandController,\
-				CharacterTrackerSlot.Type.leftHandTracker,\
+				/*CharacterTrackerSlot.Type.leftHandController,*/\
+				/*CharacterTrackerSlot.Type.leftHandTracker,*/\
 				CharacterTrackerSlot.Type.leftElbow,\
 				CharacterTrackerSlot.Type.waist
 					pTransferShiftUpper.getShiftSlots().add(each.getName())

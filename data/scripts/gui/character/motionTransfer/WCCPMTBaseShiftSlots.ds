@@ -87,6 +87,14 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 	
 	
 	var WCCPMTTracker pEditReferenceTracker, pEditBase1Tracker, pEditBase2Tracker
+	var SharedListModel pModelListBaseBone1
+	var DefaultTextModel pModelTextBaseBone1
+	var SharedListModel pModelListTipBone1
+	var DefaultTextModel pModelTextTipBone1
+	var SharedListModel pModelListBaseBone2
+	var DefaultTextModel pModelTextBaseBone2
+	var SharedListModel pModelListTipBone2
+	var DefaultTextModel pModelTextTipBone2
 	var DefaultListModel pModelShiftSlots
 	var SharedListModel pModelAddShiftSlot
 	var DefaultTextModel pModelScaleShift
@@ -95,6 +103,22 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 	/** Create window. */
 	func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
 		pModelTypeName.setText("@UI.BaseShiftSlots")
+		
+		pModelListBaseBone1 = SharedListModel.new(window.getModelBones())
+		pModelListBaseBone1.setAutoSelect(false)
+		pModelTextBaseBone1 = DefaultTextModel.new()
+		
+		pModelListTipBone1 = SharedListModel.new(window.getModelBones())
+		pModelListTipBone1.setAutoSelect(false)
+		pModelTextTipBone1 = DefaultTextModel.new()
+		
+		pModelListBaseBone2 = SharedListModel.new(window.getModelBones())
+		pModelListBaseBone2.setAutoSelect(false)
+		pModelTextBaseBone2 = DefaultTextModel.new()
+		
+		pModelListTipBone2 = SharedListModel.new(window.getModelBones())
+		pModelListTipBone2.setAutoSelect(false)
+		pModelTextTipBone2 = DefaultTextModel.new()
 		
 		pModelShiftSlots = DefaultListModel.new()
 		pModelShiftSlots.setAutoSelect(false)
@@ -109,6 +133,14 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 	
 	/** Dispose of window. */
 	func void dispose()
+		pModelListBaseBone1 = null
+		pModelTextBaseBone1 = null
+		pModelListTipBone1 = null
+		pModelTextTipBone1 = null
+		pModelListBaseBone2 = null
+		pModelTextBaseBone2 = null
+		pModelListTipBone2 = null
+		pModelTextTipBone2 = null
 		pModelShiftSlots = null
 		pModelAddShiftSlot = null
 		pEditReferenceTracker.setTracker(null)
@@ -136,6 +168,10 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 				pEditBase1Tracker.loadValues()
 				pEditBase2Tracker.setTracker(mt.getBase2())
 				pEditBase2Tracker.loadValues()
+				pModelTextTipBone1.setText(mt.getTipBone1())
+				pModelTextBaseBone1.setText(mt.getBaseBone1())
+				pModelTextTipBone2.setText(mt.getTipBone2())
+				pModelTextBaseBone2.setText(mt.getBaseBone2())
 				pModelScaleShift.setText(mt.getScaleShift().toString())
 				
 			else
@@ -172,11 +208,12 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 	
 	/** Create window content. */
 	protected func void createContent(DefaultListModel modelTrackerSlotNames, String optionPrefix)
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var ComboBox comboBox, comboBoxTip, comboBoxBase
+		var Label label, labelTip, labelBase
 		var TextField textField
-		var ComboBox comboBox
 		var ListBox listBox
 		var Button button
-		var Label label
 		
 		createBaseContent("MotionTransferBaseShiftSlots")
 		
@@ -210,6 +247,46 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 			listBox.setNumberDisplayLines(4)
 			p.addWidget(ScrollPanel.new(listBox))
 		end))
+		
+		// base 1 chain
+		labelBase = Label.new("@UI.Base1Bone.Label", "Label.FormCaption.SingleLine")
+		pPanelForm.addWidget(labelBase)
+		
+		comboBoxBase = ComboBox.new(pModelListBaseBone1, DefaultComboBoxEditor.new(pModelTextBaseBone1))
+		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxBase.setToolTip("@UI.ToolTip.Base1Bone")
+		pPanelForm.addWidget(comboBoxBase)
+		
+		labelTip = Label.new("@UI.Tip1Bone.Label", "Label.FormCaption.SingleLine")
+		pPanelForm.addWidget(labelTip)
+		
+		comboBoxTip = ComboBox.new(pModelListTipBone1, DefaultComboBoxEditor.new(pModelTextTipBone1))
+		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxTip.setToolTip("@UI.ToolTip.Tip1Bone")
+		pPanelForm.addWidget(comboBoxTip)
+		
+		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
+		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
+		
+		// base 2 chain
+		labelBase = Label.new("@UI.Base2Bone.Label", "Label.FormCaption.SingleLine")
+		pPanelForm.addWidget(labelBase)
+		
+		comboBoxBase = ComboBox.new(pModelListBaseBone2, DefaultComboBoxEditor.new(pModelTextBaseBone2))
+		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxBase.setToolTip("@UI.ToolTip.Base2Bone")
+		pPanelForm.addWidget(comboBoxBase)
+		
+		labelTip = Label.new("@UI.Tip2Bone.Label", "Label.FormCaption.SingleLine")
+		pPanelForm.addWidget(labelTip)
+		
+		comboBoxTip = ComboBox.new(pModelListTipBone2, DefaultComboBoxEditor.new(pModelTextTipBone2))
+		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxTip.setToolTip("@UI.ToolTip.Tip2Bone")
+		pPanelForm.addWidget(comboBoxTip)
+		
+		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
+		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
 		
 		// shift scale
 		pPanelForm.addWidget(Label.new("@UI.ShiftScale.Label", "Label.FormCaption.SingleLine"))

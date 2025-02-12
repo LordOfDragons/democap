@@ -30,6 +30,7 @@ pin Dragengine.LoadSave
 pin Dragengine.Scenery
 pin Dragengine.Utils
 pin Dragengine.XML
+pin Democap.Actions
 
 
 /**
@@ -63,8 +64,14 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 	
 	
 	var MotionTransferTracker pReference, pBase1, pBase2
+	var String pBaseBone1, pTipBone1, pBaseBone2, pTipBone2
 	var Array pShiftSlots
 	var float pScaleShift
+	//var float pCalibrateShiftDistance, pCalibrateTargetDistance
+	var Vector pCalibrateOffsetBase1, pCalibrateOffsetTip1
+	var Vector pCalibrateOffsetBase2, pCalibrateOffsetTip2
+	var float pCalibrateDistance1, pCalibrateDistance2
+	var float pCalibrateBaseShift
 	
 	
 	/** Create motion transfer. */
@@ -72,8 +79,16 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 		pReference = MotionTransferTracker.new()
 		pBase1 = MotionTransferTracker.new()
 		pBase2 = MotionTransferTracker.new()
+		pBaseBone1 = ""
+		pTipBone1 = ""
+		pBaseBone2 = ""
+		pTipBone2 = ""
 		pShiftSlots = Array.new()
 		pScaleShift = 0
+		pCalibrateOffsetBase1 = Vector.new()
+		pCalibrateOffsetTip1 = Vector.new()
+		pCalibrateOffsetBase2 = Vector.new()
+		pCalibrateOffsetTip2 = Vector.new()
 	end
 	
 	/** Create copy of motion transfer. */
@@ -81,8 +96,17 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 		pReference = MotionTransferTracker.new(transfer.pReference)
 		pBase1 = MotionTransferTracker.new(transfer.pBase1)
 		pBase2 = MotionTransferTracker.new(transfer.pBase2)
+		pBaseBone1 = transfer.pBaseBone1
+		pTipBone1 = transfer.pTipBone1
+		pBaseBone2 = transfer.pBaseBone2
+		pTipBone2 = transfer.pTipBone2
 		pShiftSlots = Array.new(transfer.pShiftSlots)
 		pScaleShift = transfer.pScaleShift
+		pCalibrateOffsetBase1 = transfer.pCalibrateOffsetBase1
+		pCalibrateOffsetTip1 = transfer.pCalibrateOffsetTip1
+		pCalibrateOffsetBase2 = transfer.pCalibrateOffsetBase2
+		pCalibrateOffsetTip2 = transfer.pCalibrateOffsetTip2
+		pCalibrateBaseShift = transfer.pCalibrateBaseShift
 	end
 	
 	
@@ -101,6 +125,58 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 		return pBase2
 	end
 	
+	/** Base bone 1. */
+	func String getBaseBone1()
+		return pBaseBone1
+	end
+	
+	/** Set base bone 1. */
+	func void setBaseBone1(String bone)
+		if bone == null
+			throw ENullPointer.new()
+		end
+		pBaseBone1 = bone
+	end
+	
+	/** Tip bone 1. */
+	func String getTipBone1()
+		return pTipBone1
+	end
+	
+	/** Set tip bone 1. */
+	func void setTipBone1(String bone)
+		if bone == null
+			throw ENullPointer.new()
+		end
+		pTipBone1 = bone
+	end
+	
+	/** Base bone 2. */
+	func String getBaseBone2()
+		return pBaseBone2
+	end
+	
+	/** Set base bone 2. */
+	func void setBaseBone2(String bone)
+		if bone == null
+			throw ENullPointer.new()
+		end
+		pBaseBone2 = bone
+	end
+	
+	/** Tip bone 2. */
+	func String getTipBone2()
+		return pTipBone2
+	end
+	
+	/** Set tip bone 2. */
+	func void setTipBone2(String bone)
+		if bone == null
+			throw ENullPointer.new()
+		end
+		pTipBone2 = bone
+	end
+	
 	/** Shift slots as Array of String slot names. */
 	func Array getShiftSlots()
 		return pShiftSlots
@@ -116,6 +192,54 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 		pScaleShift = DEMath.clamp(factor, 0.0, 1.0)
 	end
 	
+	/** Calibrate shift distance. */
+	/*
+	func float getCalibrateShiftDistance()
+		return pCalibrateShiftDistance
+	end
+	*/
+	
+	/** Calibrate target distance. */
+	/*
+	func float getCalibrateTargetDistance()
+		return pCalibrateTargetDistance
+	end
+	*/
+	
+	/** Calibrate offset base 1. */
+	func Vector getCalibrateOffsetBase1()
+		return pCalibrateOffsetBase1
+	end
+	
+	/** Calibrate offset tip 1. */
+	func Vector getCalibrateOffsetTip1()
+		return pCalibrateOffsetTip1
+	end
+	
+	/** Calibrate offset base 2. */
+	func Vector getCalibrateOffsetBase2()
+		return pCalibrateOffsetBase2
+	end
+	
+	/** Calibrate offset tip 2. */
+	func Vector getCalibrateOffsetTip2()
+		return pCalibrateOffsetTip2
+	end
+	
+	/** Calibrate distance base 1. */
+	func float getCalibrateDistance1()
+		return pCalibrateDistance1
+	end
+	
+	/** Calibrate distance base 2. */
+	func float getCalibrateDistance2()
+		return pCalibrateDistance2
+	end
+	
+	/** Calibrate base shift. */
+	func float getCalibrateBaseShift()
+		return pCalibrateBaseShift
+	end
 	
 	
 	/** Init element clas. */
@@ -128,6 +252,15 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 		pReference.resetTransform()
 		pBase1.resetTransform()
 		pBase2.resetTransform()
+		//pCalibrateShiftDistance = 0
+		//pCalibrateTargetDistance = 0
+		pCalibrateOffsetBase1 = Vector.new()
+		pCalibrateOffsetTip1 = Vector.new()
+		pCalibrateOffsetBase2 = Vector.new()
+		pCalibrateOffsetTip2 = Vector.new()
+		pCalibrateDistance1 = 0
+		pCalibrateDistance2 = 0
+		pCalibrateBaseShift = 0
 	end
 	
 	/** Calibrate character. */
@@ -139,6 +272,196 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 		pBase1.setTransform(config, component, "")
 		pBase2.resolveRealSlot(config)
 		pBase2.setTransform(config, component, "")
+		
+		pCalibrateOffsetBase1 = Vector.new()
+		pCalibrateOffsetTip1 = Vector.new()
+		pCalibrateOffsetBase2 = Vector.new()
+		pCalibrateOffsetTip2 = Vector.new()
+		pCalibrateDistance1 = 0
+		pCalibrateDistance2 = 0
+		pCalibrateBaseShift = 0
+		
+		//pCalibrateShiftDistance = 0
+		//pCalibrateTargetDistance = 0
+		
+		calibrateShiftSlots(config, component)
+	end
+	
+	/** Shift slots during calibration process. */
+	func void calibrateShiftSlots(CharacterConfiguration config, Component component)
+		var CharacterTrackerSlot slotRef = pReference.getRealSlot()
+		var CharacterTrackerSlot slotBase1 = pBase1.getRealSlot()
+		var CharacterTrackerSlot slotBase2 = pBase2.getRealSlot()
+		if slotRef == null or slotRef.isDeviceDetached()
+			return
+		end
+		
+		//var Vector posBase, shift, normDir
+		var Matrix invMatrixRef = slotRef.getTargetMatrix().getInverse()
+		//var Matrix transform
+		
+		var int indexBase1 = -1, indexTip1 = -1, indexBase2 = -1, indexTip2 = -1
+		if not pBaseBone1.empty() and not pTipBone1.empty()
+			indexBase1 = component.indexOfBoneNamed(pBaseBone1)
+			indexTip1 = component.indexOfBoneNamed(pTipBone1)
+		end
+		if not pBaseBone2.empty() and not pTipBone2.empty()
+			indexBase2 = component.indexOfBoneNamed(pBaseBone2)
+			indexTip2 = component.indexOfBoneNamed(pTipBone2)
+		end
+		
+		var Vector posBase1, posTip1, posBase2, posTip2
+		var Vector centerBase = Vector.new(), centerTip = Vector.new()
+		var int slotCount
+		
+		// calculate base and tip positions and calculate calibrate distance. no base-shift
+		// is applied since base positions are already in component space
+
+		if slotBase1 != null and indexBase1 != -1 and indexTip1 != -1
+			posBase1 = component.boneGetMatrix(indexBase1).getPosition()
+			pCalibrateOffsetBase1 = invMatrixRef * posBase1
+			posTip1 = component.boneGetMatrix(indexTip1).getPosition()
+			pCalibrateOffsetTip1 = slotBase1.getTargetMatrix().getInverse() * posTip1
+			pCalibrateDistance1 = (posTip1 - posBase1).getLength()
+			
+			centerBase = centerBase + posBase1
+			centerTip = centerTip + posTip1
+			slotCount++
+		end
+		
+		if slotBase2 != null and indexBase2 != -1 and indexTip2 != -1
+			posBase2 = component.boneGetMatrix(indexBase2).getPosition()
+			pCalibrateOffsetBase2 = invMatrixRef * posBase2
+			posTip2 = component.boneGetMatrix(indexTip2).getPosition()
+			pCalibrateOffsetTip2 = slotBase2.getTargetMatrix().getInverse() * posTip2
+			pCalibrateDistance2 = (posTip2 - posBase2).getLength()
+			
+			centerBase = centerBase + posBase2
+			centerTip = centerTip + posTip2
+			slotCount++
+		end
+		
+		// calculate center base and tip
+		if slotCount > 1
+			centerBase = centerBase / slotCount
+			centerTip = centerTip / slotCount
+			
+		elif slotCount == 0
+			return
+		end
+		
+		// shift direction is normalized direction from center base to center tip
+		var Vector direction = centerTip - centerBase
+		var float centerDistance = direction.getLength()
+		if centerDistance < 0.01
+			return
+		end
+		
+		var Vector normDir = direction / centerDistance
+		
+		// calculate base shift
+		pCalibrateBaseShift = normDir * (slotRef.getTargetPosition()\
+			- config.actorToCharacter(slotRef.getPosition()))
+		if DEMath.fabs(pCalibrateBaseShift) < 0.01
+			pCalibrateBaseShift = 0
+		end
+		
+		// calculate calibrate distance. base-shift contains the shift required to move
+		// from the actor reference slot to the character reference slot. no shift is applied
+		// since the base positions are in component space and thus already shifted
+		var Vector shift = normDir * pCalibrateBaseShift
+		
+		// final shift is base-shift
+		var Matrix transform = Matrix.newTranslation(shift)
+		
+		/*
+		if slotBase1 != null or slotBase2 != null
+			var Vector posBaseRef, posRef, posRefRef
+			
+			posRef = (pReference.getTransformMatrix() * slotRef.getCalibrateMatrix()).getPosition()
+			posRefRef = slotRef.getCalibrateReferenceMatrix().getPosition()
+			
+			if slotBase1 != null and slotBase2 != null
+				posBase = ((pBase1.getTransformMatrix() * slotBase1.getCalibrateMatrix()).getPosition()\
+					+ (pBase2.getTransformMatrix() * slotBase2.getCalibrateMatrix()).getPosition()) / 2
+				posBaseRef = (slotBase1.getCalibrateReferenceMatrix().getPosition()\
+					+ slotBase2.getCalibrateReferenceMatrix().getPosition()) / 2
+				
+			elif slotBase1 != null
+				posBase = (pBase1.getTransformMatrix() * slotBase1.getCalibrateMatrix()).getPosition()
+				posBaseRef = slotBase1.getCalibrateReferenceMatrix().getPosition()
+				
+			else
+				posBase = (pBase2.getTransformMatrix() * slotBase2.getCalibrateMatrix()).getPosition()
+				posBaseRef = slotBase2.getCalibrateReferenceMatrix().getPosition()
+			end
+			
+			var Vector direction = posRef - posBase
+			var float targetDistance = direction.getLength()
+			GameApp.getApp().getConsole().addMessage("CP1: " + Array.newWith(getName(), posRef, posBase, targetDistance))
+			if targetDistance < 0.01
+				return
+			end
+			normDir = direction / targetDistance
+			
+			direction = posRefRef - posBaseRef
+			var float referenceDistance = direction.getLength()
+			GameApp.getApp().getConsole().addMessage("CP2: " + Array.newWith(getName(), posRefRef, posBaseRef, referenceDistance))
+			if referenceDistance < 0.01
+				return
+			end
+			var Vector normDirRef = direction / referenceDistance
+			
+			pCalibrateShiftDistance = normDirRef * (slotRef.getTargetPosition() - posRefRef)
+			pCalibrateTargetDistance = referenceDistance + pCalibrateShiftDistance
+			
+			if DEMath.fabs(pCalibrateShiftDistance) < 0.01
+				pCalibrateShiftDistance = 0
+			end
+			
+			shift = normDir * pCalibrateShiftDistance
+			transform = Matrix.newTranslation(shift)
+			
+		else
+			// TODO
+			return
+		end
+		*/
+		
+		var Matrix matrix
+		
+		if pScaleShift > 0
+			var float length, scale, fullScale
+			
+			pShiftSlots.forEach(block String each
+				var CharacterTrackerSlot slot = config.getTrackerSlots().getNamed(each)
+				if slot == null
+					return null
+				end
+				
+				matrix = slot.getCalibrateMatrix()
+				length = normDir * (matrix.getPosition() - centerBase)
+				fullScale = DEMath.min(DEMath.fabs(length / centerDistance), 1.0)
+				scale = DEMath.mix(1, fullScale, pScaleShift)
+				transform = Matrix.newTranslation(shift * scale)
+				
+				matrix = matrix * transform
+				slot.setCalibrateMatrix(matrix)
+				slot.setRecalibrateMatrix(matrix)
+			end)
+			
+		else
+			pShiftSlots.forEach(block String each
+				var CharacterTrackerSlot slot = config.getTrackerSlots().getNamed(each)
+				if slot == null
+					return null
+				end
+				
+				matrix = slot.getCalibrateMatrix() * transform
+				slot.setCalibrateMatrix(matrix)
+				slot.setRecalibrateMatrix(matrix)
+			end)
+		end
 	end
 	
 	/** Create copy of motion transfer. */
@@ -160,6 +483,18 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 				
 			elif tagName.equals("base2")
 				pBase2.load(loader, element)
+				
+			elif tagName.equals("baseBone1")
+				pBaseBone1 = element.getFirstCData()
+				
+			elif tagName.equals("tipBone1")
+				pTipBone1 = element.getFirstCData()
+				
+			elif tagName.equals("baseBone2")
+				pBaseBone2 = element.getFirstCData()
+				
+			elif tagName.equals("tipBone2")
+				pTipBone2 = element.getFirstCData()
 				
 			elif tagName.equals("shiftSlot")
 				pShiftSlots.add(element.getFirstCData())
@@ -183,6 +518,35 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 				
 			elif tagName.equals("base2")
 				pBase2.loadCalibrated(loader, element)
+				
+				/*
+			elif tagName.equals("shiftDistance")
+				pCalibrateShiftDistance = element.getFirstCDataFloat()
+				
+			elif tagName.equals("targetDistance")
+				pCalibrateTargetDistance = element.getFirstCDataFloat()
+				*/
+				
+			elif tagName.equals("offsetBase1")
+				pCalibrateOffsetBase1 = loader.readVector(element)
+				
+			elif tagName.equals("offsetTip1")
+				pCalibrateOffsetTip1 = loader.readVector(element)
+				
+			elif tagName.equals("offsetBase2")
+				pCalibrateOffsetBase2 = loader.readVector(element)
+				
+			elif tagName.equals("offsetTip2")
+				pCalibrateOffsetTip2 = loader.readVector(element)
+				
+			elif tagName.equals("distance1")
+				pCalibrateDistance1 = element.getFirstCDataFloat()
+				
+			elif tagName.equals("distance2")
+				pCalibrateDistance2 = element.getFirstCDataFloat()
+				
+			elif tagName.equals("baseShift")
+				pCalibrateBaseShift = element.getFirstCDataFloat()
 			end
 		end)
 	end
@@ -200,15 +564,32 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 		pReference.save(loader, tag.addTag("reference"))
 		pBase1.save(loader, tag.addTag("base1"))
 		pBase2.save(loader, tag.addTag("base2"))
+		tag.addDataTag("baseBone1", pBaseBone1)
+		tag.addDataTag("tipBone1", pTipBone1)
+		tag.addDataTag("baseBone2", pBaseBone2)
+		tag.addDataTag("tipBone2", pTipBone2)
 		tag.addDataTag("scaleShift", pScaleShift)
 		pShiftSlots.forEach(block String each
 			tag.addDataTag("shiftSlot", each)
 		end)
+		
+		if calibrated
+			saveCalibrated(loader, tag.addTag("calibrated"))
+		end
 	end
 	
 	protected func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
 		pReference.saveCalibrated(loader, tag.addTag("reference"))
 		pBase1.saveCalibrated(loader, tag.addTag("base1"))
 		pBase2.saveCalibrated(loader, tag.addTag("base2"))
+		//tag.addDataTag("shiftDistance", pCalibrateShiftDistance)
+		//tag.addDataTag("targetDistance", pCalibrateTargetDistance)
+		loader.writeVector(tag, "offsetBase1", pCalibrateOffsetBase1)
+		loader.writeVector(tag, "offsetTip1", pCalibrateOffsetTip1)
+		loader.writeVector(tag, "offsetBase2", pCalibrateOffsetBase2)
+		loader.writeVector(tag, "offsetTip2", pCalibrateOffsetTip2)
+		tag.addDataTag("distance1", pCalibrateDistance1)
+		tag.addDataTag("distance2", pCalibrateDistance2)
+		tag.addDataTag("baseShift", pCalibrateBaseShift)
 	end
 end
