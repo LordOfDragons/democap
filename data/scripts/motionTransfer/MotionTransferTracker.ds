@@ -65,7 +65,7 @@ class MotionTransferTracker
 	
 	var Vector pTransformPosition
 	var Vector pTransformRotation
-	var Matrix pTransformMatrix
+	var Matrix pTransformMatrix, pTransformMatrixOrg
 	var Vector pReverseTransformPosition
 	var Vector pReverseTransformRotation
 	var Matrix pReverseTransformMatrix
@@ -80,7 +80,7 @@ class MotionTransferTracker
 		pOffsetRotation = Vector.new()
 		pTransformPosition = Vector.new()
 		pTransformRotation = Vector.new()
-		pTransformMatrix = Matrix.new()
+		pTransformMatrixOrg = pTransformMatrix = Matrix.new()
 		pReverseTransformPosition = Vector.new()
 		pReverseTransformRotation = Vector.new()
 		pReverseTransformMatrix = Matrix.new()
@@ -95,6 +95,7 @@ class MotionTransferTracker
 		pTransformPosition = tracker.pTransformPosition
 		pTransformRotation = tracker.pTransformRotation
 		pTransformMatrix = tracker.pTransformMatrix
+		pTransformMatrixOrg = tracker.pTransformMatrixOrg
 		pReverseTransformPosition = tracker.pReverseTransformPosition
 		pReverseTransformRotation = tracker.pReverseTransformRotation
 		pReverseTransformMatrix = tracker.pReverseTransformMatrix
@@ -193,7 +194,7 @@ class MotionTransferTracker
 	func void resetTransform()
 		pTransformPosition = Vector.new()
 		pTransformRotation = Vector.new()
-		pTransformMatrix = Matrix.new()
+		pTransformMatrixOrg = pTransformMatrix = Matrix.new()
 		pReverseTransformPosition = Vector.new()
 		pReverseTransformRotation = Vector.new()
 		pReverseTransformMatrix = Matrix.new()
@@ -202,7 +203,7 @@ class MotionTransferTracker
 	
 	/** Set transform (both directions). */
 	func void setTransform(Vector position, Vector rotation)
-		pTransformMatrix = Matrix.newRT(rotation, position)
+		pTransformMatrixOrg = pTransformMatrix = Matrix.newRT(rotation, position)
 		pTransformPosition = position
 		pTransformRotation = rotation
 		setReverseFromTransform()
@@ -212,7 +213,7 @@ class MotionTransferTracker
 	func void setTransform(Matrix matrix)
 		pTransformPosition = matrix.getPosition()
 		pTransformRotation = matrix.getEulerAngles()
-		pTransformMatrix = matrix
+		pTransformMatrixOrg = pTransformMatrix = matrix
 		setReverseFromTransform()
 	end
 	
@@ -223,10 +224,30 @@ class MotionTransferTracker
 			return
 		end
 		
+		setTransform(config, component, bone, true)
+		pTransformMatrixOrg = pTransformMatrix
+		
+		setTransform(config, component, bone, false)
+	end
+	
+	protected func void setTransform(CharacterConfiguration config, Component component,\
+	String bone, bool original)
+		if pRealSlot == null
+			resetTransform()
+			return
+		end
+		
 		// getCalibrateMatrix() is the same as getCharacterMatrix() during capturing
 		// getCalibrateReferenceMatrix() is the same as getReferenceMatrix() in tracker slot
-		// getTargetMatrix() is not actor scaled
-		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
+		// getTargetMatrix() is not actor scaled.
+		// 
+		// original selects if the original or potential manipulated matrix is used.
+		// while calibrating the modified matrices have to be used while during init
+		// element class the original matrix is required otherwise motion transfers
+		// are potentially affect twice depending on auto transform
+		var Matrix slotInvMatrix = original if pRealSlot.getCalibrateMatrixInverse()\
+			else pRealSlot.getCalibrateMatrixInverseOriginal()
+		
 		var Matrix slotTargetMatrix = pRealSlot.getTargetMatrix()
 		var Matrix slotRefMatrix = pRealSlot.getCalibrateReferenceMatrix()
 		var Matrix slotRefMatrixInv = pRealSlot.getCalibrateReferenceMatrixInverse()
@@ -245,7 +266,8 @@ class MotionTransferTracker
 		
 		var Matrix deviceReferenceTransform = slotRefMatrix * slotInvMatrix
 		var Matrix referenceTargetTransform = slotTargetMatrix * slotRefMatrixInv
-		var Matrix deviceBoneTransform = targetBoneTransform * referenceTargetTransform * deviceReferenceTransform
+		var Matrix deviceBoneTransform = targetBoneTransform\
+			* referenceTargetTransform * deviceReferenceTransform
 		
 		select pAutoTransform
 		case AutoTransform.full
@@ -272,7 +294,27 @@ class MotionTransferTracker
 		setReverseFromTransform()
 	end
 	
-	func void setTransformTrackTo(CharacterConfiguration config, Component component, String bone, Vector axis)
+	func void setTransformTrackTo(CharacterConfiguration config, Component component,\
+	String bone, Vector axis)
+		if pRealSlot == null
+			resetTransform()
+			return
+		end
+		
+		var int index = component.indexOfBoneNamed(bone)
+		if index == -1
+			resetTransform()
+			return
+		end
+		
+		setTransformTrackTo(config, component, bone, axis, true)
+		pTransformMatrixOrg = pTransformMatrix
+		
+		setTransformTrackTo(config, component, bone, axis, false)
+	end
+	
+	protected func void setTransformTrackTo(CharacterConfiguration config, Component component,\
+	String bone, Vector axis, bool original)
 		if pRealSlot == null
 			resetTransform()
 			return
@@ -286,8 +328,15 @@ class MotionTransferTracker
 		
 		// getCalibrateMatrix() is the same as getCharacterMatrix() during capturing
 		// getCalibrateReferenceMatrix() is the same as getReferenceMatrix() in tracker slot
-		// getTargetMatrix() is not actor scaled
-		var Matrix slotInvMatrix = pRealSlot.getCalibrateMatrixInverse()
+		// getTargetMatrix() is not actor scaled.
+		// 
+		// original selects if the original or potential manipulated matrix is used.
+		// while calibrating the modified matrices have to be used while during init
+		// element class the original matrix is required otherwise motion transfers
+		// are potentially affect twice depending on auto transform
+		var Matrix slotInvMatrix = original if pRealSlot.getCalibrateMatrixInverse()\
+			else pRealSlot.getCalibrateMatrixInverseOriginal()
+		
 		var Matrix slotTargetMatrix = getOffsetMatrix() * pRealSlot.getTargetMatrix()
 		var Matrix slotRefMatrix = pRealSlot.getCalibrateReferenceMatrix()
 		var Matrix slotRefMatrixInv = pRealSlot.getCalibrateReferenceMatrixInverse()
@@ -335,6 +384,15 @@ class MotionTransferTracker
 		pReverseTransformRotation = pReverseTransformMatrix.getEulerAngles()
 	end
 	
+	/**
+	 * Finish calibrate.
+	 * 
+	 * Replaces transform matrix with original transform matrix.
+	 */
+	func void finishCalibrate()
+		setTransform(pTransformMatrixOrg)
+	end
+	
 	/** Real slot or null. */
 	func CharacterTrackerSlot getRealSlot()
 		return pRealSlot
@@ -360,6 +418,7 @@ class MotionTransferTracker
 		pTransformPosition = tracker.pTransformPosition
 		pTransformRotation = tracker.pTransformRotation
 		pTransformMatrix = tracker.pTransformMatrix
+		pTransformMatrixOrg = tracker.pTransformMatrixOrg
 		pReverseTransformPosition = tracker.pReverseTransformPosition
 		pReverseTransformRotation = tracker.pReverseTransformRotation
 		pReverseTransformMatrix = tracker.pReverseTransformMatrix
