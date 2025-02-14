@@ -66,42 +66,34 @@ class MotionTransferBend extends DefaultMotionTransfer
 	end
 	
 	
-	
-	var String pTargetBone
-	var String pTargetBaseBone
-	var String pTipBone
-	var String pBaseBone
-	var MotionTransferTracker pTargetTracker
-	var MotionTransferTracker pBaseTracker
+	var String pTargetBone, pTargetBaseBone, pTipBone, pBaseBone
+	var MotionTransferTracker pTargetTracker, pBaseTracker, pStabilizeTracker
 	var Vector2 pScaleRotation
 	var float pBendShape
-	var bool pFitCurveToTarget
-	var bool pUseRotation
-	var float pTwistPropagation
-	var float pTwistScale
+	var bool pFitCurveToTarget, pUseRotation
+	var float pTwistPropagation, pTwistScale
 	var int pTwistBoneCount
 	var Vector pBendAxisRotation
-	var String pBendMoveX
-	var String pBendMoveY
-	var Vector2 pBendMoveRange
+	var String pBendMoveX, pBendMoveY
+	var Vector2 pBendMoveRangeX, pBendMoveRangeY
+	var bool pLockZDistance
 	
-	
-	var ADController pADControllerBendX
-	var ADController pADControllerBendY
-	var ADController pADControllerTwist
+	var ADController pADControllerBendX, pADControllerBendY, pADControllerTwist
 	
 	var Array pCalibrateBones
 	var Matrix pCalibrateBendAxisMatrix
 	var Vector pCalibrateZeroRotation
-	var Array pCalibrateBendAxesX
-	var Array pCalibrateBendAxesY
-	var Array pCalibrateBendWeights
-	var CurveBezier pCalibrateBendCurveX
-	var CurveBezier pCalibrateBendCurveY
+	var Array pCalibrateBendAxesX, pCalibrateBendAxesY, pCalibrateBendWeights
+	var CurveBezier pCalibrateBendCurveX, pCalibrateBendCurveY
 	var Array pCalibrateTwistAxes
 	var Vector pCalibrateTwistBoneAxisRotation
 	var Matrix pCalibrateTwistTransform
+	var float pCalibrateLockedZDistance
 	
+	var Vector pCalibrateStabilizeAxis
+	var Matrix pCalibrateBendAxisMatrixStabilize
+	var Vector pCalibrateZeroRotationStabilize
+	//var Vector pCalibrateStableBaseOffset
 	
 	
 	/** Create motion transfer. */
@@ -112,6 +104,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pBaseBone = ""
 		pTargetTracker = MotionTransferTracker.new()
 		pBaseTracker = MotionTransferTracker.new()
+		pStabilizeTracker = MotionTransferTracker.new()
 		pScaleRotation = Vector2.new(1, 1)
 		pBendShape = 0.5
 		pFitCurveToTarget = false
@@ -122,10 +115,16 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pBendAxisRotation = Vector.new()
 		pBendMoveX = ""
 		pBendMoveY = ""
-		pBendMoveRange = Vector2.new(90, 90)
+		pBendMoveRangeX = Vector2.new(-90, 90)
+		pBendMoveRangeY = Vector2.new(-90, 90)
+		pLockZDistance = false
 		pCalibrateBones = Array.new()
 		pCalibrateBendAxisMatrix = Matrix.new()
 		pCalibrateZeroRotation = Vector.new()
+		pCalibrateStabilizeAxis = Vector.new()
+		pCalibrateBendAxisMatrixStabilize = Matrix.new()
+		pCalibrateZeroRotationStabilize = Vector.new()
+		//pCalibrateStableBaseOffset = Vector.new()
 		pCalibrateBendAxesX = Array.new()
 		pCalibrateBendAxesY = Array.new()
 		pCalibrateBendWeights = Array.new()
@@ -144,6 +143,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pBaseBone = transfer.pBaseBone
 		pTargetTracker = MotionTransferTracker.new(transfer.pTargetTracker)
 		pBaseTracker = MotionTransferTracker.new(transfer.pBaseTracker)
+		pStabilizeTracker = MotionTransferTracker.new(transfer.pStabilizeTracker)
 		pScaleRotation = transfer.pScaleRotation
 		pBendShape = transfer.pBendShape
 		pFitCurveToTarget = transfer.pFitCurveToTarget
@@ -154,10 +154,16 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pBendAxisRotation = transfer.pBendAxisRotation
 		pBendMoveX = transfer.pBendMoveX
 		pBendMoveY = transfer.pBendMoveY
-		pBendMoveRange = transfer.pBendMoveRange
+		pBendMoveRangeX = transfer.pBendMoveRangeX
+		pBendMoveRangeY = transfer.pBendMoveRangeY
+		pLockZDistance = transfer.pLockZDistance
 		pCalibrateBones = Array.new(transfer.pCalibrateBones)
 		pCalibrateBendAxisMatrix = transfer.pCalibrateBendAxisMatrix
 		pCalibrateZeroRotation = transfer.pCalibrateZeroRotation
+		pCalibrateStabilizeAxis = transfer.pCalibrateStabilizeAxis
+		pCalibrateBendAxisMatrixStabilize = transfer.pCalibrateBendAxisMatrixStabilize
+		pCalibrateZeroRotationStabilize = transfer.pCalibrateZeroRotationStabilize
+		//pCalibrateStableBaseOffset = transfer.pCalibrateStableBaseOffset
 		pCalibrateBendAxesX = Array.new(transfer.pCalibrateBendAxesX)
 		pCalibrateBendAxesY = Array.new(transfer.pCalibrateBendAxesY)
 		pCalibrateBendWeights = Array.new(transfer.pCalibrateBendWeights)
@@ -230,6 +236,11 @@ class MotionTransferBend extends DefaultMotionTransfer
 	/** Base tracker. */
 	func MotionTransferTracker getBaseTracker()
 		return pBaseTracker
+	end
+	
+	/** Stabilize tracker. */
+	func MotionTransferTracker getStabilizeTracker()
+		return pStabilizeTracker
 	end
 	
 	/** Scale rotation. */
@@ -361,17 +372,52 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pBendMoveY = move
 	end
 	
-	/** Range in degrees of bending rotation to map to move based bending. */
-	func Vector2 getBendMoveRange()
-		return pBendMoveRange
+	/**
+	 * Range in degrees of bending X rotation to map to move based bending.
+	 * X coordinate is negative range, Y coordinate is positive range.
+	 */
+	func Vector2 getBendMoveRangeX()
+		return pBendMoveRangeX
 	end
 	
-	/** Set range in degrees of bending rotation to map to move based bending. */
-	func void setBendMoveRange(Vector2 range)
+	/**
+	 * Set range in degrees of bending X rotation to map to move based bending.
+	 * X coordinate is negative range, Y coordinate is positive range.
+	 */
+	func void setBendMoveRangeX(Vector2 range)
 		if range == null
 			throw ENullPointer.new("range")
 		end
-		pBendMoveRange = range
+		pBendMoveRangeX = range
+	end
+	
+	/**
+	 * Range in degrees of bending Y rotation to map to move based bending.
+	 * X coordinate is negative range, Y coordinate is positive range.
+	 */
+	func Vector2 getBendMoveRangeY()
+		return pBendMoveRangeY
+	end
+	
+	/**
+	 * Set range in degrees of bending Y rotation to map to move based bending.
+	 * X coordinate is negative range, Y coordinate is positive range.
+	 */
+	func void setBendMoveRangeY(Vector2 range)
+		if range == null
+			throw ENullPointer.new("range")
+		end
+		pBendMoveRangeY = range
+	end
+	
+	/** Lock Z distance for non-rotation bending calculation. */
+	func bool getLockZDistance()
+		return pLockZDistance
+	end
+	
+	/** Set lock Z distance for non-rotation bending calculation. */
+	func void setLockZDistance(bool lock)
+		pLockZDistance = lock
 	end
 	
 	
@@ -385,6 +431,26 @@ class MotionTransferBend extends DefaultMotionTransfer
 	func Vector getCalibrateZeroRotation()
 		return pCalibrateZeroRotation
 	end
+	
+	/** Calibrate stabilize axis. */
+	func Vector getCalibrateStabilizeAxis()
+		return pCalibrateStabilizeAxis
+	end
+	
+	/** Calibrate bend axis matrix (inverse bend axis matrix in base matrix) stabilize. */
+	func Matrix getCalibrateBendAxisMatrixStabilize()
+		return pCalibrateBendAxisMatrixStabilize
+	end
+	
+	/** Calibrate zero rotation stabilize. */
+	func Vector getCalibrateZeroRotationStabilize()
+		return pCalibrateZeroRotationStabilize
+	end
+	
+	/** Calibrate stabilize base offset. */
+	/*func Vector getCalibrateStableBaseOffset()
+		return pCalibrateStableBaseOffset
+	end*/
 	
 	/** Calibrate twist bone axis rotation. */
 	func Vector getCalibrateTwistBoneAxisRotation()
@@ -406,6 +472,11 @@ class MotionTransferBend extends DefaultMotionTransfer
 		return pCalibrateBendCurveY
 	end
 	
+	/** Calibrate locked z distance. */
+	func float getCalibrateLockedZDistance()
+		return pCalibrateLockedZDistance
+	end
+	
 	
 	
 	/** Init element clas. */
@@ -418,12 +489,15 @@ class MotionTransferBend extends DefaultMotionTransfer
 		var ECBMotionTransferBend behavior = ECBMotionTransferBend.new(eclass, this)
 		
 		// add rules
-		var CharacterTrackerSlot slotTarget, slotBase
+		var CharacterTrackerSlot slotTarget, slotBase, slotStabilize
 		if not pTargetTracker.getSlot().empty()
 			slotTarget = config.getTrackerSlots().getNamed(pTargetTracker.getSlot())
 		end
 		if not pBaseTracker.getSlot().empty()
 			slotBase = config.getTrackerSlots().getNamed(pBaseTracker.getSlot())
+		end
+		if not pStabilizeTracker.getSlot().empty()
+			slotStabilize = config.getTrackerSlots().getNamed(pStabilizeTracker.getSlot())
 		end
 		
 		if slotTarget == null or slotBase == null or pCalibrateBones.getCount() == 0 \
@@ -460,11 +534,11 @@ class MotionTransferBend extends DefaultMotionTransfer
 			linkMoveBendX = ADLink.new()
 			linkMoveBendX.setController(pADControllerBendX)
 			
-			var float factor = pBendMoveRange.getX() / (fullRotation * 2)
+			var Vector2 factor = pBendMoveRangeX / (fullRotation * 2)
 			var CurveBezier curve = CurveBezier.new()
 			curve.setInterpolationMode(CurveBezierInterpolation.linear)
-			curve.addPoint(0.5 - factor, 0)
-			curve.addPoint(0.5 + factor, 1)
+			curve.addPoint(0.5 + factor.getX(), 0)
+			curve.addPoint(0.5 + factor.getY(), 1)
 			linkMoveBendX.setCurve(curve)
 			adef.addLink(linkMoveBendX)
 		end
@@ -474,11 +548,11 @@ class MotionTransferBend extends DefaultMotionTransfer
 			linkMoveBendY = ADLink.new()
 			linkMoveBendY.setController(pADControllerBendY)
 			
-			var float factor = pBendMoveRange.getY() / (fullRotation * 2)
+			var Vector2 factor = pBendMoveRangeY / (fullRotation * 2)
 			var CurveBezier curve = CurveBezier.new()
 			curve.setInterpolationMode(CurveBezierInterpolation.linear)
-			curve.addPoint(0.5 - factor, 0)
-			curve.addPoint(0.5 + factor, 1)
+			curve.addPoint(0.5 + factor.getX(), 0)
+			curve.addPoint(0.5 + factor.getY(), 1)
 			linkMoveBendY.setCurve(curve)
 			adef.addLink(linkMoveBendY)
 		end
@@ -497,13 +571,15 @@ class MotionTransferBend extends DefaultMotionTransfer
 			rule.setName(nameBendX)
 			rule.setReferenceMoveName(pBendMoveX)
 			rule.setLeadingMoveName(pBendMoveX)
-			rule.setEnablePosition(false)
+			rule.setEnableSize(true)
 			rule.setEnableVertexPositionSet(false)
 			rule.setReferenceMoveTime(0.5)
 			rule.addTargetLink(ADRuleTargetLink.new(ARAnimationDifferenceTarget.leadingMoveTime, linkMoveBendX))
+			/*
 			for i = 0 to count
 				rule.addBone(pCalibrateBones.getAt(baseIndex - i) cast String)
 			end
+			*/
 			adef.addRule(rule)
 		end
 		
@@ -512,13 +588,15 @@ class MotionTransferBend extends DefaultMotionTransfer
 			rule.setName(nameBendY)
 			rule.setReferenceMoveName(pBendMoveY)
 			rule.setLeadingMoveName(pBendMoveY)
-			rule.setEnablePosition(false)
+			rule.setEnableSize(true)
 			rule.setEnableVertexPositionSet(false)
 			rule.setReferenceMoveTime(0.5)
 			rule.addTargetLink(ADRuleTargetLink.new(ARAnimationDifferenceTarget.leadingMoveTime, linkMoveBendY))
+			/*
 			for i = 0 to count
 				rule.addBone(pCalibrateBones.getAt(baseIndex - i) cast String)
 			end
+			*/
 			adef.addRule(rule)
 		end
 		
@@ -629,6 +707,11 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pBaseTracker.resetTransform()
 		pCalibrateBendAxisMatrix = Matrix.new()
 		pCalibrateZeroRotation = Vector.new()
+		pStabilizeTracker.resetTransform()
+		pCalibrateStabilizeAxis = Vector.new()
+		pCalibrateBendAxisMatrixStabilize = Matrix.new()
+		pCalibrateZeroRotationStabilize = Vector.new()
+		//pCalibrateStableBaseOffset = Vector.new()
 		pCalibrateBendAxesX.removeAll()
 		pCalibrateBendAxesY.removeAll()
 		pCalibrateBendWeights.removeAll()
@@ -637,6 +720,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pCalibrateTwistAxes.removeAll()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
 		pCalibrateTwistTransform = Matrix.new()
+		pCalibrateLockedZDistance = 0
 	end
 	
 	/** Calibrate character. */
@@ -654,8 +738,14 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pBaseTracker.resolveRealSlot(config)
 		pBaseTracker.setTransform(config, component, pTargetBaseBone)
 		
+		pStabilizeTracker.resolveRealSlot(config)
+		pStabilizeTracker.setTransform(config, component, "")
+		
 		// calibrate zero rotation
 		pCalibrateZeroRotation = Vector.new()
+		pCalibrateStabilizeAxis = Vector.new()
+		pCalibrateZeroRotationStabilize = Vector.new()
+		//pCalibrateStableBaseOffset = Vector.new()
 		
 		var int indexBase = -1, indexTarget = -1, indexTip = -1
 		if not pBaseBone.empty()
@@ -677,8 +767,87 @@ class MotionTransferBend extends DefaultMotionTransfer
 		end
 		
 		var Matrix bendAxisMatrix = Matrix.newRotation(pBendAxisRotation)
+		
+		if pStabilizeTracker.getRealSlot() != null and pBaseTracker.getRealSlot() != null\
+		and pTargetTracker.getRealSlot() != null
+			var Matrix stabilizeMatrix = pStabilizeTracker.getTransformMatrix()\
+				* pStabilizeTracker.getRealSlot().getCalibrateMatrix()
+			
+			pCalibrateStabilizeAxis = pBaseTracker.getRealSlot().getCalibrateMatrixInverse().\
+				transformNormal(bendAxisMatrix.getViewVector())
+			
+			//var Vector stabilizePos = stabilizeMatrix.getPosition()
+			var Vector basePos = pBaseTracker.getRealSlot().getCalibratePosition()
+			
+			var Matrix stabilizeMatrixInv = stabilizeMatrix.getInverse()
+			pCalibrateBendAxisMatrixStabilize = (bendAxisMatrix * stabilizeMatrixInv.getRotation()).getInverse()
+			
+			var Vector position = (stabilizeMatrixInv * pCalibrateBendAxisMatrixStabilize) * basePos
+			
+			var float radius = Vector2.new(position.getX(), position.getZ()).getLength()
+			var float rotY = DEMath.atan2(-position.getX(), position.getZ())
+			var float rotX
+			
+			if DEMath.fabs(rotY) <= 90
+				rotX = DEMath.atan2(position.getY(), radius)
+				
+			else
+				rotX = DEMath.atan2(position.getY(), -radius)
+				rotY = DEMath.normalize(rotY + 180, -90, 90)
+			end
+			
+			pCalibrateZeroRotationStabilize = Vector.new(-rotX, -rotY, 0)
+			/*if getName().equals("AutoHuman: Neck Shift")
+				GameApp.getApp().getConsole().addMessage("INIT(S): " + Array.newWith(rotX, rotY, position))
+			end*/
+			
+			/*
+			var Vector axis = basePos - stabilizePos
+			if not axis.isZero()
+				pCalibrateStabilizeAxis = pBaseTracker.getRealSlot().\
+					getCalibrateMatrixInverse().transformNormal(axis.normalize())
+			end
+			*/
+		end
+		
+		/*
+		if pStabilizeTracker.getRealSlot() != null and pBaseTracker.getRealSlot() != null and not pUseRotation
+			var Vector stabilizePos = (pStabilizeTracker.getTransformMatrix()\
+				* pStabilizeTracker.getRealSlot().getCalibrateMatrix()).getPosition()
+			
+			var Vector basePos = pBaseTracker.getRealSlot().getCalibratePosition()
+				pCalibrateStableBaseOffset = baseMatrix.getPosition() - basePos
+			end
+			baseMatrix = Matrix.newWorld(baseMatrix.getPosition(), stabilizeMatrix.toQuaternion())
+			
+			// zero rotation
+			var Matrix stabilizeMatrixInv = stabilizeMatrix.getInverse()
+			pCalibrateBendAxisMatrixStabilize = (bendAxisMatrix * stabilizeMatrixInv.getRotation()).getInverse()
+			
+			var Vector position = (stabilizeMatrixInv * pCalibrateBendAxisMatrixStabilize) * basePos
+			
+			var float radius = Vector2.new(position.getX(), position.getZ()).getLength()
+			var float rotY = DEMath.atan2(-position.getX(), position.getZ())
+			var float rotX
+			
+			if DEMath.fabs(rotY) <= 90
+				rotX = DEMath.atan2(position.getY(), radius)
+				
+			else
+				rotX = DEMath.atan2(position.getY(), -radius)
+				rotY = DEMath.normalize(rotY + 180, -90, 90)
+			end
+			
+			pCalibrateZeroRotationStabilize = Vector.new(-rotX, -rotY, 0)
+			if getName().equals("AutoHuman: Neck Shift")
+				GameApp.getApp().getConsole().addMessage("INIT(S): " + Array.newWith(rotX, rotY, position))
+			end
+		end
+		*/
+		
 		var Matrix baseMatrixInv = baseMatrix.getInverse()
 		pCalibrateBendAxisMatrix = (bendAxisMatrix * baseMatrixInv.getRotation()).getInverse()
+		pCalibrateLockedZDistance = 0
 		
 		if indexBase != -1 and indexTip != -1
 			// zero rotation
@@ -686,11 +855,6 @@ class MotionTransferBend extends DefaultMotionTransfer
 			var Vector position = bendMatrix.getPosition()
 			
 			if pUseRotation
-				var int indexBone = component.indexOfBoneNamed(pTipBone)
-				if indexBone == -1
-					return
-				end
-				
 				pCalibrateZeroRotation = (bendAxisMatrix * targetMatrix.getRotation().getInverse()).getEulerAngles()
 				
 			else
@@ -720,6 +884,10 @@ class MotionTransferBend extends DefaultMotionTransfer
 				end
 				
 				pCalibrateZeroRotation = Vector.new(-rotX, -rotY, 0)
+				pCalibrateLockedZDistance = position.getZ()
+				/*if getName().equals("AutoHuman: Neck Shift")
+					GameApp.getApp().getConsole().addMessage("INIT: " + Array.newWith(rotX, rotY, position))
+				end*/
 			end
 			
 			// bend axes
@@ -943,6 +1111,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 			elif tagName.equals("baseTracker")
 				pBaseTracker.load(loader, element)
 				
+			elif tagName.equals("stabilizeTracker")
+				pStabilizeTracker.load(loader, element)
+				
 			elif tagName.equals("scaleRotation")
 				setScaleRotation(loader.readVector2(element))
 				
@@ -973,8 +1144,20 @@ class MotionTransferBend extends DefaultMotionTransfer
 			elif tagName.equals("bendMoveY")
 				setBendMoveY(element.getFirstCData())
 				
+			elif tagName.equals("bendMoveRangeX")
+				pBendMoveRangeX = loader.readVector2(element)
+				
+			elif tagName.equals("bendMoveRangeY")
+				pBendMoveRangeY = loader.readVector2(element)
+
 			elif tagName.equals("bendMoveRange")
-				setBendMoveRange(loader.readVector2(element))
+				// backwards compatibility
+				var Vector2 range = loader.readVector2(element)
+				pBendMoveRangeX = Vector2.new(-range.getX(), range.getX())
+				pBendMoveRangeY = Vector2.new(-range.getY(), range.getY())
+				
+			elif tagName.equals("lockZDistance")
+				pLockZDistance = element.getFirstCDataBool()
 				
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
@@ -999,6 +1182,21 @@ class MotionTransferBend extends DefaultMotionTransfer
 			elif tagName.equals("zeroRotation")
 				pCalibrateZeroRotation = loader.readVector(element)
 				
+			elif tagName.equals("stabilizeTracker")
+				pStabilizeTracker.loadCalibrated(loader, element)
+				
+			elif tagName.equals("stabilizeAxis")
+				pCalibrateStabilizeAxis = loader.readVector(element)
+				
+			elif tagName.equals("bendAxisMatrixStabilize")
+				pCalibrateBendAxisMatrixStabilize = GameApp.getGameApp().getLoadCharacterProfile().readMatrix(element)
+				
+			elif tagName.equals("zeroRotationStabilize")
+				pCalibrateZeroRotationStabilize = loader.readVector(element)
+				
+			//elif tagName.equals("stableBaseOffset")
+			//	pCalibrateStableBaseOffset = loader.readVector(element)
+				
 			elif tagName.equals("bendAxisX")
 				pCalibrateBendAxesX.add(loader.readVector(element))
 				
@@ -1022,6 +1220,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 				
 			elif tagName.equals("twistTransform")
 				pCalibrateTwistTransform = GameApp.getGameApp().getLoadCharacterProfile().readMatrix(element)
+				
+			elif tagName.equals("lockedZDistance")
+				pCalibrateLockedZDistance = element.getFirstCDataFloat()
 			end
 		end)
 	end
@@ -1030,6 +1231,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 	func void postLoadInit(CharacterConfiguration config)
 		pTargetTracker.resolveRealSlot(config)
 		pBaseTracker.resolveRealSlot(config)
+		pStabilizeTracker.resolveRealSlot(config)
 	end
 	
 	/** Save to XML. */
@@ -1041,6 +1243,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		tag.addDataTag("baseBone", pBaseBone)
 		pTargetTracker.save(loader, tag.addTag("targetTracker"))
 		pBaseTracker.save(loader, tag.addTag("baseTracker"))
+		pStabilizeTracker.save(loader, tag.addTag("stabilizeTracker"))
 		loader.writeVector2(tag, "scaleRotation", pScaleRotation)
 		tag.addDataTag("bendShape", pBendShape)
 		tag.addDataTag("fitCurveToTarget", pFitCurveToTarget)
@@ -1051,7 +1254,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 		loader.writeVector(tag, "bendAxisRotation", pBendAxisRotation)
 		tag.addDataTag("bendMoveX", pBendMoveX)
 		tag.addDataTag("bendMoveY", pBendMoveY)
-		loader.writeVector2(tag, "bendMoveRange", pBendMoveRange)
+		loader.writeVector2(tag, "bendMoveRangeX", pBendMoveRangeX)
+		loader.writeVector2(tag, "bendMoveRangeY", pBendMoveRangeY)
+		tag.addDataTag("lockZDistance", pLockZDistance)
 		
 		if calibrated
 			saveCalibrated(loader, tag.addTag("calibrated"))
@@ -1068,6 +1273,11 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pBaseTracker.saveCalibrated(loader, tag.addTag("baseTracker"))
 		lcp.writeMatrix(tag, "bendAxisMatrix", pCalibrateBendAxisMatrix)
 		loader.writeVector(tag, "zeroRotation", pCalibrateZeroRotation)
+		pStabilizeTracker.saveCalibrated(loader, tag.addTag("stabilizeTracker"))
+		loader.writeVector(tag, "stabilizeAxis", pCalibrateStabilizeAxis)
+		lcp.writeMatrix(tag, "bendAxisMatrixStabilize", pCalibrateBendAxisMatrixStabilize)
+		loader.writeVector(tag, "zeroRotationStabilize", pCalibrateZeroRotationStabilize)
+		//loader.writeVector(tag, "stableBaseOffset", pCalibrateStableBaseOffset)
 		pCalibrateBendAxesX.forEach(block Vector each
 			loader.writeVector(tag, "bendAxisX", each)
 		end)
@@ -1084,5 +1294,6 @@ class MotionTransferBend extends DefaultMotionTransfer
 		end)
 		loader.writeVector(tag, "twistBoneAxisRotation", pCalibrateTwistBoneAxisRotation)
 		lcp.writeMatrix(tag, "twistTransform", pCalibrateTwistTransform)
+		tag.addDataTag("lockedZDistance", pCalibrateLockedZDistance)
 	end
 end

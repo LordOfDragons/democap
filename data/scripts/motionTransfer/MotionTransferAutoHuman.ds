@@ -68,14 +68,14 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	var Vector pScaleHeadRotation, pScaleSpineBending
 	var Vector pNeckBendAxisRotation, pSpineBendAxisRotation
 	var bool pRelocateArms
-	var String pNeckBendMoveX, pNeckBendMoveY
-	var Vector2 pNeckBendMoveRange
+	var String pNeckBendMoveX, pNeckBendMoveY, pNeckShiftMoveX, pNeckShiftMoveY
+	var Vector2 pNeckBendMoveRange, pNeckShiftMoveRange
 	
 	var MotionTransferChild pTransferWaist
 	var MotionTransferBaseShiftSlots pTransferShiftUpper, pTransferShiftLegLeft, pTransferShiftLegRight
 // 	var MotionTransferIK pTransferSpineHead
 	var MotionTransferIK pTransferHead
-	var MotionTransferBend pTransferNeck, pTransferSpine
+	var MotionTransferBend pTransferNeck, pTransferNeckShift, pTransferSpine
 	var MotionTransferIK pTransferArmRight, pTransferArmLeft
 	var MotionTransferIK pTransferLegRight, pTransferLegLeft
 	
@@ -105,7 +105,15 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pRelocateArms = false
 		pNeckBendMoveX = ""
 		pNeckBendMoveY = ""
+		pNeckShiftMoveX = ""
+		pNeckShiftMoveY = ""
 		pNeckBendMoveRange = Vector2.new(90, 90)
+		
+		// neck/head distance in actor space is 2dm . head can be shifted around 5cm forward.
+		// this results in an angle of deg(atan2(0.05,0.2)) = 14 degrees. for sidewards shift
+		// 2cm is used. this yields an angle of 5 degrees. To have some leeway these values
+		// are increased
+		pNeckShiftMoveRange = Vector2.new(30, 15)
 		
 		// create child motion transfers
 		var MotionTransferChild.Factory factoryChild = MotionTransferChild.Factory.new()
@@ -136,6 +144,11 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		pTransferHead = MotionTransferIK.new(factoryIK.factoryID())
 		pTransferHead.setName("AutoHuman: Head")
+		
+		pTransferNeckShift = MotionTransferBend.new(factoryBend.factoryID())
+		pTransferNeckShift.setName("AutoHuman: Neck Shift")
+		pTransferNeckShift.setBendAxisRotation(pNeckBendAxisRotation)
+		pTransferNeckShift.setTwistPropagation(0.5)
 		
 		pTransferNeck = MotionTransferBend.new(factoryBend.factoryID())
 		pTransferNeck.setName("AutoHuman: Neck")
@@ -204,13 +217,17 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pRelocateArms = transfer.pRelocateArms
 		pNeckBendMoveX = transfer.pNeckBendMoveX
 		pNeckBendMoveY = transfer.pNeckBendMoveY
+		pNeckShiftMoveX = transfer.pNeckShiftMoveX
+		pNeckShiftMoveY = transfer.pNeckShiftMoveY
 		pNeckBendMoveRange = transfer.pNeckBendMoveRange
+		pNeckShiftMoveRange = transfer.pNeckShiftMoveRange
 		
 		pTransferShiftLegLeft = MotionTransferBaseShiftSlots.new(transfer.pTransferShiftLegLeft)
 		pTransferShiftLegRight = MotionTransferBaseShiftSlots.new(transfer.pTransferShiftLegRight)
 		pTransferShiftUpper = MotionTransferBaseShiftSlots.new(transfer.pTransferShiftUpper)
 		pTransferWaist = MotionTransferChild.new(transfer.pTransferWaist)
 // 		pTransferSpineHead = MotionTransferIK.new(transfer.pTransferSpineHead)
+		pTransferNeckShift = MotionTransferBend.new(transfer.pTransferNeckShift)
 		pTransferNeck = MotionTransferBend.new(transfer.pTransferNeck)
 		pTransferSpine = MotionTransferBend.new(transfer.pTransferSpine)
 		pTransferHead = MotionTransferIK.new(transfer.pTransferHead)
@@ -524,6 +541,45 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pNeckBendMoveRange = range
 	end
 	
+	/** Animation move to use for X axis neck shifting or empty string. */
+	func String getNeckShiftMoveX()
+		return pNeckShiftMoveX
+	end
+	
+	/** Set animation move to use for X axis neck shifting or empty string. */
+	func void setNeckShiftMoveX(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pNeckShiftMoveX = move
+	end
+	
+	/** Animation move to use for Y axis neck shifting or empty string. */
+	func String getNeckShiftMoveY()
+		return pNeckShiftMoveY
+	end
+	
+	/** Set animation move to use for Y axis neck shifting or empty string. */
+	func void setNeckShiftMoveY(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pNeckShiftMoveY = move
+	end
+	
+	/** Range in degrees of neck shift rotation to map to move based shifting. */
+	func Vector2 getNeckShiftMoveRange()
+		return pNeckShiftMoveRange
+	end
+	
+	/** Set range in degrees of neck shift rotation to map to move based shifting. */
+	func void setNeckShiftMoveRange(Vector2 range)
+		if range == null
+			throw ENullPointer.new("range")
+		end
+		pNeckShiftMoveRange = range
+	end
+	
 	
 	
 	/** Child motion transfer. */
@@ -551,6 +607,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	
 	func MotionTransferIK getTransferHead()
 		return pTransferHead
+	end
+	
+	func MotionTransferBend getTransferNeckShift()
+		return pTransferNeckShift
 	end
 	
 	func MotionTransferBend getTransferNeck()
@@ -587,6 +647,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferWaist.initElementClass(config, eclass, modifyRig)
 // 		pTransferSpineHead.initElementClass(config, eclass, modifyRig)
 		pTransferSpine.initElementClass(config, eclass, modifyRig)
+		pTransferNeckShift.initElementClass(config, eclass, modifyRig)
 		pTransferNeck.initElementClass(config, eclass, modifyRig)
 		pTransferHead.initElementClass(config, eclass, modifyRig)
 		pTransferArmRight.initElementClass(config, eclass, modifyRig)
@@ -603,6 +664,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferWaist.resetCalibration()
 // 		pTransferSpineHead.resetCalibration()
 		pTransferSpine.resetCalibration()
+		pTransferNeckShift.resetCalibration()
 		pTransferNeck.resetCalibration()
 		pTransferHead.resetCalibration()
 		pTransferArmRight.resetCalibration()
@@ -622,6 +684,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferShiftUpper.calibrate(config, actorProfile, actor, component)
 // 		pTransferSpineHead.calibrate(config, actorProfile, actor, component)
 		pTransferSpine.calibrate(config, actorProfile, actor, component)
+		pTransferNeckShift.calibrate(config, actorProfile, actor, component)
 		pTransferNeck.calibrate(config, actorProfile, actor, component)
 		pTransferHead.calibrate(config, actorProfile, actor, component)
 		pTransferArmRight.calibrate(config, actorProfile, actor, component)
@@ -672,6 +735,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.getGuideTracker().resolveRealSlot(config)
 		pTransferArmLeft.getRelocateTracker().resolveRealSlot(config)
 		
+		pTransferNeckShift.getBaseTracker().resolveRealSlot(config)
 		pTransferNeck.getBaseTracker().resolveRealSlot(config)
 		
 		var bool hasSlotWaist = hasSlot(pTransferWaist.getTracker(), CharacterTrackerSlot.Type.waist)
@@ -803,6 +867,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		if isSlotChestAttached
 // 			pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 			pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.reference)
+			//pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.none)
 			pTransferSpine.setTwistScale(pScaleSpineBending.getY())
 			
 		else
@@ -873,14 +938,68 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferSpine.setTargetBaseBone("")
 		
 		
+		// neck shift
+		var bool hasScaleHeadRotation = not pScaleHeadRotation.equals(Vector.new(1, 1, 1))
+		var bool hasNeckShiftMoves = not pNeckShiftMoveX.empty() or not pNeckShiftMoveY.empty()
+		
+		pTransferNeckShift.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.reference)
+		pTransferNeckShift.getTargetTracker().setOffsetPosition(Vector.new())
+		
+		pTransferNeckShift.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.reference)
+		pTransferNeckShift.getBaseTracker().setOffsetPosition(Vector.new())
+		pTransferNeckShift.getBaseTracker().setOffsetRotation(Vector.new())
+		
+		pTransferNeckShift.getStabilizeTracker().setAutoTransform(MotionTransferTracker.AutoTransform.reference)
+		pTransferNeckShift.getStabilizeTracker().setOffsetRotation(pNeckBendAxisRotation)
+		//pTransferNeckShift.setStabilizeBone(pTransferSpine.getBaseBone())
+		
+		pTransferNeckShift.setBendShape(pBendShapeNeck)
+		pTransferNeckShift.setBendAxisRotation(pNeckBendAxisRotation)
+		pTransferNeckShift.setFitCurveToTarget(false)
+		pTransferNeckShift.setUseRotation(false)
+		pTransferNeckShift.setLockZDistance(true)
+		pTransferNeckShift.setBendMoveRangeX(Vector2.new(\
+			-pNeckShiftMoveRange.getX(), pNeckShiftMoveRange.getX() * 0.5))
+		pTransferNeckShift.setBendMoveRangeY(Vector2.new(\
+			-pNeckShiftMoveRange.getY(), pNeckShiftMoveRange.getY()))
+		
+		if hasNeckShiftMoves
+			pTransferNeckShift.setBendMoveX(pNeckShiftMoveX)
+			pTransferNeckShift.setBendMoveY(pNeckShiftMoveY)
+			
+		else
+			pTransferNeckShift.setBendMoveX("")
+			pTransferNeckShift.setBendMoveY("")
+		end
+		
+		pTransferNeckShift.setTargetBone("")
+		pTransferNeckShift.setTargetBaseBone("")
+		
+		if chainHead.getCount() > 1
+			pTransferNeckShift.setTipBone(chainHead.getAt(0) cast String)
+			pTransferNeckShift.setBaseBone(chainHead.getAt(-2) cast String)
+			
+		else
+			pTransferNeckShift.setTipBone("")
+			pTransferNeckShift.setBaseBone("")
+		end
+		
+		if pTransferNeckShift.getBaseBone().empty() or pTransferNeckShift.getTipBone().empty()\
+		or (hasScaleHeadRotation and not hasNeckShiftMoves) or not isSlotChestAttached
+			pTransferNeckShift.setTipBone("")
+			pTransferNeckShift.setBaseBone("")
+		end
+		
 		
 		// neck
 // 		pTransferNeck.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
-		pTransferNeck.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		//pTransferNeck.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		pTransferNeck.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.reference)
 		pTransferNeck.getTargetTracker().setOffsetRotation(Vector.new())
 		pTransferNeck.getTargetTracker().setOffsetPosition(Vector.new())
 		
-		pTransferNeck.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		//pTransferNeck.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
+		pTransferNeck.getBaseTracker().setAutoTransform(MotionTransferTracker.AutoTransform.reference)
 // 		pTransferNeck.getBaseTracker().setOffsetRotation(Vector.new(90, 0, 0))
 		pTransferNeck.getBaseTracker().setOffsetRotation(pNeckBendAxisRotation)
 // 		pTransferNeck.getBaseTracker().setOffsetPosition(isSlotChestAttached if Vector.new() else Vector.new(0, -0.1, 0))
@@ -891,11 +1010,20 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferNeck.setFitCurveToTarget(false)
 		pTransferNeck.setUseRotation(true)
 		pTransferNeck.setTwistPropagation(1)
-		pTransferNeck.setScaleRotation(Vector2.new(pScaleHeadRotation.getX(), pScaleHeadRotation.getZ()))
 		pTransferNeck.setTwistScale(pScaleHeadRotation.getY())
 		pTransferNeck.setBendMoveX(pNeckBendMoveX)
 		pTransferNeck.setBendMoveY(pNeckBendMoveY)
-		pTransferNeck.setBendMoveRange(pNeckBendMoveRange)
+		pTransferNeck.setBendMoveRangeX(Vector2.new(\
+			-pNeckBendMoveRange.getX(), pNeckBendMoveRange.getX()))
+		pTransferNeck.setBendMoveRangeY(Vector2.new(\
+			-pNeckBendMoveRange.getY(), pNeckBendMoveRange.getY()))
+		
+		if hasNeckShiftMoves or hasScaleHeadRotation or not isSlotChestAttached
+			pTransferNeck.setScaleRotation(Vector2.new(pScaleHeadRotation.getX(), pScaleHeadRotation.getZ()))
+			
+		else
+			pTransferNeck.setScaleRotation(Vector2.new())
+		end
 		
 		if chainHead.getCount() > 1
 			pTransferNeck.setTipBone(chainHead.getAt(0) cast String)
@@ -935,16 +1063,16 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 // 			pTransferHead.setBaseBone("")
 // 		end
 		
-		if pScaleHeadRotation.equals(Vector.new(1, 1, 1))
+		if hasScaleHeadRotation
+			pTransferHead.setTipBone("")
+			pTransferHead.setBaseBone("")
+			
+		else
 			pTransferHead.setTipBone(pBoneHead)
 			pTransferHead.setBaseBone(pBoneHead)
 			pTransferHead.getTipTracker().setOffsetPosition(Vector.new())
 			pTransferHead.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
 			pTransferHead.setAdjustPosition(false)
-			
-		else
-			pTransferHead.setTipBone("")
-			pTransferHead.setBaseBone("")
 		end
 		
 		
@@ -1210,6 +1338,11 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			list.add(pTransferSpine.createCopy())
 		end
 		
+		if not pTransferNeckShift.getBaseTracker().getSlot().empty()\
+		and not pTransferNeckShift.getTargetTracker().getSlot().empty()
+			list.add(pTransferNeckShift.createCopy())
+		end
+		
 		if not pTransferNeck.getBaseTracker().getSlot().empty()\
 		and not pTransferNeck.getTargetTracker().getSlot().empty()
 			list.add(pTransferNeck.createCopy())
@@ -1331,13 +1464,22 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 				pRelocateArms = element.getFirstCDataBool()
 				
 			elif tagName.equals("neckBendMoveX")
-				setNeckBendMoveX(element.getFirstCData())
+				pNeckBendMoveX = element.getFirstCData()
 				
 			elif tagName.equals("neckBendMoveY")
-				setNeckBendMoveY(element.getFirstCData())
+				pNeckBendMoveY = element.getFirstCData()
 				
 			elif tagName.equals("neckBendMoveRange")
-				setNeckBendMoveRange(loader.readVector2(element))
+				pNeckBendMoveRange = loader.readVector2(element)
+				
+			elif tagName.equals("neckShiftMoveX")
+				pNeckShiftMoveX = element.getFirstCData()
+				
+			elif tagName.equals("neckShiftMoveY")
+				pNeckShiftMoveY = element.getFirstCData()
+				
+			elif tagName.equals("neckShiftMoveRange")
+				pNeckShiftMoveRange = loader.readVector2(element)
 				
 			elif tagName.equals("transfers")
 				loadTransfers(loader, element)
@@ -1364,6 +1506,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 				
 			elif tagName.equals("head")
 				pTransferHead.load(loader, element)
+				
+			elif tagName.equals("neckShift")
+				pTransferNeckShift.load(loader, element)
 				
 			elif tagName.equals("neck")
 				pTransferNeck.load(loader, element)
@@ -1394,6 +1539,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferWaist.postLoadInit(config)
 // 		pTransferSpineHead.postLoadInit(config)
 		pTransferSpine.postLoadInit(config)
+		pTransferNeckShift.postLoadInit(config)
 		pTransferNeck.postLoadInit(config)
 		pTransferHead.postLoadInit(config)
 		pTransferArmRight.postLoadInit(config)
@@ -1428,6 +1574,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		tag.addDataTag("neckBendMoveX", pNeckBendMoveX)
 		tag.addDataTag("neckBendMoveY", pNeckBendMoveY)
 		loader.writeVector2(tag, "neckBendMoveRange", pNeckBendMoveRange)
+		tag.addDataTag("neckShiftMoveX", pNeckShiftMoveX)
+		tag.addDataTag("neckShiftMoveY", pNeckShiftMoveY)
+		loader.writeVector2(tag, "neckShiftMoveRange", pNeckShiftMoveRange)
 		
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
 		pTransferShiftLegLeft.save(loader, tagTransfers.addTag("shiftLegLeft"), calibrated)
@@ -1436,6 +1585,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferWaist.save(loader, tagTransfers.addTag("waist"), calibrated)
 // 		pTransferSpineHead.save(loader, tagTransfers.addTag("spineHead"), calibrated)
 		pTransferSpine.save(loader, tagTransfers.addTag("spine"), calibrated)
+		pTransferNeckShift.save(loader, tagTransfers.addTag("neckShift"), calibrated)
 		pTransferNeck.save(loader, tagTransfers.addTag("neck"), calibrated)
 		pTransferHead.save(loader, tagTransfers.addTag("head"), calibrated)
 		pTransferArmRight.save(loader, tagTransfers.addTag("armRight"), calibrated)
@@ -1541,6 +1691,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		if pScaleHeadRotation.equals(Vector.new(1, 1, 1))
 			pTransferHead.getTipTracker().setSlot(slotHead)
 		end
+		
+		pTransferNeckShift.getTargetTracker().setSlot(slotHead)
+		pTransferNeckShift.getBaseTracker().setSlot(neckSlotBase)
+		pTransferNeckShift.getStabilizeTracker().setSlot(slotWaist)
 		
 		pTransferNeck.getTargetTracker().setSlot(slotHead)
 		pTransferNeck.getBaseTracker().setSlot(neckSlotBase)

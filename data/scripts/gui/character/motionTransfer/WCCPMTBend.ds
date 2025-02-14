@@ -42,13 +42,13 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	var DefaultTextModel pModelTextTipBone
 	var SharedListModel pModelListBaseBone
 	var DefaultTextModel pModelTextBaseBone
-	var WCCPMTTracker pEditTargetTracker
-	var WCCPMTTracker pEditBaseTracker
+	var WCCPMTTracker pEditTargetTracker, pEditBaseTracker, pEditStabilizeTracker
 	var EditVector2 pEditScaleRotation
 	var DefaultRangeModel pModelBendShape
 	var EditVector pEditBendAxisRotation
 	var DefaultToggleModel pModelFitCurveToTarget
 	var DefaultToggleModel pModelUseRotation
+	var DefaultToggleModel pModelLockZDistance
 	var DefaultTextModel pModelTwistPropagation
 	var DefaultTextModel pModelTwistScale
 	var DefaultTextModel pModelTwistBoneCount
@@ -56,7 +56,7 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	var DefaultTextModel pModelTextBendMoveX
 	var SharedListModel pModelListBendMoveY
 	var DefaultTextModel pModelTextBendMoveY
-	var EditVector2 pEditBendMoveRange
+	var EditVector2 pEditBendMoveRangeX, pEditBendMoveRangeY
 	
 	
 	
@@ -83,6 +83,7 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pModelBendShape = DefaultRangeModel.new(0, 20, 5, 10, 1)
 		pModelFitCurveToTarget = DefaultToggleModel.new(false)
 		pModelUseRotation = DefaultToggleModel.new(false)
+		pModelLockZDistance = DefaultToggleModel.new(false)
 		
 		pModelTwistPropagation = DefaultTextModel.new()
 		pModelTwistScale = DefaultTextModel.new()
@@ -118,12 +119,16 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pModelBendShape = null
 		pModelFitCurveToTarget = null
 		pModelUseRotation = null
+		pModelLockZDistance = null
 		
 		pEditTargetTracker.setTracker(null)
 		pEditTargetTracker = null
 		
 		pEditBaseTracker.setTracker(null)
 		pEditBaseTracker = null
+		
+		pEditStabilizeTracker.setTracker(null)
+		pEditStabilizeTracker = null
 		
 		pModelTwistPropagation = null
 		pModelTwistScale = null
@@ -136,7 +141,7 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pModelTextBendMoveX = null
 		pModelListBendMoveY = null
 		pModelTextBendMoveY = null
-		pEditBendMoveRange = null
+		pEditBendMoveRangeX = pEditBendMoveRangeY = null
 		
 		super.dispose()
 	end
@@ -158,17 +163,21 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 				pEditTargetTracker.loadValues()
 				pEditBaseTracker.setTracker(mt.getBaseTracker())
 				pEditBaseTracker.loadValues()
+				pEditStabilizeTracker.setTracker(mt.getStabilizeTracker())
+				pEditStabilizeTracker.loadValues()
 				pEditScaleRotation.setVector2(mt.getScaleRotation())
 				pModelBendShape.setValue((mt.getBendShape() * 20 + 0.5) cast int)
 				pEditBendAxisRotation.setVector(mt.getBendAxisRotation())
 				pModelFitCurveToTarget.setToggled(mt.getFitCurveToTarget())
 				pModelUseRotation.setToggled(mt.getUseRotation())
+				pModelLockZDistance.setToggled(mt.getLockZDistance())
 				pModelTwistPropagation.setText(mt.getTwistPropagation().toString())
 				pModelTwistScale.setText(mt.getTwistScale().toString())
 				pModelTwistBoneCount.setText(mt.getTwistBoneCount().toString())
 				pModelTextBendMoveX.setText(mt.getBendMoveX())
 				pModelTextBendMoveY.setText(mt.getBendMoveY())
-				pEditBendMoveRange.setVector2(mt.getBendMoveRange())
+				pEditBendMoveRangeX.setVector2(mt.getBendMoveRangeX())
+				pEditBendMoveRangeY.setVector2(mt.getBendMoveRangeY())
 				
 			else
 				pModelTextTargetBone.setText("")
@@ -177,17 +186,20 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 				pModelTextBaseBone.setText("")
 				pEditTargetTracker.setTracker(null)
 				pEditBaseTracker.setTracker(null)
+				pEditStabilizeTracker.setTracker(null)
 				pEditScaleRotation.setVector2(Vector2.new(1, 1))
 				pModelBendShape.setValue(10)
 				pEditBendAxisRotation.setVector(Vector.new())
 				pModelFitCurveToTarget.setToggled(false)
 				pModelUseRotation.setToggled(false)
+				pModelLockZDistance.setToggled(false)
 				pModelTwistPropagation.setText("")
 				pModelTwistScale.setText("")
 				pModelTwistBoneCount.setText("")
 				pModelTextBendMoveX.setText("")
 				pModelTextBendMoveY.setText("")
-				pEditBendMoveRange.setVector2(Vector2.new(90, 90))
+				pEditBendMoveRangeX.setVector2(Vector2.new(-90, 90))
+				pEditBendMoveRangeY.setVector2(Vector2.new(-90, 90))
 			end
 		end)
 		doLayoutIfBlocked()
@@ -208,17 +220,20 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		mt.setBaseBone(pModelTextBaseBone.getText())
 		pEditTargetTracker.saveValues()
 		pEditBaseTracker.saveValues()
+		pEditStabilizeTracker.saveValues()
 		mt.setScaleRotation(pEditScaleRotation.getVector2())
 		mt.setBendShape(0.05 * pModelBendShape.getValue())
 		mt.setBendAxisRotation(pEditBendAxisRotation.getVector())
 		mt.setFitCurveToTarget(pModelFitCurveToTarget.getToggled())
 		mt.setUseRotation(pModelUseRotation.getToggled())
+		mt.setLockZDistance(pModelLockZDistance.getToggled())
 		mt.setTwistPropagation(pModelTwistPropagation.getText().toFloat())
 		mt.setTwistScale(pModelTwistScale.getText().toFloat())
 		mt.setTwistBoneCount(pModelTwistBoneCount.getText().toInt())
 		mt.setBendMoveX(pModelTextBendMoveX.getText())
 		mt.setBendMoveY(pModelTextBendMoveY.getText())
-		mt.setBendMoveRange(pEditBendMoveRange.getVector2())
+		mt.setBendMoveRangeX(pEditBendMoveRangeX.getVector2())
+		mt.setBendMoveRangeY(pEditBendMoveRangeY.getVector2())
 	end
 	
 	/** Supports motion transfer type. */
@@ -336,12 +351,19 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		comboBox.setToolTip("@UI.ToolTip.BendYMove")
 		pPanelForm.addWidget(comboBox)
 		
-		// bend move range
-		pPanelForm.addWidget(Label.new("@UI.BendMoveRange.Label", "Label.FormCaption.SingleLine"))
+		// bend move range x
+		pPanelForm.addWidget(Label.new("@UI.BendMoveRangeX.Label", "Label.FormCaption.SingleLine"))
 		
-		pEditBendMoveRange = EditVector2.new()
-		pEditBendMoveRange.setToolTip("@UI.ToolTip.BendMoveRange")
-		pPanelForm.addWidget(pEditBendMoveRange)
+		pEditBendMoveRangeX = EditVector2.new()
+		pEditBendMoveRangeX.setToolTip("@UI.ToolTip.BendMoveRangeX")
+		pPanelForm.addWidget(pEditBendMoveRangeX)
+		
+		// bend move range
+		pPanelForm.addWidget(Label.new("@UI.BendMoveRangeY.Label", "Label.FormCaption.SingleLine"))
+		
+		pEditBendMoveRangeY = EditVector2.new()
+		pEditBendMoveRangeY.setToolTip("@UI.ToolTip.BendMoveRangeY")
+		pPanelForm.addWidget(pEditBendMoveRangeY)
 		
 		// fit curve to target
 		pPanelForm.addWidget(Label.new("", "Label.FormCaption.SingleLine"))
@@ -355,6 +377,13 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		
 		checkBox = CheckBox.new(pModelUseRotation, "@UI.UseRotationToBend")
 		checkBox.setToolTip("@UI.ToolTip.UseRotationToBend")
+		pPanelForm.addWidget(checkBox)
+		
+		// lock z distance if non-rotation mode is used
+		pPanelForm.addWidget(Label.new("", "Label.FormCaption.SingleLine"))
+		
+		checkBox = CheckBox.new(pModelUseRotation, "@UI.BendLockZDistance")
+		checkBox.setToolTip("@UI.ToolTip.BendLockZDistance")
 		pPanelForm.addWidget(checkBox)
 		
 		// twist propagation
@@ -385,11 +414,17 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(textField)
 		
 		// trackers
-		pEditTargetTracker = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/TargetTracker", this, "@UI.TargetTracker", false)
+		pEditTargetTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
+			optionPrefix + "/TargetTracker", this, "@UI.TargetTracker", false)
 		addWidget(pEditTargetTracker)
 		
-		pEditBaseTracker = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/BaseTracker", this, "@UI.BaseTracker", false)
+		pEditBaseTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
+			optionPrefix + "/BaseTracker", this, "@UI.BaseTracker", false)
 		addWidget(pEditBaseTracker)
+		
+		pEditStabilizeTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
+			optionPrefix + "/StabilizeTracker", this, "@UI.StabilizeTracker", false)
+		addWidget(pEditStabilizeTracker)
 	end
 	
 	/** Motion transfer changed. */
@@ -399,6 +434,9 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		end
 		if pEditBaseTracker != null
 			pEditBaseTracker.setTracker(null)
+		end
+		if pEditStabilizeTracker != null
+			pEditStabilizeTracker.setTracker(null)
 		end
 	end
 end

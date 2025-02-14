@@ -68,6 +68,11 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 	var SharedListModel pModelListNeckBendMoveY
 	var DefaultTextModel pModelTextNeckBendMoveY
 	var EditVector2 pEditNeckBendMoveRange
+	var SharedListModel pModelListNeckShiftMoveX
+	var DefaultTextModel pModelTextNeckShiftMoveX
+	var SharedListModel pModelListNeckShiftMoveY
+	var DefaultTextModel pModelTextNeckShiftMoveY
+	var EditVector2 pEditNeckShiftMoveRange
 	
 	
 	
@@ -124,6 +129,14 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		pModelListNeckBendMoveY.setAutoSelect(false)
 		pModelTextNeckBendMoveY = DefaultTextModel.new()
 		
+		pModelListNeckShiftMoveX = SharedListModel.new(window.getModelMoves())
+		pModelListNeckShiftMoveX.setAutoSelect(false)
+		pModelTextNeckShiftMoveX = DefaultTextModel.new()
+		
+		pModelListNeckShiftMoveY = SharedListModel.new(window.getModelMoves())
+		pModelListNeckShiftMoveY.setAutoSelect(false)
+		pModelTextNeckShiftMoveY = DefaultTextModel.new()
+		
 		runWhileBlockingLayout(block
 			createContent(optionPrefix)
 		end)
@@ -178,6 +191,12 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		pModelTextNeckBendMoveY = null
 		pEditNeckBendMoveRange = null
 		
+		pModelListNeckShiftMoveX = null
+		pModelTextNeckShiftMoveX = null
+		pModelListNeckShiftMoveY = null
+		pModelTextNeckShiftMoveY = null
+		pEditNeckShiftMoveRange = null
+		
 		super.dispose()
 	end
 	
@@ -213,6 +232,9 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelTextNeckBendMoveX.setText(mt.getNeckBendMoveX())
 				pModelTextNeckBendMoveY.setText(mt.getNeckBendMoveY())
 				pEditNeckBendMoveRange.setVector2(mt.getNeckBendMoveRange())
+				pModelTextNeckShiftMoveX.setText(mt.getNeckShiftMoveX())
+				pModelTextNeckShiftMoveY.setText(mt.getNeckShiftMoveY())
+				pEditNeckShiftMoveRange.setVector2(mt.getNeckShiftMoveRange())
 				
 			else
 				pModelTextBoneHead.setText("")
@@ -238,6 +260,9 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelTextNeckBendMoveX.setText("")
 				pModelTextNeckBendMoveY.setText("")
 				pEditNeckBendMoveRange.setVector2(Vector2.new(90, 90))
+				pModelTextNeckShiftMoveX.setText("")
+				pModelTextNeckShiftMoveY.setText("")
+				pEditNeckShiftMoveRange.setVector2(Vector2.new(45, 30))
 			end
 		end)
 		doLayoutIfBlocked()
@@ -274,6 +299,9 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		mt.setNeckBendMoveX(pModelTextNeckBendMoveX.getText())
 		mt.setNeckBendMoveY(pModelTextNeckBendMoveY.getText())
 		mt.setNeckBendMoveRange(pEditNeckBendMoveRange.getVector2())
+		mt.setNeckShiftMoveX(pModelTextNeckShiftMoveX.getText())
+		mt.setNeckShiftMoveY(pModelTextNeckShiftMoveY.getText())
+		mt.setNeckShiftMoveRange(pEditNeckShiftMoveRange.getVector2())
 	end
 	
 	/** Supports motion transfer type. */
@@ -404,6 +432,22 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		comboBox.setToolTip("@UI.ToolTip.BendYMove")
 		pPanelForm.addWidget(comboBox)
 		
+		// neck shift move x
+		pPanelForm.addWidget(Label.new("@UI.NeckShiftXMove.Label", "Label.FormCaption.SingleLine"))
+		
+		comboBox = ComboBox.new(pModelListNeckShiftMoveX, DefaultComboBoxEditor.new(pModelTextNeckShiftMoveX))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("@UI.ToolTip.BendXMove")
+		pPanelForm.addWidget(comboBox)
+		
+		// neck shift move y
+		pPanelForm.addWidget(Label.new("@UI.NeckShiftYMove.Label", "Label.FormCaption.SingleLine"))
+		
+		comboBox = ComboBox.new(pModelListNeckShiftMoveY, DefaultComboBoxEditor.new(pModelTextNeckShiftMoveY))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("@UI.ToolTip.BendYMove")
+		pPanelForm.addWidget(comboBox)
+		
 		// fine tuning parameters
 		addWidget(CollapsibleGroup.new("@UI.FineTuning", "motiontransferautohuman#fine_tuning", CollapsibleGroup.persistModel(\
 		optionPrefix + "/GroupFineTuning", false), FormLayout.new(true, 10, 2), block Panel p
@@ -436,6 +480,17 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 			pEditNeckBendMoveRange = EditVector2.new()
 			pEditNeckBendMoveRange.setToolTip(toolTip)
 			p.addWidget(pEditNeckBendMoveRange)
+			
+			// neck bend shift range
+			toolTip = "@UI.ToolTip.BendMoveRange"
+			
+			label = Label.new("@UI.NeckShiftMoveRange.Label", "Label.FormCaption.SingleLine")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			pEditNeckShiftMoveRange = EditVector2.new()
+			pEditNeckShiftMoveRange.setToolTip(toolTip)
+			p.addWidget(pEditNeckShiftMoveRange)
 			
 			// bend shape spine
 			toolTip = "@UI.ToolTip.SpineBendShape"
