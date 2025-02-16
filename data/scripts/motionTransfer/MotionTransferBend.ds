@@ -72,7 +72,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 	var float pBendShape
 	var bool pFitCurveToTarget, pUseRotation
 	var float pTwistPropagation, pTwistScale
-	var int pTwistBoneCount
+	var int pTwistBoneCount, pAlignOrientationBoneCount
 	var Vector pBendAxisRotation
 	var String pBendMoveX, pBendMoveY
 	var Vector2 pBendMoveRangeX, pBendMoveRangeY
@@ -85,7 +85,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 	var Vector pCalibrateZeroRotation
 	var Array pCalibrateBendAxesX, pCalibrateBendAxesY, pCalibrateBendWeights
 	var CurveBezier pCalibrateBendCurveX, pCalibrateBendCurveY
-	var Array pCalibrateTwistAxes
+	var Array pCalibrateTwistAxes, pCalibrateAlignOrientations
 	var Vector pCalibrateTwistBoneAxisRotation
 	var Matrix pCalibrateTwistTransform
 	var float pCalibrateLockedZDistance
@@ -109,9 +109,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pBendShape = 0.5
 		pFitCurveToTarget = false
 		pUseRotation = false
-		pTwistPropagation = 0
 		pTwistScale = 1
-		pTwistBoneCount = 0
 		pBendAxisRotation = Vector.new()
 		pBendMoveX = ""
 		pBendMoveY = ""
@@ -131,6 +129,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pCalibrateBendCurveX = CurveBezier.newDefaultLinear()
 		pCalibrateBendCurveY = CurveBezier.newDefaultLinear()
 		pCalibrateTwistAxes = Array.new()
+		pCalibrateAlignOrientations = Array.new()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
 		pCalibrateTwistTransform = Matrix.new()
 	end
@@ -151,6 +150,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pTwistPropagation = transfer.pTwistPropagation
 		pTwistScale = transfer.pTwistScale
 		pTwistBoneCount = transfer.pTwistBoneCount
+		pAlignOrientationBoneCount = transfer.pAlignOrientationBoneCount
 		pBendAxisRotation = transfer.pBendAxisRotation
 		pBendMoveX = transfer.pBendMoveX
 		pBendMoveY = transfer.pBendMoveY
@@ -170,6 +170,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pCalibrateBendCurveX = CurveBezier.new(transfer.pCalibrateBendCurveX)
 		pCalibrateBendCurveY = CurveBezier.new(transfer.pCalibrateBendCurveY)
 		pCalibrateTwistAxes = Array.new(transfer.pCalibrateTwistAxes)
+		pCalibrateAlignOrientations = Array.new(transfer.pCalibrateAlignOrientations)
 		pCalibrateTwistBoneAxisRotation = transfer.pCalibrateTwistBoneAxisRotation
 		pCalibrateTwistTransform = transfer.pCalibrateTwistTransform
 	end
@@ -331,6 +332,19 @@ class MotionTransferBend extends DefaultMotionTransfer
 			throw EInvalidParam.new("count < 0")
 		end
 		pTwistBoneCount = count
+	end
+	
+	/** Count of bones along chain to align orientation with starting at first bone after tip bone. */
+	func int getAlignOrientationBoneCount()
+		return pAlignOrientationBoneCount
+	end
+	
+	/** Set count of bones along chain to align orientation with starting at first bone after tip bone. */
+	func void setAlignOrientationBoneCount(int count)
+		if count < 0
+			throw EInvalidParam.new("count < 0")
+		end
+		pAlignOrientationBoneCount = count
 	end
 	
 	/** Rotation of bend axis in component space. */
@@ -637,56 +651,89 @@ class MotionTransferBend extends DefaultMotionTransfer
 		end
 		
 		// twist
-		count = DEMath.min(DEMath.max(pTwistBoneCount, 1), pCalibrateBones.getCount())
-		var ADRuleBoneTransformator rule
-		var String name = getName() + ".twist"
-		var float maxAngle = 180
-		
-		pADControllerTwist = ADController.new()
-		pADControllerTwist.setName(behavior.getControllerNameTwist())
-		pADControllerTwist.setMinimum(-maxAngle)
-		pADControllerTwist.setMaximum(maxAngle)
-		adef.addController(pADControllerTwist)
-		
-		var ADLink link = ADLink.new()
-		link.setController(pADControllerTwist)
-		adef.addLink(link)
-		
-		var float angle = pTwistPropagation * maxAngle / count
-		if pTwistPropagation <= 0.01
-			angle = 0
+		if pTwistBoneCount > 0
+			count = DEMath.min(DEMath.max(pTwistBoneCount, 1), pCalibrateBones.getCount())
+			var ADRuleBoneTransformator rule
+			var String name = getName() + ".twist"
+			var float maxAngle = 180
+			
+			pADControllerTwist = ADController.new()
+			pADControllerTwist.setName(behavior.getControllerNameTwist())
+			pADControllerTwist.setMinimum(-maxAngle)
+			pADControllerTwist.setMaximum(maxAngle)
+			adef.addController(pADControllerTwist)
+			
+			var ADLink link = ADLink.new()
+			link.setController(pADControllerTwist)
+			adef.addLink(link)
+			
+			var float angle = pTwistPropagation * maxAngle / count
+			if pTwistPropagation <= 0.01
+				angle = 0
+			end
+			
+			var float tipAngle = maxAngle - angle * ( count - 1 )
+			
+			baseIndex = count - 1
+			
+			for i = 0 to count
+				if i > 0 and pTwistPropagation <= 0.01
+					continue
+				end
+				
+				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
+				var Vector axis = pCalibrateTwistAxes.getAt(i) cast Vector
+				
+				rule = ADRuleBoneTransformator.new()
+				rule.setName(name)
+				rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+				rule.setUseAxis(true)
+				rule.setAxis(axis)
+				
+				if i > 0
+					rule.setMinimumAngle(-angle)
+					rule.setMaximumAngle(angle)
+					
+				else
+					rule.setMinimumAngle(-tipAngle)
+					rule.setMaximumAngle(tipAngle)
+				end
+				
+				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				rule.addBone(bone)
+				adef.addRule(rule)
+			end
 		end
 		
-		var float tipAngle = maxAngle - angle * ( count - 1 )
-		
-		baseIndex = count - 1
-		
-		for i = 0 to count
-			if i > 0 and pTwistPropagation <= 0.01
-				continue
-			end
-			
-			var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
-			var Vector axis = pCalibrateTwistAxes.getAt(i) cast Vector
-			
-			rule = ADRuleBoneTransformator.new()
-			rule.setName(name)
-			rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
-			rule.setUseAxis(true)
-			rule.setAxis(axis)
-			
-			if i > 0
-				rule.setMinimumAngle(-angle)
-				rule.setMaximumAngle(angle)
+		// align orientation
+		if pAlignOrientationBoneCount > 0
+			count = DEMath.min(DEMath.max(pAlignOrientationBoneCount, 0), pCalibrateBones.getCount())
+			if count > 0 and pTargetTracker.getRealSlot() != null
+				var String name = getName() + ".align"
 				
-			else
-				rule.setMinimumAngle(-tipAngle)
-				rule.setMaximumAngle(tipAngle)
+				var ADLink link = ADLink.new()
+				link.setController(pTargetTracker.getRealSlot().getADControllerRotation())
+				adef.addLink(link)
+				
+				var ADRuleInverseKinematic ruleIk
+				baseIndex = count - 1
+				
+				for i = 0 to count
+					var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
+					var float weight = 1.0 / (baseIndex - i + 1)
+					//var float weight = 1.0 / DEMath.pow(baseIndex - i + 1, 1.5)
+					
+					ruleIk = ADRuleInverseKinematic.new()
+					ruleIk.setName(name)
+					ruleIk.setAdjustPosition(false)
+					ruleIk.setAdjustOrientation(true)
+					ruleIk.setBlendFactor(weight)
+					ruleIk.setLocalOrientation(pCalibrateAlignOrientations.getAt(i) cast Vector)
+					ruleIk.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, link))
+					ruleIk.addBone(bone)
+					adef.addRule(ruleIk)
+				end
 			end
-			
-			rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
-			rule.addBone(bone)
-			adef.addRule(rule)
 		end
 		
 		// register bones to record
@@ -718,6 +765,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pCalibrateBendCurveX.removeAllPoints()
 		pCalibrateBendCurveY.removeAllPoints()
 		pCalibrateTwistAxes.removeAll()
+		pCalibrateAlignOrientations.removeAll()
 		pCalibrateTwistBoneAxisRotation = Vector.new()
 		pCalibrateTwistTransform = Matrix.new()
 		pCalibrateLockedZDistance = 0
@@ -1020,37 +1068,62 @@ class MotionTransferBend extends DefaultMotionTransfer
 		end
 		
 		// calculate twist axes
-		var int count = DEMath.min(DEMath.max(pTwistBoneCount, 1), pCalibrateBones.getCount())
-		var Vector axis = Matrix.newRotation(pBendAxisRotation).getViewVector()
-		var int i, baseIndex = count - 1
-		
-		for i = 0 to count
-			var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
-			var int indexBone = component.indexOfBoneNamed(bone)
-			if indexBone != -1
-				pCalibrateTwistAxes.add(component.boneGetInverseMatrix(indexBone).normalize().transformNormal(axis))
-				
-			else
-				pCalibrateTwistAxes.add(Vector.new(0, 0, 1))
-			end
-		end
-		
-		var Matrix invTargetMat
-		
-		if indexTarget != -1
-			invTargetMat = component.boneGetInverseMatrix(indexTarget).normalize()
+		if pTwistBoneCount > 0
+			var int count = DEMath.min(DEMath.max(pTwistBoneCount, 1), pCalibrateBones.getCount())
+			var Vector axis = Matrix.newRotation(pBendAxisRotation).getViewVector()
+			var int i, baseIndex = count - 1
 			
-		elif pTargetTracker.getRealSlot() != null and pBaseTracker.getRealSlot() != null
-			invTargetMat = targetMatrix.getInverse()
-		end
-		
-		if invTargetMat != null
-			pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pBendAxisRotation)\
-				* invTargetMat.getRotation()).getEulerAngles()
+			for i = 0 to count
+				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
+				var int indexBone = component.indexOfBoneNamed(bone)
+				if indexBone != -1
+					pCalibrateTwistAxes.add(component.boneGetInverseMatrix(indexBone).normalize().transformNormal(axis))
+					
+				else
+					pCalibrateTwistAxes.add(Vector.new(0, 0, 1))
+				end
+			end
+			
+			var Matrix invTargetMat
+			
+			if indexTarget != -1
+				invTargetMat = component.boneGetInverseMatrix(indexTarget).normalize()
+				
+			elif pTargetTracker.getRealSlot() != null and pBaseTracker.getRealSlot() != null
+				invTargetMat = targetMatrix.getInverse()
+			end
+			
+			if invTargetMat != null
+				pCalibrateTwistBoneAxisRotation = (Matrix.newRotation(pBendAxisRotation)\
+					* invTargetMat.getRotation()).getEulerAngles()
+			end
 		end
 		
 		// (target * base^-1)^-1 => base * target^-1
 		pCalibrateTwistTransform = baseMatrix * targetMatrix.getInverse()
+		
+		// calculate align orientation
+		if pAlignOrientationBoneCount > 0
+			var int count = DEMath.min(DEMath.max(pAlignOrientationBoneCount, 0), pCalibrateBones.getCount())
+			
+			if count > 0 and pTargetTracker.getRealSlot() != null
+				var int i, baseIndex = count - 1
+				var Matrix invTargetMat = pTargetTracker.getRealSlot().getCalibrateMatrixInverseOriginal().getRotation()
+				
+				for i = 0 to count
+					var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
+					var int indexBone = component.indexOfBoneNamed(bone)
+					if indexBone != -1
+						pCalibrateAlignOrientations.add((\
+							component.boneGetMatrix(indexBone).getRotation().normalize()\
+								* invTargetMat).getEulerAngles())
+						
+					else
+						pCalibrateAlignOrientations.add(Vector.new())
+					end
+				end
+			end
+		end
 	end
 	
 	/** Calculate bend weight. */
@@ -1134,6 +1207,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 				
 			elif tagName.equals("twistBoneCount")
 				setTwistBoneCount(element.getFirstCDataInt())
+				
+			elif tagName.equals("alignOrientationBoneCount")
+				setAlignOrientationBoneCount(element.getFirstCDataInt())
 				
 			elif tagName.equals("bendAxisRotation")
 				setBendAxisRotation(loader.readVector(element))
@@ -1221,6 +1297,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 			elif tagName.equals("twistTransform")
 				pCalibrateTwistTransform = GameApp.getGameApp().getLoadCharacterProfile().readMatrix(element)
 				
+			elif tagName.equals("alignOrientation")
+				pCalibrateAlignOrientations.add(loader.readVector(element))
+				
 			elif tagName.equals("lockedZDistance")
 				pCalibrateLockedZDistance = element.getFirstCDataFloat()
 			end
@@ -1251,6 +1330,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		tag.addDataTag("twistPropagation", pTwistPropagation)
 		tag.addDataTag("twistScale", pTwistScale)
 		tag.addDataTag("twistBoneCount", pTwistBoneCount)
+		tag.addDataTag("alignOrientationBoneCount", pAlignOrientationBoneCount)
 		loader.writeVector(tag, "bendAxisRotation", pBendAxisRotation)
 		tag.addDataTag("bendMoveX", pBendMoveX)
 		tag.addDataTag("bendMoveY", pBendMoveY)
@@ -1294,6 +1374,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 		end)
 		loader.writeVector(tag, "twistBoneAxisRotation", pCalibrateTwistBoneAxisRotation)
 		lcp.writeMatrix(tag, "twistTransform", pCalibrateTwistTransform)
+		pCalibrateAlignOrientations.forEach(block Vector each
+			loader.writeVector(tag, "alignOrientation", each)
+		end)
 		tag.addDataTag("lockedZDistance", pCalibrateLockedZDistance)
 	end
 end

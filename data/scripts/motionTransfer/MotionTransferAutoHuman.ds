@@ -910,7 +910,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			end
 			
 			pTransferSpine.setBaseBone(baseBone)
-			pTransferSpine.setTwistBoneCount(DEMath.max(chainSpine.getCount() - 1, 0))
+			pTransferSpine.setTwistBoneCount(DEMath.max(chainSpine.getCount() - 1, 1))
+			pTransferSpine.setAlignOrientationBoneCount(DEMath.max((chainSpine.getCount() - 1) / 2, 0))
 			
 			if chainHead.getCount() > 1 and isSlotChestAttached
 				pTransferSpine.setTargetBone(chainHead.getAt(-2) cast String)
@@ -924,6 +925,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		else
 			pTransferSpine.setBaseBone("")
 			pTransferSpine.setTwistBoneCount(0)
+			pTransferSpine.setAlignOrientationBoneCount(0)
 			pTransferSpine.setTargetBaseBone("")
 		end
 		
@@ -941,6 +943,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		// neck shift
 		var bool hasScaleHeadRotation = not pScaleHeadRotation.equals(Vector.new(1, 1, 1))
 		var bool hasNeckShiftMoves = not pNeckShiftMoveX.empty() or not pNeckShiftMoveY.empty()
+		var bool hasNeckBendMoves = not pNeckBendMoveX.empty() or not pNeckBendMoveY.empty()
 		
 		pTransferNeckShift.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.reference)
 		pTransferNeckShift.getTargetTracker().setOffsetPosition(Vector.new())
@@ -1022,13 +1025,13 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferNeck.setScaleRotation(Vector2.new(pScaleHeadRotation.getX(), pScaleHeadRotation.getZ()))
 			
 		else
-			pTransferNeck.setScaleRotation(Vector2.new())
+			pTransferNeck.setScaleRotation(Vector2.new(1, 1))
 		end
 		
 		if chainHead.getCount() > 1
 			pTransferNeck.setTipBone(chainHead.getAt(0) cast String)
 			pTransferNeck.setBaseBone(chainHead.getAt(-2) cast String)
-			pTransferNeck.setTwistBoneCount(DEMath.max(chainHead.getCount() - 2, 0))
+			pTransferNeck.setTwistBoneCount(DEMath.max(chainHead.getCount() - 2, 1))
 			pTransferNeck.setTargetBone(pBoneHead)
 			pTransferNeck.setTargetBaseBone(pTransferNeck.getBaseBone())
 			
@@ -1063,7 +1066,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 // 			pTransferHead.setBaseBone("")
 // 		end
 		
-		if hasScaleHeadRotation
+		if hasScaleHeadRotation or hasNeckBendMoves
 			pTransferHead.setTipBone("")
 			pTransferHead.setBaseBone("")
 			
@@ -1240,7 +1243,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegRight.setMoveBaseIK(pMoveBaseIK)
 		pTransferLegRight.setMoveRetracted(pMoveCrouch)
 		pTransferLegRight.setActorReach(MotionTransferIK.ActorReach.leg)
-		pTransferLegRight.setTwistBoneCount(0)//DEMath.max(chainRightLeg.getCount() - 2, 0))
+		pTransferLegRight.setTwistBoneCount(0)//DEMath.max(chainRightLeg.getCount() - 2, 1))
 		pTransferLegRight.setTwistPropagation(1)
 		pTransferLegRight.setTwistAxisRotation(Vector.new(-90, 0, 0))
 		pTransferLegRight.setGuideBendAxisRotation(Vector.new(0, -90, 0))
@@ -1274,7 +1277,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferLegLeft.setMoveBaseIK(pMoveBaseIK)
 		pTransferLegLeft.setMoveRetracted(pMoveCrouch)
 		pTransferLegLeft.setActorReach(MotionTransferIK.ActorReach.leg)
-		pTransferLegLeft.setTwistBoneCount(0)//DEMath.max(chainLeftLeg.getCount() - 2, 0))
+		pTransferLegLeft.setTwistBoneCount(0)//DEMath.max(chainLeftLeg.getCount() - 2, 1))
 		pTransferLegLeft.setTwistPropagation(1)
 		pTransferLegLeft.setTwistAxisRotation(Vector.new(-90, 0, 0))
 		pTransferLegLeft.setGuideBendAxisRotation(Vector.new(0, -90, 0))
