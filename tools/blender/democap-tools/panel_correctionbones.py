@@ -280,7 +280,16 @@ class VIEW3D_PT_DemocapToolsCorrectionBones(bpy.types.Panel):
 
         column = layout.row().column(align=True)
         column.operator("democaptools.copybonetransform",
-                        text="Copy Bone Matrices", icon='COPYDOWN')
+                        text="Copy Bone Matrices",
+                        icon='COPYDOWN').subtract = False
+        column.operator("democaptools.copybonetransform",
+                        text="Copy Subtract",
+                        icon='COPYDOWN').subtract = True
+        column.operator("democaptools.pastebonetransform",
+                        text="Paste Bone Matrices",
+                        icon='PASTEDOWN')
+
+        column = layout.row().column(align=True)
         column.operator("democaptools.aligncorrectionbones",
                         text="Align Correction Bones", icon='PASTEDOWN')
 
@@ -294,6 +303,11 @@ class ARMATURE_OT_CopyBoneTransform(bpy.types.Operator):
     """Copy bone transforms."""
     bl_idname = "democaptools.copybonetransform"
     bl_label = "Copy bone transform"
+
+    subtract: bpy.props.BoolProperty(
+        name="Subtract",
+        description="Subtract matrices from already copied matrices",
+        default=False)
 
     @classmethod
     def poll(cls, context):
@@ -316,12 +330,18 @@ class ARMATURE_OT_CopyBoneTransform(bpy.types.Operator):
 
         copybuffer = context.window_manager.\
             democaptools_copybuffer_bonetransforms
+        prevcopybuf = {}
+        for state in copybuffer:
+            prevcopybuf[state.name] = mathutils.Matrix(state.matrix)
         copybuffer.clear()
 
         for selectedBone in context.selected_pose_bones:
             bone = copybuffer.add()
             bone.name = selectedBone.name
-            bone.matrix = flatten(selectedBone.matrix)
+            mat = selectedBone.matrix
+            if self.subtract and selectedBone.name in prevcopybuf:
+                mat = mat.inverted() @ prevcopybuf[selectedBone.name]
+            bone.matrix = flatten(mat)
 
             # if this is correction bone also copy the original bone
             if selectedBone.name.startswith(boneNamePrefix):
@@ -438,12 +458,93 @@ class ARMATURE_OT_AlignCorrectionBones(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class ARMATURE_OT_PasteBoneTransform(bpy.types.Operator):
+    """Past copied bone transforms."""
+    bl_idname = "democaptools.pastebonetransform"
+    bl_label = "Paste previously copied bone transforms"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    overlay: bpy.props.BoolProperty(
+        name="Overlay",
+        description="Overlay pasted matrix instead of replacing",
+        default=False)
+    negate: bpy.props.BoolProperty(
+        name="Negate",
+        description="Negate pasted matrix before overlaying",
+        default=False)
+
+    class BoneState:
+        def __init__(self, pose_bone, bone_chain, matrix):
+            self.pose_bone = pose_bone
+            self.bone_chain = bone_chain
+            self.matrix = mathutils.Matrix(matrix)
+            self.pose_matrix = mathutils.Matrix(pose_bone.matrix)
+
+    @classmethod
+    def poll(cls, context):
+        return (context.active_object
+                and context.active_object.type == 'ARMATURE'
+                and context.mode == 'POSE'
+                and context.selected_pose_bones
+                and len(context.selected_pose_bones) > 0
+                and len(context.window_manager.
+                        democaptools_copybuffer_bonetransforms) > 0)
+
+    def execute(self, context):
+        if (not context.active_object
+                or context.active_object.type != 'ARMATURE'
+                or context.mode != 'POSE'
+                or not context.selected_pose_bones
+                or len(context.selected_pose_bones) == 0
+                or len(context.window_manager.
+                       democaptools_copybuffer_bonetransforms) == 0):
+            return {'CANCELLED'}
+
+        copybuffer = {}
+        for cb in context.window_manager.democaptools_copybuffer_bonetransforms:
+            copybuffer[cb.name] = cb.matrix
+
+        obj = context.active_object
+        pose = obj.pose
+
+        bone_states = []
+        for pose_bone in context.selected_pose_bones:
+            bone_name = pose_bone.name
+            if bone_name not in pose.bones or bone_name not in copybuffer:
+                continue
+
+            bone_chain = pose_bone.parent_recursive
+
+            insert_before = len(bone_states)
+            for i, bone_state in enumerate(bone_states):
+                if bone_state in bone_states[i].bone_chain:
+                    insert_before = i
+                    break
+
+            bone_states.insert(insert_before,
+                ARMATURE_OT_PasteBoneTransform.BoneState(
+                    pose_bone, bone_chain, copybuffer[bone_name]))
+
+        for bone_state in bone_states:
+            mat = bone_state.matrix
+            if self.overlay:
+                if self.negate:
+                    mat = bone_state.pose_matrix @ mat.inverted()
+                else:
+                    mat = bone_state.pose_matrix @ mat
+            bone_state.pose_bone.matrix = mat
+            context.view_layer.update()
+
+        return {'FINISHED'}
+
+
 def panelCorrectionBonesRegister():
     registerClass(ARMATURE_OT_AddCorrectionBones)
     registerClass(VIEW3D_PT_DemocapToolsCorrectionBones)
     registerClass(CopyBufferBoneTransform)
     registerClass(ARMATURE_OT_CopyBoneTransform)
     registerClass(ARMATURE_OT_AlignCorrectionBones)
+    registerClass(ARMATURE_OT_PasteBoneTransform)
 
     bpy.types.WindowManager.democaptools_copybuffer_bonetransforms = \
         bpy.props.CollectionProperty(type=CopyBufferBoneTransform)
