@@ -610,6 +610,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 		// twist
 		if pTwistBoneCount > 0
 			count = DEMath.min(DEMath.max(pTwistBoneCount, 1), pCalibrateBones.getCount())
+			baseIndex = count - 1
+			
 			var ADRuleBoneTransformator rule
 			var String name = getName() + ".twist"
 			var float maxAngle = 180
@@ -629,9 +631,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 				angle = 0
 			end
 			
-			var float tipAngle = maxAngle - angle * ( count - 1 )
-			
-			baseIndex = count - 1
+			var String tipBone = pCalibrateBones.getAt(0) cast String
+			var Vector tipAxis = pCalibrateTwistAxes.getAt(baseIndex) cast Vector
+			var float tipAngle = maxAngle - angle * (count - 1)
 			
 			for i = 0 to count
 				if i > 0 and pTwistPropagation <= 0.01
@@ -639,21 +641,28 @@ class MotionTransferBend extends DefaultMotionTransfer
 				end
 				
 				var String bone = pCalibrateBones.getAt(baseIndex - i) cast String
-				var Vector axis = pCalibrateTwistAxes.getAt(i) cast Vector
 				
 				rule = ADRuleBoneTransformator.new()
 				rule.setName(name)
-				rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
 				rule.setUseAxis(true)
-				rule.setAxis(axis)
 				
-				if i > 0
+				if i < baseIndex
 					rule.setMinimumAngle(-angle)
 					rule.setMaximumAngle(angle)
 					
 				else
 					rule.setMinimumAngle(-tipAngle)
 					rule.setMaximumAngle(tipAngle)
+				end
+				
+				if i < baseIndex and (linkMoveBendX != null or linkMoveBendY != null)
+					rule.setAxis(tipAxis)
+					rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+					rule.setTargetBone(tipBone)
+					
+				else
+					rule.setAxis(pCalibrateTwistAxes.getAt(i) cast Vector)
+					rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
 				end
 				
 				rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
