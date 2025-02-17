@@ -42,7 +42,7 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	var DefaultTextModel pModelTextTipBone
 	var SharedListModel pModelListBaseBone
 	var DefaultTextModel pModelTextBaseBone
-	var WCCPMTTracker pEditTargetTracker, pEditBaseTracker, pEditStabilizeTracker
+	var WCCPMTTracker pEditTargetTracker, pEditBaseTracker
 	var EditVector2 pEditScaleRotation
 	var DefaultRangeModel pModelBendShape
 	var EditVector pEditBendAxisRotation
@@ -129,9 +129,6 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pEditBaseTracker.setTracker(null)
 		pEditBaseTracker = null
 		
-		pEditStabilizeTracker.setTracker(null)
-		pEditStabilizeTracker = null
-		
 		pModelTwistPropagation = null
 		pModelTwistScale = null
 		pModelTwistBoneCount = null
@@ -166,8 +163,6 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 				pEditTargetTracker.loadValues()
 				pEditBaseTracker.setTracker(mt.getBaseTracker())
 				pEditBaseTracker.loadValues()
-				pEditStabilizeTracker.setTracker(mt.getStabilizeTracker())
-				pEditStabilizeTracker.loadValues()
 				pEditScaleRotation.setVector2(mt.getScaleRotation())
 				pModelBendShape.setValue((mt.getBendShape() * 20 + 0.5) cast int)
 				pEditBendAxisRotation.setVector(mt.getBendAxisRotation())
@@ -190,7 +185,6 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 				pModelTextBaseBone.setText("")
 				pEditTargetTracker.setTracker(null)
 				pEditBaseTracker.setTracker(null)
-				pEditStabilizeTracker.setTracker(null)
 				pEditScaleRotation.setVector2(Vector2.new(1, 1))
 				pModelBendShape.setValue(10)
 				pEditBendAxisRotation.setVector(Vector.new())
@@ -225,7 +219,6 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		mt.setBaseBone(pModelTextBaseBone.getText())
 		pEditTargetTracker.saveValues()
 		pEditBaseTracker.saveValues()
-		pEditStabilizeTracker.saveValues()
 		mt.setScaleRotation(pEditScaleRotation.getVector2())
 		mt.setBendShape(0.05 * pModelBendShape.getValue())
 		mt.setBendAxisRotation(pEditBendAxisRotation.getVector())
@@ -436,10 +429,6 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pEditBaseTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
 			optionPrefix + "/BaseTracker", this, "@UI.BaseTracker", false)
 		addWidget(pEditBaseTracker)
-		
-		pEditStabilizeTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
-			optionPrefix + "/StabilizeTracker", this, "@UI.StabilizeTracker", false)
-		addWidget(pEditStabilizeTracker)
 	end
 	
 	/** Motion transfer changed. */
@@ -449,9 +438,6 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		end
 		if pEditBaseTracker != null
 			pEditBaseTracker.setTracker(null)
-		end
-		if pEditStabilizeTracker != null
-			pEditStabilizeTracker.setTracker(null)
 		end
 	end
 end

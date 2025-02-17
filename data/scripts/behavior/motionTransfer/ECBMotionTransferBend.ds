@@ -78,13 +78,6 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		var bool pUseTwistSlot, pUseRotation, pLockZDistance
 		var float pLockedZDistance
 		
-		var ECBTrackerSlot.Instance pSlotStabilize
-		var Matrix pTransformStabilize
-		var Vector pStabilizeAxis
-		var Matrix pBendAxisMatrixStabilize, pBendAxisMatrixStabilizeInv, pZeroMatrixStabilize
-		//var Matrix pStabilizeBaseOffset
-		var bool pUseStabilize
-		
 		var float pTwistScale
 		var Quaternion pTwistQuat, pTwistQuatInv
 		var CurveBezier pBendCurveX, pBendCurveY
@@ -102,13 +95,6 @@ class ECBMotionTransferBend extends DefaultECBehavior
 			pBendAxisMatrix = transfer.getCalibrateBendAxisMatrix()
 			pTipAxisMatrix = Matrix.newRotation(transfer.getCalibrateZeroRotation())
 			pZeroMatrix = pBendAxisMatrix * pTipAxisMatrix
-			
-			pStabilizeAxis = transfer.getCalibrateStabilizeAxis()
-			pBendAxisMatrixStabilize = transfer.getCalibrateBendAxisMatrixStabilize()
-			pBendAxisMatrixStabilizeInv = pBendAxisMatrixStabilize.getInverse()
-			pZeroMatrixStabilize = pBendAxisMatrixStabilize\
-				* Matrix.newRotation(transfer.getCalibrateZeroRotationStabilize())
-			//pStabilizeBaseOffset = Matrix.newTranslation(transfer.getCalibrateStableBaseOffset())
 			
 // 			pZeroRotationX = pBendAxisMatrix * Matrix.newRotationX(-transfer.getCalibrateZeroRotation().getX())
 // 			pZeroRotationY = pBendAxisMatrix * Matrix.newRotationY(-transfer.getCalibrateZeroRotation().getY())
@@ -136,15 +122,6 @@ class ECBMotionTransferBend extends DefaultECBehavior
 				pSlotBase = ecbehavior.getSlotBase().instance(element)
 				pTransformBase = transfer.getBaseTracker().getTransformMatrix()
 			end
-			
-			if ecbehavior.getSlotStabilize() != null
-				pSlotStabilize = ecbehavior.getSlotStabilize().instance(element)
-				pTransformStabilize = transfer.getStabilizeTracker().getTransformMatrix()
-			end
-			
-			//pUseStabilize = pSlotStabilize != null and pSlotTarget != null\
-			//	and pSlotBase != null and not pStabilizeAxis.isZero()
-			pUseStabilize = false
 			
 			if ecbehavior.getSlotTarget() != null and ecbehavior.getSlotBase() != null
 				pTransformTwist = transfer.getCalibrateTwistTransform()
@@ -339,64 +316,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		end
 		
 		func Matrix calcBaseMatrix()
-			var Matrix baseMatrix = pSlotBase.getMatrixCharacter()
-			
-			if not pUseStabilize
-				return baseMatrix
-			end
-			
-			// calculate rotated bend axis
-			var Matrix stabilizeMatrix = pTransformStabilize * pSlotStabilize.getMatrixCharacter()
-			var Matrix stabilizeMatrixInv = stabilizeMatrix.getInverse()
-			var Vector basePos = baseMatrix.getPosition()
-			
-			var Vector position = (stabilizeMatrixInv * pZeroMatrixStabilize) * basePos
-			var float rotX, rotY
-			
-			var float radius = Vector2.new(position.getX(), position.getZ()).getLength()
-			rotY = DEMath.atan2(-position.getX(), position.getZ())
-			
-			if DEMath.fabs(rotY) <= 90
-				rotX = DEMath.atan2(position.getY(), radius)
-				
-			else
-				rotX = DEMath.atan2(position.getY(), -radius)
-				rotY = DEMath.normalize(rotY + 180, -90, 90)
-			end
-			
-			//rotX *= 2
-			//rotY *= 2
-			
-			var Vector axis = (Matrix.newRotation(rotX, rotY, 0)\
-				* pBendAxisMatrixStabilizeInv * stabilizeMatrix).getViewVector()
-			/*if pECBehavior.getTransfer().getName().equals("AutoHuman: Neck Shift")
-				GameApp.getApp().getConsole().addMessage("DEBUG(S): " + Array.newWith(rotX, rotY, axis))
-			end*/
-			
-			// lock base matrix bend axis direction to rotated bend axis
-			//var Vector stabilizePos = stabilizeMatrix.getPosition()
-			//var Vector basePos = baseMatrix.getPosition()
-			//var Vector axis = basePos - stabilizePos
-			if axis.isZero()
-				return baseMatrix
-			end
-			axis = baseMatrix.getInverse().transformNormal(axis.normalize())
-			
-			var float dot = pStabilizeAxis * axis
-			if DEMath.fabs(dot) > 0.9999
-				return baseMatrix
-			end
-			
-			//var Vector cross = axis % stabilizeAxis
-			//var Quaternion quat = Quaternion.new(cross.getX(), cross.getY(), cross.getZ(), dot + 1).normalize()
-			//return baseMatrix * Matrix.newFromQuaternion(quat)
-			
-			/*if pECBehavior.getTransfer().getName().equals("AutoHuman: Neck Shift")
-				GameApp.getApp().getConsole().addMessage("STABILIZE: " + Array.newWith(\
-					axis, pStabilizeAxis, DEMath.acos(dot)))
-			end*/
-			
-			return Matrix.newRotationAxis(axis % pStabilizeAxis, DEMath.acos(dot)) * baseMatrix
+			return pSlotBase.getMatrixCharacter()
 		end
 	end
 	
@@ -405,7 +325,7 @@ class ECBMotionTransferBend extends DefaultECBehavior
 	var MotionTransferBend pTransfer
 	var ECBehaviorVRPlayspace pVRPlayspace
 	var ECBMoCapAnimator pMoCapAnimator
-	var ECBTrackerSlot pSlotTarget, pSlotBase, pSlotStabilize
+	var ECBTrackerSlot pSlotTarget, pSlotBase
 	var String pControllerNameBendX, pControllerNameBendY, pControllerNameBendZ
 	var String pControllerNameTwist
 	
@@ -426,9 +346,6 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		if transfer.getBaseTracker() != null
 			pSlotBase = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getBaseTracker().getSlot())
 		end
-		if transfer.getStabilizeTracker() != null
-			pSlotStabilize = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getStabilizeTracker().getSlot())
-		end
 		
 		pControllerNameBendX = transfer.getName() + ".rotateX"
 		pControllerNameBendY = transfer.getName() + ".rotateY"
@@ -445,7 +362,6 @@ class ECBMotionTransferBend extends DefaultECBehavior
 		pTransfer = null
 		pSlotTarget = null
 		pSlotBase = null
-		//pSlotStabilize = null
 		super.dispose()
 	end
 	
@@ -474,11 +390,6 @@ class ECBMotionTransferBend extends DefaultECBehavior
 	/** Base slot behavior or null. */
 	func ECBTrackerSlot getSlotBase()
 		return pSlotBase
-	end
-	
-	/** Stabilize slot behavior or null. */
-	func ECBTrackerSlot getSlotStabilize()
-		return pSlotStabilize
 	end
 	
 	/** Animator controller name rotate. */
