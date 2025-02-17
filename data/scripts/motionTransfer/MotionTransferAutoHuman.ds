@@ -860,6 +860,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		
 		// spine
+		var float autoSpineTwistFactor
+		var bool useAutoSpineTwist
+		
 		pTransferSpine.setTipBone(pBoneChest)
 		pTransferSpine.setTargetBone("")
 		pTransferSpine.setTargetBaseBone("")
@@ -872,7 +875,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			
 		else
 			pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.reference)
-			pTransferSpine.setTwistScale(pScaleSpineBending.getY() * 0.5)
+			autoSpineTwistFactor = 0.5
+			useAutoSpineTwist = true
+			pTransferSpine.setTwistScale(pScaleSpineBending.getY() * autoSpineTwistFactor)
 		end
 		pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new())
 		
@@ -911,13 +916,14 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			
 			pTransferSpine.setBaseBone(baseBone)
 			pTransferSpine.setTwistBoneCount(DEMath.max(chainSpine.getCount() - 1, 1))
-			pTransferSpine.setAlignOrientationBoneCount(DEMath.max((chainSpine.getCount() - 1) / 2, 0))
 			
 			if chainHead.getCount() > 1 and isSlotChestAttached
 				pTransferSpine.setTargetBone(chainHead.getAt(-2) cast String)
+				pTransferSpine.setAlignOrientationBoneCount(DEMath.max((chainSpine.getCount() - 1) / 2, 0))
 				
 			else
 				pTransferSpine.setTargetBone("")
+				pTransferSpine.setAlignOrientationBoneCount(0)
 			end
 			
 			pTransferSpine.setTargetBaseBone(pTransferSpine.getBaseBone())
@@ -1012,12 +1018,14 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferNeck.setTwistScale(pScaleHeadRotation.getY())
 		pTransferNeck.setBendMoveX(pNeckBendMoveX)
 		pTransferNeck.setBendMoveY(pNeckBendMoveY)
-		pTransferNeck.setBendMoveRangeX(Vector2.new(\
-			-pNeckBendMoveRange.getX(), pNeckBendMoveRange.getX()))
-		pTransferNeck.setBendMoveRangeY(Vector2.new(\
-			-pNeckBendMoveRange.getY(), pNeckBendMoveRange.getY()))
+		pTransferNeck.setBendMoveRangeX(Vector2.new(-pNeckBendMoveRange.getX(), pNeckBendMoveRange.getX()))
+		pTransferNeck.setBendMoveRangeY(Vector2.new(-pNeckBendMoveRange.getY(), pNeckBendMoveRange.getY()))
 		
-		if hasNeckShiftMoves or hasScaleHeadRotation or not isSlotChestAttached
+		if useAutoSpineTwist
+			pTransferNeck.setTwistScale(pTransferNeck.getTwistScale() * (1 - autoSpineTwistFactor))
+		end
+		
+		if hasScaleHeadRotation
 			pTransferNeck.setScaleRotation(Vector2.new(pScaleHeadRotation.getX(), pScaleHeadRotation.getZ()))
 			
 		else
