@@ -286,6 +286,7 @@ class SessionSettings
 	
 	var DefaultListModel pModelHudCamera
 	var DefaultToggleModel pModelShowVRControllers
+	var DefaultToggleModel pModelShowVRDevices
 	var DefaultListModel pModelRightWristMenuPanel
 	var DefaultListModel pModelLeftWristMenuPanel
 	var DefaultToggleModel pModelProjectToGround
@@ -357,8 +358,11 @@ class SessionSettings
 		pModelHudCamera = DefaultListModel.new()
 		pModelHudCamera.add(null)
 		
-		pModelShowVRControllers = DefaultToggleModel.new(s.getBoolAt("ShowVRControllers", true))
+		pModelShowVRControllers = DefaultToggleModel.new(s.getBoolAt("ShowVRControllers", false))
 		pModelShowVRControllers.addListener(SaveToggleModelChanged.new("ShowVRControllers"))
+		
+		pModelShowVRDevices = DefaultToggleModel.new(s.getBoolAt("ShowVRDevices", false))
+		pModelShowVRDevices.addListener(SaveToggleModelChanged.new("ShowVRDevices"))
 		
 		pModelRightWristMenuPanel = DefaultListModel.new(WristMenuPanel.all().toArray())
 		pModelRightWristMenuPanel.setSelectedElement(WristMenuPanel.named(s.getStringAt("RightWristMenuPanel", "none")))
@@ -546,9 +550,14 @@ class SessionSettings
 		pModelHudCamera.setSelectedElement(selection)
 	end
 	
-	/** Show VR Controllers model. */
+	/** Show VR controllers model. */
 	func DefaultToggleModel getModelShowVRControllers()
 		return pModelShowVRControllers
+	end
+	
+	/** Show VR devices model. */
+	func DefaultToggleModel getModelShowVRDevices()
+		return pModelShowVRDevices
 	end
 	
 	/** Model right wrist menu panel. */

@@ -1,0 +1,144 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2021, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Worlds
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Commands
+pin Democap.Elements
+pin Democap.Behaviors
+
+
+/**
+ * Behavior tracking input devices to visualize VR devices.
+ * 
+ * For each VR device of controller or tracking type an instance of
+ * \ref VisualizeVRDeviceClass is added to the parent game world.
+ */
+class GWBVisualizeVRDevices extends DefaultGWBehavior
+	/** Listener tracking input devices being added and removed. */
+	class AddRemoveDeviceListener extends DefaultBindingManagerListener
+		var GWBVisualizeVRDevices pOwner
+		
+		func new(GWBVisualizeVRDevices owner)
+			pOwner = owner
+		end
+		
+		func void deviceAttached(BindingManager manager, InputDevice device)
+			pOwner.onDeviceAdded(device)
+		end
+		
+		func void deviceDetached(BindingManager manager, InputDevice device)
+			pOwner.onDeviceRemoved(device)
+		end
+		
+		func void devicesReloaded(BindingManager manager)
+			pOwner.onDevicesReloaded()
+		end
+	end
+	
+	
+	var AddRemoveDeviceListener pAddRemoveDeviceListener
+	var Array pDeviceElements
+	
+	
+	/** Create behavior. */
+	func new(GameWorld gameWorld) super(gameWorld)
+		pDeviceElements = Array.new()
+	end
+	
+	func void dispose()
+		if pAddRemoveDeviceListener != null
+			GameApp.getApp().getBindingManager().removeListener(pAddRemoveDeviceListener)
+			pAddRemoveDeviceListener = null
+		end
+		pDeviceElements = null
+		
+		super.dispose()
+	end
+	
+	
+	func void init(StubGameWorld stub)
+		pAddRemoveDeviceListener = AddRemoveDeviceListener.new(this)
+		GameApp.getApp().getBindingManager().addListener(pAddRemoveDeviceListener)
+		onDevicesReloaded()
+	end
+	
+	
+	/**
+	 * Create device element or null if not supported.
+	 * 
+	 * Default implementation creates instance of \ref VisualizeVRDeviceClass if device
+	 * is of supported type. Supported types are:
+	 * - \ref InputDeviceType#vrTracker
+	 */
+	func BehaviorElement createDeviceElement(InputDevice device)
+		select device.getType()
+		case InputDeviceType.vrTracker
+			return StubElement.new(GameApp.getApp().getElementClassList().getNamed(\
+				VisualizeVRDeviceClass.defaultClassName)).createElement() cast BehaviorElement
+			
+		else
+			return null
+		end
+	end
+	
+	
+	/** Device has been added. */
+	func void onDeviceAdded(InputDevice device)
+		var BehaviorElement element = pDeviceElements.find(block BehaviorElement each
+			return ECBVisualizeInputDevice.getInstanceIn(each).getDevice() == device
+		end) cast BehaviorElement
+		if element != null
+			return
+		end
+		
+		element = createDeviceElement(device)
+		if element != null
+			ECBVisualizeInputDevice.getInstanceIn(element).setDevice(device)
+			getGameWorld().addElement(element)
+			pDeviceElements.add(element)
+		end
+	end
+	
+	/** Device has been removed. */
+	func void onDeviceRemoved(InputDevice device)
+		pDeviceElements.removeIf(block BehaviorElement each
+			if ECBVisualizeInputDevice.getInstanceIn(each).getDevice() == device
+				each.safeDispose()
+				return true
+			end
+			return false
+		end)
+	end
+	
+	/** Devices have been reloaded. */
+	func void onDevicesReloaded()
+		pDeviceElements.forEach(block BehaviorElement each
+			each.safeDispose()
+		end)
+		pDeviceElements.removeAll()
+		
+		GameApp.getApp().getBindingManager().forEachDevice(block InputDevice each
+			onDeviceAdded(each)
+		end)
+	end
+end

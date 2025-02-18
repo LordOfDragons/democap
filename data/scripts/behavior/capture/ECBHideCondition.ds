@@ -103,9 +103,7 @@ class ECBHideCondition extends DefaultECBehavior
 		var RecordingStateChanged pRecordingStateChanged
 		var PlaybackChanged pPlaybackChanged
 		var Boolean pRestoreVisible
-		var bool pLive
-		var bool pPlayback
-		var bool pRecord
+		var bool pLive, pPlayback, pRecord
 		var Array pListeners
 		
 		
@@ -124,9 +122,9 @@ class ECBHideCondition extends DefaultECBehavior
 		
 		/** Init behavior from stubu. */
 		func void init(Preloading.StubElement stub)
-			pLive = pECBehavior.getLive().getValue(stub)
-			pPlayback = pECBehavior.getPlayback().getValue(stub)
-			pRecord = pECBehavior.getRecord().getValue(stub)
+			pLive = pECBehavior.live.getValue(stub)
+			pPlayback = pECBehavior.playback.getValue(stub)
+			pRecord = pECBehavior.record.getValue(stub)
 			
 			if pECBehavior.behaviorGuiPanels != null
 				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
@@ -147,7 +145,7 @@ class ECBHideCondition extends DefaultECBehavior
 			end
 			
 			pLive = hide
-			getElement().getStub().setPropertyBoolFor(pECBehavior.getLive().getName(), hide)
+			getElement().getStub().setPropertyBoolFor(pECBehavior.live.getName(), hide)
 			
 			updateVisibility()
 		end
@@ -164,7 +162,7 @@ class ECBHideCondition extends DefaultECBehavior
 			end
 			
 			pPlayback = hide
-			getElement().getStub().setPropertyBoolFor(pECBehavior.getPlayback().getName(), hide)
+			getElement().getStub().setPropertyBoolFor(pECBehavior.playback.getName(), hide)
 			
 			updateVisibility()
 		end
@@ -181,7 +179,7 @@ class ECBHideCondition extends DefaultECBehavior
 			end
 			
 			pRecord = hide
-			getElement().getStub().setPropertyBoolFor(pECBehavior.getRecord().getName(), hide)
+			getElement().getStub().setPropertyBoolFor(pECBehavior.record.getName(), hide)
 			
 			updateVisibility()
 		end
@@ -302,9 +300,9 @@ class ECBHideCondition extends DefaultECBehavior
 			
 			// update stub to properly support copy
 			var StubElement stub = getElement().getStub()
-			stub.setPropertyBoolFor(pECBehavior.getLive().getName(), pLive)
-			stub.setPropertyBoolFor(pECBehavior.getPlayback().getName(), pPlayback)
-			stub.setPropertyBoolFor(pECBehavior.getRecord().getName(), pRecord)
+			stub.setPropertyBoolFor(pECBehavior.live.getName(), pLive)
+			stub.setPropertyBoolFor(pECBehavior.playback.getName(), pPlayback)
+			stub.setPropertyBoolFor(pECBehavior.record.getName(), pRecord)
 		end
 		
 		/** Write to file. */
@@ -322,9 +320,7 @@ class ECBHideCondition extends DefaultECBehavior
 	
 	
 	public var ECBBehaviorGuiPanels behaviorGuiPanels
-	protected var ECPBoolean pLive
-	protected var ECPBoolean pPlayback
-	protected var ECPBoolean pRecord
+	public var ECPBoolean live, playback, record
 	
 	
 	
@@ -334,14 +330,9 @@ class ECBHideCondition extends DefaultECBehavior
 		
 		this.behaviorGuiPanels = behaviorGuiPanels
 		
-		pLive = ECPBoolean.new(prefix + "live", false)
-		eclass.addProperty(pLive)
-		
-		pPlayback = ECPBoolean.new(prefix + "playback", true)
-		eclass.addProperty(pPlayback)
-		
-		pRecord = ECPBoolean.new(prefix + "record", true)
-		eclass.addProperty(pRecord)
+		eclass.addProperty(live = ECPBoolean.new(prefix + "live", false))
+		eclass.addProperty(playback = ECPBoolean.new(prefix + "playback", true))
+		eclass.addProperty(record = ECPBoolean.new(prefix + "record", true))
 		
 		eclass.addBehavior(this)
 	end
@@ -351,21 +342,6 @@ class ECBHideCondition extends DefaultECBehavior
 		behaviorGuiPanels = null
 		super.dispose()
 	end
-	
-	
-	
-	func ECPBoolean getLive()
-		return pLive
-	end
-	
-	func ECPBoolean getPlayback()
-		return pPlayback
-	end
-	
-	func ECPBoolean getRecord()
-		return pRecord
-	end
-	
 	
 	
 	/** Get instance in element from owner element class. */

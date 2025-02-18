@@ -1,0 +1,224 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2025, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Democap.Elements
+pin Dragengine.Gui
+
+/**
+ * Behavior visualize input device.
+ */
+class ECBVisualizeInputDevice extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class ShowDevice extends DefaultToggleModelListener
+			var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func void toggledChanged(ToggleModel model)
+				pInstance.updateVisibility()
+			end
+		end
+		
+		class EvaluateHideCondition extends ECBHideCondition.DefaultListener
+			var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func bool hideObject(ECBHideCondition.Instance instance)
+				return pInstance.doHideElement()
+			end
+		end
+		
+		
+		var ECBVisualizeInputDevice pECBehavior
+		var ECBHideCondition.Instance pHideCondition
+		var Component pComponent
+		var Collider pCollider
+		var DynamicSkin pDynamicSkin
+		var InputDevice pDevice
+		var ShowDevice pShowDevice
+		
+		
+		/** Create behavior instance. */
+		func new(ECBVisualizeInputDevice ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pHideCondition = ecbehavior.hideCondition.instance(element)
+			pHideCondition.addListener(EvaluateHideCondition.new(this))
+		end
+		
+		func void dispose()
+			pHideCondition = null
+			
+			if pShowDevice != null
+				SessionSettings.get().getModelShowVRDevices().removeListener(pShowDevice)
+				pShowDevice = null
+			end
+			
+			pECBehavior = null
+			super.dispose()
+		end
+		
+		func void init(StubElement stub)
+			var BehaviorElement element = getElement()
+			
+			pComponent = pECBehavior.component.instance(element).getComponent()
+			pCollider = pECBehavior.collider.instance(element).getCollider()
+			pDynamicSkin = pECBehavior.dynamicSkin.instance(element).getDynamicSkin()
+			
+			pShowDevice = ShowDevice.new(this)
+			SessionSettings.get().getModelShowVRDevices().addListener(pShowDevice)
+		end
+		
+		
+		/** Monitored device or null. */
+		func InputDevice getDevice()
+			return pDevice
+		end
+		
+		/** Set monitored device or null. */
+		func void setDevice(InputDevice device)
+			if device == pDevice
+				return
+			end
+			
+			pDevice = device
+			
+			updateResources()
+			updateVisibility()
+			
+			setRequiresThink(device != null)
+		end
+		
+		
+		func void postThink(float elapsed)
+			if pDevice == null
+				return
+			end
+			
+			var DMatrix matrix = pDevice.getDevicePoseMatrix().toDMatrix()
+			
+			var WorldSpawnCharacter wsc = GameApp.getGameApp().getWorldSpawnCharacter()
+			var MoCapActor actor = wsc.getActor()
+			if actor != null
+				if wsc.getCharacter() != null
+					matrix = wsc.getCharacter().actorToCharacter(matrix.toMatrix()).toDMatrix()
+				end
+				matrix = matrix * actor.getVRPlayspace().getMatrix()
+			end
+			
+			getElement().setGeometry(matrix.getPosition(), matrix.toQuaternion())
+		end
+		
+		
+		func bool doHideElement()
+			return not SessionSettings.get().getModelShowVRDevices().getToggled() or pDevice == null
+		end
+		
+		
+		func void updateResources()
+			if pDevice == null
+				return
+			end
+			
+			try
+				var String basePath
+				var Model model
+				var Skin skin
+				
+				select pDevice.getType()
+				case InputDeviceType.vrTracker
+					basePath = "/content/models/vivetracker/"
+					model = Model.new(basePath + "tracker.demodel")
+					skin = Skin.new(basePath + "tracker.deskin")
+					//rig = Rig.new(basePath + "tracker.derig")
+					
+				else
+					basePath = "/content/models/vivetracker/"
+					model = Model.new(basePath + "tracker.demodel")
+					skin = Skin.new(basePath + "tracker.deskin")
+					//rig = Rig.new(basePath + "tracker.derig")
+				end
+				
+				pComponent.setModelAndSkin(model, skin)
+				
+			catch Exception e
+				GameApp.getApp().getConsole().addError("Failed updating resources: " + pDevice.getName(), e)
+			end
+		end
+		
+		func void updateVisibility()
+			pHideCondition.updateVisibility()
+		end
+	end
+	
+	
+	public var ECBehaviorComponent component
+	public var ECBehaviorCollider collider
+	public var ECBehaviorDynamicSkin dynamicSkin
+	public var ECBHideCondition hideCondition
+	
+	
+	/** Create behavior and add it to element class. */
+	func new(BehaviorElementClass eclass, ECBehaviorComponent component, ECBehaviorCollider collider,\
+	ECBehaviorDynamicSkin dynamicSkin, ECBHideCondition hideCondition) super(eclass)
+		this.component = component
+		this.collider = collider
+		this.dynamicSkin = dynamicSkin
+		this.hideCondition = hideCondition
+		
+		eclass.addBehavior(this)
+	end
+	
+	func void dispose()
+		component = null
+		collider = null
+		dynamicSkin = null
+		hideCondition = null
+		super.dispose()
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(this.getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	
+	/** Create behavior instance. */
+	func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
