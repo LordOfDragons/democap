@@ -771,35 +771,64 @@ class CharacterConfiguration
 	protected func void assignInputDevices(ActorProfile actorProfile)
 		var Vector offset = GameApp.getGameApp().getSessionSettings().getFloorOffsetVector()
 		var BindingManager bindings = GameApp.getGameApp().getBindingManager()
+		var Console console = GameApp.getGameApp().getConsole()
 		
 		// clear all assignments
 		pTrackerSlots.forEach(block CharacterTrackerSlot slot
 			slot.setInputDeviceID("")
+			slot.getInputDeviceCandidates().removeAll()
 		end)
 		
-		// assign input devices
-		var Console console = GameApp.getGameApp().getConsole()
-		console.addMessage("Assign input devices: " + getLogName())
-		
+		// determine input device candidates
+		console.addMessage("Determine input devices assignment candidates: " + getLogName())
 		bindings.forEachDevice(block InputDevice device
 			select device.getType()
 			case InputDeviceType.vrHMD, InputDeviceType.vrEyeTracker,\
-			  	 InputDeviceType.vrLeftHand, InputDeviceType.vrRightHand,\
-				 InputDeviceType.vrTracker
-				var CharacterTrackerSlot slot = pTrackerSlots.bestMatching(device.getType(),\
-					pMatrixCalibrate * device.getDevicePosePosition() + offset)
+					InputDeviceType.vrLeftHand, InputDeviceType.vrRightHand,\
+					InputDeviceType.vrTracker
+				
+				var Vector position = pMatrixCalibrate * device.getDevicePosePosition() + offset
+				var CharacterTrackerSlot slot = pTrackerSlots.bestMatching(device.getType(), position)
 				
 				if slot != null
-					slot.setInputDeviceID(device.getID())
-					console.addMessage("- {} ({}) {}: Assign to slot '{}'".format(\
+					slot.getInputDeviceCandidates().add(CharacterTrackerSlot.InputDeviceCandidate.new(\
+						device, position, (position - slot.getPosition()).getLength()))
+					console.addMessage("- {} ({}) {}: Candidate for slot '{}'".format(\
 						Array.newWith(device.getID(), device.getType().name(),\
 							device.getDevicePosePosition() + offset, slot.getName())))
 					
 				else
-					console.addMessage("- {} ({}) {}: Not assigned".format(\
+					console.addMessage("- {} ({}) {}: No candidate slot found".format(\
 						Array.newWith(device.getID(), device.getType().name(),\
 							device.getDevicePosePosition() + offset)))
 				end
+			end
+		end)
+		
+		// log slot candidates
+		console.addMessage("Slot candidates: " + getLogName())
+		pTrackerSlots.forEach(block CharacterTrackerSlot slot
+			console.addMessage("- {}: {}".format(Array.newWith(slot.getName(),\
+				slot.getInputDeviceCandidates().map(block CharacterTrackerSlot.InputDeviceCandidate candidate
+					return "{}({})".format(Array.newWith(candidate.getDevice().getID(), candidate.getDistance()))
+				end))))
+		end)
+		
+		// assign input devices
+		console.addMessage("Assign input devices: " + getLogName())
+		pTrackerSlots.forEach(block CharacterTrackerSlot slot
+			if slot.getInputDeviceCandidates().getCount() == 0
+				console.addMessage("- {}: No candidate".format(Array.newWith(slot.getName())))
+				
+			else
+				var CharacterTrackerSlot.InputDeviceCandidate candidate =\
+					slot.getInputDeviceCandidates().sorted().getAt(0) cast CharacterTrackerSlot.InputDeviceCandidate
+				
+				slot.setInputDeviceID(candidate.getDevice().getID())
+				console.addMessage("- {}: Assign candidate {} ({}) {}".format(\
+					Array.newWith(slot.getName(), candidate.getDevice().getID(),\
+						candidate.getDevice().getType().name(),\
+						candidate.getDevice().getDevicePosePosition() + offset)))
 			end
 		end)
 	end

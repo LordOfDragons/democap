@@ -53,6 +53,34 @@ class CharacterTrackerSlot
 		eyes
 	end
 	
+	class InputDeviceCandidate
+		public var InputDevice pDevice
+		public var Vector pPosition
+		public var float pDistance
+		
+		func new(InputDevice device, Vector position, float distance)
+			pDevice = device
+			pPosition = position
+			pDistance = distance
+		end
+		
+		func InputDevice getDevice()
+			return pDevice
+		end
+		
+		func Vector getPosition()
+			return pPosition
+		end
+		
+		func float getDistance()
+			return pDistance
+		end
+		
+		func int compare(Object obj)
+			return pDistance.compare((obj cast InputDeviceCandidate).pDistance)
+		end
+	end
+	
 	
 	
 	var CharacterConfiguration pConfiguration
@@ -67,6 +95,7 @@ class CharacterTrackerSlot
 	var Matrix pTargetMatrix
 	var InputDeviceType pInputDeviceType
 	var String pInputDeviceID
+	var Array pInputDeviceCandidates
 	var Vector pOffsetPosition
 	var Vector pOffsetRotation
 	var Matrix pOffsetMatrix
@@ -112,6 +141,7 @@ class CharacterTrackerSlot
 		pTargetMatrix = Matrix.new()
 		pInputDeviceType = InputDeviceType.vrTracker
 		pInputDeviceID = ""
+		pInputDeviceCandidates = Array.new()
 		pOffsetPosition = Vector.new()
 		pOffsetRotation = Vector.new()
 		pOffsetMatrix = Matrix.new()
@@ -150,6 +180,7 @@ class CharacterTrackerSlot
 		pTargetRotation = slot.pTargetRotation
 		pTargetMatrix = slot.pTargetMatrix
 		pInputDeviceID = slot.pInputDeviceID
+		pInputDeviceCandidates = Array.new()
 		pInputDeviceType = slot.pInputDeviceType
 		pOffsetPosition = slot.pOffsetPosition
 		pOffsetRotation = slot.pOffsetRotation
@@ -365,6 +396,11 @@ class CharacterTrackerSlot
 		return GameApp.getGameApp().getBindingManager().findDevice(block InputDevice each
 			return each.getID().equals(pInputDeviceID)
 		end)
+	end
+	
+	/** Input device candidates as \ref Array of \ref InputDeviceCandidate. */
+	func Array getInputDeviceCandidates()
+		return pInputDeviceCandidates
 	end
 	
 	/** Input device is attached. */
