@@ -1,0 +1,227 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2025, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Actors
+pin Democap.Characters
+
+pin Dragengine.Gui
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Utils
+pin Democap.Actions
+
+
+class ECBDebugBones extends DefaultECBehavior
+	class Instance extends DefaultECBehaviorInstance
+		class Bone
+			public var String name
+			public var int index
+			public var Component component
+			
+			func new(String name, int index, Component component)
+				this.name = name
+				this.index = index
+				this.component = component
+			end
+		end
+		
+		class BoneScalingCalculator
+			protected var float pBoneSize, pMinBoneSize, pMaxLimit
+			protected var Array pLimits
+			protected var Rig pRig
+			
+			func new(Rig rig, CharacterConfiguration config)
+				pBoneSize = config.actorToComponent(0.08)
+				pMinBoneSize = config.actorToComponent(0.01)
+				pMaxLimit = 10000
+				pRig = rig
+				pLimits
+			end
+			
+			/**
+			 * Calculate scalings for array bones of \ref Bone.
+			 */
+			func void calcScalings(Array bones)
+				var int i, parent, count = pRig.getBoneCount()
+				pLimits = Array.new(count, pMaxLimit)
+				
+				for i = 0 to count
+					parent = pRig.boneGetParent(i)
+					if parent != -1
+						pLimits.setAt(parent, DEMath.min(\
+							pLimits.getAt(parent) cast float,\
+							pRig.boneGetPosition(i).getLength()))
+					end
+				end
+				
+				bones.forEach(block Bone each
+					each.component.setScaling(calcBoneScaling(each.index))
+				end)
+			end
+			
+			protected func Vector calcBoneScaling(int index)
+				var float limit = pLimits.getAt(index) cast float
+				if limit < pBoneSize
+					if limit > pMinBoneSize
+						return Vector.new(limit, limit, limit)
+						
+					else
+						return Vector.new(pMinBoneSize, pMinBoneSize, pMinBoneSize)
+					end
+					
+				elif limit < pMaxLimit
+					return Vector.new(pBoneSize, pBoneSize, limit)
+					
+				else
+					var int parent = pRig.boneGetParent(index)
+					if parent != -1
+						return calcBoneScaling(parent)
+						
+					else
+						return Vector.new(pBoneSize, pBoneSize, pBoneSize)
+					end
+				end
+			end
+		end
+		
+		
+		protected var Model pBoneModel
+		protected var Skin pBoneSkin
+		protected var Array pBoneComponents
+		protected var DynamicSkin pDynamicSkinCaptured, pDynamicSkinNotCaptured
+		protected var bool pEnableCaptured, pEnableNotCaptured
+		protected var Component pMocapComponent
+		
+		
+		func new(BehaviorElement element) super(element)
+		end
+		
+		func void init(StubElement stub)
+			var ParameterTree pt = GameApp.getGameApp().debugParamTree
+			pEnableCaptured = pt.getBoolAt("Bones/Captured", false)
+			pEnableNotCaptured = pt.getBoolAt("Bones/NotCaptured", false)
+			if not pEnableCaptured and not pEnableNotCaptured
+				return
+			end
+			
+			pBoneModel = Model.new("/content/models/bone/bone2.demodel")
+			pBoneSkin = Skin.new("/content/models/bone/bone2.deskin")
+			pBoneComponents = Array.new()
+			
+			if pEnableCaptured
+				pDynamicSkinCaptured = DynamicSkin.new()
+				pDynamicSkinCaptured.addRenderable("color", DynamicSkinRenderableType.color)
+				pDynamicSkinCaptured.setColorAt(0, Color.new(0.75, 0, 1))
+			end
+			
+			if pEnableNotCaptured
+				pDynamicSkinNotCaptured = DynamicSkin.new()
+				pDynamicSkinNotCaptured.addRenderable("color", DynamicSkinRenderableType.color)
+				pDynamicSkinNotCaptured.setColorAt(0, Color.new(0, 0, 1))
+			end
+			
+			var BehaviorElement element = getElement()
+			var Component component
+			
+			pMocapComponent = ECBehaviorActorAnimated.getInstanceIn(element).getComponent().getComponent()
+			var Rig rig = pMocapComponent.getRig()
+			
+			var ECBRecordAnimation.Instance recordAnimation = ECBRecordAnimation.getInstanceIn(element)
+			var Set capturedBones = recordAnimation.getECBehavior().getBones()
+			
+			if pEnableCaptured
+				capturedBones.forEach(block String each
+					component = Component.new(pBoneModel, pBoneSkin)
+					component.setDynamicSkin(pDynamicSkinCaptured)
+					pBoneComponents.add(Bone.new(each, rig.indexOfBoneNamed(each), component))
+				end)
+			end
+			
+			if pEnableNotCaptured
+				var int i, count = rig.getBoneCount()
+				var String bone
+				
+				for i = 0 to count
+					bone = rig.boneGetName(i)
+					if not capturedBones.has(bone)
+						component = Component.new(pBoneModel, pBoneSkin)
+						component.setDynamicSkin(pDynamicSkinNotCaptured)
+						pBoneComponents.add(Bone.new(bone, i, component))
+					end
+				end
+			end
+			
+			if pBoneComponents.getCount() > 0
+				var BoneScalingCalculator scaler = BoneScalingCalculator.new(\
+					rig, recordAnimation.getCharacter().getCharacter())
+				scaler.calcScalings(pBoneComponents)
+			end
+			
+			setRequiresThink(true)
+		end
+		
+		
+		func void postThink(float elapsed)
+			updateBones()
+		end
+		
+		
+		func void updateBones()
+			var DMatrix matrix = pMocapComponent.getMatrix()
+			var DMatrix boneMatrix
+			
+			pBoneComponents.forEach(block Bone each
+				boneMatrix = pMocapComponent.boneGetMatrix(each.index).toDMatrix() * matrix
+				each.component.setPosition(boneMatrix.getPosition())
+				each.component.setOrientation(boneMatrix.toQuaternion())
+			end)
+		end
+		
+		func void addToGameWorld()
+			if pBoneComponents != null
+				var World world = getElement().getGameWorld().getWorld()
+				pBoneComponents.forEach(block Bone each
+					world.addComponent(each.component)
+				end)
+			end
+		end
+		
+		func void removeFromGameWorld()
+			if pBoneComponents != null
+				var World world = getElement().getGameWorld().getWorld()
+				pBoneComponents.forEach(block Bone each
+					world.removeComponent(each.component)
+				end)
+			end
+		end
+	end
+	
+	
+	func new(BehaviorElementClass eclass) super(eclass)
+		eclass.addBehavior(this)
+	end
+	
+	func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(element)
+	end
+end
