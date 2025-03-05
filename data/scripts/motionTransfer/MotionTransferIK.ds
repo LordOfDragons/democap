@@ -1264,7 +1264,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 				
 				var float reachBasePos = posBase.absolute().getX()
 				var float reachRotateTip = (posTip.absolute() - posRotate).getLength()
-				var float reachBaseRotate = (posRotate - posBase.absolute()).getLength()  // can be 0
+				var float reachBaseRotate = (posRotate - posBase.absolute()).getLength() // can be 0
 				var float tip, actorTip
 				
 				// reach scaling
@@ -1344,7 +1344,19 @@ class MotionTransferIK extends DefaultMotionTransfer
 			
 			// reach range is only used if base tracker is set
 			if slotBase != null
-				pCalibrateReachRange = pCalibrateReach
+				pCalibrateReachRange = 0
+				
+				var Vector bonePos, lastBonePos = component.boneGetMatrix(indexTip).getPosition()
+				var int indexBone = rig.boneGetParent(indexTip)
+				
+				while indexBone != -1 and indexBone != indexBase
+					bonePos = component.boneGetMatrix(indexBone).getPosition()
+					pCalibrateReachRange += (bonePos - lastBonePos).getLength()
+					lastBonePos = bonePos
+					indexBone = rig.boneGetParent(indexBone)
+				end
+				
+				pCalibrateReachRange = DEMath.max(pCalibrateReachRange * pReachLimit, pCalibrateReach)
 				
 			else
 				pCalibrateReachRange = 0
