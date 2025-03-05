@@ -888,15 +888,39 @@ class MotionTransferIK extends DefaultMotionTransfer
 			adef.addRule(ruleAlign)
 			
 			// rotate pre-rotate bone using rotator bone Z-axis and controller value as angle
-			var ADRuleBoneTransformator ruleRotate = ADRuleBoneTransformator.new()
-			ruleRotate.setName(getName() + ".preRotate")
-			ruleRotate.setCoordinateFrame(ARBoneTransformatorCFrame.target)
-			ruleRotate.setTargetBone(bonePreRotate.name)
-			ruleRotate.setMinimumRotation(Vector.new(0, 0, -180))
-			ruleRotate.setMaximumRotation(Vector.new(0, 0, 180))
-			ruleRotate.addBone(boneName)
-			ruleRotate.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
-			adef.addRule(ruleRotate)
+			var ADRuleBoneTransformator ruleRotate
+			if useGuide
+				ruleRotate = ADRuleBoneTransformator.new()
+				ruleRotate.setName(getName() + ".preRotate")
+				ruleRotate.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+				ruleRotate.setTargetBone(bonePreRotate.name)
+				ruleRotate.setMinimumRotation(Vector.new(0, 0, -162)) // 90%
+				ruleRotate.setMaximumRotation(Vector.new(0, 0, 162)) // 90%
+				ruleRotate.addBone(pGuideBone)
+				ruleRotate.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				adef.addRule(ruleRotate)
+				
+				ruleRotate = ADRuleBoneTransformator.new()
+				ruleRotate.setName(getName() + ".preRotate")
+				ruleRotate.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+				ruleRotate.setTargetBone(bonePreRotate.name)
+				ruleRotate.setMinimumRotation(Vector.new(0, 0, -18)) // 10%
+				ruleRotate.setMaximumRotation(Vector.new(0, 0, 18)) // 10%
+				ruleRotate.addBone(pCalibratePreRotateBone)
+				ruleRotate.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				adef.addRule(ruleRotate)
+				
+			else
+				ruleRotate = ADRuleBoneTransformator.new()
+				ruleRotate.setName(getName() + ".preRotate")
+				ruleRotate.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+				ruleRotate.setTargetBone(bonePreRotate.name)
+				ruleRotate.setMinimumRotation(Vector.new(0, 0, -180))
+				ruleRotate.setMaximumRotation(Vector.new(0, 0, 180))
+				ruleRotate.addBone(boneName)
+				ruleRotate.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+				adef.addRule(ruleRotate)
+			end
 		end
 		
 		

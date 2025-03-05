@@ -1,0 +1,219 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2025, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer scale slot panel.
+ */
+class WCCPMTScaleSlots extends WCCPanelMotionTransfer
+	/** Add scale slot action. */
+	class ActionAddScaleSlot implements ActionListener
+		var DefaultListModel pModel
+		var ListModel pModelAdd
+		
+		func new(DefaultListModel model, ListModel modelAdd)
+			pModel = model
+			pModelAdd = modelAdd
+		end
+		
+		func void onAction(ActionEvent event)
+			if pModelAdd.getSelected() == -1
+				return
+			end
+			
+			var String name = pModelAdd.getAt(pModelAdd.getSelected()) cast String
+			if not name.empty() and not pModel.has(name)
+				pModel.add(name)
+				pModel.sort()
+			end
+		end
+	end
+	
+	/** Remove scale slot action. */
+	class ActionScaleShiftSlot implements ActionListener
+		var DefaultListModel pModel
+		
+		func new(DefaultListModel model)
+			pModel = model
+		end
+		
+		func void onAction(ActionEvent event)
+			if pModel.getSelected() != -1
+				pModel.removeFrom(pModel.getSelected())
+			end
+		end
+	end
+	
+	/** Clear scale slots action. */
+	class ActionClearScaleSlots implements ActionListener
+		var DefaultListModel pModel
+		
+		func new(DefaultListModel model)
+			pModel = model
+		end
+		
+		func void onAction(ActionEvent event)
+			pModel.removeAll()
+		end
+	end
+	
+	
+	var WCCPMTTracker pEditOriginTracker
+	var DefaultListModel pModelScaleSlots
+	var SharedListModel pModelAddScaleSlot
+	var EditVector pEditScaleFactor
+	
+	
+	/** Create window. */
+	func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
+		pModelTypeName.setText("@UI.ScaleSlots")
+		
+		pModelScaleSlots = DefaultListModel.new()
+		pModelScaleSlots.setAutoSelect(false)
+		pModelAddScaleSlot = SharedListModel.new(window.getModelTrackerSlotNames())
+		pModelAddScaleSlot.setAutoSelect(false)
+		
+		runWhileBlockingLayout(block
+			createContent(window.getModelTrackerSlotNames(), optionPrefix)
+		end)
+	end
+	
+	/** Dispose of window. */
+	func void dispose()
+		pModelScaleSlots = null
+		pModelAddScaleSlot = null
+		pEditOriginTracker.setTracker(null)
+		pEditOriginTracker = null
+		pEditScaleFactor = null
+		super.dispose()
+	end
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	func void loadValues()
+		runWhileBlockingLayout(block
+			super.loadValues()
+			
+			if pMotionTransfer != null
+				var MotionTransferScaleSlots mt = pMotionTransfer cast MotionTransferScaleSlots
+				pModelScaleSlots.setContent(mt.getScaleSlots().sorted())
+				pEditOriginTracker.setTracker(mt.getOrigin())
+				pEditOriginTracker.loadValues()
+				pEditScaleFactor.setVector(mt.getScaleFactor())
+				
+			else
+				pModelScaleSlots.removeAll()
+				pEditOriginTracker.setTracker(null)
+				pEditScaleFactor.setVector(Vector.new())
+			end
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		super.saveValues()
+		
+		var MotionTransferScaleSlots mt = pMotionTransfer cast MotionTransferScaleSlots
+		mt.getScaleSlots().addAll(pModelScaleSlots.getContent())
+		mt.setScaleFactor(pEditScaleFactor.getVector())
+		pEditOriginTracker.saveValues()
+	end
+	
+	/** Supports motion transfer type. */
+	func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferScaleSlots
+	end
+	
+	
+	/** Create window content. */
+	protected func void createContent(DefaultListModel modelTrackerSlotNames, String optionPrefix)
+		var ComboBox comboBox
+		var ListBox listBox
+		var Button button
+		var Label label
+		
+		createBaseContent("MotionTransferScaleSlots")
+		
+		// scale slots
+		label = Label.new("@UI.ScaleSlots.Label", "Label.FormCaption.SingleLine")
+		pPanelForm.addWidget(label)
+		
+		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+			comboBox = ComboBox.new(pModelAddScaleSlot)
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+			comboBox.setToolTip("@UI.ToolTip.ScaleSlots.ScaleSlot")
+			p.addWidget(comboBox)
+			
+			p.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p2
+				button = Button.new("@UI.Add", ActionAddScaleSlot.new(pModelScaleSlots, pModelAddScaleSlot))
+				button.setDesignerSelector("Button.Popup")
+				p2.addWidget(button)
+				
+				button = Button.new("@UI.Remove", ActionScaleShiftSlot.new(pModelScaleSlots))
+				button.setDesignerSelector("Button.Popup")
+				p2.addWidget(button)
+				
+				button = Button.new("@UI.Clear", ActionClearScaleSlots.new(pModelScaleSlots))
+				button.setDesignerSelector("Button.Popup")
+				p2.addWidget(button)
+			end))
+			
+			listBox = ListBox.new(pModelScaleSlots)
+			listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
+			listBox.setToolTip("@UI.ToolTip.ScaleSlots")
+			listBox.setNumberDisplayLines(4)
+			p.addWidget(ScrollPanel.new(listBox))
+		end))
+		
+		// scale factor
+		pPanelForm.addWidget(Label.new("@UI.Scale.Label", "Label.FormCaption.SingleLine"))
+		
+		pEditScaleFactor = EditVector.new()
+		pEditScaleFactor.setToolTip("@UI.ToolTip.ScaleSlots.ScaleFactor")
+		pPanelForm.addWidget(pEditScaleFactor)
+		
+		// origin slot
+		pEditOriginTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
+			optionPrefix + "/OriginTracker", this, "@UI.OriginTracker", false)
+		addWidget(pEditOriginTracker)
+	end
+	
+	/** Motion transfer changed. */
+	protected func void onMotionTransferChanged()
+		if pEditOriginTracker != null
+			pEditOriginTracker.setTracker(null)
+		end
+	end
+end

@@ -34,45 +34,26 @@ pin Dragengine.Scenery
  * Edit character config window motion transfer auto human panel.
  */
 class WCCPMTAutoHuman extends WCCPanelMotionTransfer
-	var SharedListModel pModelListBoneHead
-	var DefaultTextModel pModelTextBoneHead
-	var SharedListModel pModelListBoneChest
-	var DefaultTextModel pModelTextBoneChest
-	var SharedListModel pModelListBoneHandRight
-	var DefaultTextModel pModelTextBoneHandRight
-	var SharedListModel pModelListBoneHandLeft
-	var DefaultTextModel pModelTextBoneHandLeft
-	var SharedListModel pModelListBoneHip
-	var DefaultTextModel pModelTextBoneHip
-	var SharedListModel pModelListBoneFootRight
-	var DefaultTextModel pModelTextBoneFootRight
-	var SharedListModel pModelListBoneFootLeft
-	var DefaultTextModel pModelTextBoneFootLeft
-	var DefaultRangeModel pModelBendShapeSpine
-	var DefaultRangeModel pModelBendShapeNeck
-	var SharedListModel pModelListMoveBaseIK
-	var DefaultTextModel pModelTextMoveBaseIK
-	var SharedListModel pModelListMoveCrouch
-	var DefaultTextModel pModelTextMoveCrouch
-	var DefaultToggleModel pModelRelocateArms
-	var EditVector pEditReachScalingArmRight
-	var EditVector pEditReachScalingArmRightBack
-	var EditVector pEditReachScalingArmLeft
-	var EditVector pEditReachScalingArmLeftBack
-	var EditVector pEditScaleHeadRotation
-	var EditVector pEditScaleSpineBending
-	var EditVector pEditNeckBendAxisRotation
-	var EditVector pEditSpineBendAxisRotation
-	var SharedListModel pModelListNeckBendMoveX
-	var DefaultTextModel pModelTextNeckBendMoveX
-	var SharedListModel pModelListNeckBendMoveY
-	var DefaultTextModel pModelTextNeckBendMoveY
-	var EditVector2 pEditNeckBendMoveRange
-	var SharedListModel pModelListNeckShiftMoveX
-	var DefaultTextModel pModelTextNeckShiftMoveX
-	var SharedListModel pModelListNeckShiftMoveY
-	var DefaultTextModel pModelTextNeckShiftMoveY
-	var EditVector2 pEditNeckShiftMoveRange
+	var SharedListModel pModelListBoneHead, pModelListBoneChest, pModelListBoneHip
+	var DefaultTextModel pModelTextBoneHead, pModelTextBoneChest, pModelTextBoneHip
+	var SharedListModel pModelListBoneHandRight, pModelListBoneHandLeft
+	var DefaultTextModel pModelTextBoneHandRight, pModelTextBoneHandLeft
+	var SharedListModel pModelListBoneFootRight, pModelListBoneFootLeft
+	var DefaultTextModel pModelTextBoneFootRight, pModelTextBoneFootLeft
+	var DefaultRangeModel pModelBendShapeSpine, pModelBendShapeNeck
+	var SharedListModel pModelListMoveBaseIK, pModelListMoveCrouch
+	var DefaultTextModel pModelTextMoveBaseIK, pModelTextMoveCrouch
+	var DefaultToggleModel pModelRelocateArms, pModelPullFeetToGround
+	var EditVector pEditReachScalingArmRight, pEditReachScalingArmRightBack
+	var EditVector pEditReachScalingArmLeft, pEditReachScalingArmLeftBack
+	var EditVector pEditScaleHeadRotation, pEditScaleSpineBending
+	var EditVector pEditNeckBendAxisRotation, pEditSpineBendAxisRotation
+	var SharedListModel pModelListNeckBendMoveX, pModelListNeckBendMoveY
+	var DefaultTextModel pModelTextNeckBendMoveX, pModelTextNeckBendMoveY
+	var SharedListModel pModelListNeckShiftMoveX, pModelListNeckShiftMoveY
+	var DefaultTextModel pModelTextNeckShiftMoveX, pModelTextNeckShiftMoveY
+	var EditVector2 pEditNeckBendMoveRange, pEditNeckShiftMoveRange
+	var DefaultListModel pModelWaistMode
 	
 	
 	
@@ -120,6 +101,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		pModelTextMoveCrouch = DefaultTextModel.new()
 		
 		pModelRelocateArms = DefaultToggleModel.new()
+		pModelPullFeetToGround = DefaultToggleModel.new()
 		
 		pModelListNeckBendMoveX = SharedListModel.new(window.getModelMoves())
 		pModelListNeckBendMoveX.setAutoSelect(false)
@@ -136,6 +118,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		pModelListNeckShiftMoveY = SharedListModel.new(window.getModelMoves())
 		pModelListNeckShiftMoveY.setAutoSelect(false)
 		pModelTextNeckShiftMoveY = DefaultTextModel.new()
+		
+		pModelWaistMode = DefaultListModel.new(MotionTransferAutoHuman.WaistMode.all().toArray())
 		
 		runWhileBlockingLayout(block
 			createContent(optionPrefix)
@@ -175,6 +159,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		pModelTextMoveCrouch = null
 		
 		pModelRelocateArms = null
+		pModelPullFeetToGround = null
+		pModelWaistMode = null
 		
 		pEditReachScalingArmRight = null
 		pEditReachScalingArmRightBack = null
@@ -221,6 +207,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelTextMoveBaseIK.setText(mt.getMoveBaseIK())
 				pModelTextMoveCrouch.setText(mt.getMoveCrouch())
 				pModelRelocateArms.setToggled(mt.getRelocateArms())
+				pModelPullFeetToGround.setToggled(mt.getPullFeetToGround())
+				pModelWaistMode.setSelectedElement(mt.getWaistMode())
 				pEditReachScalingArmRight.setVector(mt.getReachScalingArmRight())
 				pEditReachScalingArmRightBack.setVector(mt.getReachScalingArmRightBack())
 				pEditReachScalingArmLeft.setVector(mt.getReachScalingArmLeft())
@@ -249,6 +237,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelTextMoveBaseIK.setText("")
 				pModelTextMoveCrouch.setText("")
 				pModelRelocateArms.setToggled(false)
+				pModelPullFeetToGround.setToggled(false)
+				pModelWaistMode.setSelectedElement(MotionTransferAutoHuman.WaistMode.direct)
 				pEditReachScalingArmRight.setVector(Vector.new(1, 1, 1))
 				pEditReachScalingArmRightBack.setVector(Vector.new(1, 1, 1))
 				pEditReachScalingArmLeft.setVector(Vector.new(1, 1, 1))
@@ -288,6 +278,8 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		mt.setMoveBaseIK(pModelTextMoveBaseIK.getText())
 		mt.setMoveCrouch(pModelTextMoveCrouch.getText())
 		mt.setRelocateArms(pModelRelocateArms.getToggled())
+		mt.setPullFeetToGround(pModelPullFeetToGround.getToggled())
+		mt.setWaistMode(pModelWaistMode.getSelectedElement() cast MotionTransferAutoHuman.WaistMode)
 		mt.setReachScalingArmRight(pEditReachScalingArmRight.getVector())
 		mt.setReachScalingArmRightBack(pEditReachScalingArmRightBack.getVector())
 		mt.setReachScalingArmLeft(pEditReachScalingArmLeft.getVector())
@@ -607,12 +599,29 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 			
 			CPECoordinateSystemAxis.new(preview, null, null, label, pEditSpineBendAxisRotation, comboBoxHip, null, true)
 			
-			// relocate tip
+			// relocate arms
 			p.addWidget(Label.new(""))
 			
 			checkBox = CheckBox.new(pModelRelocateArms, "@UI.RelocateArms")
 			checkBox.setToolTip("@UI.ToolTip.RelocateArms")
 			p.addWidget(checkBox)
+			
+			// pull feet to ground
+			p.addWidget(Label.new(""))
+			
+			checkBox = CheckBox.new(pModelPullFeetToGround, "@UI.PullFeetToGround")
+			checkBox.setToolTip("@UI.ToolTip.PullFeetToGround")
+			p.addWidget(checkBox)
+			
+			// waist mode
+			p.addWidget(Label.new("@UI.WaistMode.Label", "Label.FormCaption.SingleLine"))
+			
+			var EnumListElementRenderer renderer = EnumListElementRenderer.new()
+			renderer.setTranslationPrefix("UI.Enum.AutoTransferWaistMode.")
+			comboBox = ComboBox.new(pModelWaistMode, renderer)
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+			comboBox.setToolTip("@UI.ToolTip.WaistMode")
+			p.addWidget(comboBox)
 		end))
 	end
 end

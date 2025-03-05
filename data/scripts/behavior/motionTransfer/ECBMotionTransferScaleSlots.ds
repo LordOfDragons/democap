@@ -1,0 +1,237 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2025, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Commands
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Behavior for MotionTransferScaleSlots.
+ */
+class ECBMotionTransferScaleSlots extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Shift slots. */
+		class ShiftSlots extends ECBMoCapAnimator.DefaultListener
+			var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func void updateControllers(ECBMoCapAnimator.Instance instance, float elapsed, int phase)
+				if phase == 0
+					pInstance.scaleSlots()
+				end
+			end
+		end
+		
+		
+		var ECBMotionTransferScaleSlots pECBehavior
+		var ECBMoCapAnimator.Instance pMoCapAnimator
+		var ECBTrackerSlot.Instance pSlotOrigin
+		var Array pScaleSlots
+		var Matrix pTransformOrigin
+		
+		
+		/** Create instance. */
+		func new(ECBMotionTransferScaleSlots ecbehavior, BehaviorElement element) super(element)
+			var MotionTransferScaleSlots transfer = ecbehavior.getTransfer()
+			pECBehavior = ecbehavior
+			
+			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
+			
+			if ecbehavior.getSlotOrigin() != null
+				pSlotOrigin = ecbehavior.getSlotOrigin().instance(element)
+				pTransformOrigin = transfer.getOrigin().getTransformMatrix()
+			end
+			
+			pScaleSlots = ecbehavior.getScaleSlots().map(block ECBTrackerSlot each
+				return each.instance(element)
+			end)
+		end
+		
+		/** Dispose of instance. */
+		func void dispose()
+			pSlotOrigin = null
+			pScaleSlots = null
+			pMoCapAnimator = null
+			super.dispose()
+		end
+		
+		
+		/** Init behavior instance. */
+		func void init(StubElement stub)
+			pMoCapAnimator.addListener(ShiftSlots.new(this))
+		end
+		
+		
+		/** Behavior. */
+		func ECBMotionTransferScaleSlots getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Motion capture animator. */
+		func ECBMoCapAnimator.Instance getMoCapAnimator()
+			return pMoCapAnimator
+		end
+		
+		/** Origin slot behavior instance or null. */
+		func ECBTrackerSlot.Instance getSlotOrigin()
+			return pSlotOrigin
+		end
+		
+		/** Scale slot behavior instances as Array of \ref ECBTrackerSlot#Instance. */
+		func Array getScaleSlots()
+			return pScaleSlots
+		end
+		
+		
+		/** Scale slots. */
+		func void scaleSlots()
+			if pScaleSlots.getCount() == 0
+				return
+			end
+			
+			var Vector scaling = pECBehavior.getTransfer().getScaleFactor()
+			if scaling.equals(Vector.new(1, 1, 1))
+				return
+			end
+			
+			var Matrix transform
+			if pSlotOrigin != null
+				transform = pTransformOrigin * pSlotOrigin.getMatrixCharacter()
+				transform = transform.getInverse() * Matrix.newScaling(scaling) * transform
+				
+			else
+				transform = Matrix.newScaling(scaling)
+			end
+			
+			pScaleSlots.forEach(block ECBTrackerSlot.Instance each
+				each.setMatrixCharacter(each.getMatrixCharacter() * transform)
+			end)
+		end
+	end
+	
+	
+	var MotionTransferScaleSlots pTransfer
+	var ECBMoCapAnimator pMoCapAnimator
+	var ECBTrackerSlot pSlotOrigin
+	var Array pScaleSlots
+	
+	
+	/** Create behavior element class. */
+	func new(BaseVRActorClass eclass, MotionTransferScaleSlots transfer) super(eclass, transfer.getName())
+		pTransfer = transfer
+		pMoCapAnimator = ECBMoCapAnimator.getBehaviorIn(eclass)
+		if transfer.getOrigin() != null
+			pSlotOrigin = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getOrigin().getSlot())
+		end
+		pScaleSlots = Array.new()
+		transfer.getScaleSlots().forEach(block String each
+			var ECBTrackerSlot slot = ECBTrackerSlot.getBehaviorIn(eclass, each)
+			if slot != null
+				pScaleSlots.add(slot)
+			end
+		end)
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	func void dispose()
+		pTransfer = null
+		pMoCapAnimator = null
+		pSlotOrigin = null
+		pScaleSlots = null
+		super.dispose()
+	end
+	
+	
+	/** Motion transfer. */
+	func MotionTransferScaleSlots getTransfer()
+		return pTransfer
+	end
+	
+	/** Motion capture animator behavior. */
+	func ECBMoCapAnimator getMoCapAnimator()
+		return pMoCapAnimator
+	end
+	
+	/** Origin slot behavior or null. */
+	func ECBTrackerSlot getSlotOrigin()
+		return pSlotOrigin
+	end
+	
+	/** Scale slot behaviors as Array of \ref ECBTrackerSlot. */
+	func Array getScaleSlots()
+		return pScaleSlots
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	
+	/** Get behavior with slot name in element class or null if absent. */
+	static func ECBMotionTransferScaleSlots getBehaviorIn(BehaviorElementClass eclass, String slotName)
+		return eclass.findBehavior(block ECBMotionTransferScaleSlots each
+			return each.getTransfer().getName().equals(slotName)
+		end) cast ECBMotionTransferScaleSlots
+	end
+	
+	/** Get list of all behaviors in element. */
+	static func Array getAllBehaviorsIn(BehaviorElementClass eclass)
+		return eclass.collectBehaviors(block ECBMotionTransferScaleSlots each
+			return true
+		end)
+	end
+	
+	/** Get instance with slot name in element or null if absent. */
+	static func Instance getInstanceIn(BehaviorElement element, String slotName)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getTransfer().getName().equals(slotName)
+		end) cast Instance
+	end
+	
+	/** Get list of all instances in element. */
+	static func Array getAllInstancesIn(BehaviorElement element)
+		return element.collectInstances(block Instance each
+			return true
+		end)
+	end
+	
+	
+	/** Create Behavior instance. */
+	func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

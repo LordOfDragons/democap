@@ -87,6 +87,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 		var Quaternion pCalibrationOrientation
 		var int pCalibrationCounter
 		var Matrix pMatrixPoseOffset
+		var DebugDrawer pDDSlotPosition
 		
 		
 		
@@ -106,6 +107,20 @@ class ECBTrackerSlot extends DefaultECBehavior
 			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
 			pActorAnimated = ecbehavior.getActorAnimated().instance(element)
 			pComponent = ecbehavior.getComponent().instance(element)
+			
+			if GameApp.getGameApp().debugParamTree.getBoolAt("Slot/Position", false)
+				pDDSlotPosition = DebugDrawer.new()
+				pDDSlotPosition.setXRay(true)
+				pDDSlotPosition.setShapeCount(4)
+				pDDSlotPosition.shapeSetEdgeColor(0, Color.new(0, 0, 1, 0.9))
+				pDDSlotPosition.shapeSetFillColor(0, Color.new(0, 0, 1, 0.1))
+				pDDSlotPosition.shapeSetEdgeColor(1, Color.new(0, 0.5, 1, 0.9))
+				pDDSlotPosition.shapeSetFillColor(1, Color.new(0, 0.5, 1, 0.1))
+				pDDSlotPosition.shapeSetEdgeColor(2, Color.new(0, 1, 0, 0.9))
+				pDDSlotPosition.shapeSetFillColor(2, Color.new(0, 1, 0, 0.1))
+				pDDSlotPosition.shapeSetEdgeColor(3, Color.new(1, 0, 0.5, 0.9))
+				pDDSlotPosition.shapeSetFillColor(3, Color.new(1, 0, 0.5, 0.1))
+			end
 		end
 		
 		/** Dispose of instance. */
@@ -337,6 +352,9 @@ class ECBTrackerSlot extends DefaultECBehavior
 			GameApp.getGameApp().getBindingManager().addListener(pAttachDetachListener)
 			findInputDevice()
 			createDDCoordSystem()
+			if pDDSlotPosition != null
+				getElement().getGameWorld().getWorld().addDebugDrawer(pDDSlotPosition)
+			end
 		end
 		
 		/** Element has been removed from game world. Stop tracking device. */
@@ -344,6 +362,9 @@ class ECBTrackerSlot extends DefaultECBehavior
 			GameApp.getGameApp().getBindingManager().removeListener(pAttachDetachListener)
 			setInputDevice(null)
 			destroyDDCoordSystem()
+			if pDDSlotPosition != null
+				getElement().getGameWorld().getWorld().removeDebugDrawer(pDDSlotPosition)
+			end
 		end
 		
 		/** Element state changed like visible. */
@@ -373,6 +394,46 @@ class ECBTrackerSlot extends DefaultECBehavior
 				var DMatrix matrix = getMatrix()
 				pDDCoordSystem.setPosition(matrix.getPosition())
 				pDDCoordSystem.setOrientation(matrix.toQuaternion())
+			end
+			
+			if pDDSlotPosition != null
+				var CharacterTrackerSlot slot = pECBehavior.getTrackerSlot()
+				var CharacterConfiguration config = slot.getConfiguration()
+				var DMatrix matrix = config.getMatrixCalibrateInverse().toDMatrix() * pVRPlayspace.getMatrix().normalize()
+				/*
+				var BehaviorElement vrmirror = GameApp.getGameApp().getWorldSpawnCharacter().getMirrorLarge()
+				if vrmirror.getVisible()
+					var DMatrix m = vrmirror.getElementMatrix()
+					matrix = matrix * m.getInverse() * DMatrix.newScaling(DVector.new(1, 1, -1)) * m
+				end
+				*/
+				
+				pDDSlotPosition.setPosition(matrix.getPosition())
+				pDDSlotPosition.setOrientation(matrix.toQuaternion())
+				
+				var float size = config.actorToCharacter(0.01)
+				var ShapeList shapes = ShapeList.new()
+				shapes.addBox(pReferenceMatrix.getPosition(), Vector.new(size, size, size))
+				pDDSlotPosition.shapeSetShapes(0, shapes)
+				
+				size = config.actorToCharacter(0.014)
+				shapes = ShapeList.new()
+				shapes.addBox(slot.getTargetPosition(), Vector.new(size, size, size))
+				pDDSlotPosition.shapeSetShapes(1, shapes)
+				
+				size = config.actorToCharacter(0.016)
+				shapes = ShapeList.new()
+				shapes.addBox(pMatrix.getPosition(), Vector.new(size, size, size))
+				pDDSlotPosition.shapeSetShapes(2, shapes)
+			end
+		end
+		
+		func void motionCaptured()
+			if pDDSlotPosition != null
+				var float size = pECBehavior.getTrackerSlot().getConfiguration().actorToCharacter(0.02)
+				var ShapeList shapes = ShapeList.new()
+				shapes.addBox(pMatrix.getPosition(), Vector.new(size, size, size))
+				pDDSlotPosition.shapeSetShapes(3, shapes)
 			end
 		end
 		

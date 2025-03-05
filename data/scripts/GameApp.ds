@@ -114,6 +114,7 @@ class GameApp extends BaseGameApp
 	
 	var Array pModifications
 	
+	public var ParameterTree debugParamTree
 	
 	
 	/**
@@ -519,9 +520,9 @@ class GameApp extends BaseGameApp
 		super.initGame()
 		
 		// debug
-		FileUsageManager.debugUsage = getSettings().getBoolAt("Debug/FileUsageManager/Enable", false)
-		CharacterConfiguration.debugAnimatorDefinition = \
-			getSettings().getBoolAt("Debug/CharacterConfiguration/LogAnimatorDefinition", false)
+		FileUsageManager.debugUsage = debugParamTree.getBoolAt("FileUsageManager/Enable", false)
+		CharacterConfiguration.debugAnimatorDefinition =\
+			debugParamTree.getBoolAt("CharacterConfiguration/LogAnimatorDefinition", false)
 		
 		// only enable this in debug build
 		getLoaders().getPersistency().setDebugEnableCanaryValue(true)
@@ -615,6 +616,11 @@ class GameApp extends BaseGameApp
 	protected func void loadSettings()
 		super.loadSettings()
 		pSessionSettings = SessionSettings.new()
+		
+		debugParamTree = ParameterTree.new()
+		if FileSystem.existsFile("/debug.ptree.xml")
+			getLoaders().getParameterTree().loadFromFile("/debug.ptree.xml", debugParamTree)
+		end
 	end
 	
 	/**
@@ -883,6 +889,7 @@ class GameApp extends BaseGameApp
 		pMotionTransferFactories.add(MotionTransferBend.Factory.new())
 		pMotionTransferFactories.add(MotionTransferCopy.Factory.new())
 		pMotionTransferFactories.add(MotionTransferBaseShiftSlots.Factory.new())
+		pMotionTransferFactories.add(MotionTransferScaleSlots.Factory.new())
 		pMotionTransferFactories.add(MotionTransferRotation.Factory.new())
 		pMotionTransferFactories.add(MotionTransferSecondary.Factory.new())
 		pMotionTransferFactories.add(MotionTransferAnimation.Factory.new())

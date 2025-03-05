@@ -98,6 +98,7 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 	var DefaultListModel pModelShiftSlots
 	var SharedListModel pModelAddShiftSlot
 	var DefaultTextModel pModelScaleShift
+	var DefaultToggleModel pModelShiftReferenceOffset
 	
 	
 	/** Create window. */
@@ -126,6 +127,8 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 		pModelAddShiftSlot.setAutoSelect(false)
 		pModelScaleShift = DefaultTextModel.new()
 		
+		pModelShiftReferenceOffset = DefaultToggleModel.new()
+		
 		runWhileBlockingLayout(block
 			createContent(window.getModelTrackerSlotNames(), optionPrefix)
 		end)
@@ -150,6 +153,7 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 		pEditBase2Tracker.setTracker(null)
 		pEditBase2Tracker = null
 		pModelScaleShift = null
+		pModelShiftReferenceOffset = null
 		super.dispose()
 	end
 	
@@ -173,6 +177,7 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 				pModelTextTipBone2.setText(mt.getTipBone2())
 				pModelTextBaseBone2.setText(mt.getBaseBone2())
 				pModelScaleShift.setText(mt.getScaleShift().toString())
+				pModelShiftReferenceOffset.setToggled(mt.getShiftReferenceOffset())
 				
 			else
 				pModelShiftSlots.removeAll()
@@ -180,6 +185,7 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 				pEditBase1Tracker.setTracker(null)
 				pEditBase2Tracker.setTracker(null)
 				pModelScaleShift.setText("")
+				pModelShiftReferenceOffset.setToggled(false)
 			end
 		end)
 		doLayoutIfBlocked()
@@ -195,6 +201,7 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 		var MotionTransferBaseShiftSlots mt = pMotionTransfer cast MotionTransferBaseShiftSlots
 		mt.getShiftSlots().addAll(pModelShiftSlots.getContent())
 		mt.setScaleShift(pModelScaleShift.getText().toFloat())
+		mt.setShiftReferenceOffset(pModelShiftReferenceOffset.getToggled())
 		pEditReferenceTracker.saveValues()
 		pEditBase1Tracker.saveValues()
 		pEditBase2Tracker.saveValues()
@@ -212,6 +219,7 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 		var ComboBox comboBox, comboBoxTip, comboBoxBase
 		var Label label, labelTip, labelBase
 		var TextField textField
+		var CheckBox checkBox
 		var ListBox listBox
 		var Button button
 		
@@ -296,6 +304,13 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("@UI.ToolTip.ShiftScale")
 		pPanelForm.addWidget(textField)
+		
+		// shift reference offset
+		pPanelForm.addWidget(Label.new(""))
+		
+		checkBox = CheckBox.new(pModelShiftReferenceOffset, "@UI.ShiftReferenceOffset")
+		checkBox.setToolTip("@UI.ToolTip.ShiftReferenceOffset")
+		pPanelForm.addWidget(checkBox)
 		
 		// reference and base slots
 		pEditReferenceTracker = WCCPMTTracker.new(modelTrackerSlotNames,\

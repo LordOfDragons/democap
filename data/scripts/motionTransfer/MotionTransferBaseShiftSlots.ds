@@ -67,6 +67,7 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 	var String pBaseBone1, pTipBone1, pBaseBone2, pTipBone2
 	var Array pShiftSlots
 	var float pScaleShift
+	var bool pShiftReferenceOffset
 	//var float pCalibrateShiftDistance, pCalibrateTargetDistance
 	var Vector pCalibrateOffsetBase1, pCalibrateOffsetTip1
 	var Vector pCalibrateOffsetBase2, pCalibrateOffsetTip2
@@ -102,6 +103,7 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 		pTipBone2 = transfer.pTipBone2
 		pShiftSlots = Array.new(transfer.pShiftSlots)
 		pScaleShift = transfer.pScaleShift
+		pShiftReferenceOffset = transfer.pShiftReferenceOffset
 		pCalibrateOffsetBase1 = transfer.pCalibrateOffsetBase1
 		pCalibrateOffsetTip1 = transfer.pCalibrateOffsetTip1
 		pCalibrateOffsetBase2 = transfer.pCalibrateOffsetBase2
@@ -190,6 +192,16 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 	/** Set scale shift factor. */
 	func void setScaleShift(float factor)
 		pScaleShift = DEMath.clamp(factor, 0.0, 1.0)
+	end
+	
+	/** Shift by reference distance between actor and character slot position. */
+	func bool getShiftReferenceOffset()
+		return pShiftReferenceOffset
+	end
+	
+	/** Set shift by reference distance between actor and character slot position. */
+	func void setShiftReferenceOffset(bool shift)
+		pShiftReferenceOffset = shift
 	end
 	
 	/** Calibrate shift distance. */
@@ -316,7 +328,6 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 		
 		// calculate base and tip positions and calculate calibrate distance. no base-shift
 		// is applied since base positions are already in component space
-
 		if slotBase1 != null and indexBase1 != -1 and indexTip1 != -1
 			posBase1 = component.boneGetMatrix(indexBase1).getPosition()
 			pCalibrateOffsetBase1 = invMatrixRef * posBase1
@@ -360,9 +371,14 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 		var Vector normDir = direction / centerDistance
 		
 		// calculate base shift
-		pCalibrateBaseShift = normDir * (slotRef.getTargetPosition()\
-			- config.actorToCharacter(slotRef.getPosition()))
-		if DEMath.fabs(pCalibrateBaseShift) < 0.01
+		if pShiftReferenceOffset
+			pCalibrateBaseShift = normDir * (slotRef.getTargetPosition()\
+				- config.actorToCharacter(slotRef.getPosition()))
+			if DEMath.fabs(pCalibrateBaseShift) < 0.01
+				pCalibrateBaseShift = 0
+			end
+			
+		else
 			pCalibrateBaseShift = 0
 		end
 		
@@ -505,6 +521,9 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 			elif tagName.equals("scaleShift")
 				setScaleShift(element.getFirstCDataFloat())
 				
+			elif tagName.equals("shiftReferenceOffset")
+				setShiftReferenceOffset(element.getFirstCDataBool())
+				
 			elif tagName.equals("calibrated")
 				loadCalibrated(loader, element)
 			end
@@ -572,6 +591,7 @@ class MotionTransferBaseShiftSlots extends DefaultMotionTransfer
 		tag.addDataTag("baseBone2", pBaseBone2)
 		tag.addDataTag("tipBone2", pTipBone2)
 		tag.addDataTag("scaleShift", pScaleShift)
+		tag.addDataTag("shiftReferenceOffset", pShiftReferenceOffset)
 		pShiftSlots.forEach(block String each
 			tag.addDataTag("shiftSlot", each)
 		end)

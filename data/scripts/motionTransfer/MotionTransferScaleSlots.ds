@@ -1,0 +1,184 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2025, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Democap.Actors
+pin Democap.Behaviors
+pin Democap.Characters
+
+pin Dragengine.Animators
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+pin Democap.Actions
+
+
+/**
+ * Motion transfer scaling slot positions.
+ * 
+ * The origin slot is used as scale origin. If not sed the calibrate origin is used.
+ */
+class MotionTransferScaleSlots extends DefaultMotionTransfer
+	/** Factory. */
+	class Factory implements MotionTransferFactory
+		func new()
+		end
+		
+		func String factoryID()
+			return "scaleSlots"
+		end
+		
+		func MotionTransfer createMotionTransfer()
+			return MotionTransferScaleSlots.new(factoryID())
+		end
+		
+		func String displayName()
+			return "@UI.ScaleSlots"
+		end
+	end
+	
+	
+	var MotionTransferTracker pOrigin
+	var Array pScaleSlots
+	var Vector pScaleFactor
+	
+	
+	/** Create motion transfer. */
+	func new(String factoryID) super(factoryID)
+		pOrigin = MotionTransferTracker.new()
+		pScaleSlots = Array.new()
+		pScaleFactor = Vector.new(1, 1, 1)
+	end
+	
+	/** Create copy of motion transfer. */
+	func new(MotionTransferScaleSlots transfer) super(transfer)
+		pOrigin = MotionTransferTracker.new(transfer.pOrigin)
+		pScaleSlots = Array.new(transfer.pScaleSlots)
+		pScaleFactor = transfer.pScaleFactor
+	end
+	
+	
+	/** Origin slot. */
+	func MotionTransferTracker getOrigin()
+		return pOrigin
+	end
+	
+	/** Scale slots as Array of String slot names. */
+	func Array getScaleSlots()
+		return pScaleSlots
+	end
+	
+	/** Scale factor. */
+	func Vector getScaleFactor()
+		return pScaleFactor
+	end
+	
+	/** Set scale factor. */
+	func void setScaleFactor(Vector factor)
+		if factor == null
+			throw ENullPointer.new()
+		end
+		pScaleFactor = factor
+	end
+	
+	
+	/** Init element clas. */
+	func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
+		ECBMotionTransferScaleSlots.new(eclass, this)
+	end
+	
+	/** Reset calibration. */
+	func void resetCalibration()
+		pOrigin.resetTransform()
+	end
+	
+	/** Calibrate character. */
+	func void calibrate(CharacterConfiguration config, ActorProfile actorProfile,\
+	BaseVRActor actor, Component component)
+		pOrigin.resolveRealSlot(config)
+		pOrigin.setTransform(config, component, "")
+		
+		calibrateScaleSlots(config, component)
+	end
+	
+	/** Shift slots during calibration process. */
+	func void calibrateScaleSlots(CharacterConfiguration config, Component component)
+	end
+	
+	/** Create copy of motion transfer. */
+	func MotionTransfer createCopy()
+		return MotionTransferScaleSlots.new(this)
+	end
+	
+	/** Load from XML. */
+	func void load(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("name")
+				setName(element.getFirstCData())
+				
+			elif tagName.equals("origin")
+				pOrigin.load(loader, element)
+				
+			elif tagName.equals("scaleSlot")
+				pScaleSlots.add(element.getFirstCData())
+				
+			elif tagName.equals("scaleFactor")
+				pScaleFactor = loader.readVector(element)
+				
+			elif tagName.equals("calibrated")
+				loadCalibrated(loader, element)
+			end
+		end)
+	end
+	
+	protected func void loadCalibrated(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("origin")
+				pOrigin.loadCalibrated(loader, element)
+			end
+		end)
+	end
+	
+	/** Post load initialize. */
+	func void postLoadInit(CharacterConfiguration config)
+		pOrigin.resolveRealSlot(config)
+	end
+	
+	/** Save to XML. */
+	func void save(BaseXmlLoader loader, EasyXMLElement tag, bool calibrated)
+		tag.addDataTag("name", getName())
+		pOrigin.save(loader, tag.addTag("origin"))
+		loader.writeVector(tag, "scaleFactor", pScaleFactor)
+		pScaleSlots.forEach(block String each
+			tag.addDataTag("scaleSlot", each)
+		end)
+		
+		if calibrated
+			saveCalibrated(loader, tag.addTag("calibrated"))
+		end
+	end
+	
+	protected func void saveCalibrated(BaseXmlLoader loader, EasyXMLElement tag)
+		pOrigin.saveCalibrated(loader, tag.addTag("reference"))
+	end
+end
