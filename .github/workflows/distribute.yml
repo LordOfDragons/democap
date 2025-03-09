@@ -50,10 +50,11 @@ jobs:
       
       - name: Distribute
         id: distribute
-        uses: LordOfDragons/build-delga@v1
+        uses: LordOfDragons/build-delga@v2
         with:
           projectFile: 'DEMoCap.degp'
           profile: 'Release'
+          outputDir: 'deigde-output'
         
       - name: Rename distribution file
         run: |
@@ -61,7 +62,10 @@ jobs:
         
       - name: Store DELGA
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ${{ inputs.artifact }}
-          path: DEMoCap-${{ inputs.version }}.delga
+          path: |
+            DEMoCap-${{ inputs.version }}.delga
+            deigde-output
           if-no-files-found: error
