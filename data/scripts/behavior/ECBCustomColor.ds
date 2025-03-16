@@ -32,6 +32,39 @@ pin Dragengine.Utils
  * Behavior extending ECBehaviorCustomColor.
  */
 class ECBCustomColor extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Required: \ref ECBehaviorCustomColor
+	 * - Optional: \ref ECBBehaviorGuiPanels
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBBehaviorGuiPanels'/>
+	 * <behavior type='ECBehaviorCustomColor'/>
+	 * 
+	 * <behavior type='ECBCustomColor'>
+	 * </behavior>
+	 * 
+	 * <!-- for adding multiple behaviors use unique identifiers -->
+	 * <behavior type='ECBCustomColor' id='second'/>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBCustomColor"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			return ECBCustomColor.new(eclass, ECBBehaviorGuiPanels.getBehaviorIn(eclass),\
+				eclass.sharedFactoryHelper.defaultCustomColor(eclass, parameters), id)
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel

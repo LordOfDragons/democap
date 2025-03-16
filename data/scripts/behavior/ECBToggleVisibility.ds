@@ -36,6 +36,39 @@ pin Dragengine.Utils
  * the actor. Optionally the up axis can be locked.
  */
 class ECBToggleVisibility extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBToggleVisibility'>
+	 *   <vector name='.lockUpAxis' x='0' y='1' z='0'/> <!-- default null -->
+	 *   <vector name='.pivot' x='0' y='0' z='0'/> <!-- default null -->
+	 *   <vector name='.rotation' x='0' y='0' z='0'/>
+	 *   <float name='.distance'>0.5</float> <!-- min=0 -->
+	 *   <boolean name='.lockZRotation'>false</boolean>
+	 *   <boolean name='.scaleWithActor'>false</boolean>
+	 * </behavior>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBToggleVisibility"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			if not id.empty()
+				throw EInvalidParam.new("id is not empty string")
+			end
+			var ECBToggleVisibility behavior = ECBToggleVisibility.new(eclass)
+			BehaviorElementClass.sharedFactoryHelper.setPropertiesFromParameters(eclass, parameters, "toggleVisibility")
+			return behavior
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		var ECBToggleVisibility pECBehavior
