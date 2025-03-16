@@ -36,6 +36,50 @@ pin Dragengine.Utils
  * ECBehaviorVRHandPointedAt events.
  */
 class ECBHighlightPointedAt extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Required: \ref ECBehaviorComponent
+	 * - Required: \ref ECBehaviorCollider
+	 * - Required: \ref ECBehaviorVRHandPointedAt
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBehaviorComponent'/>
+	 * <behavior type='ECBehaviorCollider'/>
+	 * <behavior type='ECBehaviorVRHandPointedAt'/>
+	 * 
+	 * <behavior type='ECBHighlightPointedAt'>
+	 * </behavior>
+	 * \endcode
+	 * 
+	 * Element class properties added by the behavior can also be set directly inside the tag
+	 * be removing the property name prefix and starting with a "." (for exampler ".propertyName").
+	 * 
+	 * Behavior adds an instance of ECBehaviorOutline. Set outline element properties using
+	 * prefix '.outline(highlightPointedAt).*'
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBHighlightPointedAt"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			var ECBHighlightPointedAt behavior = ECBHighlightPointedAt.new(eclass,\
+				eclass.sharedFactoryHelper.defaultComponent(eclass, parameters),\
+				ECBehaviorCollider.getBehaviorIn(eclass),\
+				ECBehaviorVRHandPointedAt.getBehaviorIn(eclass))
+			
+			BehaviorElementClass.sharedFactoryHelper.setPropertiesFromParameters(eclass, parameters)
+			
+			return behavior
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		/** Pointed at changed. */

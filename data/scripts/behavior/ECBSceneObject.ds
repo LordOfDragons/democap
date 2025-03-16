@@ -56,6 +56,42 @@ class ECBSceneObject extends DefaultECBehavior
 		func bool initStub(StubElement stub, Window window)
 	end
 	
+	/**
+	 * Behavior factory.
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBSceneObject'>
+	 *   <string name='.name'>name</string>
+	 *   <vector name='.addActorOffset' x='0' y='0' z='0'/>
+	 *   <boolean name='.canRemove'>false</boolean>
+	 *   <boolean name='.canHide'>false</boolean>
+	 *   <boolean name='.editPanelNoBehaviors'>false</boolean>
+	 *   <boolean name='.editPanelNoPhysics'>false</boolean>
+	 * </behavior>
+	 * 
+	 * <!-- outside behavior tag: use property prefix 'sceneObject.' -->
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBSceneObject"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			if not id.empty()
+				throw EInvalidParam.new("id is not empty string")
+			end
+			
+			var ECBSceneObject behavior = ECBSceneObject.new(eclass)
+			BehaviorElementClass.sharedFactoryHelper.setPropertiesFromParameters(eclass, parameters, "sceneObject")
+			return behavior
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		var ECBSceneObject pECBehavior

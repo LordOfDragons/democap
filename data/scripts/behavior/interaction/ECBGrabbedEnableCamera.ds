@@ -33,6 +33,40 @@ pin Dragengine.Utils
  *      user can also look at the image without grabbing the camera.
  */
 class ECBGrabbedEnableCamera extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Required: \ref ECBehaviorGrabSpot
+	 * - Required: \ref ECBRenderableCamera
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBehaviorGrabSpot'/>
+	 * <behavior type='ECBRenderableCamera'/>
+	 * 
+	 * <behavior type='ECBGrabbedEnableCamera'>
+	 * </behavior>
+	 * 
+	 * <!-- for adding multiple behaviors use unique identifiers -->
+	 * <behavior type='ECBGrabbedEnableCamera' id='second'/>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBGrabbedEnableCamera"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			return ECBGrabbedEnableCamera.new(eclass,\
+				ECBehaviorGrabSpot.getBehaviorIn(eclass, parameters.getAt("grabSpot", "") cast String),\
+				ECBRenderableCamera.getBehaviorIn(eclass, parameters.getAt("renderableCamera", "") cast String), id)
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class EnableCameraListener extends ECBehaviorGrabSpot.DefaultListener

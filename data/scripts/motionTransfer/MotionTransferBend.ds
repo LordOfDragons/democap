@@ -572,6 +572,8 @@ class MotionTransferBend extends DefaultMotionTransfer
 		end
 		
 		if linkMoveBendX == null or linkMoveBendY == null
+			var Vector tipAxis = pCalibrateBendAxesY.getAt(baseIndex) cast Vector
+			var String tipBone = pCalibrateBones.getAt(0) cast String
 			var ADRuleBoneTransformator rule
 			
 			for i = 0 to count
@@ -595,12 +597,23 @@ class MotionTransferBend extends DefaultMotionTransfer
 				if linkMoveBendY == null
 					rule = rule = ADRuleBoneTransformator.new()
 					rule.setName(nameBendY)
-					rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+					//rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
 					rule.setUseAxis(true)
-					rule.setAxis(pCalibrateBendAxesY.getAt(i) cast Vector)
+					//rule.setAxis(pCalibrateBendAxesY.getAt(i) cast Vector)
 					rule.setMinimumAngle(-boneRotation)
 					rule.setMaximumAngle(boneRotation)
 					rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, linkBendY))
+					
+					if i < baseIndex
+						rule.setAxis(tipAxis)
+						rule.setCoordinateFrame(ARBoneTransformatorCFrame.target)
+						rule.setTargetBone(tipBone)
+						
+					else
+						rule.setAxis(pCalibrateBendAxesY.getAt(i) cast Vector)
+						rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+					end
+					
 					rule.addBone(bone)
 					adef.addRule(rule)
 				end

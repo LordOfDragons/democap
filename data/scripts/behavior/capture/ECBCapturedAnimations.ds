@@ -107,6 +107,46 @@ class ECBCapturedAnimations extends DefaultECBehavior implements BehaviorPrepare
 		object
 	end
 	
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Optional: \ref ECBBehaviorGuiPanels
+	 * - Optional: \ref ECBehaviorComponent
+	 * - Optional: \ref ECBehaviorCollider
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBCapturedAnimations'>
+	 *   <string name='.captureTarget'>object</string> <!-- allowed: character, object -->
+	 *   <boolean name='.record'>false</boolean>
+	 *   <boolean name='.recordObject'>false</boolean>
+	 *   <boolean name='.animationName'>Object</boolean>
+	 * </behavior>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBCapturedAnimations"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			if not id.empty()
+				throw EInvalidParam.new("id is not empty string")
+			end
+			
+			var ECBCapturedAnimations behavior = ECBCapturedAnimations.new(eclass,\
+				ECBBehaviorGuiPanels.getBehaviorIn(eclass),\
+				eclass.sharedFactoryHelper.defaultComponent(eclass, parameters),\
+				ECBehaviorCollider.getBehaviorIn(eclass))
+			
+			BehaviorElementClass.sharedFactoryHelper.setPropertiesFromParameters(eclass, parameters, "capturedAnimations")
+			return behavior
+		end
+	end
 	
 	
 	/** Behavior instance. */

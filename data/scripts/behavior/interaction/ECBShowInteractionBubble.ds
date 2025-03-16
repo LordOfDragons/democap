@@ -31,6 +31,41 @@ pin Dragengine.Utils
  * Behavior showing interaction bubble.
  */
 class ECBShowInteractionBubble extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Optional: \ref ECBehaviorCollider
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBShowInteractionBubble'>
+	 *   <list name='.buttons'>
+	 *     <string>button_identifier</string>
+	 *   </list>
+	 *   <string name='.class'>InteractionBubble</string>
+	 * </behavior>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBShowInteractionBubble"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			if not id.empty()
+				throw EInvalidParam.new("id is not empty string")
+			end
+			
+			var ECBShowInteractionBubble behavior = ECBShowInteractionBubble.new(eclass)
+			BehaviorElementClass.sharedFactoryHelper.setPropertiesFromParameters(eclass, parameters, "showInteractionBubble")
+			return behavior
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		var ECBShowInteractionBubble pECBehavior

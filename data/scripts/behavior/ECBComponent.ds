@@ -30,6 +30,43 @@ pin Dragengine.LoadSave
  * Behavior extending ECBehaviorComponent.
  */
 class ECBComponent extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Required: \ref ECBehaviorComponent
+	 * - Optional: \ref ECBBehaviorGuiPanels
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBehaviorComponent'/>
+	 * 
+	 * <behavior type='ECBComponent'>
+	 *   <!-- optional: use component with id instead of empty string -->
+	 *   <string name='component'>second</string>
+	 * </behavior>
+	 * 
+	 * <!-- for adding multiple behaviors use unique identifiers -->
+	 * <behavior type='ECBComponent' id='second'/>
+	 * \endcode
+	 * 
+	 * Element class properties added by the behavior can also be set directly inside the tag
+	 * be removing the property name prefix and starting with a "." (for exampler ".propertyName").
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBComponent"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			return ECBComponent.new(eclass, ECBBehaviorGuiPanels.getBehaviorIn(eclass),\
+				eclass.sharedFactoryHelper.defaultComponent(eclass, parameters), id)
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
@@ -164,6 +201,10 @@ class ECBComponent extends DefaultECBehavior
 	
 	func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
 	ECBehaviorComponent component, String id) super(eclass, id)
+		if component == null
+			throw ENullPointer.new("component")
+		end
+		
 		this.behaviorGuiPanels = behaviorGuiPanels
 		this.component = component
 		

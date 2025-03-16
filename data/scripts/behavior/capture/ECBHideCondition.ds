@@ -50,6 +50,41 @@ class ECBHideCondition extends DefaultECBehavior
 		end
 	end
 	
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Optional: \ref ECBBehaviorGuiPanels
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBBehaviorGuiPanels'/>
+	 * <behavior type='ECBHideCondition'>
+	 *   <boolean name='.live'>false</boolean>
+	 *   <boolean name='.playback'>true</boolean>
+	 *   <boolean name='.record'>true</boolean>
+	 * </behavior>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBHideCondition"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			if not id.empty()
+				throw EInvalidParam.new("id is not empty string")
+			end
+			var ECBHideCondition behavior = ECBHideCondition.new(eclass,\
+				ECBBehaviorGuiPanels.getBehaviorIn(eclass))
+			BehaviorElementClass.sharedFactoryHelper.setPropertiesFromParameters(eclass, parameters, "hideCondition")
+			return behavior
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class RecordingStateChanged extends RecordScene.DefaultListener

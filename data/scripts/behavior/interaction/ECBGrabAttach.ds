@@ -38,6 +38,56 @@ pin Dragengine.Utils
  * using relative attachment.
  */
 class ECBGrabAttach extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Requred: \ref ECBehaviorGrabSpot
+	 * - Requred: \ref ECBehaviorCollider
+	 * - Optional: \ref ECBBehaviorGuiPanels
+	 * - Optional: \ref ECBehaviorAttachable
+	 * - Optional: \ref ECBShowInteractHandles
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBehaviorComponent'/>
+	 * <behavior type='ECBehaviorCollider'/>
+	 * <behavior type='ECBehaviorAttachable'/>
+	 * <behavior type='ECBBehaviorGuiPanels'/>
+	 * <behavior type='ECBehaviorGrabSpot'/>
+	 * <behavior type='ECBShowInteractHandles'/>
+	 * 
+	 * <behavior type='ECBGrabAttach'>
+	 *   <string name='grabSpot'>id</string> <!-- only required if not empty string -->
+	 *   <string name='.bone'>bone</string> <!-- default empty -->
+	 *   <boolean name='.immobile'>false</boolean>
+	 *   <boolean name='.ikLockRotation'>false</boolean>
+	 * </behavior>
+	 * 
+	 * <!-- for adding multiple behaviors use unique identifiers -->
+	 * <behavior type='ECBGrabAttach' id='second'/>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBGrabAttach"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			var ECBGrabAttach behavior = ECBGrabAttach.new(eclass,\
+				ECBBehaviorGuiPanels.getBehaviorIn(eclass),\
+				ECBehaviorGrabSpot.getBehaviorIn(eclass, parameters.getAt("grabSpot", "") cast String),\
+				ECBehaviorCollider.getBehaviorIn(eclass),\
+				ECBehaviorAttachable.getBehaviorIn(eclass),\
+				ECBShowInteractHandles.getBehaviorIn(eclass), id)
+			BehaviorElementClass.sharedFactoryHelper.setPropertiesFromParameters(eclass, parameters, "grabAttach", id)
+			return behavior
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class TemporaryDetachListener extends ECBShowInteractHandles.DefaultListener

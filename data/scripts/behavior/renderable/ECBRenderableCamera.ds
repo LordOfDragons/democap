@@ -36,6 +36,41 @@ pin Dragengine.Scenery
  *       both bits and the camera views only the regular one.
  */
 class ECBRenderableCamera extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Required: \ref ECBehaviorRenderablePanel
+	 * - Required: \ref ECBehaviorCamera
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBehaviorComponent'/>
+	 * <behavior type='ECBehaviorCollider'/>
+	 * <behavior type='ECBehaviorDynamicSkin'/>
+	 * <behavior type='ECBehaviorRenderablePanel'/>
+	 * <behavior type='ECBehaviorCamera'/>
+	 * 
+	 * <behavior type='ECBRenderableCamera'/>
+	 * 
+	 * <!-- for adding multiple behaviors use unique identifiers -->
+	 * <behavior type='ECBRenderableCamera' id='second'/>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBRenderableCamera"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			return ECBRenderableCamera.new(eclass, ECBehaviorRenderablePanel.getBehaviorIn(eclass),\
+				eclass.sharedFactoryHelper.defaultCamera(eclass, parameters), id)
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		var ECBRenderableCamera pECBehavior
@@ -136,6 +171,14 @@ class ECBRenderableCamera extends DefaultECBehavior
 		camera = null
 		renderablePanel = null
 		super.dispose()
+	end
+	
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBRenderableCamera getBehaviorIn(BehaviorElementClass eclass, String id)
+		return eclass.findBehavior(block ECBRenderableCamera each
+			return each.getID().equals(id)
+		end) cast ECBRenderableCamera
 	end
 	
 	

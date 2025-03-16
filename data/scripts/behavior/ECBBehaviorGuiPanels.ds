@@ -136,6 +136,30 @@ class ECBBehaviorGuiPanels extends DefaultECBehavior
 		end
 	end
 	
+	/**
+	 * Behavior factory.
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBBehaviorGuiPanels'/>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBBehaviorGuiPanels"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			if not id.empty()
+				throw EInvalidParam.new("id is not empty string")
+			end
+			return ECBBehaviorGuiPanels.new(eclass)
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		protected var Array pBehaviorGuiPanels
@@ -188,6 +212,13 @@ class ECBBehaviorGuiPanels extends DefaultECBehavior
 		eclass.addBehavior(this)
 	end
 	
+	
+	/** Get behavior in element class or null if absent. */
+	static public func ECBBehaviorGuiPanels getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBBehaviorGuiPanels each
+			return true
+		end) cast ECBBehaviorGuiPanels
+	end
 	
 	/** Get instance in element from owner element class. */
 	func Instance instance(BehaviorElement element)

@@ -30,6 +30,35 @@ pin Dragengine.LoadSave
  * Behavior extending ECBehaviorAnimated.
  */
 class ECBAnimated extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Requred: \ref ECBehaviorAnimated
+	 * - Optional: \ref ECBBehaviorGuiPanels
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBAnimated'/>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBAnimated"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			if not id.empty()
+				throw EInvalidParam.new("id is not empty string")
+			end
+			return ECBAnimated.new(eclass, ECBBehaviorGuiPanels.getBehaviorIn(eclass),\
+				eclass.sharedFactoryHelper.defaultAnimated(eclass, parameters))
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel

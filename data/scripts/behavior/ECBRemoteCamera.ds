@@ -33,6 +33,43 @@ pin Dragengine.Scenery
  * itself to the global list of available remote views.
  */
 class ECBRemoteCamera extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Requred: \ref ECBehaviorCamera
+	 * - Optional: \ref ECBBehaviorGuiPanels
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBBehaviorGuiPanels'>
+	 * <behavior type='ECBehaviorCamera'/>
+	 * 
+	 * <behavior type='ECBRemoteCamera'>
+	 *   <string name='.name'>Camera</string>
+	 * </behavior>
+	 * 
+	 * <!-- for adding multiple behaviors use unique identifiers -->
+	 * <behavior type='ECBRemoteCamera' id='second'/>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBRemoteCamera"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			var ECBRemoteCamera behavior = ECBRemoteCamera.new(eclass,\
+				ECBBehaviorGuiPanels.getBehaviorIn(eclass),\
+				eclass.sharedFactoryHelper.defaultCamera(eclass, parameters), id)
+			BehaviorElementClass.sharedFactoryHelper.setPropertiesFromParameters(eclass, parameters, "remoteCamera", id)
+			return behavior
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel

@@ -52,6 +52,61 @@ class ECBTemporaryGhost extends DefaultECBehavior
 		end
 	end
 	
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Optional: \ref ECBBehaviorGuiPanels
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBBehaviorGuiPanels'/>
+	 * 
+	 * <behavior type='ECBTemporaryGhost'>
+	 *   <!-- optional: list of components to apply ghost to. default is behavior with
+	 *                  empty string if present. -->
+	 *   <list name='components'>
+	 *     <string>second</string>
+	 *   </list>
+	 * </behavior>
+	 * 
+	 * Element class properties added by the behavior can also be set directly inside the tag
+	 * be removing the property name prefix and starting with a "." (for exampler ".propertyName").
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBTemporaryGhost"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			if not id.empty()
+				throw EInvalidParam.new("id is not empty string")
+			end
+			var ECBTemporaryGhost behavior = ECBTemporaryGhost.new(eclass,\
+				ECBBehaviorGuiPanels.getBehaviorIn(eclass),\
+				eclass.sharedFactoryHelper.defaultComponent(eclass, parameters))
+			
+			if parameters.has("components")
+				var Array components = behavior.getComponents()
+				components.removeAll()
+				(parameters.getAt("components") cast Array).forEach(block String each
+					var ECBehaviorComponent component = ECBehaviorComponent.getBehaviorIn(eclass, each)
+					if component == null
+						throw EInvalidParam.new("ECBehaviorComponent not found: " + each)
+					end
+					components.add(component)
+				end)
+			end
+			
+			BehaviorElementClass.sharedFactoryHelper.setPropertiesFromParameters(\
+				eclass, parameters, "temporaryGhost", id)
+			return behavior
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		/** Component texture. */

@@ -54,6 +54,74 @@ class ECBShowInteractHandles extends DefaultECBehavior
 		end
 	end
 	
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Requred: \ref ECBSelectable
+	 * - Optional: \ref ECBBehaviorGuiPanels
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBBehaviorGuiPanels'/>
+	 * <behavior type='ECBSelectable'/>
+	 * 
+	 * <behavior type='ECBShowInteractHandles'>
+	 *   <float name='.handleSize'>0.2</float>
+	 *   <list name='.handles'>
+	 *     <string>InteractHandleMoveX</string> <!-- only InteractHandle* classes allowed -->
+	 *   </list>
+	 *   
+	 *   <!-- in addition to '.handles' supports also this: -->
+	 *   <list name='handleSets'>
+	 *     <string>move</string>
+	 *     <string>rotate</string>
+	 *   </list>
+	 * </behavior>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBShowInteractHandles"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			var ECBShowInteractHandles behavior = ECBShowInteractHandles.new(eclass,\
+				ECBBehaviorGuiPanels.getBehaviorIn(eclass), ECBSelectable.getBehaviorIn(eclass))
+			
+			if parameters.has("handleSets")
+				var ECPElementClassList classes = behavior.getHandleClasses()
+				
+				(parameters.getAt("handleSets") cast Array).forEach(block String each
+						if each.equals("move")
+							classes.addElementClassName("InteractHandleMoveX")
+							classes.addElementClassName("InteractHandleMoveY")
+							classes.addElementClassName("InteractHandleMoveZ")
+							classes.addElementClassName("InteractHandleMoveXNeg")
+							classes.addElementClassName("InteractHandleMoveYNeg")
+							classes.addElementClassName("InteractHandleMoveZNeg")
+							
+						elif each.equals("rotate")
+							classes.addElementClassName("InteractHandleRotateX")
+							classes.addElementClassName("InteractHandleRotateY")
+							classes.addElementClassName("InteractHandleRotateZ")
+							
+						else
+							throw EInvalidParam.new("unknown handleSet: " + each)
+						end
+					end)
+			end
+			
+			BehaviorElementClass.sharedFactoryHelper.setPropertiesFromParameters(\
+				eclass, parameters, "showInteractHandles")
+			
+			return behavior
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		/** Show handles listener. */

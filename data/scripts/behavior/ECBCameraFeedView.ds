@@ -39,6 +39,45 @@ pin Democap.Elements
  */
 class ECBCameraFeedView extends DefaultECBehavior
 	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Required: \ref ECBehaviorCamera
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBehaviorComponent'>
+	 * <behavior type='ECBehaviorCollider'>
+	 * <behavior type='ECBehaviorCamera'>
+	 * 
+	 * <behavior type='ECBCameraFeedView'>
+	 *   <point name='.feedSize' x='512' y='320'/> <!--  16:10 -->
+	 *   <float name='.viewAngle'>45</float> <!-- min=10 max=110 -->
+	 * </behavior>
+	 * \endcode
+	 * 
+	 * For component properties see https://developer.dragondreams.ch/wiki/doku.php/dragengine:modules:dragonscript:behavior_component.
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBCameraFeedView"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			if not id.empty()
+				throw EInvalidParam.new("id is not empty string")
+			end
+			var ECBCameraFeedView behavior = ECBCameraFeedView.new(eclass,\
+				eclass.sharedFactoryHelper.defaultCamera(eclass, parameters))
+			BehaviorElementClass.sharedFactoryHelper.setPropertiesFromParameters(eclass, parameters, "cameraFeedView")
+			return behavior
+		end
+	end
+	
+	/**
 	 * ECBCameraFeedView behavior instance.
 	 */
 	class Instance extends DefaultECBehaviorInstance
