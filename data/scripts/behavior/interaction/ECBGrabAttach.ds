@@ -25,6 +25,7 @@ pin Dragengine.LoadSave
 pin Dragengine.Scenery
 pin Dragengine.Preloading
 pin Dragengine.Utils
+pin Dragengine.Gui
 
 
 /**
@@ -62,6 +63,9 @@ class ECBGrabAttach extends DefaultECBehavior
 	 *   <string name='.bone'>bone</string> <!-- default empty -->
 	 *   <boolean name='.immobile'>false</boolean>
 	 *   <boolean name='.ikLockRotation'>false</boolean>
+	 *   <boolean name='.align'>true</boolean>
+	 *   <vector name='.position' x='0' y='0' z='0'/>
+	 *   <vector name='.rotation' x='0' y='0' z='0'/>
 	 * </behavior>
 	 * 
 	 * <!-- for adding multiple behaviors use unique identifiers -->
@@ -122,10 +126,9 @@ class ECBGrabAttach extends DefaultECBehavior
 		protected var ECBehaviorAttachable.Instance pAttachable
 		protected var ECBehaviorCollider.Instance pParentCollider
 		protected var String pBone
-		protected var bool pImmobile
-		protected var bool pIKLockRotation
-		protected var bool pTemporaryDetached
-		
+		protected var bool pImmobile, pIKLockRotation, pAlign, pTemporaryDetached
+		protected var Vector pPosition, pRotation
+		protected var DebugDrawer pDebugDrawer
 		
 		
 		/** Create behavior instance. */
@@ -147,12 +150,33 @@ class ECBGrabAttach extends DefaultECBehavior
 				pECBehavior.showInteractHandles.instance(element).addListener(TemporaryDetachListener.new(this))
 			end
 			
+			var CodecPropertyString codec = element.getClass().getCodecPropertyString()
+			
 			pBone = pECBehavior.bone.getValue(stub)
 			pImmobile = pECBehavior.immobile.getValue(stub)
 			pIKLockRotation = pECBehavior.ikLockRotation.getValue(stub)
+			pAlign = pECBehavior.align.getValue(stub)
+			pPosition = pECBehavior.position.getVector(stub, codec)
+			pRotation = pECBehavior.rotation.getVector(stub, codec)
 			
 			if pECBehavior.behaviorGuiPanels != null
 				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
+			
+			if GameApp.getGameApp().debugParamTree.getBoolAt("ECBGrabAttach/ShowShape", false)
+				pDebugDrawer = DebugDrawer.new()
+				pDebugDrawer.setXRay(true)
+				pDebugDrawer.setShapeCount(1)
+				
+				try
+					var ColliderVolume cv = pGrabSpot.getTouchCollider() cast ColliderVolume
+					pDebugDrawer.shapeSetShapes(0, cv.getShape())
+					pDebugDrawer.shapeSetEdgeColor(0, Color.new(Color.red, 0.9))
+					pDebugDrawer.shapeSetFillColor(0, Color.new(Color.red, 0.1))
+					pGrabSpot.getECBehavior().getAttachTouchCollider().attach(pCollider.getCollider(), pDebugDrawer, stub)
+					
+				catch Exception e
+				end
 			end
 		end
 		
@@ -227,6 +251,58 @@ class ECBGrabAttach extends DefaultECBehavior
 			getElement().getStub().setPropertyBoolFor(pECBehavior.ikLockRotation.getName(), lock)
 		end
 		
+		/** Hand aligns with grab position/rotation. */
+		func bool getAlign()
+			return pAlign
+		end
+		
+		/** Set if hand aligns with grab position/rotation. */
+		func void setAlign(bool align)
+			if align == pAlign
+				return
+			end
+			
+			pAlign = align
+			getElement().getStub().setPropertyBoolFor(pECBehavior.align.getName(), align)
+		end
+		
+		/** Grab position. */
+		func Vector getPosition()
+			return pPosition
+		end
+		
+		/** Set grab position. */
+		func void setPosition(Vector position)
+			if position.equals(pPosition)
+				return
+			end
+			
+			pPosition = position
+			getElement().getStub().setPropertyValueFor(pECBehavior.position.getName(),\
+				getElement().getClass().getCodecPropertyString().encodeVector(position))
+		end
+		
+		/** Grab rotation. */
+		func Vector getRotation()
+			return pRotation
+		end
+		
+		/** Set grab rotation. */
+		func void setRotation(Vector rotation)
+			if rotation.equals(pPosition)
+				return
+			end
+			
+			pRotation = rotation
+			getElement().getStub().setPropertyValueFor(pECBehavior.rotation.getName(),\
+				getElement().getClass().getCodecPropertyString().encodeVector(rotation))
+		end
+		
+		/** Grab matrix. */
+		func Matrix getMatrix()
+			return Matrix.newRT(pRotation, pPosition)
+		end
+		
 		
 		
 		func ECBehaviorCollider.Instance getParentCollider()
@@ -234,8 +310,16 @@ class ECBGrabAttach extends DefaultECBehavior
 		end
 		
 		
-		/** Remove from game world. */
+		func void addToGameWorld()
+			if pDebugDrawer != null
+				getElement().getGameWorld().getWorld().addDebugDrawer(pDebugDrawer)
+			end
+		end
+		
 		func void removeFromGameWorld()
+			if pDebugDrawer != null
+				getElement().getGameWorld().getWorld().removeDebugDrawer(pDebugDrawer)
+			end
 			removeFromAttachments()
 			pParentCollider = null
 			getElement().setParent(null)
@@ -337,11 +421,10 @@ class ECBGrabAttach extends DefaultECBehavior
 			select reader.readByte() // version
 			case 0
 			case 1
-				var PersistencyFlags flags = PersistencyFlags.new(2, reader)
-				pImmobile = flags.getAt(0)
-				pIKLockRotation = flags.getAt(1)
+				readFromFileV1(env, reader)
 				
-				pBone = reader.readString8()
+			case 2
+				readFromFileV2(env, reader)
 				
 			else
 				throw EInvalidParam.new("unsupported version")
@@ -349,21 +432,48 @@ class ECBGrabAttach extends DefaultECBehavior
 			
 			// update stub to properly support copy
 			var StubElement stub = getElement().getStub()
+			var CodecPropertyString codec = getElement().getClass().getCodecPropertyString()
+			
 			stub.setPropertyValueFor(pECBehavior.bone.getName(), pBone)
 			stub.setPropertyBoolFor(pECBehavior.immobile.getName(), pImmobile)
 			stub.setPropertyBoolFor(pECBehavior.ikLockRotation.getName(), pIKLockRotation)
+			stub.setPropertyBoolFor(pECBehavior.align.getName(), pAlign)
+			stub.setPropertyValueFor(pECBehavior.position.getName(), codec.encodeVector(pPosition))
+			stub.setPropertyValueFor(pECBehavior.rotation.getName(), codec.encodeVector(pRotation))
+		end
+		
+		private func void readFromFileV1(PersistencyEnvironment env, FileReader reader)
+			var PersistencyFlags flags = PersistencyFlags.new(2, reader)
+			pImmobile = flags.getAt(0)
+			pIKLockRotation = flags.getAt(1)
+			
+			pBone = reader.readString8()
+		end
+		
+		private func void readFromFileV2(PersistencyEnvironment env, FileReader reader)
+			var PersistencyFlags flags = PersistencyFlags.new(3, reader)
+			pImmobile = flags.getAt(0)
+			pIKLockRotation = flags.getAt(1)
+			pAlign = flags.getAt(2)
+			
+			pBone = reader.readString8()
+			pPosition = Vector.readFromFile(reader)
+			pRotation = Vector.readFromFile(reader)
 		end
 		
 		/** Write behavior to file. */
 		func void writeToFile(PersistencyEnvironment env, FileWriter writer)
-			writer.writeByte(1) // version
+			writer.writeByte(2) // version
 			
-			var PersistencyFlags flags = PersistencyFlags.new(2)
+			var PersistencyFlags flags = PersistencyFlags.new(3)
 			flags.setAt(0, pImmobile)
 			flags.setAt(1, pIKLockRotation)
+			flags.setAt(2, pAlign)
 			flags.writeToFile(writer)
 			
 			writer.writeString8(pBone)
+			pPosition.writeToFile(writer)
+			pRotation.writeToFile(writer)
 		end
 	end
 	
@@ -375,8 +485,8 @@ class ECBGrabAttach extends DefaultECBehavior
 	public var ECBehaviorAttachable attachable
 	public var ECBShowInteractHandles showInteractHandles
 	public var ECPString bone
-	public var ECPBoolean immobile
-	public var ECPBoolean ikLockRotation
+	public var ECPBoolean immobile, ikLockRotation, align
+	public var ECPVector position, rotation
 	
 	// TODO hand model to show. this though should be the job of ECBehaviorComponent present
 	//      in the owner class which has for example the hand model set with a modified skin.
@@ -402,15 +512,12 @@ class ECBGrabAttach extends DefaultECBehavior
 		
 		var String prefix = "grabAttach."
 		
-		bone = ECPString.new(prefix + "bone", "")
-		eclass.addProperty(bone)
-		
-		immobile = ECPBoolean.new(prefix + "immobile", false)
-		eclass.addProperty(immobile)
-		
-		ikLockRotation = ECPBoolean.new(prefix + "ikLockRotation", false)
-		eclass.addProperty(ikLockRotation)
-		
+		eclass.addProperty(bone = ECPString.new(prefix + "bone", ""))
+		eclass.addProperty(immobile = ECPBoolean.new(prefix + "immobile", false))
+		eclass.addProperty(ikLockRotation = ECPBoolean.new(prefix + "ikLockRotation", false))
+		eclass.addProperty(align = ECPBoolean.new(prefix + "align", true))
+		eclass.addProperty(position = ECPVector.new(prefix + "position"))
+		eclass.addProperty(rotation = ECPVector.new(prefix + "rotation"))
 		eclass.addBehavior(this)
 	end
 	

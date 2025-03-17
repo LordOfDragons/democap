@@ -464,7 +464,14 @@ class ECBAGrab extends DefaultECBehavior
 				bone = (attachingCollider cast ColliderRig).getRig().indexOfBoneNamed(grabAttach.getBone())
 			end
 			
-			var DMatrix anchorMatrix = grabAttach.getElement().getElementMatrix().normalize()
+			var DMatrix anchorMatrix
+			if grabAttach.getAlign()
+				anchorMatrix = grabAttach.getMatrix().toDMatrix() * grabAttach.getElement().getElementMatrix().normalize()
+				
+			else
+				anchorMatrix = pComponent.boneGetMatrix(pGrabBoneIndex).toDMatrix() * pComponent.getMatrix()
+			end
+			
 			pPhysicsGrabConstraint = createGrabConstraint(ECBAPhysicsToucher.TouchObject.new(\
 				attachingElement, attachingCollider, bone), anchorMatrix)
 			if pPhysicsGrabConstraint == null
