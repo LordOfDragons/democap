@@ -60,13 +60,24 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 		end
 	end
 	
+	class AlignChanged extends DefaultToggleModelListener
+		protected var WMPSOGrabAttach pPanel
+		
+		func new(WMPSOGrabAttach panel)
+			pPanel = panel
+		end
+		
+		func void toggledChanged(ToggleModel model)
+			pPanel.getBehaviorGrabAttach().setAlign(model.getToggled())
+		end
+	end
+	
 	
 	
 	protected var ECBGrabAttach.Instance pBehaviorGrabAttach
 	protected var DefaultListModel pModelBoneList
 	protected var DefaultTextModel pModelBoneText
-	protected var DefaultToggleModel pModelImmobile
-	protected var DefaultToggleModel pModelIKLockRotation
+	protected var DefaultToggleModel pModelImmobile, pModelIKLockRotation, pModelAlign
 	
 	
 	
@@ -77,6 +88,7 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 		pModelBoneList.setAutoSelect(false)
 		pModelImmobile = DefaultToggleModel.new(false)
 		pModelIKLockRotation = DefaultToggleModel.new(false)
+		pModelAlign = DefaultToggleModel.new(true)
 		pModelBoneText = DefaultTextModel.new()
 		
 		getPanelContent().runWhileBlockingLayout(block
@@ -85,6 +97,7 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 		
 		pModelImmobile.addListener(ImmobileChanged.new(this))
 		pModelIKLockRotation.addListener(IKLockRotationChanged.new(this))
+		pModelAlign.addListener(AlignChanged.new(this))
 	end
 	
 	/** Dispose of widget. */
@@ -93,8 +106,7 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 		
 		pModelBoneText = null
 		pModelBoneList = null
-		pModelImmobile = null
-		pModelIKLockRotation = null
+		pModelImmobile = pModelIKLockRotation = pModelAlign = null
 		super.dispose()
 	end
 	
@@ -114,6 +126,7 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 		runWhileBlockingLayout(block
 			pModelImmobile.setToggled(pBehaviorGrabAttach.getImmobile())
 			pModelIKLockRotation.setToggled(pBehaviorGrabAttach.getIKLockRotation())
+			pModelAlign.setToggled(pBehaviorGrabAttach.getAlign())
 			pModelBoneText.setText(pBehaviorGrabAttach.getBone())
 			updateModelBone()
 		end)
@@ -127,7 +140,16 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 		content.add("")
 		
 		var Rig rig
-		if pBehaviorGrabAttach.getParentCollider() != null
+		
+		if pBehaviorGrabAttach.getCollider() != null
+			var ECBehaviorComponent.Instance component = ECBehaviorComponent.getInstanceIn(\
+				pBehaviorGrabAttach.getElement())
+			if component != null and component.getComponent() != null
+				rig = component.getComponent().getRig()
+			end
+		end
+		
+		if rig == null and pBehaviorGrabAttach.getParentCollider() != null
 			var ECBehaviorComponent.Instance component = ECBehaviorComponent.getInstanceIn(\
 				pBehaviorGrabAttach.getParentCollider().getElement())
 			if component != null and component.getComponent() != null
@@ -184,14 +206,18 @@ class WMPSOGrabAttach extends WMPPanelSceneObject
 			end))
 			
 			// grabbing
-			p.addWidget(Label.new("@UI.Grab.Label", "Label.FormCaption.SingleLine"))
-			p.addWidget(Panel.new(BoxLayout.new(LayoutAxis.x), block Panel p2
+			p.addWidget(Label.new("@UI.Grab.Label", "Label.FormCaption.MultiLine"))
+			p.addWidget(Panel.new(GridLayout.new(2, 0), block Panel p2
 				checkBox = CheckBox.new(pModelImmobile, "@UI.Immobile")
 				checkBox.setToolTip("@UI.ToolTip.ObjectImmobileWhileGrabbed")
 				p2.addWidget(checkBox)
 				
 				checkBox = CheckBox.new(pModelIKLockRotation, "@UI.LockIkRotation")
 				checkBox.setToolTip("@UI.ToolTip.GrabLockRotation")
+				p2.addWidget(checkBox)
+				
+				checkBox = CheckBox.new(pModelAlign, "@UI.Align")
+				checkBox.setToolTip("@UI.ToolTip.GrabAlign")
 				p2.addWidget(checkBox)
 			end))
 		end))
