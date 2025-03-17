@@ -59,14 +59,17 @@ class SessionSettings
 		end
 		
 		func void toggledChanged(ToggleModel model)
-			var WindowGameWorld window = GameApp.getGameApp().getWindowGameWorld()
-			
-			if model.getToggled()
-				window.getWorldRenderer().setCamera(GameApp.getGameApp().getVRCamera())
-				
-			else
-				window.getWorldRenderer().setCamera(window.getCamera())
-			end
+			SessionSettings.get().updateCameraDirector()
+		end
+	end
+	
+	/** View remote camera listener. */
+	class ViewCameraChanged extends DefaultListModelListener
+		func new()
+		end
+		
+		func void selectionChanged(ListModel listModel)
+			SessionSettings.get().updateCameraDirector()
 		end
 	end
 	
@@ -284,7 +287,7 @@ class SessionSettings
 	var DefaultToggleModel pModelUseFacialTracking
 	var DefaultTextModel pModelFloorOffset
 	
-	var DefaultListModel pModelHudCamera
+	var DefaultListModel pModelHudCamera, pModelViewCamera
 	var DefaultToggleModel pModelShowVRControllers
 	var DefaultToggleModel pModelShowVRDevices
 	var DefaultListModel pModelRightWristMenuPanel
@@ -357,6 +360,10 @@ class SessionSettings
 		
 		pModelHudCamera = DefaultListModel.new()
 		pModelHudCamera.add(null)
+		
+		pModelViewCamera = DefaultListModel.new()
+		pModelViewCamera.add(null)
+		pModelViewCamera.addListener(ViewCameraChanged.new())
 		
 		pModelShowVRControllers = DefaultToggleModel.new(s.getBoolAt("ShowVRControllers", false))
 		pModelShowVRControllers.addListener(SaveToggleModelChanged.new("ShowVRControllers"))
@@ -527,6 +534,16 @@ class SessionSettings
 		return pModelHudCamera.getSelectedElement() cast ECBRemoteCamera.Instance
 	end
 	
+	/** Actor View Camera. */
+	func DefaultListModel getModelViewCamera()
+		return pModelViewCamera
+	end
+	
+	/** Selected Actor View Camera or null. */
+	func ECBRemoteCamera.Instance getViewCamera()
+		return pModelViewCamera.getSelectedElement() cast ECBRemoteCamera.Instance
+	end
+	
 	/** Update actor HUD camera model. */
 	func void updateModelHudCamera()
 		var Array content = Array.new()
@@ -548,6 +565,25 @@ class SessionSettings
 		
 		pModelHudCamera.setContent(content)
 		pModelHudCamera.setSelectedElement(selection)
+		
+		pModelViewCamera.setContent(content)
+		pModelViewCamera.setSelectedElement(selection)
+	end
+	
+	/** Update window game world camera renderer with the camera to use. */
+	func void updateCameraDirector()
+		var WindowGameWorld window = GameApp.getGameApp().getWindowGameWorld()
+		
+		if pModelShowVRCamera.getToggled()
+			window.getWorldRenderer().setCamera(GameApp.getGameApp().getVRCamera())
+			
+		elif pModelViewCamera.getSelectedElement() != null
+			window.getWorldRenderer().setCamera((pModelViewCamera.getSelectedElement()\
+				cast ECBRemoteCamera.Instance).getCamera().getCamera())
+			
+		else
+			window.getWorldRenderer().setCamera(window.getCamera())
+		end
 	end
 	
 	/** Show VR controllers model. */
@@ -689,5 +725,6 @@ class SessionSettings
 		EngineTranslations.get().setActiveWithIdIfPresent(langpack.getIdentifier())
 		pModelLanguage.setSelectedElement(langpack)
 	end
+	
 	
 end

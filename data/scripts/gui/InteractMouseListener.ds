@@ -153,7 +153,7 @@ class InteractMouseListener extends DefaultMouseListener
 		end
 		
 		var GameApp app = GameApp.getGameApp()
-		if SessionSettings.get().getModelShowVRCamera().getToggled()
+		if SessionSettings.get().getModelShowVRCamera().getToggled() or SessionSettings.get().getViewCamera() != null
 			return
 		end
 		
@@ -222,12 +222,13 @@ class InteractMouseListener extends DefaultMouseListener
 	/** Mouse moved. */
 	func void onMouseMove(MouseEvent event)
 		var bool showVRCamera = SessionSettings.get().getModelShowVRCamera().getToggled()
+		var bool showRemoteCamera = SessionSettings.get().getViewCamera() != null
 		var GameApp app = GameApp.getGameApp()
 		var WindowGameWorld window = app.getWindowGameWorld()
 		var CameraDirector director = window.getCameraDirector()
 		
 		if pHandle != null
-			if showVRCamera or director == null
+			if showVRCamera or showRemoteCamera or director == null
 				pHandle.stopInteract()
 				if pShowHandles != null
 					pShowHandles.notifyStopInteract(pHandle)
@@ -242,7 +243,7 @@ class InteractMouseListener extends DefaultMouseListener
 				camera.getPosition(), window.backProject(event).normalize())
 			
 		elif pDragging
-			if showVRCamera or director == null
+			if showVRCamera or showRemoteCamera or director == null
 				onButtonRelease(event)
 				return
 			end
@@ -252,7 +253,7 @@ class InteractMouseListener extends DefaultMouseListener
 				pControlDesktop.moveMouseRay(camera.getPosition(), DVector.new(window.backProject(event)))
 			end
 			
-		elif not showVRCamera
+		elif not showVRCamera and not showRemoteCamera
 			if director == null
 				pControlDesktop = null
 				return
