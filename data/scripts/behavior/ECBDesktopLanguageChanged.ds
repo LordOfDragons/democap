@@ -31,6 +31,34 @@ pin Dragengine.Utils
  * changed global event is send.
  */
 class ECBDesktopLanguageChanged extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Required: \ref ECBehaviorRenderableDesktop
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBDesktopLanguageChanged'/>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBDesktopLanguageChanged"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			if not id.empty()
+				throw EInvalidParam.new("id is not empty string")
+			end
+			return ECBDesktopLanguageChanged.new(eclass,\
+				ECBehaviorRenderableDesktop.getBehaviorIn(eclass, parameters.getAt("renderableDesktop", "") cast String))
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		/** Language changed event receiver. */

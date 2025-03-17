@@ -1,0 +1,427 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2025, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Gui
+
+pin Dragengine.Gui
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.LoadSave
+
+
+/**
+ * Behavior adding video player to renderable desktop using a borderless window.
+ */
+class ECBWindowVideoPlayer extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Required: \ref ECBehaviorRenderableDesktop
+	 * - Optional: \ref ECBBehaviorGuiPanels
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBBehaviorGuiPanels'>
+	 * <behavior type='ECBehaviorRenderableDesktop'>
+	 * 
+	 * <behavior type='ECBWindowVideoPlayer'>
+	 *   <string name='.guitheme'>/content/gui/videoplayer.guitheme.xml</string>
+	 *   <string name='.video>...</string>
+	 * </behavior>
+	 * 
+	 * <behavior type='ECBWindowVideoPlayer' id='second'/>
+	 * \endcode
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBWindowVideoPlayer"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			var ECBWindowVideoPlayer behavior = ECBWindowVideoPlayer.new(eclass,\
+				ECBehaviorRenderableDesktop.getBehaviorIn(eclass, parameters.getAt("renderableDesktop", "") cast String),\
+				ECBBehaviorGuiPanels.getBehaviorIn(eclass), id)
+			BehaviorElementClass.sharedFactoryHelper.setPropertiesFromParameters(eclass, parameters, "windowVideoPlayer")
+			return behavior
+		end
+	end
+	
+	/** Video player window. */
+	class WindowVideoPlayer extends Window
+		class ClickAndDragPlayPosition extends DefaultMouseListener
+			var WindowVideoPlayer pWindow
+			var bool pDragging
+			var Widget pWidget
+			
+			func new(WindowVideoPlayer window, Widget widget)
+				pWindow = window
+				pWidget = widget
+			end
+			
+			func float positionFromMouse(int mouse)
+				var int x = mouse - pWidget.getPadding().getLeft()
+				var int width = pWidget.getWidth() - pWidget.getPadding().getWidth()
+				var float percentage = (x cast float) / (width cast float)
+				return percentage * pWindow.getPlayTime()
+			end
+			
+			func void onButtonPress(MouseEvent event)
+				if not pDragging and event.getButton() == InputEventMouseButton.left
+					pDragging = true
+					pWidget.captureMouse()
+					pWindow.skipToPosition(positionFromMouse(event.getPosition().getX()))
+				end
+			end
+			
+			func void onButtonRelease(MouseEvent event)
+				if pDragging and event.getButton() == InputEventMouseButton.left
+					pDragging = false
+					pWidget.releaseMouse()
+				end
+			end
+			
+			func void onMouseMove(MouseEvent event)
+				if pDragging
+					pWindow.skipToPosition(positionFromMouse(event.getPosition().getX()))
+				end
+			end
+		end
+		
+		static var int unitsPerSecond = 20
+		
+		var DisplayVideo pDisplayVideo
+		var RangeModel pModelPlayPosition
+		var Button pButtonRewind, pButtonForwardEnd, pButtonPlay, pButtonPause, pButtonStop
+		
+		func new(ECBWindowVideoPlayer.Instance behavior, Desktop desktop)\
+		super(0, 0, desktop.getContainerWidth(), desktop.getContainerHeight())
+			var StubElement stub = behavior.getElement().getStub()
+			var ElementClass eclass = behavior.getElement().getClass()
+			var ECBWindowVideoPlayer ecbehavior = behavior.getECBehavior()
+			var Video video = ecbehavior.video.getVideo(stub, eclass)
+			
+			runWhileBlockingLayout(block
+				setGuiTheme(ecbehavior.guitheme.getGuiTheme(stub, eclass))
+				setCanClose(false)
+				setLayout(BorderLayout.new())
+				
+				addWidget(Panel.new(StackLayout.new(StackLayout.AspectRatio.fit), block Panel p
+					p.setDesignerSelector("Panel.Content")
+					pDisplayVideo = DisplayVideo.new(video, RepeatMode.stretch, false)
+					pDisplayVideo.setLooping(false)
+					p.addWidget(pDisplayVideo)
+				end), BorderLayout.Area.content)
+				
+				addWidget(Panel.new(BorderLayout.new(), block Panel p
+					p.setDesignerSelector("Panel.PlayBar")
+					
+					var int playtime = 0
+					if video != null
+						playtime = (video.getPlayTime() * unitsPerSecond) cast int
+					end
+					pModelPlayPosition = DefaultRangeModel.new(0, playtime, unitsPerSecond * 2, 0, unitsPerSecond)
+					
+					var ProgressBar progress = ProgressBar.new(Orientation.horizontal, pModelPlayPosition)
+					progress.setDesignerSelector("ProgressBar.Bar")
+					progress.addMouseListener(ClickAndDragPlayPosition.new(this, progress))
+					p.addWidget(progress, BorderLayout.Area.top)
+					
+					p.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.y), block Panel p2
+						p2.addWidget(Panel.new(GridLayout.new(5, 1), block Panel p3
+							var Button button = Button.new("", BlockActionListener.new(block ActionEvent event
+								pDisplayVideo.setPlayPosition(0)
+							end))
+							button.setDesignerSelector("Button.Bar.Rewind")
+							p3.addWidget(button)
+							
+							button = Button.new("", BlockActionListener.new(block ActionEvent event
+								pDisplayVideo.pause()
+							end))
+							button.setDesignerSelector("Button.Bar.Pause")
+							p3.addWidget(button)
+							
+							button = Button.new("", BlockActionListener.new(block ActionEvent event
+								pDisplayVideo.play()
+							end))
+							button.setDesignerSelector("Button.Bar.Play")
+							p3.addWidget(button)
+							
+							button = Button.new("", BlockActionListener.new(block ActionEvent event
+								pDisplayVideo.stop()
+								pDisplayVideo.setPlayPosition(0)
+							end))
+							button.setDesignerSelector("Button.Bar.Stop")
+							p3.addWidget(button)
+							
+							button = Button.new("", BlockActionListener.new(block ActionEvent event
+								pDisplayVideo.setPlayPosition(pDisplayVideo.getPlayTime())
+							end))
+							button.setDesignerSelector("Button.Bar.ForwardEnd")
+							p3.addWidget(button)
+						end))
+					end), BorderLayout.Area.content)
+				end), BorderLayout.Area.bottom)
+			end)
+			
+			startFrameUpdater()
+		end
+		
+		func void dispose()
+			pButtonStop = pButtonPause = pButtonPlay = pButtonForwardEnd = pButtonRewind = null
+			pModelPlayPosition = null
+			pDisplayVideo = null
+			super.dispose()
+		end
+		
+		func float getPlayTime()
+			return pDisplayVideo.getPlayTime()
+		end
+		
+		func void setVideo(Video video)
+			if pDisplayVideo.getVideo() == video
+				return
+			end
+			
+			pDisplayVideo.stop()
+			pDisplayVideo.setVideo(video)
+			
+			var int playtime = 0
+			if video != null
+				playtime = (video.getPlayTime() * unitsPerSecond) cast int
+			end
+			pModelPlayPosition.setMaximum(playtime)
+				pDisplayVideo.play()
+		end
+		
+		func void skipToPosition(float position)
+			if pDisplayVideo.getVideo() != null
+				pDisplayVideo.setPlayPosition(position)
+			end
+		end
+		
+		func void onFrameUpdate(float elapsed)
+			pModelPlayPosition.setValue((pDisplayVideo.getPlayPosition() * unitsPerSecond) cast int)
+		end
+	end
+	
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class WMPSOWindowVideoPlayer extends WMPPanelSceneObject
+			protected var Instance pBehaviorWindowVideoPlayer
+			protected var DefaultTextModel pModelPathVideo
+			
+			
+			func new(WMPanelProject panelProject, String bgpTypeId, String behaviorId)\
+			super(panelProject, bgpTypeId, behaviorId, "@UI.WindowVideoPlayer", "WMPSOWindowVideoPlayer", "ppob_windowvideoplayer")
+				pModelPathVideo = DefaultTextModel.new()
+				getPanelContent().runWhileBlockingLayout(block
+					createContent(getPanelContent())
+				end)
+			end
+			
+			func void dispose()
+				setBehavior(null)
+				pModelPathVideo = null
+				super.dispose()
+			end
+			
+			func void updateBehavior()
+				if pBehaviorWindowVideoPlayer == null
+					return
+				end
+				
+				runWhileBlockingLayout(block
+					pModelPathVideo.setText(pBehaviorWindowVideoPlayer.getPathVideo())
+				end)
+			end
+			
+			
+			protected func void createContent(Panel content)
+				var String startDirectory = GameApp.getGameApp().getProject().getDataDirectory().toString()
+				var EditPath editPath
+				
+				content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+				
+				content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+					// path video resource
+					p.addWidget(Label.new("@UI.Video.Label", "Label.FormCaption.SingleLine"))
+					
+					editPath = EditPath.new(pModelPathVideo, ResourceLoaderType.video, startDirectory)
+					editPath.setToolTip("@UI.ToolTip.Video")
+					p.addWidget(editPath)
+					editPath.addActionListener(BlockActionListener.new(block ActionEvent event
+						pBehaviorWindowVideoPlayer.setPathVideo(pModelPathVideo.getText())
+					end))
+				end))
+			end
+			
+			protected func void onBehaviorChanged()
+				pBehaviorWindowVideoPlayer = pBehavior cast Instance
+			end
+		end
+		
+		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
+			func new(Instance instance) super(instance, "ECBWindowVideoPlayer", instance.getECBehavior().getID())
+			end
+			
+			func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+				return WMPSOWindowVideoPlayer.new(panelProject, getId(), getBehaviorId())
+			end
+		end
+		
+		
+		var ECBWindowVideoPlayer pECBehavior
+		var WindowVideoPlayer pWindow
+		var String pPathVideo
+		
+		
+		/** Create instance. */
+		func new(ECBWindowVideoPlayer ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+		end
+		
+		/** Init behavior instance. */
+		func void init(StubElement stub)
+			var BehaviorElement element = getElement()
+			
+			pPathVideo = BehaviorStubHelper.stubParamPath(stub, pECBehavior.video)
+			
+			var Desktop desktop = pECBehavior.renderableDesktop.instance(element).getDesktop()
+			pWindow = WindowVideoPlayer.new(this, desktop)
+			desktop.addWindow(pWindow)
+			
+			if pECBehavior.guiPanels != null
+				pECBehavior.guiPanels.instance(element).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
+		end
+		
+		/** Dispose of behavior instance. */
+		func void dispose()
+			pWindow = null
+			super.dispose()
+		end
+		
+		
+		/** Behavior. */
+		func ECBWindowVideoPlayer getECBehavior()
+			return pECBehavior
+		end
+		
+		func String getPathVideo()
+			return pPathVideo
+		end
+		
+		func void setPathVideo(String path)
+			if path.equals(pPathVideo)
+				return
+			end
+			
+			pPathVideo = path
+			BehaviorStubHelper.setStubParamValue(getElement().getStub(), pECBehavior.video.getName(), path)
+			
+			var Video video
+			if not path.empty()
+				try
+					video = Video.new(path)
+					
+				catch Exception e
+					GameApp.getGameApp().getConsole().addError("Load video failed", e)
+				end
+			end
+			pWindow.setVideo(video)
+		end
+		
+		/** Window. */
+		func WindowVideoPlayer getWindow()
+			return pWindow
+		end
+		
+		/** Element state changed like for example visibility. */
+		func void stateChanged()
+			if pWindow != null
+				pWindow.setVisible(getElement().getVisible())
+			end
+		end
+	end
+	
+	
+	public var ECBBehaviorGuiPanels guiPanels
+	public var ECBehaviorRenderableDesktop renderableDesktop
+	public var ECPGuiTheme guitheme
+	public var ECPVideo video
+	public var ECPImage imagePlay, imagePause, imageStop, imageRewind, imageForwardEnd
+	
+	
+	/** Create behavior element class. */
+	func new(BehaviorElementClass eclass, ECBehaviorRenderableDesktop renderabledesktop,\
+	ECBBehaviorGuiPanels guiPanels, String id) super(eclass, id)
+		if renderabledesktop == null
+			throw ENullPointer.new("renderabledesktop")
+		end
+		
+		var Loaders loaders = GameApp.getGameApp().getLoaders()
+		var String prefix = "windowVideoPlayer."
+		
+		this.renderableDesktop = renderabledesktop
+		this.guiPanels = guiPanels
+		
+		eclass.addProperty(guitheme = ECPGuiTheme.new(prefix + "guitheme",\
+			loaders.getGuiTheme(), "/content/gui/videoplayer.guitheme.xml"))
+		eclass.addProperty(video = ECPVideo.new(prefix + "video"))
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	func void dispose()
+		renderableDesktop = null
+		guiPanels = null
+		super.dispose()
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static func Instance getInstanceIn(BehaviorElement element, String id)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getID().equals(id)
+		end) cast Instance
+	end
+	
+	
+	/** Create Behavior instance. */
+	func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
