@@ -297,12 +297,22 @@ class Project
 		try
 			// loading requires the global element class list to properly resolve element classes.
 			// the result though has to be written to a different list to avoid conflicts
-			loadElementClasses(app.getLoaders().getElementClass(), eclistGlobal, eclist, pDataDirectory.getPath())
+			eclistGlobal.forEach(block ElementClass each
+				eclist.add(each)
+			end)
+			app.getLoaders().getElementClass().addXmlElementClasses(eclist, pDataDirectory.getPath(), true)
 			
 		catch Exception e
+			eclistGlobal.forEach(block ElementClass each
+				eclist.removeNoDispose(each)
+			end)
 			eclist.dispose()
 			throw
 		end
+		
+		eclistGlobal.forEach(block ElementClass each
+			eclist.removeNoDispose(each)
+		end)
 		
 		pElementClassList.dispose()
 		pElementClassList = eclist
