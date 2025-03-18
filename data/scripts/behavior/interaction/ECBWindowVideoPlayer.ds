@@ -125,7 +125,6 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 			var StubElement stub = behavior.getElement().getStub()
 			var ElementClass eclass = behavior.getElement().getClass()
 			var ECBWindowVideoPlayer ecbehavior = behavior.getECBehavior()
-			var Video video = ecbehavior.video.getVideo(stub, eclass)
 			
 			runWhileBlockingLayout(block
 				setGuiTheme(ecbehavior.guitheme.getGuiTheme(stub, eclass))
@@ -134,7 +133,7 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 				
 				addWidget(Panel.new(StackLayout.new(StackLayout.AspectRatio.fit), block Panel p
 					p.setDesignerSelector("Panel.Content")
-					pDisplayVideo = DisplayVideo.new(video, RepeatMode.stretch, false)
+					pDisplayVideo = DisplayVideo.new(null, RepeatMode.stretch, false)
 					pDisplayVideo.setLooping(false)
 					p.addWidget(pDisplayVideo)
 				end), BorderLayout.Area.content)
@@ -142,11 +141,7 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 				addWidget(Panel.new(BorderLayout.new(), block Panel p
 					p.setDesignerSelector("Panel.PlayBar")
 					
-					var int playtime = 0
-					if video != null
-						playtime = (video.getPlayTime() * unitsPerSecond) cast int
-					end
-					pModelPlayPosition = DefaultRangeModel.new(0, playtime, unitsPerSecond * 2, 0, unitsPerSecond)
+					pModelPlayPosition = DefaultRangeModel.new(0, 0, unitsPerSecond * 2, 0, unitsPerSecond)
 					
 					var ProgressBar progress = ProgressBar.new(Orientation.horizontal, pModelPlayPosition)
 					progress.setDesignerSelector("ProgressBar.Bar")
@@ -295,6 +290,24 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 			end
 		end
 		
+		class LoadVideoFinished implements ResourceListener
+			var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func void finishedLoading(String filename, ResourceLoaderType resourceType, Object resource)
+				if pInstance.getWindow() != null and pInstance.getPathVideo().equals(filename)
+					pInstance.getWindow().setVideo(resource cast Video)
+				end
+			end
+			
+			func void failedLoading(String filename, ResourceLoaderType resourceType)
+				GameApp.getGameApp().getConsole().addMessage("Load video failed: " + filename)
+			end
+		end
+		
 		
 		var ECBWindowVideoPlayer pECBehavior
 		var WindowVideoPlayer pWindow
@@ -304,13 +317,12 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 		/** Create instance. */
 		func new(ECBWindowVideoPlayer ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
+			pPathVideo = ""
 		end
 		
 		/** Init behavior instance. */
 		func void init(StubElement stub)
 			var BehaviorElement element = getElement()
-			
-			pPathVideo = BehaviorStubHelper.stubParamPath(stub, pECBehavior.video)
 			
 			var Desktop desktop = pECBehavior.renderableDesktop.instance(element).getDesktop()
 			pWindow = WindowVideoPlayer.new(this, desktop)
@@ -319,11 +331,16 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 			if pECBehavior.guiPanels != null
 				pECBehavior.guiPanels.instance(element).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
 			end
+			
+			setPathVideo(BehaviorStubHelper.stubParamPath(stub, pECBehavior.video))
 		end
 		
 		/** Dispose of behavior instance. */
 		func void dispose()
-			pWindow = null
+			if pWindow != null
+				pWindow.safeDispose()
+				pWindow = null
+			end
 			super.dispose()
 		end
 		
@@ -344,17 +361,16 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 			
 			pPathVideo = path
 			BehaviorStubHelper.setStubParamValue(getElement().getStub(), pECBehavior.video.getName(), path)
+			pWindow.setVideo(null)
 			
-			var Video video
 			if not path.empty()
 				try
-					video = Video.new(path)
+					Video.loadAsynchron(path, LoadVideoFinished.new(this))
 					
 				catch Exception e
 					GameApp.getGameApp().getConsole().addError("Load video failed", e)
 				end
 			end
-			pWindow.setVideo(video)
 		end
 		
 		/** Window. */
@@ -374,7 +390,7 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 	public var ECBBehaviorGuiPanels guiPanels
 	public var ECBehaviorRenderableDesktop renderableDesktop
 	public var ECPGuiTheme guitheme
-	public var ECPVideo video
+	public var ECPString video
 	public var ECPImage imagePlay, imagePause, imageStop, imageRewind, imageForwardEnd
 	
 	
@@ -393,7 +409,7 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 		
 		eclass.addProperty(guitheme = ECPGuiTheme.new(prefix + "guitheme",\
 			loaders.getGuiTheme(), "/content/gui/videoplayer.guitheme.xml"))
-		eclass.addProperty(video = ECPVideo.new(prefix + "video"))
+		eclass.addProperty(video = ECPString.new(prefix + "video", ""))
 		
 		eclass.addBehavior(this)
 	end
