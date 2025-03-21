@@ -146,9 +146,12 @@ class SessionSettings
 		end
 		
 		func void visitBehaviorElement(BehaviorElement element)
-			if element.getClass() castable Elements.VideoCameraClass
-				ECBehaviorCamera.getInstanceIn(element).getCamera().setEnableGI(pEnable)
-			end
+			element.forEachInstance(block ECBRemoteCamera.Instance each
+				// do this only if no parameters are set since parameters indicate already if GI is used
+				if each.getPathParameters().empty()
+					each.getCamera().getCamera().setEnableGI(pEnable)
+				end
+			end)
 		end
 	end
 	
