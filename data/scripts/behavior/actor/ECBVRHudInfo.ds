@@ -61,8 +61,8 @@ class ECBVRHudInfo extends DefaultECBehavior
 		/** Init behavior instance. */
 		func void init(StubElement stub)
 			pComponent.getComponent().setVisible(false)
-			pDistance = pECBehavior.getDistance().getValue(stub)
-			pSize = pECBehavior.getSize().getValue(stub)
+			pDistance = DEMath.max(pECBehavior.getDistance().getValue(stub), 0.01)
+			pSize = DEMath.clamp(pECBehavior.getSize().getValue(stub), 10.0, 70.0)
 			
 			// scale the component. this depends on the FOV. we do not know what FOV the
 			// HMD has and it can potentially change. often though it is around 100 degrees.
@@ -192,7 +192,7 @@ class ECBVRHudInfo extends DefaultECBehavior
 		pRenderablePanel.getRenderableSolidity().setValue("solidity")
 		pRenderablePanel.getSize().setPoint(Point.new(1024, 1024))
 		
-		pDistance = ECPFloat.new(prefix + "distance", 0.5, 0)
+		pDistance = ECPFloat.new(prefix + "distance", 0.5, 0.01)
 		eclass.addProperty(pDistance)
 		
 		pSize = ECPFloat.new(prefix + "size", 45, 10, 70)

@@ -356,7 +356,7 @@ class ECBInteractionBubble extends DefaultECBehavior
 			// the maximum size is limited to avoid problems
 			var DVector direction = element.getPosition() - camera.getPosition()
 			var float distance = direction.getLength()
-			var float referenceSize = DEMath.min(distance, 10.0)
+			var float referenceSize = DEMath.clamp(distance, 0.01, 10.0)
 			
 			var float scaleValue = referenceSize * SessionSettings.get().getInteractionBubbleSize()
 			element.setScaling(Vector.new(scaleValue, scaleValue, scaleValue))
@@ -366,6 +366,10 @@ class ECBInteractionBubble extends DefaultECBehavior
 			var Quaternion orientation
 			
 			if sphericalRotation
+				if distance < 0.001
+					return
+				end
+				
 				var DVector view = direction.normalize()
 				var DVector up = DVector.new(0, 1, 0)
 				
