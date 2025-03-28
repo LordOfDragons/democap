@@ -264,6 +264,11 @@ class WMPanelProject extends Panel
 		
 		protected func void pRunTimer()
 			pTimer = null
+			
+			if pPanel.getParent() == null // dispose protection
+				return
+			end
+			
 			if pUpdateModelScenes
 				pUpdateModelScenes = false
 				pPanel.updateModelObjects()
@@ -550,7 +555,9 @@ class WMPanelProject extends Panel
 			
 			pTimer = TimerBlock.new(0, false, block
 				pTimer = null
-				pPanel.selectObjectFromTracker()
+				if pPanel.getParent() != null // dispose protection
+					pPanel.selectObjectFromTracker()
+				end
 			end)
 		end
 	end
@@ -2068,6 +2075,10 @@ class WMPanelProject extends Panel
 		
 		// we delay this by one frame update to avoid complicated problems due to disposing
 		TimerBlock.new(0, false, block
+			if getParent() == null // dispose protection
+				return null
+			end
+			
 			var StubElement stub = element.getStub()
 			if stub == null
 				return null
