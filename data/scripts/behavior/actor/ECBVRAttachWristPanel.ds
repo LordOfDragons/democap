@@ -37,20 +37,20 @@ class ECBVRAttachWristPanel extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		var ECBVRAttachWristPanel pECBehavior
-		var ECBehaviorVRHand.Instance pVRHand
+		var ECBehaviorVRHandLaserPointer.Instance pVRHandLaserPointer
 		var ECBehaviorAttachSlot.Instance pAttachSlot
 		
 		
 		/** Create instance. */
 		func new(ECBVRAttachWristPanel ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
-			pVRHand = ecbehavior.getVRHand().instance(element)
+			pVRHandLaserPointer = ecbehavior.getVRHandLaserPointer().instance(element)
 			pAttachSlot = ecbehavior.getAttachSlot().instance(element)
 		end
 		
 		/** Dispose of behavior instance. */
 		func void dispose()
-			pVRHand = null
+			pVRHandLaserPointer = null
 			pAttachSlot = null
 			super.dispose()
 		end
@@ -64,33 +64,48 @@ class ECBVRAttachWristPanel extends DefaultECBehavior
 		
 		/** Add to game world. */
 		func void addToGameWorld()
-			ECBehaviorAttachable.getInstanceIn(pECBehavior.getRightHand()\
-				if GameApp.getGameApp().getWorldSpawnCharacter().getWristMenuRight() \
-				else GameApp.getGameApp().getWorldSpawnCharacter().getWristMenuLeft()).\
-					reattach(pAttachSlot, Vector.new(), Quaternion.new())
+			var ECBehaviorAttachable.Instance attachable =\
+				ECBehaviorAttachable.getInstanceIn(pECBehavior.getRightHand()\
+					if GameApp.getGameApp().getWorldSpawnCharacter().getWristMenuRight() \
+					else GameApp.getGameApp().getWorldSpawnCharacter().getWristMenuLeft())
+			attachable.reattach(pAttachSlot, Vector.new(), Quaternion.new())
+			
+			var Collider collider = attachable.getCollider().getCollider()
+			pVRHandLaserPointer.getVRHandPointAt().getVRHand().getCollider().addIgnoreCollider(collider)
+			pVRHandLaserPointer.getParticleEmitter().getParticleEmitterInstance().addIgnoreCollider(collider)
 		end
 		
 		/** Remove from game world. */
 		func void removeFromGameWorld()
+			var ECBehaviorAttachable.Instance attachable = pAttachSlot.getAttachable()
+			if attachable == null
+				return
+			end
+			
 			pAttachSlot.detach()
+			
+			var Collider collider = attachable.getCollider().getCollider()
+			pVRHandLaserPointer.getVRHandPointAt().getVRHand().getCollider().removeIgnoreCollider(collider)
+			pVRHandLaserPointer.getParticleEmitter().getParticleEmitterInstance().removeIgnoreCollider(collider)
 		end
 	end
 	
 	
-	var ECBehaviorVRHand pVRHand
+	var ECBehaviorVRHandLaserPointer pVRHandLaserPointer
 	var ECBehaviorAttachSlot pAttachSlot
 	var bool pRightHand
 	
 	
 	/** Create behavior element class. */
-	func new(BehaviorElementClass eclass, ECBehaviorVRHand vrhand, bool rightHand) super(eclass)
-		if vrhand == null
-			throw ENullPointer.new("vrhand")
+	func new(BehaviorElementClass eclass, ECBehaviorVRHandLaserPointer vrhandLaserPointer, bool rightHand) super(eclass)
+		if vrhandLaserPointer == null
+			throw ENullPointer.new("vrhandLaserPointer")
 		end
 		
-		pVRHand = vrhand
+		pVRHandLaserPointer = vrhandLaserPointer
 		pRightHand = rightHand
 		
+		var ECBehaviorVRHand vrhand = vrhandLaserPointer.getVRHandPointAt().getVRHand()
 		var Matrix matrix
 		
 		if rightHand
@@ -116,15 +131,15 @@ class ECBVRAttachWristPanel extends DefaultECBehavior
 	
 	/** Dispose of behavior. */
 	func void dispose()
-		pVRHand = null
+		pVRHandLaserPointer = null
 		pAttachSlot = null
 		super.dispose()
 	end
 	
 	
-	/** VR Hand behavior. */
-	func ECBehaviorVRHand getVRHand()
-		return pVRHand
+	/** VR Hand Laser Pointer behavior. */
+	func ECBehaviorVRHandLaserPointer getVRHandLaserPointer()
+		return pVRHandLaserPointer
 	end
 	
 	/** Attach slot behavior. */

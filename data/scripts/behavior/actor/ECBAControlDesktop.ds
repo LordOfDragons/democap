@@ -36,125 +36,199 @@ pin Dragengine.Utils
 class ECBAControlDesktop extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
-		var ECBAControlDesktop pECBehavior
-		var ECBehaviorControlDesktop.Instance pControlDesktop
-		var ECBehaviorVRHandPointAt.Instance pPointAt
-		var bool pTriggerPulled
+		/** State. */
+		class State
+			public var ECBehaviorControlDesktop.Instance controlDesktop
+			public var ECBehaviorVRHandPointAt.Instance pointAt
+			public var bool triggerPulled
+			
+			func new()
+			end
+			
+			func void checkDisposed()
+				if controlDesktop != null and controlDesktop.getElement() == null
+					// disposed while in use
+					controlDesktop = null
+					pointAt = null
+					triggerPulled = false
+				end
+			end
+		end
 		
+		
+		var ECBAControlDesktop pECBehavior
+		var State pStateRight, pStateLeft, pStatePrimary
 		
 		
 		/** Create behavior instance. */
 		func new(ECBAControlDesktop ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
+			pStateRight = State.new()
+			pStateLeft = State.new()
 		end
 		
 		/** Dispose of behavior instance. */
 		func void dispose()
-			pPointAt = null
-			pControlDesktop = null
+			pStateRight = pStateLeft = pStatePrimary = null
 			super.dispose()
 		end
 		
 		
-		
-		/** Behavior instance control desktop or null. */
-		func ECBehaviorControlDesktop.Instance getControlDesktop()
-			return pControlDesktop
+		/** Right hand behavior instance control desktop or null. */
+		func ECBehaviorControlDesktop.Instance getControlDesktopRight()
+			return pStateRight.controlDesktop
 		end
 		
-		/** Behavior instance VR Hand Point At or null. */
-		func ECBehaviorVRHandPointAt.Instance getPointAt()
-			return pPointAt
+		/** Left hand behavior instance control desktop or null. */
+		func ECBehaviorControlDesktop.Instance getControlDesktopLeft()
+			return pStateLeft.controlDesktop
 		end
 		
-		/** Trigger is pulled. */
-		func bool getTriggerPulled()
-			return pTriggerPulled
+		/** Right hand behavior instance point-at or null. */
+		func ECBehaviorVRHandPointAt.Instance getPointAtRight()
+			return pStateRight.pointAt
 		end
 		
+		/** Left hand behavior instance point-at or null. */
+		func ECBehaviorVRHandPointAt.Instance getPointAtLeft()
+			return pStateLeft.pointAt
+		end
+		
+		/** Right hand trigger is pulled. */
+		func bool getTriggerPulledRight()
+			return pStateRight.triggerPulled
+		end
+		
+		/** Left hand trigger is pulled. */
+		func bool getTriggerPulledLeft()
+			return pStateLeft.triggerPulled
+		end
 		
 		
 		/** Process pointing at element. Returns true if processed. */
-		func bool pointAt(ECBehaviorVRHandPointAt.Instance behavior)
+		func bool pointAt(ECBehaviorVRHandPointAt.Instance behavior, bool rightHand)
+			// note: element is not null if hitPoint is not null
+			var BehaviorElement element = behavior.getPointAtBehaviorElement()
 			var DVector hitPoint = behavior.getPointAtHitPoint()
+			var State s = rightHand if pStateRight else pStateLeft
+			var bool canMove = pStatePrimary == null or s == pStatePrimary
+			var Point point
 			
-			if pControlDesktop != null and pControlDesktop.getElement() == null
-				// disposed while in use
-				pControlDesktop = null
-				pTriggerPulled = false
+			if element != null and element.isDisposed()
+				element = null
+				hitPoint = null
 			end
 			
-			if pControlDesktop != null
-				if behavior == pPointAt
-					if pTriggerPulled
-						pControlDesktop.moveMouseRay(behavior.getPointAtOrigin(), behavior.getPointAtDirection())
-						return true
-						
-					elif hitPoint != null and pControlDesktop.moveMouse(hitPoint)
-						return true
-						
-					else
-						pControlDesktop.moveMouseRay(behavior.getPointAtOrigin(), behavior.getPointAtDirection())
-						pControlDesktop = null
-						pPointAt = null
+			pStateRight.checkDisposed()
+			pStateLeft.checkDisposed()
+			
+			if s.controlDesktop != null
+				if s.triggerPulled
+					s.controlDesktop.moveMouseRay(behavior.getPointAtOrigin(), behavior.getPointAtDirection())
+					return true
+					
+				elif hitPoint != null and element == s.controlDesktop.getElement()\
+				and (point = s.controlDesktop.desktopPoint(hitPoint)) != null
+					if canMove
+						s.controlDesktop.moveMouse(point)
 					end
+					return true
+					
+				else
+					if canMove
+						s.controlDesktop.moveMouseRay(behavior.getPointAtOrigin(), behavior.getPointAtDirection())
+					end
+					hitPoint = null
 				end
-				return false
 			end
 			
 			if hitPoint != null
-				var BehaviorElement element = behavior.getPointAtBehaviorElement()
-				if element != null and not element.isDisposed()
-					pControlDesktop = behavior.getPointAtBehaviorElement().findInstance(\
-						block ECBehaviorControlDesktop.Instance each
-							return each.moveMouse(hitPoint)
-						end) cast ECBehaviorControlDesktop.Instance
-				end
+				var State so = rightHand if pStateLeft else pStateRight
+				
+				s.controlDesktop = behavior.getPointAtBehaviorElement().findInstance(\
+					block ECBehaviorControlDesktop.Instance each
+						point = each.desktopPoint(hitPoint)
+						if point != null
+							if each != so.controlDesktop
+								each.moveMouse(point)
+							end
+							return true
+						end
+						return false
+					end) cast ECBehaviorControlDesktop.Instance
+				
+			else
+				s.controlDesktop = null
 			end
 			
-			if pControlDesktop != null
-				pPointAt = behavior
+			if s.controlDesktop != null
+				s.pointAt = behavior
+				if pStateLeft.controlDesktop == pStateRight.controlDesktop
+					pStatePrimary = rightHand if pStateLeft else pStateRight
+					
+				else
+					pStatePrimary = null
+				end
 				return true
 				
 			else
-				pPointAt = null
+				s.pointAt = null
+				pStatePrimary = null
 				return false
 			end
 		end
 		
 		/** Pull trigger on pointed at element. Returns true if processed. */
-		func bool pointAtPull(ECBehaviorVRHandPointAt.Instance behavior)
-			if not pointAt(behavior)
+		func bool pointAtPull(ECBehaviorVRHandPointAt.Instance behavior, bool rightHand)
+			if not pointAt(behavior, rightHand)
 				return false
 			end
 			
-			pControlDesktop.leftMousePress()
-			pTriggerPulled = true
+			var State s = rightHand if pStateRight else pStateLeft
+			if pStatePrimary != null
+				if s != pStatePrimary and pStatePrimary.triggerPulled
+					return true
+				end
+				
+				var DVector hitPoint = behavior.getPointAtHitPoint()
+				if hitPoint == null or not s.controlDesktop.moveMouse(hitPoint)
+					return true
+				end
+				
+				pStatePrimary = s
+			end
+			
+			s.controlDesktop.leftMousePress()
+			s.triggerPulled = true
 			return true
 		end
 		
 		/** Release trigger on pointed at element. Returns true if processed. */
-		func bool pointAtRelease(ECBehaviorVRHandPointAt.Instance behavior)
-			if pControlDesktop == null or behavior != pPointAt
+		func bool pointAtRelease(ECBehaviorVRHandPointAt.Instance behavior, bool rightHand)
+			var State s = rightHand if pStateRight else pStateLeft
+			
+			if s.controlDesktop == null or not s.triggerPulled
 				return false
 			end
 			
-			if pControlDesktop.getElement() != null // dispose protection
-				pControlDesktop.leftMouseRelease()
+			if s.controlDesktop.getElement() != null // dispose protection
+				if pStatePrimary == null or s == pStatePrimary
+					s.controlDesktop.leftMouseRelease()
+				end
 			end
 			
-			pControlDesktop = null
-			pPointAt = null
-			pTriggerPulled = false
+			s.triggerPulled = false
 			return true
 		end
 		
 		/** Cancel triggering pointAtRelease if point at is present. */
-		func void cancel()
-			pointAtRelease(pPointAt)
+		func void cancel(bool rightHand)
+			var State s = rightHand if pStateRight else pStateLeft
+			if s.pointAt != null and s.triggerPulled
+				pointAtRelease(s.pointAt, rightHand)
+			end
 		end
 	end
-	
 	
 	
 	/** Create behavior and add it to element class. */
@@ -163,17 +237,9 @@ class ECBAControlDesktop extends DefaultECBehavior
 	end
 	
 	
-	
 	/** Get instance in element from owner element class. */
 	func Instance instance( BehaviorElement element )
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
-	end
-	
-	/** Get instance in element or null if absent. */
-	static func Instance getInstanceIn(BehaviorElement element)
-		return element.findInstance(block Instance each
-			return true
-		end) cast Instance
 	end
 	
 	/** Create behavior instance. */

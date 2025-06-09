@@ -43,7 +43,6 @@ class ECBAInteractHandle extends DefaultECBehavior
 		var bool pTriggerPulled
 		
 		
-		
 		/** Create behavior instance. */
 		func new(ECBAInteractHandle ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
@@ -58,6 +57,10 @@ class ECBAInteractHandle extends DefaultECBehavior
 		end
 		
 		
+		/** Behavior. */
+		func ECBAInteractHandle getECBehavior()
+			return pECBehavior
+		end
 		
 		/** Behavior instance show interact handles or null. */
 		func ECBShowInteractHandles.Instance getShowInteractHandles()
@@ -80,46 +83,50 @@ class ECBAInteractHandle extends DefaultECBehavior
 		end
 		
 		
-		
 		/** Process pointing at element. Returns true if processed. */
 		func bool pointAt(ECBehaviorVRHandPointAt.Instance behavior)
 			var BehaviorElement element = behavior.getPointAtBehaviorElement()
 			
+			if pInteractHandle != null and pInteractHandle.getElement() == null
+				// disposed while in use
+				pInteractHandle = null
+				pTriggerPulled = false
+			end
+			
 			if pInteractHandle != null
 				if behavior != pPointAt
 					return false
-				end
-				
-				if pTriggerPulled
+					
+				elif pTriggerPulled
 					if pInteractHandle != null and pPointAt != null
 						pInteractHandle.updateInteract(pPointAt)
 					end
 					return true
 					
-				elif element != null and not element.isDisposed()
+				elif element != null and not element.isDisposed() and element == pInteractHandle.getElement()
 					return true
 					
 				else
-					pInteractHandle = null
-					pShowInteractHandles = null
-					pPointAt = null
-					return false
+					element = null
 				end
+			end
+			
+			if element != null and not element.isDisposed()
+				pInteractHandle = ECBInteractHandle.getInstanceIn(element)
 				
 			else
-				if element != null and not element.isDisposed()
-					pInteractHandle = ECBInteractHandle.getInstanceIn(element)
-				end
+				pInteractHandle = null
+			end
+			
+			if pInteractHandle != null
+				pShowInteractHandles = ECBShowInteractHandles.getInstanceIn(element.getParent() cast BehaviorElement)
+				pPointAt = behavior
+				return true
 				
-				if pInteractHandle != null
-					pShowInteractHandles = ECBShowInteractHandles.getInstanceIn(element.getParent() cast BehaviorElement)
-					pPointAt = behavior
-					return true
-					
-				else
-					pPointAt = null
-					return false
-				end
+			else
+				pShowInteractHandles = null
+				pPointAt = null
+				return false
 			end
 		end
 		
@@ -151,7 +158,6 @@ class ECBAInteractHandle extends DefaultECBehavior
 			
 			pInteractHandle = null
 			pShowInteractHandles = null
-			pPointAt = null
 			pTriggerPulled = false
 			return true
 		end
@@ -169,11 +175,9 @@ class ECBAInteractHandle extends DefaultECBehavior
 			
 			pInteractHandle = null
 			pShowInteractHandles = null
-			pPointAt = null
 			pTriggerPulled = false
 		end
 	end
-	
 	
 	
 	/** Create behavior and add it to element class. */
@@ -182,17 +186,9 @@ class ECBAInteractHandle extends DefaultECBehavior
 	end
 	
 	
-	
 	/** Get instance in element from owner element class. */
-	func Instance instance( BehaviorElement element )
+	func Instance instance(BehaviorElement element)
 		return element.getInstanceAt(getInstanceIndex()) cast Instance
-	end
-	
-	/** Get instance in element or null if absent. */
-	static func Instance getInstanceIn(BehaviorElement element)
-		return element.findInstance(block Instance each
-			return true
-		end) cast Instance
 	end
 	
 	/** Create behavior instance. */
