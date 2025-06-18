@@ -210,8 +210,14 @@ class StartGame extends WindowGameWorld.Loader
 		// apply camera settings. world can override default camera
 		var CameraDirector director = app.getVRCameraDirector()
 		
-		app.getLoaders().getCamera().loadFromFile(getStubWorld().getPropertyValueFor(\
-			"democap.cameraProperties", GameApp.defaultCameraParameters), director)
+		try
+			app.getLoaders().getCamera().loadFromFile(getStubWorld().getPropertyValueFor(\
+				"democap.cameraProperties", GameApp.defaultCameraParameters), director)
+			
+		catch Exception e
+			app.getConsole().addError("Failed loading camera. Loading default one instead", e)
+			app.getLoaders().getCamera().loadFromFile(GameApp.defaultCameraParameters, director)
+		end
 		director.initCameraParameters()
 		
 		// assign camera director attaching the camera to the player controlled actor
