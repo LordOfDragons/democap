@@ -142,35 +142,66 @@ class WindowInputDevice extends Window
 	
 	/** Button panel. */
 	class ButtonPanel extends Panel
-		private static fixed var WeightLayout.LayoutSettings column1 = WeightLayout.LayoutSettings.new(0, 100)
+		private static fixed var WeightLayout.LayoutSettings column1 = WeightLayout.LayoutSettings.new(0, 150)
 		private static fixed var WeightLayout.LayoutSettings column2 = WeightLayout.LayoutSettings.new(1)
 		private static fixed var WeightLayout.LayoutSettings column3 = WeightLayout.LayoutSettings.new(1)
+		private static fixed var WeightLayout.LayoutSettings column4 = WeightLayout.LayoutSettings.new(1)
 		
 		var InputDeviceButton pButton
 		var TextModel pModelName
-		var Label pLabelPressed
-		var Label pLabelTouched
+		var Panel pPanelIndicators
+		var Label pLabelPressed, pLabelTouched, pLabelApproached
 		
 		func new()
 			pModelName = DefaultTextModel.new("?: ")
 			
-			setLayout(WeightLayout.new(LayoutAxis.x, 5))
-			
-			addWidget(Label.new(pModelName, Label.middleLeft), column1)
-			addWidget(pLabelPressed = Label.new("@UI.Pressed", "Label.DeviceButtonReleased"), column2)
-			addWidget(pLabelTouched = Label.new("@UI.Touched", "Label.DeviceButtonUntouched"), column3)
+			runWhileBlockingLayout(block
+				setLayout(BorderLayout.new(5))
+				setDesignerSelector("Panel.WindowInputDevice.ButtonStates")
+				addWidget(Label.new(pModelName, Label.middleLeft), BorderLayout.Area.content)
+				addWidget(pPanelIndicators = Panel.new(FlowLayout.new(LayoutAxis.x, 5)), BorderLayout.Area.right)
+			end)
 			
 			startFrameUpdater()
 		end
 		
 		func void setButton(InputDeviceButton button)
+			if button == pButton
+				return
+			end
+			
 			pButton = button
 			pModelName.setText(button.getName())
+			
+			pPanelIndicators.removeAllWidgets()
+			
+			if button == null
+				return
+			end
+			
+			pPanelIndicators.runWhileBlockingLayout(block
+				pPanelIndicators.addWidget(pLabelPressed = Label.new("@UI.Pressed", "Label.DeviceButtonReleased"))
+				if button.getTouchable()
+					pPanelIndicators.addWidget(pLabelTouched = Label.new("@UI.Touched", "Label.DeviceButtonUntouched"))
+				end
+				if button.getApproachable()
+					pPanelIndicators.addWidget(pLabelApproached = Label.new("@UI.Approached", "Label.DeviceButtonApproached"))
+				end
+			end)
+			pPanelIndicators.doLayoutIfBlocked()
 		end
 		
 		func void onFrameUpdate(float elapsed)
-			pLabelPressed.setDesignerSelector(pButton.isPressed() if "Label.DeviceButtonPressed" else "Label.DeviceButtonReleased")
-			pLabelTouched.setDesignerSelector(pButton.isTouched() if "Label.DeviceButtonTouched" else "Label.DeviceButtonUntouched")
+			pLabelPressed.setDesignerSelector(pButton.isPressed()\
+				if "Label.DeviceButtonPressed" else "Label.DeviceButtonReleased")
+			if pLabelTouched != null
+				pLabelTouched.setDesignerSelector(pButton.isTouched()\
+					if "Label.DeviceButtonTouched" else "Label.DeviceButtonUntouched")
+			end
+			if pLabelApproached != null
+				pLabelApproached.setDesignerSelector(pButton.isNear()\
+					if "Label.DeviceButtonApproached" else "Label.DeviceButtonWithdrawn")
+			end
 		end
 	end
 	
