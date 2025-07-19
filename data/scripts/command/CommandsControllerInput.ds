@@ -260,6 +260,24 @@ class CommandsAAControllerInput
 		end
 	end
 	
+	/** Two finger action. */
+	class TwoFingerAction extends Base
+		var int pFinger
+		
+		func new(ECBehaviorPlayerControllable.Tracker tracker, String name, String description,\
+		bool rightHand, int finger) super(tracker, name, description, rightHand)
+			pFinger = finger
+		end
+		
+		func void press(AAControllerInput action)
+			action.twoFingerPress(pRightHand, pFinger)
+		end
+		
+		func void release(AAControllerInput action)
+			action.twoFingerRelease(pRightHand, pFinger)
+		end
+	end
+	
 	
 	
 	/** Add commands to command manager. */
@@ -271,6 +289,10 @@ class CommandsAAControllerInput
 		commands.add(TrackPadLRAction.new(tracker, "trackPadLRRight", "Track Pad Left-Right Right Hand", true))
 		commands.add(TrackPadTouchAction.new(tracker, "trackPadTouchRight", "Track Pad Touch Right Hand", true))
 		commands.add(GripGrabAction.new(tracker, "gripGrabRight", "Grip Grab Right Hand", true))
+		commands.add(TwoFingerAction.new(tracker, "twoFinger1Right", "Index Finger Input Right Hand", true, 0))
+		commands.add(TwoFingerAction.new(tracker, "twoFinger2Right", "Middle Finger Input Right Hand", true, 1))
+		commands.add(TwoFingerAction.new(tracker, "twoFinger3Right", "Ring Finger Input Right Hand", true, 2))
+		commands.add(TwoFingerAction.new(tracker, "twoFinger4Right", "Pinky Finger Input Right Hand", true, 3))
 		
 		commands.add(TriggerAction.new(tracker, "triggerLeft", "Trigger Left Hand", false))
 		commands.add(MenuAction.new(tracker, "menuLeft", "Menu Left Hand", false))
@@ -279,6 +301,10 @@ class CommandsAAControllerInput
 		commands.add(TrackPadLRAction.new(tracker, "trackPadLRLeft", "Track Pad Left-Right Left Hand", false))
 		commands.add(TrackPadTouchAction.new(tracker, "trackPadTouchLeft", "Track Pad Touch Left Hand", false))
 		commands.add(GripGrabAction.new(tracker, "gripGrabLeft", "Grip Grab Left Hand", false))
+		commands.add(TwoFingerAction.new(tracker, "twoFinger1Left", "Index Finger Input Left Hand", false, 0))
+		commands.add(TwoFingerAction.new(tracker, "twoFinger2Left", "Middle Finger Input Left Hand", false, 1))
+		commands.add(TwoFingerAction.new(tracker, "twoFinger3Left", "Ring Finger Input Left Hand", false, 2))
+		commands.add(TwoFingerAction.new(tracker, "twoFinger4Left", "Pinky Finger Input Left Hand", false, 3))
 	end
 	
 	
@@ -292,21 +318,29 @@ class CommandsAAControllerInput
 	 */
 	public static func void addDefaultBindings(DefaultBindingHelper helper)
 		if helper.hasVRHand(true)
-			helper.vrHandBindButton(true, 0, "triggerRight")
-			helper.vrHandBindButton(true, 1, "menuRight")
-			helper.vrHandBindButton(true, 2, "secondaryRight")
+			helper.vrHandBindButton(true, InputDeviceButtonType.trigger, 0, "triggerRight")
+			helper.vrHandBindButton(true, InputDeviceButtonType.action, 0, "menuRight")
+			helper.vrHandBindButton(true, InputDeviceButtonType.action, 1, "secondaryRight")
 			helper.vrHandBindStick(true, InputDeviceAxisType.touchPad, 0, "trackPadLRRight", "trackPadUDRight")
 			helper.vrHandBindButton(true, InputDeviceButtonType.touchPad, 0, "trackPadTouchRight")
 			helper.vrHandBindTrigger(true, InputDeviceAxisType.gripGrab, 0, "gripGrabRight")
+			helper.vrHandBindButton(true, InputDeviceButtonType.twoFingerTrigger, 0, "twoFinger1Right")
+			helper.vrHandBindButton(true, InputDeviceButtonType.twoFingerTrigger, 1, "twoFinger2Right")
+			helper.vrHandBindButton(true, InputDeviceButtonType.twoFingerTrigger, 2, "twoFinger3Right")
+			helper.vrHandBindButton(true, InputDeviceButtonType.twoFingerTrigger, 3, "twoFinger4Right")
 		end
 		
 		if helper.hasVRHand(false)
-			helper.vrHandBindButton(false, 0, "triggerLeft")
-			helper.vrHandBindButton(false, 1, "menuLeft")
-			helper.vrHandBindButton(false, 2, "secondaryLeft")
+			helper.vrHandBindButton(false, InputDeviceButtonType.trigger, 0, "triggerLeft")
+			helper.vrHandBindButton(false, InputDeviceButtonType.action, 0, "menuLeft")
+			helper.vrHandBindButton(false, InputDeviceButtonType.action, 1, "secondaryLeft")
 			helper.vrHandBindStick(false, InputDeviceAxisType.touchPad, 0, "trackPadLRLeft", "trackPadUDLeft")
 			helper.vrHandBindButton(false, InputDeviceButtonType.touchPad, 0, "trackPadTouchLeft")
 			helper.vrHandBindTrigger(false, InputDeviceAxisType.gripGrab, 0, "gripGrabLeft")
+			helper.vrHandBindButton(false, InputDeviceButtonType.twoFingerTrigger, 0, "twoFinger1Left")
+			helper.vrHandBindButton(false, InputDeviceButtonType.twoFingerTrigger, 1, "twoFinger2Left")
+			helper.vrHandBindButton(false, InputDeviceButtonType.twoFingerTrigger, 2, "twoFinger3Left")
+			helper.vrHandBindButton(false, InputDeviceButtonType.twoFingerTrigger, 3, "twoFinger4Left")
 		end
 	end
 end

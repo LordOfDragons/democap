@@ -50,99 +50,103 @@ abstract class AABase extends BAAFirstPersonVR implements AAControllerInput, AAC
 	end
 	
 	
-	
-	/** Trigger touched. */
 	func void triggerTouch(bool rightHand)
 	end
 	
-	/** Trigger untouched. */
 	func void triggerUntouch(bool rightHand)
 	end
 	
-	/** Trigger pulled. */
 	func void triggerPull(bool rightHand)
 	end
 	
-	/** Trigger released. */
 	func void triggerRelease(bool rightHand)
 	end
 	
 	
-	
-	/** Menu button touched. */
 	func void menuTouch(bool rightHand)
 	end
 	
-	/** Menu button untouched. */
 	func void menuUntouch(bool rightHand)
 	end
 	
-	/** Menu button pressed. */
 	func void menuPress(bool rightHand)
 	end
 	
-	/** Menu button released. */
 	func void menuRelease(bool rightHand)
 	end
 	
 	
-	
-	/** Secondary button touched. */
 	func void secondaryTouch(bool rightHand)
 	end
 	
-	/** Secondary button untouched. */
 	func void secondaryUntouch(bool rightHand)
 	end
 	
-	/** Secondary button pressed. */
 	func void secondaryPress(bool rightHand)
 	end
 	
-	/** Secondary button released. */
 	func void secondaryRelease(bool rightHand)
 	end
 	
 	
-	
-	/** Track pad touched. */
 	func void trackPadTouch(bool rightHand)
 	end
 	
-	/** Track pad untouched. */
 	func void trackPadUntouch(bool rightHand)
 	end
 	
-	/** Track pad up-down. */
 	func void trackPadUD(bool rightHand, float value)
 	end
 	
-	/** Track pad left-right. */
 	func void trackPadLR(bool rightHand, float value)
 	end
 	
 	
-	
-	/** Grip touched. */
 	func void gripTouch(bool rightHand)
 	end
 	
-	/** Grip untouched. */
 	func void gripUntouch(bool rightHand)
 	end
 	
-	/** Grip grab. */
 	func void gripGrab(bool rightHand)
 	end
 	
-	/** Grip ungrab. */
 	func void gripUngrab(bool rightHand)
 	end
 	
-	/** Grip grab analog. */
 	func void gripGrabAnalog(bool rightHand, float value)
 	end
 	
+	
+	func void twoFingerPress(bool rightHand, int finger)
+		if isHandFacingUser(rightHand)
+			select finger
+			case 0
+				//triggerPull(rightHand)
+				
+			case 1
+				menuPress(rightHand)
+				
+			case 2
+				secondaryPress(rightHand)
+			end
+		end
+	end
+	
+	func void twoFingerRelease(bool rightHand, int finger)
+		if isHandFacingUser(rightHand)
+			select finger
+			case 0
+				//triggerRelease(rightHand)
+				
+			case 1
+				menuRelease(rightHand)
+				
+			case 2
+				secondaryRelease(rightHand)
+			end
+		end
+	end
 	
 	
 	/** Start calibration. Return true if calibration started. */
@@ -233,5 +237,13 @@ abstract class AABase extends BAAFirstPersonVR implements AAControllerInput, AAC
 		end
 		
 		toggleVisibility.setVisible(false)
+	end
+	
+	/** VR hand is facing user. */
+	func bool isHandFacingUser(bool rightHand)
+		var ECBehaviorVRHandPointAt.Instance pointAt = rightHand if vrRightHandPointAt else vrLeftHandPointAt
+		var DVector direction = (pointAt.calcTestMatrix() * vrHMD.getInverseMatrix()).getViewVector()
+		var float angle = DEMath.acos(direction * DVector.new(0, 0, -1))
+		return angle < 30
 	end
 end
