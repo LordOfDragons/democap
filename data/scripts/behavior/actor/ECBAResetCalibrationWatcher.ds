@@ -39,16 +39,24 @@ class ECBAResetCalibrationWatcher extends DefaultECBehavior
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		var ECBAResetCalibrationWatcher pECBehavior
-		var bool pRightTriggerPulled
-		var bool pLeftTriggerPulled
-		var bool pRightMenuPressed
-		var bool pLeftMenuPressed
+		var ECBehaviorVRHandPointAt.Instance pVRHandPointAtRight, pVRHandPointAtLeft
+		var bool pRightTriggerPulled, pLeftTriggerPulled
+		var bool pRightMenuPressed, pLeftMenuPressed
+		var bool pRightSecondaryPressed, pLeftSecondaryPressed
 		
 		
 		
 		/** Create behavior instance. */
 		func new(ECBAResetCalibrationWatcher ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
+			pVRHandPointAtRight = ecbehavior.vrHandPointAtRight.instance(element)
+			pVRHandPointAtLeft = ecbehavior.vrHandPointAtLeft.instance(element)
+		end
+		
+		func void dispose()
+			pVRHandPointAtRight = null
+			pVRHandPointAtLeft = null
+			super.dispose()
 		end
 		
 		
@@ -60,6 +68,10 @@ class ECBAResetCalibrationWatcher extends DefaultECBehavior
 		
 		
 		func bool menuPress(bool rightHand)
+			if usingHandInteraction(rightHand)
+				return false
+			end
+			
 			if not pRightTriggerPulled or not pLeftTriggerPulled
 				return false
 			end
@@ -75,6 +87,7 @@ class ECBAResetCalibrationWatcher extends DefaultECBehavior
 				reset()
 				resetCalibration()
 			end
+			
 			return true
 		end
 		
@@ -105,6 +118,33 @@ class ECBAResetCalibrationWatcher extends DefaultECBehavior
 			end
 		end
 		
+		func void secondaryPress(bool rightHand)
+			if not usingHandInteraction(rightHand)
+				return
+			end
+			
+			if rightHand
+				pRightSecondaryPressed = true
+				
+			else
+				pLeftSecondaryPressed = true
+			end
+			
+			if pRightSecondaryPressed and pLeftSecondaryPressed
+				reset()
+				resetCalibration()
+			end
+		end
+		
+		func void secondaryRelease(bool rightHand)
+			if rightHand
+				pRightSecondaryPressed = false
+				
+			else
+				pLeftSecondaryPressed = false
+			end
+		end
+		
 		
 		
 		/** Reset. */
@@ -113,8 +153,15 @@ class ECBAResetCalibrationWatcher extends DefaultECBehavior
 			pLeftTriggerPulled = false
 			pRightMenuPressed = false
 			pLeftMenuPressed = false
+			pRightSecondaryPressed = false
+			pLeftSecondaryPressed = false
 		end
 		
+		func bool usingHandInteraction(bool rightHand)
+			var ECBehaviorVRHandPointAt.Instance pointAt = rightHand if pVRHandPointAtRight else pVRHandPointAtLeft
+			var InputDevice device = pointAt.getVRHand().getInputDevice()
+			return device != null and device.getUsingHandInteraction()
+		end
 		
 		
 		protected func void resetCalibration()
@@ -131,10 +178,20 @@ class ECBAResetCalibrationWatcher extends DefaultECBehavior
 	end
 	
 	
+	public var ECBehaviorVRHandPointAt vrHandPointAtRight, vrHandPointAtLeft
+	
 	
 	/** Create behavior and add it to element class. */
-	func new(BehaviorElementClass eclass) super(eclass)
+	func new(BehaviorElementClass eclass, ECBehaviorVRHandPointAt vrHandPointAtRight,\
+	ECBehaviorVRHandPointAt vrHandPointAtLeft) super(eclass)
+		this.vrHandPointAtRight = vrHandPointAtRight
+		this.vrHandPointAtLeft = vrHandPointAtLeft
 		eclass.addBehavior(this)
+	end
+	
+	func void dispose()
+		vrHandPointAtRight = vrHandPointAtLeft = null
+		super.dispose()
 	end
 	
 	

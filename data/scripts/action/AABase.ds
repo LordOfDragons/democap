@@ -240,16 +240,16 @@ abstract class AABase extends BAAFirstPersonVR implements AAControllerInput, AAC
 	/** VR hand is facing user. */
 	func bool isHandFacingUser(bool rightHand)
 		var ECBehaviorVRHandPointAt.Instance pointAt = rightHand if vrRightHandPointAt else vrLeftHandPointAt
-		var DMatrix matrix = pointAt.calcTestMatrix() * vrHMD.getInverseMatrix()
+		var Matrix matrix = pointAt.getVRHand().getMatrixPlayspace() * vrHMD.getInverseMatrixPlayspace()
 		
 		/*
-		var DVector direction = matrix.getViewVector()
-		var DVector targetDirection = rightHand if DVector.new(-0.25, 1, 1) else DVector.new(0.25, 1, 1)
+		var Vector direction = matrix.getViewVector()
+		var Vector targetDirection = rightHand if Vector.new(-0.25, 1, 1) else Vector.new(0.25, 1, 1)
 		*/
 		
-		var DVector direction = matrix.transformNormal(rightHand if DVector.new(-1, 0, 0) else DVector.new(1, 0, 0))
-		//var DVector targetDirection = DVector.new(0, 0, -1)
-		var DVector targetDirection = rightHand if DVector.new(-0.36, 0.49, -0.78) else DVector.new(0.36, 0.49, -0.78)
+		var Vector direction = matrix.transformNormal(rightHand if Vector.new(-1, 0, 0) else Vector.new(1, 0, 0))
+		//var Vector targetDirection = Vector.new(0, 0, -1)
+		var Vector targetDirection = rightHand if Vector.new(-0.36, 0.49, -0.78) else Vector.new(0.36, 0.49, -0.78)
 		
 		return DEMath.acos(direction * targetDirection.normalize()) < 30
 	end
