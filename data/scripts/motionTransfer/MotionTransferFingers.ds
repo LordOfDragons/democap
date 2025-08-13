@@ -80,7 +80,7 @@ class MotionTransferFingers extends DefaultMotionTransfer
 	var Array pCalibrateBonesThumb, pCalibrateBonesIndex, pCalibrateBonesMiddle,\
 		pCalibrateBonesRing, pCalibrateBonesPinky
 	
-	var Vector pCalibrateBaseThumb, pCalibrateBaseIndex, pCalibrateBaseMiddle, pCalibrateBaseRing, pCalibrateBasePinky
+	var Array pCalibrateBaseThumb, pCalibrateBaseIndex, pCalibrateBaseMiddle, pCalibrateBaseRing, pCalibrateBasePinky
 	
 	
 	/** Create motion transfer. */
@@ -108,11 +108,11 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		pCalibrateBonesMiddle = Array.new()
 		pCalibrateBonesRing = Array.new()
 		pCalibrateBonesPinky = Array.new()
-		pCalibrateBaseThumb = Vector.new()
-		pCalibrateBaseIndex = Vector.new()
-		pCalibrateBaseMiddle = Vector.new()
-		pCalibrateBaseRing = Vector.new()
-		pCalibrateBasePinky = Vector.new()
+		pCalibrateBaseThumb = Array.new()
+		pCalibrateBaseIndex = Array.new()
+		pCalibrateBaseMiddle = Array.new()
+		pCalibrateBaseRing = Array.new()
+		pCalibrateBasePinky = Array.new()
 	end
 	
 	/** Create copy of motion transfer. */
@@ -145,11 +145,11 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		pCalibrateBonesMiddle = Array.new(transfer.pCalibrateBonesMiddle)
 		pCalibrateBonesRing = Array.new(transfer.pCalibrateBonesRing)
 		pCalibrateBonesPinky = Array.new(transfer.pCalibrateBonesPinky)
-		pCalibrateBaseThumb = transfer.pCalibrateBaseThumb
-		pCalibrateBaseIndex = transfer.pCalibrateBaseIndex
-		pCalibrateBaseMiddle = transfer.pCalibrateBaseMiddle
-		pCalibrateBaseRing = transfer.pCalibrateBaseRing
-		pCalibrateBasePinky = transfer.pCalibrateBasePinky
+		pCalibrateBaseThumb = Array.new(transfer.pCalibrateBaseThumb)
+		pCalibrateBaseIndex = Array.new(transfer.pCalibrateBaseIndex)
+		pCalibrateBaseMiddle = Array.new(transfer.pCalibrateBaseMiddle)
+		pCalibrateBaseRing = Array.new(transfer.pCalibrateBaseRing)
+		pCalibrateBasePinky = Array.new(transfer.pCalibrateBasePinky)
 	end
 	
 	
@@ -568,7 +568,7 @@ class MotionTransferFingers extends DefaultMotionTransfer
 	end
 	
 	protected func void addRules(AnimatorDefinition adef, String controllerName1,\
-	String controllerName2, String controllerName3, Array bones, Vector base)
+	String controllerName2, String controllerName3, Array bones, Array bases)
 		/*
 		var ADRuleBoneTransformator rule = ADRuleBoneTransformator.new()
 		rule.setName(link.getController().getName())
@@ -590,7 +590,8 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		var ADController controller = addADController(adef, controllerName1, 0, 1)
 		var ADLink link = addADLink(adef, controller)
 		var String baseBone = bones.getAt(boneCount - 1) cast String
-		var Vector axis = Matrix.newRotation(base).getInverse().getRightVector()
+		var Vector base = bases.getAt(boneCount - 1) cast Vector
+		// var Vector axis = Matrix.newRotation(base).getInverse().getRightVector()
 		
 		var ADRuleInverseKinematic ruleIk = ADRuleInverseKinematic.new()
 		ruleIk.setName(controllerName1)
@@ -609,6 +610,7 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		controller = addADController(adef, controllerName2, maxBendForward, maxBendBack)
 		link = addADLink(adef, controller)
 		
+		/*
 		var ADRuleBoneTransformator ruleBt = ADRuleBoneTransformator.new()
 		ruleBt.setName(controllerName2)
 		ruleBt.setAxis(axis)
@@ -620,6 +622,19 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		ruleBt.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
 		ruleBt.addBone(bones.getAt(boneCount - 2) cast String)
 		adef.addRule(ruleBt)
+		*/
+		
+		baseBone = bones.getAt(boneCount - 2) cast String
+		base = bases.getAt(boneCount - 2) cast Vector
+		
+		ruleIk = ADRuleInverseKinematic.new()
+		ruleIk.setName(controllerName2)
+		ruleIk.setAdjustOrientation(true)
+		ruleIk.setAdjustPosition(false)
+		ruleIk.setLocalOrientation(base)
+		ruleIk.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, link))
+		ruleIk.addBone(baseBone)
+		adef.addRule(ruleIk)
 		
 		// segment 3 and higher. the orientation has to be spread evenly across them
 		if boneCount < 3
@@ -631,6 +646,7 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		controller = addADController(adef, controllerName3, maxBendForward, maxBendBack)
 		link = addADLink(adef, controller)
 		
+		/*
 		ruleBt = ADRuleBoneTransformator.new()
 		ruleBt.setName(controllerName3)
 		ruleBt.setAxis(axis)
@@ -644,6 +660,21 @@ class MotionTransferFingers extends DefaultMotionTransfer
 			ruleBt.addBone(bone)
 		end)
 		adef.addRule(ruleBt)
+		*/
+		
+		bones.forEach(0, boneCount - 2, block int index, String bone
+			base = bases.getAt(index) cast Vector
+			
+			ruleIk = ADRuleInverseKinematic.new()
+			ruleIk.setName(controllerName3)
+			ruleIk.setAdjustOrientation(true)
+			ruleIk.setAdjustPosition(false)
+			ruleIk.setLocalOrientation(base)
+			ruleIk.addTargetLink(ADRuleTargetLink.new(ARInverseKinematicTarget.goalOrientation, link))
+			ruleIk.setBlendFactor(factor)
+			ruleIk.addBone(bone)
+			adef.addRule(ruleIk)
+		end)
 	end
 	
 	/** Reset calibration. */
@@ -655,11 +686,11 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		pCalibrateBonesMiddle.removeAll()
 		pCalibrateBonesRing.removeAll()
 		pCalibrateBonesPinky.removeAll()
-		pCalibrateBaseThumb = Vector.new()
-		pCalibrateBaseIndex = Vector.new()
-		pCalibrateBaseMiddle = Vector.new()
-		pCalibrateBaseRing = Vector.new()
-		pCalibrateBasePinky = Vector.new()
+		pCalibrateBaseThumb = Array.new()
+		pCalibrateBaseIndex = Array.new()
+		pCalibrateBaseMiddle = Array.new()
+		pCalibrateBaseRing = Array.new()
+		pCalibrateBasePinky = Array.new()
 	end
 	
 	/** Calibrate character. */
@@ -678,59 +709,69 @@ class MotionTransferFingers extends DefaultMotionTransfer
 			var int indexBone, count
 			
 			// thumb
-			pCalibrateBaseThumb = Vector.new()
-			count = pCalibrateBonesThumb.getCount()
-			if count > 0
-				indexBone = component.indexOfBoneNamed(pCalibrateBonesThumb.getAt(count - 1) cast String)
+			pCalibrateBaseThumb.removeAll()
+			pCalibrateBonesThumb.forEach(block String each
+				indexBone = component.indexOfBoneNamed(each)
 				if indexBone != -1
-					pCalibrateBaseThumb = (component.boneGetMatrix(indexBone)\
-						* Matrix.newRotation(pThumbRotation).getInverse()).normalize().getEulerAngles()
+					pCalibrateBaseThumb.add((component.boneGetMatrix(indexBone)\
+						* Matrix.newRotation(pThumbRotation).getInverse()).normalize().getEulerAngles())
+					
+				else
+					pCalibrateBaseThumb.add(Vector.new())
 				end
-			end
+			end)
 			
 			// index
-			pCalibrateBaseIndex = Vector.new()
-			count = pCalibrateBonesIndex.getCount()
-			if count > 0
-				indexBone = component.indexOfBoneNamed(pCalibrateBonesIndex.getAt(count - 1) cast String)
+			pCalibrateBaseIndex.removeAll()
+			pCalibrateBonesIndex.forEach(block String each
+				indexBone = component.indexOfBoneNamed(each)
 				if indexBone != -1
-					pCalibrateBaseIndex = (component.boneGetMatrix(indexBone)\
-						* Matrix.newRotation(pIndexRotation).getInverse()).normalize().getEulerAngles()
+					pCalibrateBaseIndex.add((component.boneGetMatrix(indexBone)\
+						* Matrix.newRotation(pIndexRotation).getInverse()).normalize().getEulerAngles())
+					
+				else
+					pCalibrateBaseIndex.add(Vector.new())
 				end
-			end
+			end)
 			
 			// middle
-			pCalibrateBaseMiddle = Vector.new()
-			count = pCalibrateBonesMiddle.getCount()
-			if count > 0
-				indexBone = component.indexOfBoneNamed(pCalibrateBonesMiddle.getAt(count - 1) cast String)
+			pCalibrateBaseMiddle.removeAll()
+			pCalibrateBonesMiddle.forEach(block String each
+				indexBone = component.indexOfBoneNamed(each)
 				if indexBone != -1
-					pCalibrateBaseMiddle = (component.boneGetMatrix(indexBone)\
-						* Matrix.newRotation(pMiddleRotation).getInverse()).normalize().getEulerAngles()
+					pCalibrateBaseMiddle.add((component.boneGetMatrix(indexBone)\
+						* Matrix.newRotation(pMiddleRotation).getInverse()).normalize().getEulerAngles())
+					
+				else
+					pCalibrateBaseMiddle.add(Vector.new())
 				end
-			end
+			end)
 			
 			// ring
-			pCalibrateBaseRing = Vector.new()
-			count = pCalibrateBonesRing.getCount()
-			if count > 0
-				indexBone = component.indexOfBoneNamed(pCalibrateBonesRing.getAt(count - 1) cast String)
+			pCalibrateBaseRing.removeAll()
+			pCalibrateBonesRing.forEach(block String each
+				indexBone = component.indexOfBoneNamed(each)
 				if indexBone != -1
-					pCalibrateBaseRing = (component.boneGetMatrix(indexBone)\
-						* Matrix.newRotation(pRingRotation).getInverse()).normalize().getEulerAngles()
+					pCalibrateBaseRing.add((component.boneGetMatrix(indexBone)\
+						* Matrix.newRotation(pRingRotation).getInverse()).normalize().getEulerAngles())
+					
+				else
+					pCalibrateBaseRing.add(Vector.new())
 				end
-			end
+			end)
 			
 			// pinky
-			pCalibrateBasePinky = Vector.new()
-			count = pCalibrateBonesPinky.getCount()
-			if count > 0
-				indexBone = component.indexOfBoneNamed(pCalibrateBonesPinky.getAt(count - 1) cast String)
+			pCalibrateBasePinky.removeAll()
+			pCalibrateBonesPinky.forEach(block String each
+				indexBone = component.indexOfBoneNamed(each)
 				if indexBone != -1
-					pCalibrateBasePinky = (component.boneGetMatrix(indexBone)\
-						* Matrix.newRotation(pPinkyRotation).getInverse()).normalize().getEulerAngles()
+					pCalibrateBasePinky.add((component.boneGetMatrix(indexBone)\
+						* Matrix.newRotation(pPinkyRotation).getInverse()).normalize().getEulerAngles())
+					
+				else
+					pCalibrateBasePinky.add(Vector.new())
 				end
-			end
+			end)
 		end
 	end
 	
@@ -838,19 +879,19 @@ class MotionTransferFingers extends DefaultMotionTransfer
 				pCalibrateBonesPinky.add(element.getFirstCData())
 				
 			elif tagName.equals("thumbBase")
-				pCalibrateBaseThumb = loader.readVector(element)
+				pCalibrateBaseThumb.add(loader.readVector(element))
 				
 			elif tagName.equals("indexBase")
-				pCalibrateBaseIndex = loader.readVector(element)
+				pCalibrateBaseIndex.add(loader.readVector(element))
 				
 			elif tagName.equals("middleBase")
-				pCalibrateBaseMiddle = loader.readVector(element)
+				pCalibrateBaseMiddle.add(loader.readVector(element))
 				
 			elif tagName.equals("ringBase")
-				pCalibrateBaseRing = loader.readVector(element)
+				pCalibrateBaseRing.add(loader.readVector(element))
 				
 			elif tagName.equals("pinkyBase")
-				pCalibrateBasePinky = loader.readVector(element)
+				pCalibrateBasePinky.add(loader.readVector(element))
 			end
 		end)
 	end
@@ -908,10 +949,20 @@ class MotionTransferFingers extends DefaultMotionTransfer
 		pCalibrateBonesPinky.forEach(block String each
 			tag.addDataTag("pinkyBone", each)
 		end)
-		loader.writeVector(tag, "thumbBase", pCalibrateBaseThumb)
-		loader.writeVector(tag, "indexBase", pCalibrateBaseIndex)
-		loader.writeVector(tag, "middleBase", pCalibrateBaseMiddle)
-		loader.writeVector(tag, "ringBase", pCalibrateBaseRing)
-		loader.writeVector(tag, "pinkyBase", pCalibrateBasePinky)
+		pCalibrateBaseThumb.forEach(block Vector each
+			loader.writeVector(tag, "thumbBase", each)
+		end)
+		pCalibrateBaseIndex.forEach(block Vector each
+			loader.writeVector(tag, "indexBase", each)
+		end)
+		pCalibrateBaseMiddle.forEach(block Vector each
+			loader.writeVector(tag, "middleBase", each)
+		end)
+		pCalibrateBaseRing.forEach(block Vector each
+			loader.writeVector(tag, "ringBase", each)
+		end)
+		pCalibrateBasePinky.forEach(block Vector each
+			loader.writeVector(tag, "pinkyBase", each)
+		end)
 	end
 end
