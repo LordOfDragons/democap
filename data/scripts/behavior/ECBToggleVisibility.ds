@@ -195,16 +195,26 @@ class ECBToggleVisibility extends DefaultECBehavior
 			
 			matrix = DMatrix.newWorld(mpos, view, up)
 			
-			reposition(actor, matrix)
+			reposition(actor, matrix, Vector.new())
 		end
 		
 		/** Reposition element along point-at direction. */
 		func void reposition(ECBehaviorVRHandPointAt.Instance pointAt)
-			reposition(pointAt.getElement() cast BaseVRActor, pointAt.calcTestMatrix())
+			var DMatrix matrix = pointAt.calcTestMatrix()
+			var Vector rotation = Vector.new()
+			
+			if pointAt.getVRHand().isUsingHandInteraction()
+				// for hand interaction tilt the menu to make it easier to position
+				rotation = Vector.new(-20, 0, 0)
+			end
+			
+			reposition(pointAt.getElement() cast BaseVRActor, matrix, rotation)
 		end
 		
-		/** Reposition element. */
-		func void reposition(BaseVRActor actor, DMatrix matrix)
+		/**
+		 * Reposition element. Rotation is applied to final position for fine tuning.
+		 */
+		func void reposition(BaseVRActor actor, DMatrix matrix, Vector rotation)
 			var float scale = getUseScaling(actor)
 			
 			matrix = matrix.normalize()
@@ -228,10 +238,12 @@ class ECBToggleVisibility extends DefaultECBehavior
 				matrix = DMatrix.newWorld(matrix.getPosition(), view, lockUp)
 			end
 			
-			matrix = DMatrix.newRotation(DVector.new(pRotation))\
+			matrix = DMatrix.newRotation(DVector.new(rotation))\
+				* DMatrix.newRotation(DVector.new(pRotation))\
 				* DMatrix.newTranslation(0, 0, -pDistance * scale) * matrix
 			
-			getElement().setGeometry(matrix.getPosition(), matrix.normalize().toQuaternion(), Vector.new(scale, scale, scale))
+			getElement().setGeometry(matrix.getPosition(),\
+				matrix.normalize().toQuaternion(), Vector.new(scale, scale, scale))
 		end
 		
 		/** Resize element. */
