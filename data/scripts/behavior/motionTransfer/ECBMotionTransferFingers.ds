@@ -63,6 +63,7 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 		var AnimatorController pControllerMiddle, pControllerMiddle2, pControllerMiddle3
 		var AnimatorController pControllerRing, pControllerRing2, pControllerRing3
 		var AnimatorController pControllerPinky, pControllerPinky2, pControllerPinky3
+		var AnimatorController pControllerWrist
 		var InputDevice pInputDevice
 		var InputDeviceAxis pInputAxisThumb, pInputAxisIndex, pInputAxisMiddle, pInputAxisRing, pInputAxisPinky
 		var bool pComplexMode
@@ -113,6 +114,8 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 			pControllerPinky = actorAnimated.getControllerNamed(pECBehavior.getControllerNamePinky())
 			pControllerPinky2 = actorAnimated.getControllerNamed(pECBehavior.getControllerNamePinky2())
 			pControllerPinky3 = actorAnimated.getControllerNamed(pECBehavior.getControllerNamePinky3())
+			
+			pControllerWrist = actorAnimated.getControllerNamed(pECBehavior.getControllerNameWrist())
 			
 			pComplexMode = pECBehavior.getTransfer().getMoveHandsClosed().empty()
 			
@@ -200,6 +203,10 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 			return pControllerPinky3
 		end
 		
+		func AnimatorController getControllerWrist()
+			return pControllerWrist
+		end
+		
 		
 		
 		/** Update controllers. */
@@ -222,6 +229,12 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 				var Quaternion handRot = inputDevice.getDevicePoseOrientation()
 				var Quaternion quat1, quat2, quat3
 				var float scale
+				
+				// wrist
+				if pControllerWrist != null
+					quat1 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.wrist, false) * handRot
+					pControllerWrist.setOrientation(quat1)
+				end
 				
 				// thumb
 				quat1 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.thumb0, false) * handRot
@@ -395,6 +408,7 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 	var String pControllerNameMiddle, pControllerNameMiddle2, pControllerNameMiddle3
 	var String pControllerNameRing, pControllerNameRing2, pControllerNameRing3
 	var String pControllerNamePinky, pControllerNamePinky2, pControllerNamePinky3
+	var String pControllerNameWrist
 	
 	
 	
@@ -430,6 +444,8 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 		pControllerNamePinky = transfer.getName() + ".pinky"
 		pControllerNamePinky2 = transfer.getName() + ".pinky2"
 		pControllerNamePinky3 = transfer.getName() + ".pinky3"
+		
+		pControllerNameWrist = transfer.getName() + ".wrist"
 		
 		eclass.addBehavior(this)
 	end
@@ -522,6 +538,10 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 	
 	func String getControllerNamePinky3()
 		return pControllerNamePinky3
+	end
+	
+	func String getControllerNameWrist()
+		return pControllerNameWrist
 	end
 	
 	

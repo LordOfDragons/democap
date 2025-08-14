@@ -59,23 +59,20 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 	var SharedListModel pModelListPinkyBaseBone
 	var DefaultTextModel pModelTextPinkyBaseBone
 	
+	var SharedListModel pModelListWristBone
+	var DefaultTextModel pModelTextWristBone
+	
 	var SharedListModel pModelListTrackerSlot
 	var DefaultTextModel pModelTextTrackerSlot
 	var DefaultTextModel pModelBendAngle
 	var SharedListModel pModelListMoveHandsClosed
 	var DefaultTextModel pModelTextMoveHandsClosed
 	
-	var EditVector pEditThumbRotation
-	var EditVector pEditIndexRotation
-	var EditVector pEditMiddleRotation
-	var EditVector pEditRingRotation
-	var EditVector pEditPinkyRotation
+	var EditVector pEditThumbRotation, pEditIndexRotation, pEditMiddleRotation,\
+		pEditRingRotation, pEditPinkyRotation, pEditWristRotation
 	
-	var DefaultRangeModel pModelThumbBendStrength
-	var DefaultRangeModel pModelIndexBendStrength
-	var DefaultRangeModel pModelMiddleBendStrength
-	var DefaultRangeModel pModelRingBendStrength
-	var DefaultRangeModel pModelPinkyBendStrength
+	var DefaultRangeModel pModelThumbBendStrength, pModelIndexBendStrength,\
+		pModelMiddleBendStrength, pModelRingBendStrength, pModelPinkyBendStrength
 	
 	
 	/** Create window. */
@@ -116,6 +113,10 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		pModelListPinkyBaseBone = SharedListModel.new(window.getModelBones())
 		pModelListPinkyBaseBone.setAutoSelect(false)
 		pModelTextPinkyBaseBone = DefaultTextModel.new()
+		
+		pModelListWristBone = SharedListModel.new(window.getModelBones())
+		pModelListWristBone.setAutoSelect(false)
+		pModelTextWristBone = DefaultTextModel.new()
 		
 		pModelListTrackerSlot = SharedListModel.new(window.getModelTrackerSlotNames())
 		pModelListTrackerSlot.setAutoSelect(false)
@@ -163,23 +164,20 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		pModelListPinkyBaseBone = null
 		pModelTextPinkyBaseBone = null
 		
+		pModelListWristBone = null
+		pModelTextWristBone = null
+		
 		pModelListTrackerSlot = null
 		pModelTextTrackerSlot = null
 		pModelBendAngle = null
 		pModelListMoveHandsClosed = null
 		pModelTextMoveHandsClosed = null
 		
-		pEditThumbRotation = null
-		pEditIndexRotation = null
-		pEditMiddleRotation = null
-		pEditRingRotation = null
-		pEditPinkyRotation = null
+		pEditThumbRotation = pEditIndexRotation = pEditMiddleRotation =\
+			pEditRingRotation = pEditPinkyRotation = pEditWristRotation = null
 		
-		pModelThumbBendStrength = null
-		pModelIndexBendStrength = null
-		pModelMiddleBendStrength = null
-		pModelRingBendStrength = null
-		pModelPinkyBendStrength = null
+		pModelThumbBendStrength = pModelIndexBendStrength = pModelMiddleBendStrength\
+			= pModelRingBendStrength = pModelPinkyBendStrength = null
 		
 		super.dispose()
 	end
@@ -203,6 +201,7 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 				pModelTextRingBaseBone.setText(mt.getRingBaseBone())
 				pModelTextPinkyTipBone.setText(mt.getPinkyTipBone())
 				pModelTextPinkyBaseBone.setText(mt.getPinkyBaseBone())
+				pModelTextWristBone.setText(mt.getWristBone())
 				pModelTextTrackerSlot.setText(mt.getTracker())
 				pModelBendAngle.setText(mt.getBendAngle().toString())
 				pModelTextMoveHandsClosed.setText(mt.getMoveHandsClosed())
@@ -211,6 +210,7 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 				pEditMiddleRotation.setVector(mt.getMiddleRotation())
 				pEditRingRotation.setVector(mt.getRingRotation())
 				pEditPinkyRotation.setVector(mt.getPinkyRotation())
+				pEditWristRotation.setVector(mt.getWristRotation())
 				pModelThumbBendStrength.setValue((mt.getThumbBendStrength() * 100 + 0.5) cast int)
 				pModelIndexBendStrength.setValue((mt.getIndexBendStrength() * 100 + 0.5) cast int)
 				pModelMiddleBendStrength.setValue((mt.getMiddleBendStrength() * 100 + 0.5) cast int)
@@ -228,6 +228,7 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 				pModelTextRingBaseBone.setText("")
 				pModelTextPinkyTipBone.setText("")
 				pModelTextPinkyBaseBone.setText("")
+				pModelTextWristBone.setText("")
 				pModelTextTrackerSlot.setText("")
 				pModelBendAngle.setText("")
 				pModelTextMoveHandsClosed.setText("")
@@ -236,6 +237,7 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 				pEditMiddleRotation.setVector(Vector.new())
 				pEditRingRotation.setVector(Vector.new())
 				pEditPinkyRotation.setVector(Vector.new())
+				pEditWristRotation.setVector(Vector.new())
 				pModelThumbBendStrength.setValue(20)
 				pModelIndexBendStrength.setValue(20)
 				pModelMiddleBendStrength.setValue(20)
@@ -264,6 +266,7 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		mt.setRingBaseBone(pModelTextRingBaseBone.getText())
 		mt.setPinkyTipBone(pModelTextPinkyTipBone.getText())
 		mt.setPinkyBaseBone(pModelTextPinkyBaseBone.getText())
+		mt.setWristBone(pModelTextWristBone.getText())
 		mt.setTracker(pModelTextTrackerSlot.getText())
 		mt.setBendAngle(pModelBendAngle.getText().toFloat())
 		mt.setMoveHandsClosed(pModelTextMoveHandsClosed.getText())
@@ -272,6 +275,7 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		mt.setMiddleRotation(pEditMiddleRotation.getVector())
 		mt.setRingRotation(pEditRingRotation.getVector())
 		mt.setPinkyRotation(pEditPinkyRotation.getVector())
+		mt.setWristRotation(pEditWristRotation.getVector())
 		mt.setThumbBendStrength(0.01 * pModelThumbBendStrength.getValue())
 		mt.setIndexBendStrength(0.01 * pModelIndexBendStrength.getValue())
 		mt.setMiddleBendStrength(0.01 * pModelMiddleBendStrength.getValue())
@@ -304,6 +308,7 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		pEditMiddleRotation.setVector(v2)
 		pEditRingRotation.setVector(v2)
 		pEditPinkyRotation.setVector(v2)
+		pEditWristRotation.setVector(v2)
 	end
 	
 	/** Mirror values from another motion transfer. */
@@ -331,6 +336,7 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 					pEditMiddleRotation.setVector((Matrix.newRotation(mt.getMiddleRotation()) * matMirror).normalize().getEulerAngles())
 					pEditRingRotation.setVector((Matrix.newRotation(mt.getRingRotation()) * matMirror).normalize().getEulerAngles())
 					pEditPinkyRotation.setVector((Matrix.newRotation(mt.getPinkyRotation()) * matMirror).normalize().getEulerAngles())
+					pEditWristRotation.setVector((Matrix.newRotation(mt.getWristRotation()) * matMirror).normalize().getEulerAngles())
 				end
 			end))
 	end
@@ -507,6 +513,29 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		pPanelForm.addWidget(pEditPinkyRotation)
 		
 		CPECoordinateSystemAxis.new(preview, null, null, label, pEditPinkyRotation, comboBoxBase, null, true)
+		
+		// wrist bone
+		labelBase = Label.new("@UI.WristBone.Label", "Label.FormCaption.SingleLine")
+		pPanelForm.addWidget(labelBase)
+		
+		comboBoxBase = ComboBox.new(pModelListWristBone, DefaultComboBoxEditor.new(pModelTextWristBone))
+		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxBase.setToolTip("@UI.ToolTip.WristBone")
+		pPanelForm.addWidget(comboBoxBase)
+		
+		CPEBone.new(preview, labelBase, comboBoxBase)
+		
+		// wrist rotation
+		toolTip = "@UI.ToolTip.FingerRotation"
+		label = Label.new("@UI.WristFingerRotation.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditWristRotation = EditVector.new()
+		pEditWristRotation.setToolTip(toolTip)
+		pPanelForm.addWidget(pEditWristRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditWristRotation, comboBoxBase, null, true)
 		
 		// tracker slot
 		pPanelForm.addWidget(Label.new("@UI.TrackerSlot.Label", "Label.FormCaption.SingleLine"))
