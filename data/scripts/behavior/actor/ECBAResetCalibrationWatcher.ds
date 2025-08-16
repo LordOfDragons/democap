@@ -42,7 +42,7 @@ class ECBAResetCalibrationWatcher extends DefaultECBehavior
 		var ECBehaviorVRHandPointAt.Instance pVRHandPointAtRight, pVRHandPointAtLeft
 		var bool pRightTriggerPulled, pLeftTriggerPulled
 		var bool pRightMenuPressed, pLeftMenuPressed
-		var bool pRightSecondaryPressed, pLeftSecondaryPressed
+		var bool pRightFingerPressed, pLeftFingerPressed
 		
 		
 		
@@ -68,10 +68,6 @@ class ECBAResetCalibrationWatcher extends DefaultECBehavior
 		
 		
 		func bool menuPress(bool rightHand)
-			if usingHandInteraction(rightHand)
-				return false
-			end
-			
 			if not pRightTriggerPulled or not pLeftTriggerPulled
 				return false
 			end
@@ -118,33 +114,35 @@ class ECBAResetCalibrationWatcher extends DefaultECBehavior
 			end
 		end
 		
-		func void secondaryPress(bool rightHand)
-			if not usingHandInteraction(rightHand)
-				return
+		
+		func bool twoFingerPress(bool rightHand)
+			var ECBehaviorVRHandPointAt.Instance p = rightHand if pVRHandPointAtRight else pVRHandPointAtLeft
+			if not p.getVRHand().isFacingUser() or not p.getVRHand().isUsingHandInteraction()
+				return false
 			end
 			
 			if rightHand
-				pRightSecondaryPressed = true
+				pRightFingerPressed = true
 				
 			else
-				pLeftSecondaryPressed = true
+				pLeftFingerPressed = true
 			end
 			
-			if pRightSecondaryPressed and pLeftSecondaryPressed
+			if pRightFingerPressed and pLeftFingerPressed
 				reset()
 				resetCalibration()
 			end
+			return true
 		end
 		
-		func void secondaryRelease(bool rightHand)
+		func void twoFingerRelease(bool rightHand)
 			if rightHand
-				pRightSecondaryPressed = false
+				pRightFingerPressed = false
 				
 			else
-				pLeftSecondaryPressed = false
+				pLeftFingerPressed = false
 			end
 		end
-		
 		
 		
 		/** Reset. */
@@ -153,8 +151,8 @@ class ECBAResetCalibrationWatcher extends DefaultECBehavior
 			pLeftTriggerPulled = false
 			pRightMenuPressed = false
 			pLeftMenuPressed = false
-			pRightSecondaryPressed = false
-			pLeftSecondaryPressed = false
+			pRightFingerPressed = false
+			pLeftFingerPressed = false
 		end
 		
 		func bool usingHandInteraction(bool rightHand)

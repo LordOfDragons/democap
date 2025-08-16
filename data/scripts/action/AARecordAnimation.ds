@@ -42,14 +42,13 @@ class AARecordAnimation extends AABase
 	
 	
 	protected var ECBVRHudInfo.Instance vrHudInfo
-	protected var ECBAGrab.Instance grabRightHand
-	protected var ECBAGrab.Instance grabLeftHand
+	protected var ECBAGrab.Instance grabRightHand, grabLeftHand
 	protected var Panel panelInfo
 	protected var RangeModel modelProgress
 	protected var State state
-	protected var float elapsedTime
-	protected var float waitTime
-	protected var float waitTimeFinished
+	protected var float elapsedTime, waitTime, waitTimeFinished
+	protected var float twoFingerStopRecordingDelay, twoFingerStopRecordingElapsed
+	protected var bool twoFingerStopRecordingRightPressed, twoFingerStopRecordingLeftPressed
 	
 	
 	
@@ -59,6 +58,7 @@ class AARecordAnimation extends AABase
 		elapsedTime = 0
 		waitTime = 3
 		waitTimeFinished = 1
+		twoFingerStopRecordingDelay = 2
 	end
 	
 	
@@ -157,6 +157,33 @@ class AARecordAnimation extends AABase
 		stopRecording()
 	end
 	
+	func void twoFingerPress(bool rightHand, int finger)
+		if finger == 1 and isHandFacingUser(rightHand) and isHandInFrontOfUser(rightHand)
+			twoFingerStopRecordingElapsed = 0
+			
+			if rightHand
+				twoFingerStopRecordingRightPressed = true
+				
+			else
+				twoFingerStopRecordingLeftPressed = true
+			end
+		end
+	end
+	
+	func void twoFingerRelease(bool rightHand, int finger)
+		if finger == 1 and isHandFacingUser(rightHand) and isHandInFrontOfUser(rightHand)
+			twoFingerStopRecordingElapsed = 0
+			
+			if rightHand
+				twoFingerStopRecordingRightPressed = false
+				
+			else
+				twoFingerStopRecordingLeftPressed = false
+			end
+		end
+	end
+	
+	
 	/** Stop recording. */
 	func void stopRecording()
 		GameApp.getGameApp().getRecordScene().stop(true)
@@ -216,6 +243,14 @@ class AARecordAnimation extends AABase
 		
 		grabRightHand.updateGrab(elapsed)
 		grabLeftHand.updateGrab(elapsed)
+		
+		if twoFingerStopRecordingRightPressed and twoFingerStopRecordingLeftPressed
+			twoFingerStopRecordingElapsed += elapsed
+			if twoFingerStopRecordingElapsed >= twoFingerStopRecordingDelay
+				twoFingerStopRecordingRightPressed = twoFingerStopRecordingLeftPressed = false
+				stopRecording()
+			end
+		end
 		
 		select state
 		case State.prepare

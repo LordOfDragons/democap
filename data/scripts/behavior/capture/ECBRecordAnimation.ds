@@ -153,29 +153,19 @@ class ECBRecordAnimation extends DefaultECBehavior
 		var ECBehaviorComponent.Instance pComponent
 		var ECBCharacterConfiguration.Instance pCharacter
 		var ECBCapturedAnimations.Instance pCapturedAnimations
-		var Array pBoneIndices
-		var Array pRootBoneIndices
-		var Array pStaticBoneIndices
-		var Array pStaticRootBoneIndices
-		var Matrix pTransformRootBones
+		var Array pBoneIndices, pRootBoneIndices, pStaticBoneIndices, pStaticRootBoneIndices
+		var Matrix pTransformRootBones, pInvTransformRootBones
 		var int pOriginBoneIndex
-		var Array pOriginChildrenIndices
-		var Array pVPSIndices
-		var Array pStaticVPSIndices
-		var RecordAnimation pRecordAnimation
-		var RecordAnimation pRecordAnimationDevices
-		var RecordAnimation pRecordAnimationObject
+		var Array pOriginChildrenIndices, pVPSIndices, pStaticVPSIndices
+		var RecordAnimation pRecordAnimation, pRecordAnimationDevices, pRecordAnimationObject
 		var CharacterAnimation pCharacterAnimation
 		var SessionSettings.RecordDevices pRecordDevices
 		var Array pRecordDeviceSlots
-		var bool pIsPreparing
-		var bool pIsRecording
+		var bool pIsPreparing, pIsRecording
 		var float pRecordTime
 		var bool pIncrementTime
 		var Array pListeners
-		var bool pFullRecording
-		var bool pRecordObject
-		var bool pFirstFrame
+		var bool pFullRecording, pRecordObject, pFirstFrame
 		var RecordStateChanged pRecordStateChanged
 		var bool pAutoStopRecord
 		
@@ -192,7 +182,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 			pOriginChildrenIndices = Array.new()
 			pRecordDeviceSlots = Array.new()
 			pListeners = Array.new()
-			pTransformRootBones = Matrix.new()
+			pInvTransformRootBones = pTransformRootBones = Matrix.new()
 			pVPSIndices = Array.new()
 			pStaticVPSIndices = Array.new()
 			
@@ -391,7 +381,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				prepareObjectBones()
 			end
 			
-			pTransformRootBones = Matrix.new()
+			pInvTransformRootBones = pTransformRootBones = Matrix.new()
 			
 			/*
 			if pCharacterAnimation != null
@@ -411,6 +401,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 // 				element.setGeometry(capturedElement.getPosition(), capturedElement.getOrientation())
 				pTransformRootBones = (element.getElementMatrix().normalize()\
 					* capturedElement.getInverseElementMatrix().normalize()).toMatrix()
+				pInvTransformRootBones = pTransformRootBones.getInverse()
 			end
 			
 			// if physics attachments are used init collider bone states from component.
@@ -831,7 +822,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pRecordAnimationDevices = null
 				pRecordAnimationObject = null
 				pCharacterAnimation = null
-				pTransformRootBones = Matrix.new()
+				pInvTransformRootBones = pTransformRootBones = Matrix.new()
 				
 			elif pIsPreparing
 				pIsPreparing = false
@@ -839,7 +830,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pRecordAnimationDevices = null
 				pRecordAnimationObject = null
 				pCharacterAnimation = null
-				pTransformRootBones = Matrix.new()
+				pInvTransformRootBones = pTransformRootBones = Matrix.new()
 				
 			else
 				return
@@ -908,27 +899,31 @@ class ECBRecordAnimation extends DefaultECBehavior
 			// bones
 			var Matrix originTransform = Matrix.new()
 			if pOriginBoneIndex != -1
-				originTransform = pTransformRootBones * component.getBoneOriginInverseMatrix(pOriginBoneIndex)
+				originTransform = pInvTransformRootBones
 			end
 			
 			var Matrix matrix
 			pRootBoneIndices.forEach(block int index
 				if index == pOriginBoneIndex
 					matrix = Matrix.new()
+					
 				else
 					matrix = component.boneGetMatrix(index) * pTransformRootBones\
 						* component.getBoneOriginInverseMatrix(index)
 				end
-				pRecordAnimation.addKeyframe(pRecordTime, matrix.getPosition(), matrix.normalize().toQuaternion())
+				pRecordAnimation.addKeyframe(pRecordTime,\
+					matrix.getPosition(), matrix.normalize().toQuaternion())
 			end)
 			
 			pBoneIndices.forEach(block int index
 				if pOriginChildrenIndices.has(index)
 					matrix = component.boneGetMatrix(index) * originTransform\
 						* component.getBoneOriginInverseMatrix(index)
-					pRecordAnimation.addKeyframe(pRecordTime, matrix.getPosition(), matrix.normalize().toQuaternion())
+					pRecordAnimation.addKeyframe(pRecordTime,\
+						matrix.getPosition(), matrix.normalize().toQuaternion())
+					
 				else
-					pRecordAnimation.addKeyframe(pRecordTime, \
+					pRecordAnimation.addKeyframe(pRecordTime,\
 						component.boneGetPosition(index), component.boneGetRotation(index))
 				end
 			end)
@@ -946,6 +941,7 @@ class ECBRecordAnimation extends DefaultECBehavior
 				pStaticRootBoneIndices.forEach(block int index
 					if index == pOriginBoneIndex
 						matrix = Matrix.new()
+						
 					else
 						matrix = component.boneGetMatrix(index) * pTransformRootBones\
 							* component.getBoneOriginInverseMatrix(index)
@@ -957,7 +953,9 @@ class ECBRecordAnimation extends DefaultECBehavior
 					if pOriginChildrenIndices.has(index)
 						matrix = component.boneGetMatrix(index) * originTransform\
 							* component.getBoneOriginInverseMatrix(index)
-						pRecordAnimation.addStaticKeyframe(matrix.getPosition(), matrix.normalize().toQuaternion())
+						pRecordAnimation.addStaticKeyframe(\
+							matrix.getPosition(), matrix.normalize().toQuaternion())
+						
 					else
 						pRecordAnimation.addStaticKeyframe(\
 							component.boneGetPosition(index), component.boneGetRotation(index))

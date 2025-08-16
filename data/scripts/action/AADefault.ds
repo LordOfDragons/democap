@@ -118,7 +118,7 @@ class AADefault extends AABase
 	func void triggerPull(bool rightHand)
 		resetCalibrationWatcher.triggerPulled(rightHand)
 		
-		if isHandFacingUser(rightHand)
+		if isHandFacingUser(rightHand) and isHandInFrontOfUser(rightHand)
 			return
 		end
 		
@@ -210,18 +210,6 @@ class AADefault extends AABase
 	
 	
 	
-	/** Secondary button pressed. */
-	func void secondaryPress(bool rightHand)
-		resetCalibrationWatcher.secondaryPress(rightHand)
-	end
-	
-	/** Secondary button released. */
-	func void secondaryRelease(bool rightHand)
-		resetCalibrationWatcher.secondaryRelease(rightHand)
-	end
-	
-	
-	
 	/** Touch track pad. */
 	func void trackPadTouch(bool rightHand)
 		if rightHand
@@ -287,6 +275,25 @@ class AADefault extends AABase
 			
 		else
 			grabLeftHand.ungrab()
+		end
+	end
+	
+	
+	func void twoFingerPress(bool rightHand, int finger)
+		if finger == 3 and isHandFacingUser(rightHand) and isHandInFrontOfUser(rightHand)
+			resetCalibrationWatcher.twoFingerPress(rightHand)
+			
+		else
+			super.twoFingerPress(rightHand, finger)
+		end
+	end
+	
+	func void twoFingerRelease(bool rightHand, int finger)
+		if finger == 3
+			resetCalibrationWatcher.twoFingerRelease(rightHand)
+			
+		else
+			super.twoFingerRelease(rightHand, finger)
 		end
 	end
 	

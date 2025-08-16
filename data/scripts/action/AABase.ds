@@ -33,6 +33,7 @@ pin Dragengine.Scenery
  */
 abstract class AABase extends BAAFirstPersonVR implements AAControllerInput, AAControlCommands
 	protected var ECBAMovementHelper.Instance movementHelper
+	protected var ECBehaviorVRHandLocomotion.Instance vrRightHandLocomotion, vrLeftHandLocomotion
 	
 	
 	
@@ -46,7 +47,10 @@ abstract class AABase extends BAAFirstPersonVR implements AAControllerInput, AAC
 	protected func void initBehaviors()
 		super.initBehaviors()
 		
-		movementHelper = (actor cast MoCapActor).movementHelper
+		var MoCapActor moc = actor cast MoCapActor
+		movementHelper = moc.movementHelper
+		vrRightHandLocomotion = moc.getVRRightHandLocomotion()
+		vrLeftHandLocomotion = moc.getVRLeftHandLocomotion()
 	end
 	
 	
@@ -119,30 +123,24 @@ abstract class AABase extends BAAFirstPersonVR implements AAControllerInput, AAC
 	
 	
 	func void twoFingerPress(bool rightHand, int finger)
-		if isHandFacingUser(rightHand)
+		if isHandFacingUser(rightHand) and isHandInFrontOfUser(rightHand)
 			select finger
-			case 0
-				//triggerPull(rightHand)
-				
 			case 1
 				menuPress(rightHand)
 				
 			case 2
-				secondaryPress(rightHand)
+				(rightHand if vrRightHandLocomotion else vrLeftHandLocomotion).start()
 			end
 		end
 	end
 	
 	func void twoFingerRelease(bool rightHand, int finger)
 		select finger
-		case 0
-			//triggerRelease(rightHand)
-			
 		case 1
 			menuRelease(rightHand)
 			
 		case 2
-			secondaryRelease(rightHand)
+			(rightHand if vrRightHandLocomotion else vrLeftHandLocomotion).stop()
 		end
 	end
 	
@@ -239,18 +237,19 @@ abstract class AABase extends BAAFirstPersonVR implements AAControllerInput, AAC
 	
 	/** VR hand is facing user. */
 	func bool isHandFacingUser(bool rightHand)
-		var ECBehaviorVRHandPointAt.Instance pointAt = rightHand if vrRightHandPointAt else vrLeftHandPointAt
-		var Matrix matrix = pointAt.getVRHand().getMatrixPlayspace() * vrHMD.getInverseMatrixPlayspace()
+		return (rightHand if vrRightHandPointAt else vrLeftHandPointAt).getVRHand().isFacingUser()
+	end
+	
+	/** VR hand is clearly in front of user. */
+	func bool isHandInFrontOfUser(bool rightHand)
+		var ECBehaviorVRHandPointAt.Instance p = rightHand if vrRightHandPointAt else vrLeftHandPointAt
+		var Vector position = getVRHMD().getInverseMatrixPlayspace() * p.getVRHand().getPositionPlayspace()
+		if position.getZ() < 0.1
+			return false
+		end
 		
-		/*
-		var Vector direction = matrix.getViewVector()
-		var Vector targetDirection = rightHand if Vector.new(-0.25, 1, 1) else Vector.new(0.25, 1, 1)
-		*/
-		
-		var Vector direction = matrix.transformNormal(rightHand if Vector.new(-1, 0, 0) else Vector.new(1, 0, 0))
-		//var Vector targetDirection = Vector.new(0, 0, -1)
-		var Vector targetDirection = rightHand if Vector.new(-0.36, 0.49, -0.78) else Vector.new(0.36, 0.49, -0.78)
-		
-		return DEMath.acos(direction * targetDirection.normalize()) < 30
+		var float angleY = DEMath.atan2(-position.getX(), position.getZ())
+		var float angleX = DEMath.atan2(position.getY(), Vector2.new(position.getX(), position.getZ()).getLength())
+		return DEMath.fabs(angleY) < 45 and DEMath.fabs(angleX) < 45
 	end
 end
