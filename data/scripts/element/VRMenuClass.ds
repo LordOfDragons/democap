@@ -102,16 +102,11 @@ class VRMenuClass extends BehaviorElementClass
 	
 	
 	/** Create element class. */
-	func new(String name, bool wide) super(name)
+	func new(String name) super(name)
 		setPersistable(false)
 		
 		component = ECBehaviorComponent.new(this, null)
-		if wide
-			component.setCommonPath("/content/models/vrmenu", "vrmenu_wide.demodel", "vrmenu.deskin", "vrmenu_wide.derig")
-			
-		else
-			component.setCommonPath("/content/models/vrmenu", "vrmenu.demodel", "vrmenu.deskin", "vrmenu.derig")
-		end
+		component.setCommonPath("/content/models/vrmenu", "vrmenu.demodel", "vrmenu.deskin", "vrmenu.derig")
 		var ECComposeComponent ccomp = component.getComponent()
 		ccomp.setLayerMask(LayerMask.newWith(GameApp.WorldLayerBit.remoteView))
 		ccomp.getRenderEnvMap().setValue(false)
@@ -131,22 +126,16 @@ class VRMenuClass extends BehaviorElementClass
 		renderableDesktop.getGuiTheme().setPath("/content/gui/vrmain.degt")
 		renderableDesktop.getRenderable().setValue("screen.content")
 		renderableDesktop.getRenderableSolidity().setValue("screen.solidity")
-		if wide
-			renderableDesktop.getSize().setPoint(Point.new(1024, 1024))
-			
-		else
-			renderableDesktop.getSize().setPoint(Point.new(512, 1024))
-		end
+		renderableDesktop.getSize().setPoint(Point.new(512, 1024))
 		
-		windowMain = ECBVRWindowMain.new(this, renderableDesktop)
+		controlDesktop = ECBehaviorControlDesktop.new(this, renderableDesktop)
+		controlDesktop.getLowerLeft().setVector(Vector.new(0.235, -0.484, 0))
+		controlDesktop.getLowerRight().setVector(Vector.new(-0.235, -0.484, 0))
+		controlDesktop.getUpperLeft().setVector(Vector.new(0.235, 0.484, 0))
+		
+		windowMain = ECBVRWindowMain.new(this, controlDesktop)
 		
 		vrHandPointedAt = ECBehaviorVRHandPointedAt.new(this)
-		
-		var float scaleX = wide if 1.0 else 0.5
-		controlDesktop = ECBehaviorControlDesktop.new(this, renderableDesktop)
-		controlDesktop.getLowerLeft().setVector(Vector.new(0.484 * scaleX, -0.484, 0))
-		controlDesktop.getLowerRight().setVector(Vector.new(-0.484 * scaleX, -0.484, 0))
-		controlDesktop.getUpperLeft().setVector(Vector.new(0.484 * scaleX, 0.484, 0))
 		
 		toggleVisibility = ECBToggleVisibility.new(this)
 		toggleVisibility.getDistance().setValue(0.2)
@@ -158,9 +147,7 @@ class VRMenuClass extends BehaviorElementClass
 			return SessionSettings.get().getVRMenuScale()
 		end
 		
-		if not wide
-			SessionSettings.get().getModelVRMenuScale().addListener(VRMenuScaleSettingsChanged.new())
-		end
+		SessionSettings.get().getModelVRMenuScale().addListener(VRMenuScaleSettingsChanged.new())
 		
 		hideWhileRecording = ECBHideWhileRecording.new(this, null)
 		

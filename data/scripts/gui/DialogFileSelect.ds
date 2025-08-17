@@ -26,6 +26,7 @@ pin Democap.Actors
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Utils
+pin Democap.Behaviors
 
 
 /**
@@ -191,7 +192,7 @@ class DialogFileSelect extends WindowDialog
 	
 	
 	/** Create window. */
-	func new(Window window, String title, ResultListener listener)
+	func new(Window window, String title, bool inVR, ResultListener listener)
 		imageDirectory = Image.new("/content/gui/images/icon_directory_16.png")
 		imageFile = Image.new("/content/gui/images/icon_file_16.png")
 		imageBreadCrumbSeparator = Image.new("/shareddata/guithemes/modern/arrows/right_normal.png")
@@ -208,7 +209,8 @@ class DialogFileSelect extends WindowDialog
 			setTitle(title)
 			setDesignerSelector("Window.Dialog.FileSelect")
 			
-			if PanelMain.isParentPanelInVR(window)
+			if inVR
+				ECBVRWindowMain.prepareWindowInVR(this, window)
 				setSize(window.getDesktop().getSize())
 				
 			else
@@ -236,14 +238,14 @@ class DialogFileSelect extends WindowDialog
 	
 	/** Show open file dialog for resource type. */
 	public static func DialogFileSelect showOpenFile(Window window, String title,\
-	ResourceLoaderType type, String path, ResultListener listener)
-		return showOpenFile(window, title, FileSystem.getFileExtensions(type), path, listener)
+	ResourceLoaderType type, String path, bool inVR, ResultListener listener)
+		return showOpenFile(window, title, FileSystem.getFileExtensions(type), path, inVR, listener)
 	end
 	
 	/** Show open file dialog for array of FileExtension. */
 	public static func DialogFileSelect showOpenFile(Window window, String title,\
-	Array patterns, String path, ResultListener listener)
-		var DialogFileSelect dialog = DialogFileSelect.new(window, title, listener)
+	Array patterns, String path, bool inVR, ResultListener listener)
+		var DialogFileSelect dialog = DialogFileSelect.new(window, title, inVR, listener)
 		dialog.pSaving = false
 		dialog.setPatterns(patterns)
 		dialog.setPath(path)
@@ -254,16 +256,16 @@ class DialogFileSelect extends WindowDialog
 	
 	/** Show save file dialog for resource type. */
 	public static func DialogFileSelect showSaveFile(Window window, String title,\
-	ResourceLoaderType type, String path, ResultListener listener)
-		var DialogFileSelect dialog = showOpenFile(window, title, type, path, listener)
+	ResourceLoaderType type, String path, bool inVR, ResultListener listener)
+		var DialogFileSelect dialog = showOpenFile(window, title, type, path, inVR, listener)
 		dialog.pSaving = true
 		return dialog
 	end
 	
 	/** Show save file dialog for array of FileExtension. */
 	public static func DialogFileSelect showSaveFile(Window window, String title,\
-	Array patterns, String path, ResultListener listener)
-		var DialogFileSelect dialog = showOpenFile(window, title, patterns, path, listener)
+	Array patterns, String path, bool inVR, ResultListener listener)
+		var DialogFileSelect dialog = showOpenFile(window, title, patterns, path, inVR, listener)
 		dialog.pSaving = true
 		return dialog
 	end

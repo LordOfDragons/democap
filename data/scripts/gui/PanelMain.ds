@@ -31,17 +31,13 @@ pin Dragengine.Scenery
  */
 class PanelMain extends Panel
 	var DMCWindowConsole pWindowConsole
-	var bool pInVR
-	
 	
 	
 	/** Create main window */
 	func new(Desktop desktop, bool inVR)
-		pInVR = inVR
-		
 		runWhileBlockingLayout(block
 			setDesignerSelector("Panel.Main")
-			createContent()
+			createContent(inVR)
 		end)
 		
 		// create console window and add it to desktop
@@ -55,35 +51,14 @@ class PanelMain extends Panel
 	end
 	
 	
-	
 	/** Console window. */
 	func DMCWindowConsole getWindowConsole()
 		return pWindowConsole
 	end
 	
-	/** Window is shown in VR. */
-	func bool getInVR()
-		return pInVR
-	end
-	
-	/**
-	 * Check if widget has PanelMain as parent and if so returns getInVR() otherwise false.
-	 */
-	static func bool isParentPanelInVR(Widget widget)
-		var Container parent = widget.getParent()
-		while parent != null
-			if parent castable PanelMain
-				return (parent cast PanelMain).pInVR
-			end
-			parent = parent.getParent()
-		end
-		return false
-	end
-	
-	
 	
 	/** Create window content. */
-	protected func void createContent()
+	protected func void createContent(bool inVR)
 		setLayout(BorderLayout.new(2))
 		
 		// switch panel buttons
@@ -125,21 +100,21 @@ class PanelMain extends Panel
 		end), BorderLayout.Area.top)
 		
 		// switch panels
-		var String prefixUIOptions = pInVR if "UI/VR/PanelMain" else "UI/PanelMain"
+		var String prefixUIOptions = inVR if "UI/VR/PanelMain" else "UI/PanelMain"
 		
 		addWidget(SwitchPanel.new(block SwitchPanel p
 			// settings panel
 			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
-				p2.addWidget(WMPanelSettings.new(pInVR, prefixUIOptions))
+				p2.addWidget(WMPanelSettings.new(inVR, prefixUIOptions))
 			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
 			
 			// character panel
 			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
-				p2.addWidget(WMPanelCharacter.new(pInVR, prefixUIOptions))
+				p2.addWidget(WMPanelCharacter.new(inVR, prefixUIOptions))
 			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
 			
 			// project panel
-			var WMPanelProject panelProject = WMPanelProject.new(pInVR, prefixUIOptions)
+			var WMPanelProject panelProject = WMPanelProject.new(inVR, prefixUIOptions)
 			var ScrollPanel scrollPanel = ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
 				p2.addWidget(panelProject)
 			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed)
@@ -152,12 +127,12 @@ class PanelMain extends Panel
 			
 			// actor control panel
 			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
-				p2.addWidget(WMPanelActorControl.new(pInVR, prefixUIOptions))
+				p2.addWidget(WMPanelActorControl.new(inVR, prefixUIOptions))
 			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
 			
 			// session panel
 			p.addWidget(ScrollPanel.new(Viewport.new(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p2
-				p2.addWidget(WMPanelSession.new(pInVR, prefixUIOptions))
+				p2.addWidget(WMPanelSession.new(inVR, prefixUIOptions))
 			end), 0, 20, true), ScrollPanel.Policy.hidden, ScrollPanel.Policy.needed))
 			
 			tbgroup.addListener(SwitchPanel.SwitchToggleGroup.new(p))

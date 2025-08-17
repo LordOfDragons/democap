@@ -27,6 +27,7 @@ pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Scenery
 pin Dragengine.Utils
+pin Democap.Behaviors
 
 
 /**
@@ -268,7 +269,7 @@ class DialogColorPicker extends WindowDialog
 	
 	
 	/** Create window. */
-	func new(Window window, String title, ResultListener listener)
+	func new(Window window, String title, bool inVR, ResultListener listener)
 		pColor = Color.white
 		
 		pModelRed = DefaultRangeModel.new(0, 255, 32, 255, 1)
@@ -306,7 +307,15 @@ class DialogColorPicker extends WindowDialog
 			setGuiTheme(window.getGuiTheme())
 			setTitle(title)
 			setDesignerSelector("Window.Dialog.ColorPicker")
-			setSize(Point.new(800, 500))
+			
+			if inVR
+				//ECBVRWindowMain.prepareWindowInVR(this, window)
+				//setSize(window.getDesktop().getSize())
+				setSize(Point.new(500, 400))
+				
+			else
+				setSize(Point.new(800, 500))
+			end
 			
 			createContent()
 		end)
@@ -338,8 +347,9 @@ class DialogColorPicker extends WindowDialog
 	
 	
 	/** Show dialog. Result listener receives Color as result or null if cancelled. */
-	public static func DialogColorPicker editColor(Window window, String title, Color color, ResultListener listener)
-		var DialogColorPicker dialog = DialogColorPicker.new(window, title, listener)
+	public static func DialogColorPicker editColor(Window window, String title,\
+	Color color, bool inVR, ResultListener listener)
+		var DialogColorPicker dialog = DialogColorPicker.new(window, title, inVR, listener)
 		dialog.setColor(color)
 		dialog.show(window, true, WindowModal.Placement.desktop)
 		return dialog

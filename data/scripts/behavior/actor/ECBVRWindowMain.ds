@@ -27,17 +27,88 @@ pin Dragengine.Gui
 pin Dragengine.Preloading
 pin Dragengine.Scenery
 pin Dragengine.Utils
+pin Dragengine.Gui.Events
 
 
 /**
  * Behavior adding PanelMain to renderable desktop using a borderless window.
  */
 class ECBVRWindowMain extends DefaultECBehavior
+	/** Window listener disabling wide mode on close. */
+	class DisableWideInVROnClose extends DefaultWindowListener
+		var Instance pInstance
+		
+		func new(Instance instance)
+			pInstance = instance
+		end
+		
+		func void onWindowClosing(WindowEvent event)
+			pInstance.releaseWide()
+		end
+	end
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
+		/** Window with link to behavior. */
+		class WindowMain extends Window implements WidgetInVR
+			var ECBVRWindowMain.Instance pBehavior
+			public var PanelMain panelMain
+			
+			func new(ECBVRWindowMain.Instance behavior, Desktop desktop) super(Point.new(), desktop.getSize())
+				this.pBehavior = behavior
+				
+				runWhileBlockingLayout(block
+					setDesignerSelector("Window.VRMain")
+					setCanClose(false)
+					setCanMove(false)
+					setCanMaximize(false)
+					setCanMinimize(false)
+					setCanResize(false)
+					
+					panelMain = PanelMain.new(desktop, true)
+					addWidget(panelMain)
+				end)
+				
+				desktop.addWindow(this)
+				
+				var DMCWindowConsole windowConsole = panelMain.getWindowConsole()
+				windowConsole.runWhileBlockingLayout(block
+					/*
+					windowConsole.setCanMove(false)
+					windowConsole.setCanMaximize(false)
+					windowConsole.setCanMinimize(false)
+					windowConsole.setCanResize(false)
+					*/
+					
+					var BorderSize b = windowConsole.getDecorationSize()
+					windowConsole.setPosition(Point.new(b.getLeft(), b.getTop()))
+					windowConsole.setSize(desktop.getSize() - b.getSize())
+				end)
+				windowConsole.doLayoutIfBlocked()
+			end
+			
+			func void dispose()
+				super.dispose()
+				panelMain = null
+				pBehavior = null
+			end
+			
+			func DefaultECBehaviorInstance getVRBehavior()
+				return pBehavior
+			end
+		end
+		
+		
 		var ECBVRWindowMain pECBehavior
-		var PanelMain pPanelMain
-		var Window pWindow
+		var ECBehaviorControlDesktop.Instance pControlDesktop
+		var WindowMain pWindow
+		var int pWideCounter
+		var bool pWideEnabled
+		var Model pModelWide, pModelNarrow
+		var Rig pRigWide, pRigNarrow
+		var Point pDesktopSizeWide, pDesktopSizeNarrow
+		var Vector pControlLowerLeftWide, pControlLowerRightWide, pControlUpperLeftWide
+		var Vector pControlLowerLeftNarrow, pControlLowerRightNarrow, pControlUpperLeftNarrow
 		
 		
 		/** Create instance. */
@@ -47,31 +118,38 @@ class ECBVRWindowMain extends DefaultECBehavior
 		
 		/** Init behavior instance. */
 		func void init(StubElement stub)
-			var Desktop desktop = pECBehavior.getRenderableDesktop().instance(getElement()).getDesktop()
+			var CodecPropertyString codec = getElement().getClass().getCodecPropertyString()
+			
+			pControlDesktop = pECBehavior.getControlDesktop().instance(getElement())
+			pControlLowerLeftNarrow = pControlDesktop.getLowerLeft()
+			pControlLowerRightNarrow = pControlDesktop.getLowerRight()
+			pControlUpperLeftNarrow = pControlDesktop.getUpperLeft()
+			
+			var Component component = pControlDesktop.getRenderableDesktop().getDynamicSkin().getComponent().getComponent()
+			pModelNarrow = component.getModel()
+			pRigNarrow = component.getRig()
+			
+			var Desktop desktop = pControlDesktop.getRenderableDesktop().getDesktop()
+			pDesktopSizeNarrow = desktop.getSize()
+			
+			pModelWide = pECBehavior.modelWide.getModel(stub, getElement().getClass())
+			pRigWide = pECBehavior.rigWide.getRig(stub, getElement().getClass())
+			pDesktopSizeWide = Point.new(pECBehavior.desktopWidthWide.getValue(stub), pDesktopSizeNarrow.getY())
+			pControlLowerLeftWide = pECBehavior.controlLowerLeft.getVector(stub, codec)
+			pControlLowerRightWide = pECBehavior.controlLowerRight.getVector(stub, codec)
+			pControlUpperLeftWide = pECBehavior.controlUpperLeft.getVector(stub, codec)
 			
 			if desktop.getWindowVirtualKeyboard() == null
 				desktop.setWindowVirtualKeyboard(WindowVirtualKeyboard.new())
 			end
 			
-			pPanelMain = PanelMain.new(desktop, true)
-			
-			pWindow = Window.new(0, 0, desktop.getContainerWidth(), desktop.getContainerHeight())
-			pWindow.runWhileBlockingLayout(block
-				pWindow.setDesignerSelector("Window.VRMain")
-				pWindow.setCanClose(false)
-				pWindow.addWidget(pPanelMain)
-			end)
-			desktop.addWindow(pWindow)
-			
-			var DMCWindowConsole windowConsole = pPanelMain.getWindowConsole()
-			windowConsole.setPosition(Point.new(10, desktop.getContainerHeight() - 550))
-			windowConsole.setSize(Point.new(desktop.getContainerWidth() - pWindow.getWidth() - 50, 500))
+			pWindow = WindowMain.new(this, desktop)
 		end
 		
 		/** Dispose of behavior instance. */
 		func void dispose()
 			pWindow = null
-			pPanelMain = null
+			pControlDesktop = null
 			super.dispose()
 		end
 		
@@ -83,49 +161,150 @@ class ECBVRWindowMain extends DefaultECBehavior
 		
 		/** Panel. */
 		func PanelMain getPanelMain()
-			return pPanelMain
+			return pWindow.panelMain
+		end
+		
+		
+		/** Request wide mode. Enables wide mode. Each call increments wide counter. */
+		func void requestWide()
+			pWideCounter++
+			enableWide(true)
+		end
+		
+		/** Releases wide mode. Disables wide mode if counter reaches 0. */
+		func void releaseWide()
+			if pWideCounter == 0
+				throw EInvalidParam.new()
+			end
+			pWideCounter--
+			enableWide(pWideCounter > 0)
+		end
+		
+		
+		/** Enable wide mode. */
+		protected func void enableWide(bool enable)
+			if enable == pWideEnabled
+				return
+			end
+			
+			pWideEnabled = enable
+			
+			var Component component = pControlDesktop.getRenderableDesktop().getDynamicSkin().getComponent().getComponent()
+			var Desktop desktop = pControlDesktop.getRenderableDesktop().getDesktop()
+			
+			if enable
+				if pModelWide != null
+					component.setModel(pModelWide)
+				end
+				if pRigWide != null
+					component.setRig(pRigWide)
+				end
+				desktop.setSize(pDesktopSizeWide)
+				pControlDesktop.setLowerLeft(pControlLowerLeftWide)
+				pControlDesktop.setLowerRight(pControlLowerRightWide)
+				pControlDesktop.setUpperLeft(pControlUpperLeftWide)
+				
+			else
+				component.setModel(pModelNarrow)
+				component.setRig(pRigNarrow)
+				desktop.setSize(pDesktopSizeNarrow)
+				pControlDesktop.setLowerLeft(pControlLowerLeftNarrow)
+				pControlDesktop.setLowerRight(pControlLowerRightNarrow)
+				pControlDesktop.setUpperLeft(pControlUpperLeftNarrow)
+			end
 		end
 		
 		
 		/** Element state changed like for example visibility. */
 		func void stateChanged()
-			if pPanelMain != null
-				pPanelMain.setVisible(getElement().getVisible())
+			if pWindow.panelMain != null
+				pWindow.panelMain.setVisible(getElement().getVisible())
 			end
 		end
 	end
 	
 	
-	var ECBehaviorRenderableDesktop pRenderableDesktop
+	var ECBehaviorControlDesktop pControlDesktop
+	public var ECPModel modelWide
+	public var ECPRig rigWide
+	public var ECPInteger desktopWidthWide
+	public var ECPVector controlLowerLeft, controlLowerRight, controlUpperLeft
 	
 	
 	/** Create behavior element class. */
-	func new(BehaviorElementClass eclass, ECBehaviorRenderableDesktop renderabledesktop) super(eclass)
-		if renderabledesktop == null
-			throw ENullPointer.new("renderabledesktop")
+	func new(BehaviorElementClass eclass, ECBehaviorControlDesktop controlDesktop) super(eclass)
+		if controlDesktop == null
+			throw ENullPointer.new("controlDesktop")
 		end
 		
-		pRenderableDesktop = renderabledesktop
+		var String prefix = "vrWindowMain."
+		var String basePath = "/content/models/vrmenu/"
+		
+		pControlDesktop = controlDesktop
+		
+		eclass.addProperty(modelWide = ECPModel.new(prefix + "wideModel", basePath + "vrmenu_wide.demodel"))
+		eclass.addProperty(rigWide = ECPRig.new(prefix + "wideRig", basePath + "vrmenu_wide.derig"))
+		eclass.addProperty(desktopWidthWide = ECPInteger.new(prefix + "wideDesktopWidth", 1024, 512))
+		
+		eclass.addProperty(controlLowerLeft = ECPVector.new(prefix + "wideControlLowerLeft", Vector.new(0.484, -0.484, 0)))
+		eclass.addProperty(controlLowerRight = ECPVector.new(prefix + "wideControlLowerRight", Vector.new(-0.484, -0.484, 0)))
+		eclass.addProperty(controlUpperLeft = ECPVector.new(prefix + "wideControlUpperLeft", Vector.new(0.484, 0.484, 0)))
 		
 		eclass.addBehavior(this)
 	end
 	
 	/** Dispose of behavior. */
 	func void dispose()
-		pRenderableDesktop = null
+		pControlDesktop = null
 		super.dispose()
 	end
 	
 	
-	/** Renderable desktop. */
-	func ECBehaviorRenderableDesktop getRenderableDesktop()
-		return pRenderableDesktop
+	/** Control desktop. */
+	func ECBehaviorControlDesktop getControlDesktop()
+		return pControlDesktop
+	end
+	
+	
+	/** VR behavior of first window up the chain implementing WidgetInVR otherwise null. */
+	static func Instance getVRBehaviorIn(Window window)
+		var Container c = window
+		while c != null
+			if c castable WidgetInVR
+				var DefaultECBehaviorInstance instance = (c cast WidgetInVR).getVRBehavior()
+				if instance != null
+					return instance castable Instance if instance cast Instance else null
+				end
+			end
+			c = c.getParent()
+		end
+		
+		if window castable WindowModal
+			var WindowModal wm = window cast WindowModal
+			if wm.getBlockWindow() != null
+				return getVRBehaviorIn(wm.getBlockWindow())
+			end
+		end
+		
+		return null
+	end
+	
+	/**
+	 * If parentWindow or a parent thereof is WindowMain enable wide mode and add listener
+	 * to disable wide mode on close.
+	 */
+	static func void prepareWindowInVR(Window window, Window parentWindow)
+		var ECBVRWindowMain.Instance behavior = getVRBehaviorIn(parentWindow)
+		if behavior != null
+			behavior.requestWide()
+			window.addWindowListener(DisableWideInVROnClose.new(behavior))
+		end
 	end
 	
 	
 	/** Get instance in element from owner element class. */
-	func Instance instance( BehaviorElement element )
-		return element.getInstanceAt( this.getInstanceIndex() ) cast Instance
+	func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
 	end
 	
 	/** Get instance in element or null if absent. */

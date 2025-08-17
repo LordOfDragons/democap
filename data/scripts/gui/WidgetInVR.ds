@@ -1,0 +1,70 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2025, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+pin Dragengine.Scenery
+pin Dragengine.Gui
+
+/**
+ * Widget in VR interface.
+ */
+interface WidgetInVR
+	/** VR behavior or null. */
+	func DefaultECBehaviorInstance getVRBehavior()
+end
+
+class WidgetInVRHelper
+	/** VR behavior of first widget up the chain implementing WidgetInVR otherwise null. */
+	static func DefaultECBehaviorInstance getVRBehaviorIn(Widget widget)
+		var DefaultECBehaviorInstance instance
+		
+		if widget castable WidgetInVR
+			instance = (widget cast WidgetInVR).getVRBehavior()
+			if instance != null
+				return instance
+			end
+		end
+		
+		if widget.getParent() != null
+			instance = getVRBehaviorIn(widget.getParent())
+			if instance != null
+				return instance
+			end
+		end
+		
+		if widget castable WindowModal
+			var Window window = (widget cast WindowModal).getBlockWindow()
+			if window != null
+				instance = getVRBehaviorIn(window)
+				if instance != null
+					return instance
+				end
+			end
+		end
+		
+		return null
+	end
+	
+	/** VR behavior of first widget up the chain implementing WidgetInVR is not null. */
+	static func bool hasVRBehaviorIn(Widget widget)
+		return getVRBehaviorIn(widget) != null
+	end
+end
