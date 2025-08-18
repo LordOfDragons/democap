@@ -37,7 +37,7 @@ class WCCPMTSlot extends WCCPanelMotionTransfer
 	var SharedListModel pModelListTarget
 	var DefaultTextModel pModelTextTarget
 	var WCCPMTTracker pEditSourceTracker
-	var EditVector pEditScaleRotation
+	var EditVector pEditScalePosition, pEditScaleRotation
 	
 	
 	
@@ -60,7 +60,7 @@ class WCCPMTSlot extends WCCPanelMotionTransfer
 		pModelTextTarget = null
 		pEditSourceTracker.setTracker(null)
 		pEditSourceTracker = null
-		pEditScaleRotation = null
+		pEditScalePosition = pEditScaleRotation = null
 		super.dispose()
 	end
 	
@@ -76,11 +76,13 @@ class WCCPMTSlot extends WCCPanelMotionTransfer
 				pModelTextTarget.setText(mt.getTarget())
 				pEditSourceTracker.setTracker(mt.getSource())
 				pEditSourceTracker.loadValues()
+				pEditScalePosition.setVector(mt.getScalePosition())
 				pEditScaleRotation.setVector(mt.getScaleRotation())
 				
 			else
 				pModelTextTarget.setText("")
 				pEditSourceTracker.setTracker(null)
+				pEditScalePosition.setVector(Vector.new())
 				pEditScaleRotation.setVector(Vector.new())
 			end
 		end)
@@ -98,6 +100,7 @@ class WCCPMTSlot extends WCCPanelMotionTransfer
 		
 		mt.setTarget(pModelTextTarget.getText())
 		pEditSourceTracker.saveValues()
+		mt.setScalePosition(pEditScalePosition.getVector())
 		mt.setScaleRotation(pEditScaleRotation.getVector())
 	end
 	
@@ -123,6 +126,13 @@ class WCCPMTSlot extends WCCPanelMotionTransfer
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.Target.CopySlotState")
 		pPanelForm.addWidget(comboBox)
+		
+		// scale position
+		pPanelForm.addWidget(Label.new("@UI.ScalePosition.Label", "Label.FormCaption.SingleLine"))
+		
+		pEditScalePosition = EditVector.new()
+		pEditScalePosition.setToolTip("@UI.ToolTip.ScalePosition.CopySlotState")
+		pPanelForm.addWidget(pEditScalePosition)
 		
 		// scale rotation
 		pPanelForm.addWidget(Label.new("@UI.ScaleRotation.Label", "Label.FormCaption.SingleLine"))
