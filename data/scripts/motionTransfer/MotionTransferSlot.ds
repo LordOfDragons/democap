@@ -60,7 +60,7 @@ class MotionTransferSlot extends DefaultMotionTransfer
 	
 	var String pTarget
 	var MotionTransferTracker pSource
-	var Vector pScaleRotation
+	var Vector pScalePosition, pScaleRotation
 	
 	
 	
@@ -68,13 +68,14 @@ class MotionTransferSlot extends DefaultMotionTransfer
 	func new(String factoryID) super(factoryID)
 		pTarget = ""
 		pSource = MotionTransferTracker.new()
-		pScaleRotation = Vector.new(1, 1, 1)
+		pScalePosition = pScaleRotation = Vector.new(1, 1, 1)
 	end
 	
 	/** Create copy of motion transfer. */
 	func new(MotionTransferSlot transfer) super(transfer)
 		pTarget = transfer.pTarget
 		pSource = MotionTransferTracker.new(transfer.pSource)
+		pScalePosition = transfer.pScalePosition
 		pScaleRotation = transfer.pScaleRotation
 	end
 	
@@ -96,6 +97,19 @@ class MotionTransferSlot extends DefaultMotionTransfer
 	/** Source slot. */
 	func MotionTransferTracker getSource()
 		return pSource
+	end
+	
+	/** Scale transformed position. */
+	func Vector getScalePosition()
+		return pScalePosition
+	end
+	
+	/** Set scaling to apply to transformed position. */
+	func void setScalePosition(Vector scale)
+		if scale == null
+			throw ENullPointer.new("scale")
+		end
+		pScalePosition = scale
 	end
 	
 	/** Scale transformed rotation. */
@@ -147,6 +161,9 @@ class MotionTransferSlot extends DefaultMotionTransfer
 			elif tagName.equals("source")
 				pSource.load(loader, element)
 				
+			elif tagName.equals("scalePosition")
+				setScalePosition(loader.readVector(element))
+				
 			elif tagName.equals("scaleRotation")
 				setScaleRotation(loader.readVector(element))
 				
@@ -174,6 +191,7 @@ class MotionTransferSlot extends DefaultMotionTransfer
 		tag.addDataTag("name", getName())
 		tag.addDataTag("target", pTarget)
 		pSource.save(loader, tag.addTag("source"))
+		loader.writeVector(tag, "scalePosition", pScalePosition)
 		loader.writeVector(tag, "scaleRotation", pScaleRotation)
 	end
 	

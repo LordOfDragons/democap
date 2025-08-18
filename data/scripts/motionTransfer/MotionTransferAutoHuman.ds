@@ -84,6 +84,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	var String pNeckBendMoveX, pNeckBendMoveY, pNeckShiftMoveX, pNeckShiftMoveY
 	var Vector2 pNeckBendMoveRange, pNeckShiftMoveRange
 	
+	var MotionTransferSlot pTransferWaistFromHead
 	// var MotionTransferScaleSlots pTransferScaleLower, pTransferScaleUpper
 	var MotionTransferChild pTransferWaist
 	var MotionTransferBaseShiftSlots pTransferShiftUpper, pTransferShiftLegLeft, pTransferShiftLegRight
@@ -138,6 +139,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		var MotionTransferIK.Factory factoryIK = MotionTransferIK.Factory.new()
 		var MotionTransferBend.Factory factoryBend = MotionTransferBend.Factory.new()
 		var MotionTransferBaseShiftSlots.Factory factoryBaseShiftSlots = MotionTransferBaseShiftSlots.Factory.new()
+		var MotionTransferSlot.Factory factorySlot = MotionTransferSlot.Factory.new()
 		
 		/*
 		var MotionTransferScaleSlots.Factory factoryScaleSlots = MotionTransferScaleSlots.Factory.new()
@@ -150,6 +152,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferScaleUpper.setName("AutoHuman: Scale Upper")
 		pTransferScaleUpper.setScaleFactor(Vector.new(1, 1, 1))
 		*/
+		
+		pTransferWaistFromHead = MotionTransferSlot.new(factorySlot.factoryID())
+		pTransferWaistFromHead.setName("AutoHuman: Waist from head")
 		
 		pTransferShiftLegLeft = MotionTransferBaseShiftSlots.new(factoryBaseShiftSlots.factoryID())
 		pTransferShiftLegLeft.setName("AutoHuman: Shift Leg Left")
@@ -254,6 +259,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pNeckBendMoveRange = transfer.pNeckBendMoveRange
 		pNeckShiftMoveRange = transfer.pNeckShiftMoveRange
 		
+		pTransferWaistFromHead = MotionTransferSlot.new(transfer.pTransferWaistFromHead)
 		// pTransferScaleLower = MotionTransferScaleSlots.new(transfer.pTransferScaleLower)
 		// pTransferScaleUpper = MotionTransferScaleSlots.new(transfer.pTransferScaleUpper)
 		pTransferShiftLegLeft = MotionTransferBaseShiftSlots.new(transfer.pTransferShiftLegLeft)
@@ -647,6 +653,10 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	end
 	*/
 	
+	func MotionTransferSlot getTransferWaistFromHead()
+		return pTransferWaistFromHead
+	end
+	
 	func MotionTransferBaseShiftSlots getTransferShiftUpper()
 		return pTransferShiftUpper
 	end
@@ -705,6 +715,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	
 	/** Init element class. */
 	func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
+		pTransferWaistFromHead.initElementClass(config, eclass, modifyRig)
 		// pTransferScaleLower.initElementClass(config, eclass, modifyRig)
 		// pTransferScaleUpper.initElementClass(config, eclass, modifyRig)
 		if pWaistMode == WaistMode.relocate
@@ -728,6 +739,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	
 	/** Reset calibration. */
 	func void resetCalibration()
+		pTransferWaistFromHead.resetCalibration()
 		// pTransferScaleLower.resetCalibration()
 		// pTransferScaleUpper.resetCalibration()
 		pTransferShiftLegLeft.resetCalibration()
@@ -750,6 +762,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	BaseVRActor actor, Component component)
 		initChildTransferParams(config, actorProfile, actor, component)
 		
+		pTransferWaistFromHead.calibrate(config, actorProfile, actor, component)
 		// pTransferScaleLower.calibrate(config, actorProfile, actor, component)
 		// pTransferScaleUpper.calibrate(config, actorProfile, actor, component)
 		pTransferShiftLegLeft.calibrate(config, actorProfile, actor, component)
@@ -781,6 +794,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		// can yield wrong results
 		// pTransferScaleLower.getOrigin().resolveRealSlot(config)
 		// pTransferScaleUpper.getOrigin().resolveRealSlot(config)
+		
+		pTransferWaistFromHead.getSource().resolveRealSlot(config)
 		
 		pTransferShiftLegLeft.getReference().resolveRealSlot(config)
 		pTransferShiftLegLeft.getBase1().resolveRealSlot(config)
@@ -886,11 +901,16 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 				pTransferWaist.getTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
 			end
 			
+		// elif pPullFeetToGround
+			// pTransferWaist.getTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientation)
+			
 		else
 			pTransferWaist.getTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 		end
 		
-		
+		pTransferWaistFromHead.setScalePosition(Vector.new(0.5, 0.5, 0.5))
+		pTransferWaistFromHead.setScaleRotation(Vector.new())
+		pTransferWaistFromHead.getSource().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 		
 		// scaling
 		// pTransferScaleUpper.getOrigin().setAutoTransform(pTransferWaist.getTracker().getAutoTransform())
@@ -1443,6 +1463,11 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		end
 		*/
 		
+		if not pTransferWaistFromHead.getSource().getSlot().empty()\
+		and not pTransferWaistFromHead.getTarget().empty()
+			list.add(pTransferWaistFromHead.createCopy())
+		end
+		
 		if pPullFeetToGround
 			if not pTransferShiftLegLeft.getReference().getSlot().empty()\
 			and not pTransferShiftLegLeft.getBase1().getSlot().empty()\
@@ -1641,7 +1666,11 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 				pTransferScaleUpper.load(loader, element)
 				
 			el*/
-			if tagName.equals("shiftUpper")
+				
+			if tagName.equals("waistFromHead")
+				pTransferWaistFromHead.load(loader, element)
+				
+			elif tagName.equals("shiftUpper")
 				pTransferShiftUpper.load(loader, element)
 				
 			elif tagName.equals("shiftLegLeft")
@@ -1687,6 +1716,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	func void postLoadInit(CharacterConfiguration config)
 		// pTransferScaleLower.postLoadInit(config)
 		// pTransferScaleUpper.postLoadInit(config)
+		pTransferWaistFromHead.postLoadInit(config)
 		pTransferShiftLegLeft.postLoadInit(config)
 		pTransferShiftLegRight.postLoadInit(config)
 		pTransferShiftUpper.postLoadInit(config)
@@ -1737,6 +1767,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
 		// pTransferScaleLower.save(loader, tagTransfers.addTag("scaleLower"), calibrated)
 		// pTransferScaleUpper.save(loader, tagTransfers.addTag("scaleUpper"), calibrated)
+		pTransferWaistFromHead.save(loader, tagTransfers.addTag("waistFromHead"), calibrated)
 		pTransferShiftLegLeft.save(loader, tagTransfers.addTag("shiftLegLeft"), calibrated)
 		pTransferShiftLegRight.save(loader, tagTransfers.addTag("shiftLegRight"), calibrated)
 		pTransferShiftUpper.save(loader, tagTransfers.addTag("shiftUpper"), calibrated)
@@ -1788,6 +1819,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	/** Find slots and assign them to child transfers. */
 	protected func void assignSlots(CharacterConfiguration config)
 		var String slotWaist = firstSlotWithType(config, CharacterTrackerSlot.Type.waist)
+		var String slotWaistAttached = firstSlotAttachedWithType(config, CharacterTrackerSlot.Type.waist)
 		
 		var String slotHead = firstSlotAttachedWithType(config, CharacterTrackerSlot.Type.headTracker)
 		if slotHead.empty()
@@ -1807,6 +1839,17 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		var String slotKneeLeft = firstSlotWithType(config, CharacterTrackerSlot.Type.leftKnee)
 		
 		// pTransferScaleUpper.getOrigin().setSlot(slotWaist)
+		
+		var bool simulateWaist = slotWaistAttached.empty() and pPullFeetToGround
+		
+		if simulateWaist
+			pTransferWaistFromHead.getSource().setSlot(slotHead)
+			pTransferWaistFromHead.setTarget(slotWaist)
+			
+		else
+			pTransferWaistFromHead.getSource().setSlot("")
+			pTransferWaistFromHead.setTarget("")
+		end
 		
 		pTransferShiftLegLeft.getReference().setSlot(slotWaist)
 		pTransferShiftLegLeft.getBase1().setSlot(slotFootLeft)
@@ -1833,7 +1876,11 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 				/*CharacterTrackerSlot.Type.leftHandTracker,*/\
 				CharacterTrackerSlot.Type.leftElbow,\
 				CharacterTrackerSlot.Type.waist
-					if pWaistMode == WaistMode.relocate
+					if simulateWaist and each.getType() != CharacterTrackerSlot.Type.waist
+						break
+					end
+					
+					if pWaistMode == WaistMode.relocate and not simulateWaist
 						pTransferShiftUpper.getShiftSlots().add(each.getName())
 						
 					elif pPullFeetToGround
@@ -1853,6 +1900,24 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			end
 		end)
 		
+		pTransferWaist.getTracker().setOffsetPosition(Vector.new())
+		pTransferWaist.getTracker().setOffsetRotation(Vector.new())
+		/*
+		if simulateWaist
+			pTransferWaist.getTracker().setSlot(slotHead)
+			
+			var CharacterTrackerSlot sh = config.getTrackerSlots().getNamed(slotHead)
+			var CharacterTrackerSlot sw = config.getTrackerSlots().getNamed(slotWaist)
+			if sw != null and sh != null
+				var Matrix m = sw.getTargetMatrix() * sh.getTargetMatrix().getInverse()
+				pTransferWaist.getTracker().setOffsetPosition(m.getPosition())
+				pTransferWaist.getTracker().setOffsetRotation(m.getEulerAngles())
+			end
+			
+		else
+			pTransferWaist.getTracker().setSlot(slotWaist)
+		end
+		*/
 		pTransferWaist.getTracker().setSlot(slotWaist)
 		
 // 		pTransferSpineHead.getTipTracker().setSlot(slotHead)

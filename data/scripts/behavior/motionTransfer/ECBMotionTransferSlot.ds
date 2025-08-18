@@ -53,14 +53,11 @@ class ECBMotionTransferSlot extends DefaultECBehavior
 		end
 		
 		
-		
 		var ECBMotionTransferSlot pECBehavior
 		var ECBMoCapAnimator.Instance pMoCapAnimator
-		var ECBTrackerSlot.Instance pSlotTarget
-		var ECBTrackerSlot.Instance pSlotSource
+		var ECBTrackerSlot.Instance pSlotTarget, pSlotSource
 		var Matrix pTransform
-		var Vector pScaleRotation
-		
+		var Vector pScalePosition, pScaleRotation
 		
 		
 		/** Create instance. */
@@ -68,6 +65,7 @@ class ECBMotionTransferSlot extends DefaultECBehavior
 			pECBehavior = ecbehavior
 			
 			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
+			pScalePosition = ecbehavior.getTransfer().getScalePosition()
 			pScaleRotation = ecbehavior.getTransfer().getScaleRotation()
 			
 			if ecbehavior.getSlotTarget() != null
@@ -125,22 +123,32 @@ class ECBMotionTransferSlot extends DefaultECBehavior
 				return
 			end
 			
-			var Matrix matrix = pTransform * pSlotSource.getMatrixCharacter()
+			var Matrix matSource = pTransform * pSlotSource.getMatrixCharacter()
+			var Vector posSource = matSource.getPosition()
+			var Vector rotSource = matSource.getEulerAngles()
 			
-			var Vector position = matrix.getPosition()
-			var Vector rotation = matrix.getEulerAngles().compMultiply(pScaleRotation)
+			var Matrix matTarget = pSlotTarget.getMatrixCharacter()
+			var Vector posTarget = matTarget.getPosition()
+			var Vector rotTarget = matTarget.getEulerAngles()
+			
+			var Vector position = Vector.new(\
+				DEMath.mix(posTarget.getX(), posSource.getX(), pScalePosition.getX()),\
+				DEMath.mix(posTarget.getY(), posSource.getY(), pScalePosition.getY()),\
+				DEMath.mix(posTarget.getZ(), posSource.getZ(), pScalePosition.getZ()))
+			
+			var Vector rotation = Vector.new(\
+				DEMath.mix(rotTarget.getX(), rotSource.getX(), pScaleRotation.getX()),\
+				DEMath.mix(rotTarget.getY(), rotSource.getY(), pScaleRotation.getY()),\
+				DEMath.mix(rotTarget.getZ(), rotSource.getZ(), pScaleRotation.getZ()))
 			
 			pSlotTarget.setMatrixCharacter(position, rotation)
 		end
 	end
 	
 	
-	
 	var MotionTransferSlot pTransfer
 	var ECBMoCapAnimator pMoCapAnimator
-	var ECBTrackerSlot pSlotTarget
-	var ECBTrackerSlot pSlotSource
-	
+	var ECBTrackerSlot pSlotTarget, pSlotSource
 	
 	
 	/** Create behavior element class. */
