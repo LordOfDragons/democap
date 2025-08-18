@@ -413,7 +413,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 				
 				var float size = config.actorToCharacter(0.01)
 				var ShapeList shapes = ShapeList.new()
-				shapes.addBox(pReferenceMatrix.getPosition(), Vector.new(size, size, size))
+				shapes.addBox(config.actorToCharacter(slot.getPosition()), Vector.new(size, size, size))
 				pDDSlotPosition.shapeSetShapes(0, shapes)
 				
 				size = config.actorToCharacter(0.014)
@@ -558,8 +558,6 @@ class ECBTrackerSlot extends DefaultECBehavior
 			// - pMatrix is the slot location in character space
 			// - getOffsetMatrix() applies only to real VR devices to obtain pMatrix
 			// - config.getMatrixCalibrate() transforms from VR playspace to actor space
-			pReferenceMatrix = config.actorToCharacter(slot.getMatrix())
-			
 			if pInputDevice != null
 				if calibrating
 					if pCalibrationCounter > 0
@@ -581,6 +579,18 @@ class ECBTrackerSlot extends DefaultECBehavior
 			
 			if pInputDevice != null
 				pMatrix = slot.getOffsetMatrix() * pMatrix
+			end
+			
+			if pInputDevice != null
+				if calibrating
+					pReferenceMatrix = config.actorToCharacter(slot.getMatrix())
+					
+				else
+					pReferenceMatrix = slot.getCalibrateMatrixDeviceReference() * pMatrix
+				end
+				
+			else
+				pReferenceMatrix = config.actorToCharacter(slot.getMatrix())
 			end
 			
 			pPosition = pMatrix.getPosition()

@@ -86,18 +86,12 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 	end
 	
 	
-	var WCCPMTTracker pEditReferenceTracker, pEditBase1Tracker, pEditBase2Tracker
-	var SharedListModel pModelListBaseBone1
-	var DefaultTextModel pModelTextBaseBone1
-	var SharedListModel pModelListTipBone1
-	var DefaultTextModel pModelTextTipBone1
-	var SharedListModel pModelListBaseBone2
-	var DefaultTextModel pModelTextBaseBone2
-	var SharedListModel pModelListTipBone2
-	var DefaultTextModel pModelTextTipBone2
+	var WCCPMTTracker pEditReferenceTracker, pEditBase1Tracker, pEditBase2Tracker, pEditOriginTracker
+	var SharedListModel pModelListBaseBone1, pModelListTipBone1, pModelListBaseBone2,\
+		pModelListTipBone2, pModelAddShiftSlot
+	var DefaultTextModel pModelTextBaseBone1, pModelTextTipBone1, pModelTextBaseBone2,\
+		pModelTextTipBone2, pModelScaleShift
 	var DefaultListModel pModelShiftSlots
-	var SharedListModel pModelAddShiftSlot
-	var DefaultTextModel pModelScaleShift
 	var DefaultToggleModel pModelShiftReferenceOffset
 	
 	
@@ -136,23 +130,19 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 	
 	/** Dispose of window. */
 	func void dispose()
-		pModelListBaseBone1 = null
-		pModelTextBaseBone1 = null
-		pModelListTipBone1 = null
-		pModelTextTipBone1 = null
-		pModelListBaseBone2 = null
-		pModelTextBaseBone2 = null
-		pModelListTipBone2 = null
-		pModelTextTipBone2 = null
+		pModelListBaseBone1 = pModelListTipBone1 = pModelListBaseBone2 = pModelListTipBone2\
+			= pModelAddShiftSlot = null
+		pModelTextBaseBone1 = pModelTextTipBone1 = pModelTextBaseBone2 = pModelTextTipBone2\
+			= pModelScaleShift = null
 		pModelShiftSlots = null
-		pModelAddShiftSlot = null
 		pEditReferenceTracker.setTracker(null)
 		pEditReferenceTracker = null
 		pEditBase1Tracker.setTracker(null)
 		pEditBase1Tracker = null
 		pEditBase2Tracker.setTracker(null)
 		pEditBase2Tracker = null
-		pModelScaleShift = null
+		pEditOriginTracker.setTracker(null)
+		pEditOriginTracker = null
 		pModelShiftReferenceOffset = null
 		super.dispose()
 	end
@@ -172,6 +162,8 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 				pEditBase1Tracker.loadValues()
 				pEditBase2Tracker.setTracker(mt.getBase2())
 				pEditBase2Tracker.loadValues()
+				pEditOriginTracker.setTracker(mt.getOrigin())
+				pEditOriginTracker.loadValues()
 				pModelTextTipBone1.setText(mt.getTipBone1())
 				pModelTextBaseBone1.setText(mt.getBaseBone1())
 				pModelTextTipBone2.setText(mt.getTipBone2())
@@ -184,6 +176,7 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 				pEditReferenceTracker.setTracker(null)
 				pEditBase1Tracker.setTracker(null)
 				pEditBase2Tracker.setTracker(null)
+				pEditOriginTracker.setTracker(null)
 				pModelScaleShift.setText("")
 				pModelShiftReferenceOffset.setToggled(false)
 			end
@@ -205,6 +198,7 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 		pEditReferenceTracker.saveValues()
 		pEditBase1Tracker.saveValues()
 		pEditBase2Tracker.saveValues()
+		pEditOriginTracker.saveValues()
 	end
 	
 	/** Supports motion transfer type. */
@@ -324,6 +318,10 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 		pEditBase2Tracker = WCCPMTTracker.new(modelTrackerSlotNames,\
 			optionPrefix + "/Base2Tracker", this, "@UI.Base2Tracker", false)
 		addWidget(pEditBase2Tracker)
+		
+		pEditOriginTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
+			optionPrefix + "/OriginTracker", this, "@UI.OriginTracker", false)
+		addWidget(pEditOriginTracker)
 	end
 	
 	/** Motion transfer changed. */
@@ -336,6 +334,9 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 		end
 		if pEditBase2Tracker != null
 			pEditBase2Tracker.setTracker(null)
+		end
+		if pEditOriginTracker != null
+			pEditOriginTracker.setTracker(null)
 		end
 	end
 end

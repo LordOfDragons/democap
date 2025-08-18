@@ -87,31 +87,23 @@ class CharacterTrackerSlot
 	
 	var String pName
 	var Type pType
-	var Vector pPosition
-	var Vector pRotation
+	var Vector pPosition, pRotation
 	var Matrix pMatrix
-	var Vector pTargetPosition
-	var Vector pTargetRotation
+	var Vector pTargetPosition, pTargetRotation
 	var Matrix pTargetMatrix
 	var InputDeviceType pInputDeviceType
 	var String pInputDeviceID
 	var Array pInputDeviceCandidates
-	var Vector pOffsetPosition
-	var Vector pOffsetRotation
-	var Matrix pOffsetMatrix
-	var Matrix pOffsetMatrixInverse
+	var Vector pOffsetPosition, pOffsetRotation
+	var Matrix pOffsetMatrix, pOffsetMatrixInverse
 	var Vector pForceCalibrateRotation
 	
-	var Vector pCalibratePosition
-	var Vector pCalibrateRotation
-	var Matrix pCalibrateMatrix
-	var Matrix pCalibrateMatrixInverse
-	var Matrix pCalibrateMatrixOrg
-	var Matrix pCalibrateMatrixInverseOrg
-	var Matrix pCalibrateReferenceMatrix
-	var Matrix pCalibrateReferenceMatrixInverse
-	var Matrix pCalibrateComponentMatrix
-	var Matrix pCalibrateComponentMatrixInverse
+	var Vector pCalibratePosition, pCalibrateRotation
+	var Matrix pCalibrateMatrix, pCalibrateMatrixInverse
+	var Matrix pCalibrateMatrixOrg, pCalibrateMatrixInverseOrg
+	var Matrix pCalibrateReferenceMatrix, pCalibrateReferenceMatrixInverse
+	var Matrix pCalibrateComponentMatrix, pCalibrateComponentMatrixInverse
+	var Matrix pCalibrateMatrixDeviceReference, pCalibrateMatrixDeviceReferenceInverse
 	
 	var Matrix pRecalibrateMatrix
 	
@@ -158,6 +150,8 @@ class CharacterTrackerSlot
 		pCalibrateReferenceMatrixInverse = Matrix.new()
 		pCalibrateComponentMatrix = Matrix.new()
 		pCalibrateComponentMatrixInverse = Matrix.new()
+		pCalibrateMatrixDeviceReference = Matrix.new()
+		pCalibrateMatrixDeviceReferenceInverse = Matrix.new()
 		
 		pRecalibrateMatrix = Matrix.new()
 		
@@ -196,6 +190,8 @@ class CharacterTrackerSlot
 		pCalibrateMatrixInverseOrg = slot.pCalibrateMatrixInverseOrg
 		pCalibrateReferenceMatrix = slot.pCalibrateReferenceMatrix
 		pCalibrateReferenceMatrixInverse = slot.pCalibrateReferenceMatrixInverse
+		pCalibrateMatrixDeviceReference = slot.pCalibrateMatrixDeviceReference
+		pCalibrateMatrixDeviceReferenceInverse = slot.pCalibrateMatrixDeviceReferenceInverse
 		pCalibrateComponentMatrix = slot.pCalibrateComponentMatrix
 		pCalibrateComponentMatrixInverse = slot.pCalibrateComponentMatrixInverse
 		
@@ -715,6 +711,25 @@ class CharacterTrackerSlot
 		pRecalibrateMatrix = matrix
 	end
 	
+	/** Calibrate device to reference matrix. */
+	func Matrix getCalibrateMatrixDeviceReference()
+		return pCalibrateMatrixDeviceReference
+	end
+	
+	/** Calibrate reference to device matrix. */
+	func Matrix getCalibrateMatrixDeviceReferenceInverse()
+		return pCalibrateMatrixDeviceReferenceInverse
+	end
+	
+	/** Set calibrate device to reference matrix. */
+	func void setCalibrateMatrixDeviceReference(Matrix matrix)
+		if matrix == null
+			throw ENullPointer.new("matrix")
+		end
+		pCalibrateMatrixDeviceReference = matrix
+		pCalibrateMatrixDeviceReferenceInverse = matrix.getInverse()
+	end
+	
 	
 	
 	/** Reset calibration. */
@@ -730,6 +745,8 @@ class CharacterTrackerSlot
 		pCalibrateComponentMatrix = pMatrix
 		pCalibrateComponentMatrixInverse = pMatrix.getInverse()
 		pRecalibrateMatrix = pMatrix
+		pCalibrateMatrixDeviceReference = Matrix.new()
+		pCalibrateMatrixDeviceReferenceInverse = Matrix.new()
 		
 		pADControllerPosition = null
 		pADControllerRotation = null
@@ -789,6 +806,9 @@ class CharacterTrackerSlot
 		
 		pCalibrateMatrixOrg = pCalibrateMatrix
 		pCalibrateMatrixInverseOrg = pCalibrateMatrixInverse
+		
+		pCalibrateMatrixDeviceReference = pCalibrateReferenceMatrix * pCalibrateMatrixInverse
+		pCalibrateMatrixDeviceReferenceInverse = pCalibrateMatrixDeviceReference.getInverse()
 	end
 	
 	/** Recalibrate character. */
@@ -811,6 +831,9 @@ class CharacterTrackerSlot
 		
 		pCalibrateMatrixOrg = pCalibrateMatrix
 		pCalibrateMatrixInverseOrg = pCalibrateMatrixInverse
+		
+		pCalibrateMatrixDeviceReference = pCalibrateMatrixDeviceReference * pCalibrateMatrixInverse
+		pCalibrateMatrixDeviceReferenceInverse = pCalibrateMatrixDeviceReference.getInverse()
 	end
 	
 	

@@ -29,6 +29,7 @@ pin Dragengine.LoadSave
 pin Dragengine.Preloading
 pin Dragengine.Scenery
 pin Dragengine.Utils
+pin Democap.Characters
 
 
 /**
@@ -55,12 +56,11 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 		
 		var ECBMotionTransferBaseShiftSlots pECBehavior
 		var ECBMoCapAnimator.Instance pMoCapAnimator
-		var ECBTrackerSlot.Instance pSlotReference, pSlotBase1, pSlotBase2
+		var ECBTrackerSlot.Instance pSlotReference, pSlotBase1, pSlotBase2, pSlotOrigin
 		var Array pShiftSlots
-		var Matrix pTransformReference, pTransformBase1, pTransformBase2
+		var Matrix pTransformReference, pTransformReferenceInv, pTransformBase1, pTransformBase2, pTransformOrigin
 		//var float pShiftDistance, pTargetDistance
-		var Vector pCalibOffsetBase1, pCalibOffsetTip1
-		var Vector pCalibOffsetBase2, pCalibOffsetTip2
+		var Vector pCalibOffsetBase1, pCalibOffsetTip1, pCalibOffsetBase2, pCalibOffsetTip2
 		var float pCalibDistance1, pCalibDistance2, pCalibBaseShift
 		
 		
@@ -74,6 +74,7 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 			if ecbehavior.getSlotReference() != null
 				pSlotReference = ecbehavior.getSlotReference().instance(element)
 				pTransformReference = transfer.getReference().getTransformMatrix()
+				pTransformReferenceInv = pTransformReference.getInverse()
 			end
 			
 			if ecbehavior.getSlotBase1() != null
@@ -84,6 +85,11 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 			if ecbehavior.getSlotBase2() != null
 				pSlotBase2 = ecbehavior.getSlotBase2().instance(element)
 				pTransformBase2 = transfer.getBase2().getTransformMatrix()
+			end
+			
+			if ecbehavior.getSlotOrigin() != null
+				pSlotOrigin = ecbehavior.getSlotOrigin().instance(element)
+				pTransformOrigin = transfer.getOrigin().getTransformMatrix()
 			end
 			
 			//pShiftDistance = transfer.getCalibrateShiftDistance()
@@ -103,7 +109,7 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 		
 		/** Dispose of instance. */
 		func void dispose()
-			pSlotReference = pSlotBase1 = pSlotBase2 = null
+			pSlotReference = pSlotBase1 = pSlotBase2 = pSlotOrigin = null
 			pShiftSlots = null
 			pMoCapAnimator = null
 			super.dispose()
@@ -141,6 +147,11 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 			return pSlotBase2
 		end
 		
+		/** Origin  slot behavior instance or null. */
+		func ECBTrackerSlot.Instance getSlotOrigin()
+			return pSlotOrigin
+		end
+		
 		/** Shift slot behavior instances as Array of \ref ECBTrackerSlot#Instance. */
 		func Array getShiftSlots()
 			return pShiftSlots
@@ -153,12 +164,26 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 				return
 			end
 			
-			var Matrix matRef = pTransformReference * pSlotReference.getMatrixCharacter()
+			var Matrix matRef
 			var Vector posBase1, posTip1, posBase2, posTip2
 			var Vector centerBase = Vector.new(), centerTip = Vector.new()
 			var float length, pullDistance1, pullDistance2
 			var Vector direction
 			var int slotCount
+			
+			if pSlotOrigin != null
+				// var Matrix m1 = pTransformReference * pSlotReference.getMatrixCharacter()
+				// var Matrix m2 = pTransformOrigin * pSlotOrigin.getMatrixCharacter()
+				// matRef = pTransformOrigin * pSlotOrigin.getMatrixCharacter()
+				
+				pSlotReference.setMatrixCharacter(\
+					Matrix.newWorld(\
+						pSlotOrigin.getMatrixReference().getPosition(),\
+						pSlotReference.getMatrixReference().toQuaternion())\
+					* pSlotReference.getTrackerSlot().getCalibrateMatrixDeviceReferenceInverse())
+			end
+			
+			matRef = pTransformReference * pSlotReference.getMatrixCharacter()
 			
 			// calculate base and tip positions
 			if pSlotBase1 != null
@@ -288,7 +313,7 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 	
 	var MotionTransferBaseShiftSlots pTransfer
 	var ECBMoCapAnimator pMoCapAnimator
-	var ECBTrackerSlot pSlotReference, pSlotBase1, pSlotBase2
+	var ECBTrackerSlot pSlotReference, pSlotBase1, pSlotBase2, pSlotOrigin
 	var Array pShiftSlots
 	
 	
@@ -296,14 +321,17 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 	func new(BaseVRActorClass eclass, MotionTransferBaseShiftSlots transfer) super(eclass, transfer.getName())
 		pTransfer = transfer
 		pMoCapAnimator = ECBMoCapAnimator.getBehaviorIn(eclass)
-		if transfer.getReference() != null
-			pSlotReference = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getReference().getSlot())
+		if transfer.getReference().getRealSlot() != null
+			pSlotReference = transfer.getReference().getRealSlot().getBehavior()
 		end
-		if transfer.getBase1() != null
-			pSlotBase1 = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getBase1().getSlot())
+		if transfer.getBase1().getRealSlot() != null
+			pSlotBase1 = transfer.getBase1().getRealSlot().getBehavior()
 		end
-		if transfer.getBase2() != null
-			pSlotBase2 = ECBTrackerSlot.getBehaviorIn(eclass, transfer.getBase2().getSlot())
+		if transfer.getBase2().getRealSlot() != null
+			pSlotBase2 = transfer.getBase2().getRealSlot().getBehavior()
+		end
+		if transfer.getOrigin().getRealSlot() != null
+			pSlotOrigin = transfer.getOrigin().getRealSlot().getBehavior()
 		end
 		pShiftSlots = Array.new()
 		transfer.getShiftSlots().forEach(block String each
@@ -320,7 +348,7 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 	func void dispose()
 		pTransfer = null
 		pMoCapAnimator = null
-		pSlotReference = pSlotBase1 = pSlotBase2 = null
+		pSlotReference = pSlotBase1 = pSlotBase2 = pSlotOrigin = null
 		pShiftSlots = null
 		super.dispose()
 	end
@@ -349,6 +377,11 @@ class ECBMotionTransferBaseShiftSlots extends DefaultECBehavior
 	/** Base 2 slot behavior or null. */
 	func ECBTrackerSlot getSlotBase2()
 		return pSlotBase2
+	end
+	
+	/** Origin slot behavior or null. */
+	func ECBTrackerSlot getSlotOrigin()
+		return pSlotOrigin
 	end
 	
 	/** Shift slot behaviors as Array of \ref ECBTrackerSlot. */
