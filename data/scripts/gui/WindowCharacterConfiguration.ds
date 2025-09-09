@@ -1189,6 +1189,17 @@ class WindowCharacterConfiguration extends WindowDialog
 		end
 	end
 	
+	/** Save values of selected motion transfer. */
+	func void saveMotionTransfer()
+		var int selectionIndex = pModelMotionTransferPanel.getValue()
+		if selectionIndex > 0
+			var WCCPanelMotionTransfer panel = pPanelsMotionTransfer.getAt(selectionIndex - 1) cast WCCPanelMotionTransfer
+			if panel != null
+				panel.saveValues()
+			end
+		end
+	end
+	
 	/** Add motion transfer. */
 	func void addMotionTransfer(MotionTransferFactory factory)
 		var MotionTransfer motionTransfer = factory.createMotionTransfer()
@@ -1200,20 +1211,26 @@ class WindowCharacterConfiguration extends WindowDialog
 	/** Duplicate motion transfer. */
 	func void duplicateMotionTransfer()
 		var MotionTransfer motionTransfer = getMotionTransfer()
-		if motionTransfer != null
-			var int index = pModelMotionTransfers.indexOf(motionTransfer)
-			motionTransfer = motionTransfer.createCopy()
-			pModelMotionTransfers.insert(index + 1, motionTransfer)
-			pModelMotionTransfers.setSelected(index + 1)
+		if motionTransfer == null
+			return
 		end
+		
+		saveMotionTransfer()
+		var int index = pModelMotionTransfers.indexOf(motionTransfer)
+		motionTransfer = motionTransfer.createCopy()
+		pModelMotionTransfers.insert(index + 1, motionTransfer)
+		pModelMotionTransfers.setSelected(index + 1)
 	end
 	
 	/** Copy motion transfer. */
 	func void copyMotionTransfer()
 		var MotionTransfer motionTransfer = getMotionTransfer()
-		if motionTransfer != null
-			getClipboard().setClipWith(motionTransfer.createCopy())
+		if motionTransfer == null
+			return
 		end
+		
+		saveMotionTransfer()
+		getClipboard().setClipWith(motionTransfer.createCopy())
 	end
 	
 	/** Copy motion transfers. */
@@ -1223,6 +1240,7 @@ class WindowCharacterConfiguration extends WindowDialog
 			return
 		end
 		
+		saveMotionTransfer()
 		var Array names = transfers.map(block MotionTransfer each
 			return each.getName()
 		end)
@@ -1245,6 +1263,7 @@ class WindowCharacterConfiguration extends WindowDialog
 			return
 		end
 		
+		saveMotionTransfer()
 		WindowDialog.question(this, "@UI.CutMotionTransfer",\
 			TranslationManager.get().translate("UI.Message.AskCutMotionTransfer")\
 				.toUTF8().format(Array.newWith(motionTransfer.getName())),\
@@ -1347,6 +1366,7 @@ class WindowCharacterConfiguration extends WindowDialog
 			messageText = TranslationManager.get().translate("UI.Message.CharacterNotCalibrated").toUTF8() + "\n\n" + messageText
 		end
 		
+		saveMotionTransfer()
 		WindowDialog.question(this, "@UI.DecomposeMotionTransfer", messageText,\
 			null, Array.newWith(WindowDialog.ButtonConfiguration.new("@UI.Decompose", true), \
 				WindowDialog.ButtonConfiguration.new("@UI.Cancel", false)),\
