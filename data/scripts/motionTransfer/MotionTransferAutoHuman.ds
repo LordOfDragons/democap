@@ -78,7 +78,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	var Vector pReachScalingArmLeft, pReachScalingArmLeftBack
 	var Vector pScaleHeadRotation, pScaleSpineBending
 	var Vector pNeckBendAxisRotation, pSpineBendAxisRotation
-	var bool pRelocateArms, pPullFeetToGround, pSimulateWaist
+	var bool pRelocateArms, pPullFeetToGround, pSimulateWaist, pUseSpineTwist
 	var WaistMode pWaistMode
 	var String pNeckBendMoveX, pNeckBendMoveY, pNeckShiftMoveX, pNeckShiftMoveY
 	var Vector2 pNeckBendMoveRange, pNeckShiftMoveRange
@@ -109,7 +109,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pNeckBendAxisRotation = Vector.new(90, 0, 0)
 		pSpineBendAxisRotation = Vector.new(90, 0, 0)
 		pWaistMode = WaistMode.relative
-		pPullFeetToGround = pSimulateWaist = true
+		pPullFeetToGround = pSimulateWaist = pUseSpineTwist = true
 		pNeckBendMoveX = pNeckBendMoveY = pNeckShiftMoveX = pNeckShiftMoveY = ""
 		pNeckBendMoveRange = Vector2.new(60, 45)
 		
@@ -239,6 +239,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pWaistMode = transfer.pWaistMode
 		pPullFeetToGround = transfer.pPullFeetToGround
 		pSimulateWaist = transfer.pSimulateWaist
+		pUseSpineTwist = transfer.pUseSpineTwist
 		pNeckBendMoveX = transfer.pNeckBendMoveX
 		pNeckBendMoveY = transfer.pNeckBendMoveY
 		pNeckShiftMoveX = transfer.pNeckShiftMoveX
@@ -562,6 +563,16 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	/** Animation move to use for X axis neck bending or empty string. */
 	func String getNeckBendMoveX()
 		return pNeckBendMoveX
+	end
+	
+	/** Use spine twist. */
+	func bool getUseSpineTwist()
+		return pUseSpineTwist
+	end
+	
+	/** Set use spine twist. */
+	func void setUseSpineTwist(bool useSpineTwist)
+		pUseSpineTwist = useSpineTwist
 	end
 	
 	/** Set animation move to use for X axis neck bending or empty string. */
@@ -1031,8 +1042,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			
 		else
 			pTransferSpine.getTargetTracker().setAutoTransform(MotionTransferTracker.AutoTransform.reference)
-			autoSpineTwistFactor = 0.5
 			useAutoSpineTwist = true
+			autoSpineTwistFactor = pUseSpineTwist if 0.5 else 0
 			pTransferSpine.setTwistScale(pScaleSpineBending.getY() * autoSpineTwistFactor)
 		end
 		pTransferSpine.getTargetTracker().setOffsetPosition(Vector.new())
@@ -1667,6 +1678,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			elif tagName.equals("simulateWaist")
 				pSimulateWaist = element.getFirstCDataBool()
 				
+			elif tagName.equals("useSpineTwist")
+				pUseSpineTwist = element.getFirstCDataBool()
+				
 			elif tagName.equals("neckBendMoveX")
 				pNeckBendMoveX = element.getFirstCData()
 				
@@ -1792,6 +1806,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		tag.addDataTag("waistMode", pWaistMode.name())
 		tag.addDataTag("pullFeetToGround", pPullFeetToGround)
 		tag.addDataTag("simulateWaist", pSimulateWaist)
+		tag.addDataTag("useSpineTwist", pUseSpineTwist)
 		tag.addDataTag("neckBendMoveX", pNeckBendMoveX)
 		tag.addDataTag("neckBendMoveY", pNeckBendMoveY)
 		loader.writeVector2(tag, "neckBendMoveRange", pNeckBendMoveRange)
