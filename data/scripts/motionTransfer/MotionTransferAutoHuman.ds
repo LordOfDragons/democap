@@ -1314,8 +1314,18 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferArmRight.setBaseBone("")
 		end
 		
-		if index > 2 // at least 4 bones
+		// typically chains are either of length 3 (upper arm, lower arm, hand) or of length
+		// 4 (shoulder, upper arm, lower arm, hand). if shoulder bone is included the shoulder
+		// should not be included in ik solving since it is handled already by the pre-rotation
+		// step. if though there is no shoulder in the chain skipping the base bone would try
+		// to do ik only using lower arm and hand which is not working. for this reason the
+		// guide bone is set to the base bone if there is no shoulder
+		
+		if index > 3 // at least 4 bones (has shoulder)
 			pTransferArmRight.setGuideBone(chain.getAt(index - 2) cast String)
+			
+		elif index > 2 // at least 3 bones (no shoulder)
+			pTransferArmRight.setGuideBone(pTransferArmRight.getBaseBone())
 			
 		else
 			//pTransferArmRight.setGuideBone(pTransferArmRight.getBaseBone())
@@ -1388,8 +1398,13 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			pTransferArmLeft.setBaseBone("")
 		end
 		
-		if index > 2 // at least 4 bones
+		// same as above for right arm
+		
+		if index > 3 // at least 4 bones (has shoulder)
 			pTransferArmLeft.setGuideBone(chain.getAt(index - 2) cast String)
+			
+		elif index > 2 // at least 3 bones (no shoulder)
+			pTransferArmLeft.setGuideBone(pTransferArmLeft.getBaseBone())
 			
 		else
 			//pTransferArmLeft.setGuideBone(pTransferArmLeft.getBaseBone())
