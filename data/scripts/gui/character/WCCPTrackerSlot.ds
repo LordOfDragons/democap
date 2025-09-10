@@ -74,6 +74,7 @@ class WCCPTrackerSlot extends Panel
 		func void selectionChanged(ListModel listModel)
 			var CharacterTrackerSlot slot = pPanel.getTrackerSlot()
 			if slot != null
+				pPanel.saveValues()
 				slot.initFromType(GameApp.getGameApp().getActiveActorProfile())
 			end
 		end
@@ -149,6 +150,7 @@ class WCCPTrackerSlot extends Panel
 	var DefaultListModel pModelInputDeviceType
 	var EditVector pEditOffsetPosition
 	var EditVector pEditOffsetRotation
+	var bool pPreventSaveValues
 	
 	
 	
@@ -283,6 +285,7 @@ class WCCPTrackerSlot extends Panel
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		if pTrackerSlot != null
+			pPreventSaveValues = true
 			pTrackerSlot.initFromType(GameApp.getGameApp().getActiveActorProfile())
 			
 			pModelName.setText(pTrackerSlot.getName())
@@ -292,6 +295,7 @@ class WCCPTrackerSlot extends Panel
 			pModelInputDeviceType.setSelected(pModelInputDeviceType.indexOf(pTrackerSlot.getInputDeviceType()))
 			pEditOffsetPosition.setVector(pTrackerSlot.getOffsetPosition())
 			pEditOffsetRotation.setVector(pTrackerSlot.getOffsetRotation())
+			pPreventSaveValues = false
 			
 		else
 			pModelName.setText("")
@@ -306,7 +310,7 @@ class WCCPTrackerSlot extends Panel
 	
 	/** Save value from edit widgets to tracker slot object if present. */
 	func void saveValues()
-		if pTrackerSlot == null
+		if pTrackerSlot == null or pPreventSaveValues
 			return
 		end
 		
