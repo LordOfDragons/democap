@@ -208,6 +208,16 @@ class ECBToggleVisibility extends DefaultECBehavior
 				rotation = Vector.new(-20, 0, 0)
 			end
 			
+			// for characters with head located far in front of the body we have to add an
+			// offset to avoid the menu ending up behind the camera. for this we have to
+			// take the camera position and the hand position into account
+			var CharacterConfiguration config = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter()
+			if config != null
+				var float camPos = config.getCalibratedCameraMatrix().getPosition().getZ() - 0.1
+				var float handPos = config.getCalibratedHandsCenter().getZ()
+				matrix = DMatrix.newTranslation(0, 0, camPos - handPos) * matrix
+			end
+			
 			reposition(pointAt.getElement() cast BaseVRActor, matrix, rotation)
 		end
 		
@@ -273,12 +283,9 @@ class ECBToggleVisibility extends DefaultECBehavior
 	
 	
 	
-	var ECPVector pLockUpAxis
-	var ECPVector pPivot
-	var ECPVector pRotation
+	var ECPVector pLockUpAxis, pPivot, pRotation
 	var ECPFloat pDistance
-	var ECPBoolean pLockZRotation
-	var ECPBoolean pScaleWithActor
+	var ECPBoolean pLockZRotation, pScaleWithActor
 	
 	public var Block blockSettingsScale
 	

@@ -72,6 +72,8 @@ class CharacterConfiguration
 	var float pCalibrateScale
 	var Matrix pMatrixCalibrate
 	var Matrix pMatrixCalibrateInv
+	var Matrix pCalibratedCameraMatrix
+	var Vector pCalibratedHandsCenter
 	
 	var CharacterTrackerSlots pTrackerSlots
 	var MotionTransfers pMotionTransfers
@@ -111,6 +113,8 @@ class CharacterConfiguration
 		pCalibrateScale = 1
 		pMatrixCalibrate = Matrix.new()
 		pMatrixCalibrateInv = Matrix.new()
+		pCalibratedCameraMatrix = Matrix.new()
+		pCalibratedHandsCenter = Vector.new()
 		
 		pTrackerSlots = CharacterTrackerSlots.new()
 		pMotionTransfers = MotionTransfers.new()
@@ -144,6 +148,8 @@ class CharacterConfiguration
 		pCalibrateScale = configuration.pCalibrateScale
 		pMatrixCalibrate = configuration.pMatrixCalibrate
 		pMatrixCalibrateInv = configuration.pMatrixCalibrateInv
+		pCalibratedCameraMatrix = configuration.pCalibratedCameraMatrix
+		pCalibratedHandsCenter = configuration.pCalibratedHandsCenter
 		
 		pTrackerSlots = CharacterTrackerSlots.new()
 		configuration.pTrackerSlots.forEach(block CharacterTrackerSlot each
@@ -461,7 +467,25 @@ class CharacterConfiguration
 		pMatrixCalibrateInv = matrix.getInverse()
 	end
 	
+	/** Calibrated camera matrix. */
+	func Matrix getCalibratedCameraMatrix()
+		return pCalibratedCameraMatrix
+	end
 	
+	/** Set calibrated camera matrix. */
+	func void setCalibratedCameraMatrix(Matrix matrix)
+		pCalibratedCameraMatrix = matrix
+	end
+	
+	/** Calibrated hand center. */
+	func Vector getCalibratedHandsCenter()
+		return pCalibratedHandsCenter
+	end
+	
+	/** Set calibrated hand center. */
+	func void setCalibratedHandsCenter(Vector position)
+		pCalibratedHandsCenter = position
+	end
 	
 	/** Convert actor distance to character distance. */
 	func float actorToCharacter(float distance)
@@ -720,6 +744,30 @@ class CharacterConfiguration
 		GameApp.getGameApp().getWorldSpawnCharacter().getEstimatedFloorOffset().\
 			setText("{:.3f}".format(Array.newWith(calibrator.getFloorOffset())))
 		
+		// store camera matrix. used only to figure out good offset for menu placement
+		pCalibratedCameraMatrix = Matrix.newTranslation(0, actorProfile.getShoulderLevel() + 0.2, 0.1)
+		
+		if not pCameraBone.empty()
+			var int index = component.indexOfBoneNamed(pCameraBone)
+			if index != -1
+				pCalibratedCameraMatrix = characterToWorld(pCameraMatrix *\
+					componentToCharacter(component.boneGetMatrix(index).normalize()))
+			end
+		end
+		
+		// store hand center matrix
+		pCalibratedHandsCenter = Vector.new(0, actorProfile.getShoulderLevel(), 0)
+		
+		if not pGrabBoneRight.empty() and not pGrabBoneLeft.empty()
+			var int indexRight = component.indexOfBoneNamed(pGrabBoneRight)
+			var int indexLeft = component.indexOfBoneNamed(pGrabBoneLeft)
+			if indexRight != -1 and indexLeft != -1
+				pCalibratedHandsCenter = characterToWorld(\
+					(component.boneGetMatrix(indexRight).getPosition()\
+						+ component.boneGetMatrix(indexLeft).getPosition()) / 2)
+			end
+		end
+		
 		// save calibration
 		pIsCalibrated = true
 		
@@ -898,7 +946,7 @@ class CharacterConfiguration
 				ecccomponent.getRig().setPath("")
 				ecccomponent.getRig().setRig(modifiedRig.getModifiedRig())
 				
-				modifiedRig.getModifiedRig().save("_debug_modified.derig")
+				// modifiedRig.getModifiedRig().save("_debug_modified.derig")
 				
 			catch Exception e
 				GameApp.getGameApp().getConsole().addError("Init ElementClass failed. Reset clalibration", e)
