@@ -57,8 +57,8 @@ class WCCPanelMotionTransfer extends Panel
 	
 	protected var WindowCharacterConfiguration pWindowCharacterConfiguration
 	protected var MotionTransfer pMotionTransfer
-	protected var DefaultTextModel pModelTypeName
-	protected var DefaultTextModel pModelName
+	protected var DefaultTextModel pModelTypeName, pModelName
+	protected var DefaultToggleModel pModelEnable
 	protected var Panel pPanelForm
 	
 	
@@ -68,6 +68,7 @@ class WCCPanelMotionTransfer extends Panel
 		pWindowCharacterConfiguration = window
 		pModelTypeName = DefaultTextModel.new()
 		pModelName = DefaultTextModel.new()
+		pModelEnable = DefaultToggleModel.new(false)
 	end
 	
 	/** Dispose of window. */
@@ -76,6 +77,7 @@ class WCCPanelMotionTransfer extends Panel
 		
 		pModelTypeName = null
 		pModelName = null
+		pModelEnable = null
 		pWindowCharacterConfiguration = null
 		pPanelForm = null
 		
@@ -117,9 +119,11 @@ class WCCPanelMotionTransfer extends Panel
 	func void loadValues()
 		if pMotionTransfer != null
 			pModelName.setText(pMotionTransfer.getName())
+			pModelEnable.setToggled(pMotionTransfer.getEnabled())
 			
 		else
 			pModelName.setText("")
+			pModelEnable.setToggled(false)
 		end
 	end
 	
@@ -130,6 +134,7 @@ class WCCPanelMotionTransfer extends Panel
 		end
 		
 		pMotionTransfer.setName(pModelName.getText())
+		pMotionTransfer.setEnabled(pModelEnable.getToggled())
 	end
 	
 	
@@ -174,6 +179,14 @@ class WCCPanelMotionTransfer extends Panel
 				button.setDesignerSelector("Button.Popup")
 				p2.addWidget(button)
 			end))
+			
+			// enabled
+			p.addWidget(Label.new(""))
+			
+			var CheckBox checkBox = CheckBox.new(pModelEnable, "@UI.Enabled")
+			checkBox.setDesignerSelector("CheckBox.FormCaption.SingleLine")
+			checkBox.setToolTip("@UI.ToolTip.MotionTransferEnable")
+			p.addWidget(checkBox)
 		end)
 		addWidget(pPanelForm)
 	end
