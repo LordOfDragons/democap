@@ -30,6 +30,7 @@ pin Dragengine.Gui.Layouts
 pin Dragengine.Scenery
 pin Dragengine.Utils
 pin Dragengine.LoadSave
+pin Democap.Behaviors
 
 
 /**
@@ -364,7 +365,7 @@ class WindowInputDevice extends Window
 	
 	
 	/** Create window. */
-	func new() super(0, 0, 800, 500)
+	func new(Window window, bool inVR) super(0, 0, 800, 500)
 		pModelInputDevices = DefaultListModel.new()
 		pModelAxes = DefaultListModel.new()
 		pModelButtons = DefaultListModel.new()
@@ -372,13 +373,24 @@ class WindowInputDevice extends Window
 		runWhileBlockingLayout(block
 			setDesignerSelector("WindowInputDevice")
 			setTitle("@UI.InputDevice")
-			createContent(this)
+			createContent(this, inVR)
 		end)
 		
 		updateInputDeviceModel()
 		
 		pDeviceChangeListener = DeviceChangeListener.new(this)
 		BaseGameApp.getApp().getBindingManager().addListener(pDeviceChangeListener)
+		
+		if inVR
+			ECBVRWindowMain.prepareWindowInVR(this, window)
+			setPosition(Point.new())
+			setSize(window.getDesktop().getSize())
+			window.getDesktop().addWindow(this)
+			
+		else
+			window.getDesktop().addWindow(this)
+			centerWindow()
+		end
 	end
 	
 	/** Dispose of window. */
@@ -405,7 +417,7 @@ class WindowInputDevice extends Window
 	
 	
 	/** Create content. */
-	private func void createContent(Container content)
+	private func void createContent(Container content, bool inVR)
 		content.setLayout(BorderLayout.new(5))
 		
 		// input device selection
@@ -443,8 +455,13 @@ class WindowInputDevice extends Window
 		end), BorderLayout.Area.content)
 		
 		// poses
-		content.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 10), block Panel panel
+		content.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 10, FlowLayout.Stretch.first), block Panel panel
 			panel.addWidget(pPanelPose = PosePanel.new())
+			if inVR
+				panel.addWidget(Button.new("@UI.Close", null, BlockActionListener.new(block ActionEvent each
+					close()
+				end)))
+			end
 		end), BorderLayout.Area.bottom)
 	end
 	
