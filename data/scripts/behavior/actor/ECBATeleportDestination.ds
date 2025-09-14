@@ -28,6 +28,7 @@ pin Dragengine.LoadSave
 pin Dragengine.Preloading
 pin Dragengine.Scenery
 pin Dragengine.Utils
+pin Democap.Actions
 
 
 /**
@@ -38,9 +39,7 @@ class ECBATeleportDestination extends DefaultECBehavior
 	class Instance extends DefaultECBehaviorInstance
 		var ECBATeleportDestination pECBehavior
 		var ECBehaviorComponent.Instance pComponent
-		var Component pComponentMarker
-		var Component pComponentActor
-		
+		var Component pComponentMarker, pComponentTeleport, pComponentActor
 		
 		
 		/** Create behavior instance. */
@@ -73,6 +72,15 @@ class ECBATeleportDestination extends DefaultECBehavior
 				replaceAllTextures(pComponentMarker, skin)
 			end
 			
+			model = pECBehavior.getModelTeleport().getModel(stub, eclass)
+			if model != null
+				pComponentTeleport = Component.new(model, null)
+				pComponentTeleport.setLayerMask(layerMask)
+				pComponentTeleport.setVisible(false)
+				
+				replaceAllTextures(pComponentTeleport, skin)
+			end
+			
 			model = pComponent.getComponent().getModel()
 			if model != null
 				pComponentActor = Component.new(model, null)
@@ -94,12 +102,18 @@ class ECBATeleportDestination extends DefaultECBehavior
 		end
 		
 		
-		
 		/** Set visibility. */
 		func void setVisible(bool visible)
+			var bool hasChar = GameApp.getGameApp().getWorldSpawnCharacter().getCharacter() != null
+			
 			if pComponentMarker != null
-				pComponentMarker.setVisible(visible)
+				pComponentMarker.setVisible(visible and hasChar)
 			end
+			
+			if pComponentTeleport != null
+				pComponentTeleport.setVisible(visible and not hasChar)
+			end
+			
 			if pComponentActor != null
 				pComponentActor.setVisible(visible)
 				setRequiresThink(visible)
@@ -112,12 +126,17 @@ class ECBATeleportDestination extends DefaultECBehavior
 				pComponentMarker.setPosition(position)
 				pComponentMarker.setOrientation(orientation)
 			end
+			
+			if pComponentTeleport != null
+				pComponentTeleport.setPosition(position)
+				pComponentTeleport.setOrientation(orientation)
+			end
+			
 			if pComponentActor != null
 				pComponentActor.setPosition(position)
 				pComponentActor.setOrientation(orientation)
 			end
 		end
-		
 		
 		
 		/** Frame update. */
@@ -133,12 +152,16 @@ class ECBATeleportDestination extends DefaultECBehavior
 			
 			if pComponentMarker != null
 				pComponentMarker.setScaling(pComponent.getComponent().getScaling())
-				
 				world.addComponent(pComponentMarker)
 			end
+			
+			if pComponentTeleport != null
+				pComponentTeleport.setScaling(pComponent.getComponent().getScaling())
+				world.addComponent(pComponentTeleport)
+			end
+			
 			if pComponentActor != null
 				pComponentActor.setScaling(pComponent.getComponent().getScaling())
-				
 				world.addComponent(pComponentActor)
 			end
 		end
@@ -150,6 +173,11 @@ class ECBATeleportDestination extends DefaultECBehavior
 			if pComponentMarker != null
 				world.removeComponent(pComponentMarker)
 			end
+			
+			if pComponentTeleport != null
+				world.removeComponent(pComponentTeleport)
+			end
+			
 			if pComponentActor != null
 				world.removeComponent(pComponentActor)
 			end
@@ -157,11 +185,9 @@ class ECBATeleportDestination extends DefaultECBehavior
 	end
 	
 	
-	
 	protected var ECBehaviorComponent pComponent
-	protected var ECPModel pModelMarker
+	protected var ECPModel pModelMarker, pModelTeleport
 	protected var ECPSkin pSkin
-	
 	
 	
 	/** Create behavior and add it to element class. */
@@ -170,11 +196,14 @@ class ECBATeleportDestination extends DefaultECBehavior
 		
 		pComponent = component
 		
-		pModelMarker = ECPModel.new(prefix + "modelMarker", "/content/models/actorMarker/actorMarker.demodel")
-		eclass.addProperty(pModelMarker)
+		eclass.addProperty(pModelMarker = ECPModel.new(prefix + "modelMarker",\
+			"/content/models/actorMarker/actorMarker.demodel"))
 		
-		pSkin = ECPSkin.new(prefix + "skin", "/content/materials/ghost/ghost.deskin")
-		eclass.addProperty(pSkin)
+		eclass.addProperty(pModelTeleport = ECPModel.new(prefix + "modelMarkerTeleport",\
+			"/content/models/teleport/teleport.demodel"))
+		
+		eclass.addProperty(pSkin = ECPSkin.new(prefix + "skin",\
+			"/content/materials/ghost/ghostStrong.deskin"))
 		
 		eclass.addBehavior(this)
 	end
@@ -202,6 +231,10 @@ class ECBATeleportDestination extends DefaultECBehavior
 		return pSkin
 	end
 	
+	/** Teleport model. */
+	func ECPModel getModelTeleport()
+		return pModelTeleport
+	end
 	
 	
 	/** Get instance in element from owner element class. */
