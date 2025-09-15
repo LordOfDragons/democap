@@ -72,10 +72,12 @@ class ECBShowVRHandController extends DefaultECBehavior
 		func void updateVRHandVisible()
 			var bool show = SessionSettings.get().getModelShowVRControllers().getToggled()
 			var GameApp app = GameApp.getGameApp()
+			var bool playbackStopped = app.getPlaybackScene().isStopped()
+			var bool recording = app.getRecordScene().isRecording()
 			var CharacterConfiguration config = app.getWorldSpawnCharacter().getCharacter()
 			
 			pVRHand.setShowHand(show or config == null or not config.isCalibrated()\
-				or not app.getPlaybackScene().isStopped())
+				or (not playbackStopped and not recording))
 		end
 		
 		
