@@ -81,7 +81,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	var bool pRelocateArms, pPullFeetToGround, pSimulateWaist, pUseSpineTwist
 	var WaistMode pWaistMode
 	var String pNeckBendMoveX, pNeckBendMoveY, pNeckShiftMoveX, pNeckShiftMoveY
-	var Vector2 pNeckBendMoveRange, pNeckShiftMoveRange
+	var Vector2 pNeckBendMoveRange, pNeckShiftMoveRange, pShoulderRange
 	
 	var MotionTransferBaseShiftSlots pTransferSimulateWaist
 	// var MotionTransferScaleSlots pTransferScaleLower, pTransferScaleUpper
@@ -112,6 +112,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pPullFeetToGround = pSimulateWaist = pUseSpineTwist = true
 		pNeckBendMoveX = pNeckBendMoveY = pNeckShiftMoveX = pNeckShiftMoveY = ""
 		pNeckBendMoveRange = Vector2.new(60, 45)
+		pShoulderRange = Vector2.new(30, 45)
 		
 		// neck/head distance in actor space is 2dm . head can be shifted around 5cm forward.
 		// this results in an angle of deg(atan2(0.05,0.2)) = 14 degrees. for sidewards shift
@@ -246,6 +247,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pNeckShiftMoveY = transfer.pNeckShiftMoveY
 		pNeckBendMoveRange = transfer.pNeckBendMoveRange
 		pNeckShiftMoveRange = transfer.pNeckShiftMoveRange
+		pShoulderRange = transfer.pShoulderRange
 		
 		// pTransferScaleLower = MotionTransferScaleSlots.new(transfer.pTransferScaleLower)
 		// pTransferScaleUpper = MotionTransferScaleSlots.new(transfer.pTransferScaleUpper)
@@ -648,6 +650,24 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pNeckShiftMoveRange = range
 	end
 	
+	/**
+	 * Shoulder range. X component is maximum angle rotate shoulder upwards. Y component is
+	 * maximum angle to rotate shoulder forward and backward.
+	 */
+	func Vector2 getShoulderRange()
+		return pShoulderRange
+	end
+	
+	/**
+	 * Set shoulder range. X component is maximum angle rotate shoulder upwards. Y component is
+	 * maximum angle to rotate shoulder forward and backward.
+	 */
+	func void setShoulderRange(Vector2 range)
+		if range == null
+			throw ENullPointer.new("range")
+		end
+		pShoulderRange = range
+	end
 	
 	
 	/** Child motion transfer. */
@@ -1286,18 +1306,18 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmRight.setRelocateTip(pRelocateArms)
 		
 		pTransferArmRight.setGuideBendAxisRotation(Vector.new(-45, 90, 0))
-		pTransferArmRight.setBaseRotateAngleMinimum(Vector2.new(-5, -45))
-		pTransferArmRight.setBaseRotateAngleMaximum(Vector2.new(30, 45))
-
+		pTransferArmRight.setBaseRotateAngleMinimum(Vector2.new(0, -pShoulderRange.getY()))
+		pTransferArmRight.setBaseRotateAngleMaximum(Vector2.new(pShoulderRange.getX(), pShoulderRange.getY()))
+		
 		if isSlotRightElbowAttached
-			pTransferArmRight.setBaseRotateRangeCenter(Vector2.new(-20, 0))
-			pTransferArmRight.setBaseRotateRangeMinimum(Vector2.new(-90, -60))
-			pTransferArmRight.setBaseRotateRangeMaximum(Vector2.new(45, 120))
+			pTransferArmRight.setBaseRotateRangeCenter(Vector2.new(25, 90))
+			pTransferArmRight.setBaseRotateRangeMinimum(Vector2.new(-10, -60))
+			pTransferArmRight.setBaseRotateRangeMaximum(Vector2.new(60, 140))
 			
 		else
-			pTransferArmRight.setBaseRotateRangeCenter(Vector2.new(-45, 30))
-			pTransferArmRight.setBaseRotateRangeMinimum(Vector2.new(-90, -45))
-			pTransferArmRight.setBaseRotateRangeMaximum(Vector2.new(45, 160))
+			pTransferArmRight.setBaseRotateRangeCenter(Vector2.new(25, 90))
+			pTransferArmRight.setBaseRotateRangeMinimum(Vector2.new(-10, -60))
+			pTransferArmRight.setBaseRotateRangeMaximum(Vector2.new(60, 160))
 		end
 		
 		if hasSlotRightHandController
@@ -1368,20 +1388,20 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))
 		pTransferArmLeft.setTwistBoneCount(isSlotLeftElbowAttached if 1 else 2)
 		pTransferArmLeft.setRelocateTip(pRelocateArms)
-
+		
 		pTransferArmLeft.setGuideBendAxisRotation(Vector.new(45, -90, 0))
-		pTransferArmLeft.setBaseRotateAngleMinimum(Vector2.new(-5, -45))
-		pTransferArmLeft.setBaseRotateAngleMaximum(Vector2.new(30, 45))
-
+		pTransferArmLeft.setBaseRotateAngleMinimum(Vector2.new(0, -pShoulderRange.getY()))
+		pTransferArmLeft.setBaseRotateAngleMaximum(Vector2.new(pShoulderRange.getX(), pShoulderRange.getY()))
+		
 		if isSlotLeftElbowAttached
-			pTransferArmLeft.setBaseRotateRangeCenter(Vector2.new(-20, 0))
-			pTransferArmLeft.setBaseRotateRangeMinimum(Vector2.new(-90, -120))
-			pTransferArmLeft.setBaseRotateRangeMaximum(Vector2.new(45, 60))
+			pTransferArmLeft.setBaseRotateRangeCenter(Vector2.new(25, -90))
+			pTransferArmLeft.setBaseRotateRangeMinimum(Vector2.new(-10, -140))
+			pTransferArmLeft.setBaseRotateRangeMaximum(Vector2.new(60, 60))
 			
 		else
-			pTransferArmLeft.setBaseRotateRangeCenter(Vector2.new(-45, -30))
-			pTransferArmLeft.setBaseRotateRangeMinimum(Vector2.new(-90, -160))
-			pTransferArmLeft.setBaseRotateRangeMaximum(Vector2.new(45, 45))
+			pTransferArmLeft.setBaseRotateRangeCenter(Vector2.new(25, -90))
+			pTransferArmLeft.setBaseRotateRangeMinimum(Vector2.new(-10, -160))
+			pTransferArmLeft.setBaseRotateRangeMaximum(Vector2.new(60, 60))
 		end
 		
 		if hasSlotLeftHandController
@@ -1717,6 +1737,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			elif tagName.equals("neckShiftMoveRange")
 				pNeckShiftMoveRange = loader.readVector2(element)
 				
+			elif tagName.equals("shoulderRange")
+				pShoulderRange = loader.readVector2(element)
+				
 			elif tagName.equals("transfers")
 				loadTransfers(loader, element)
 			end
@@ -1832,6 +1855,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		tag.addDataTag("neckShiftMoveX", pNeckShiftMoveX)
 		tag.addDataTag("neckShiftMoveY", pNeckShiftMoveY)
 		loader.writeVector2(tag, "neckShiftMoveRange", pNeckShiftMoveRange)
+		loader.writeVector2(tag, "shoulderRange", pShoulderRange)
 		
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
 		// pTransferScaleLower.save(loader, tagTransfers.addTag("scaleLower"), calibrated)

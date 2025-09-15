@@ -52,7 +52,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 	var DefaultTextModel pModelTextNeckBendMoveX, pModelTextNeckBendMoveY
 	var SharedListModel pModelListNeckShiftMoveX, pModelListNeckShiftMoveY
 	var DefaultTextModel pModelTextNeckShiftMoveX, pModelTextNeckShiftMoveY
-	var EditVector2 pEditNeckBendMoveRange, pEditNeckShiftMoveRange
+	var EditVector2 pEditNeckBendMoveRange, pEditNeckShiftMoveRange, pEditShoulderRange
 	var DefaultListModel pModelWaistMode
 	
 	
@@ -151,7 +151,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 			pEditReachScalingArmLeftBack = pEditScaleHeadRotation = pEditScaleSpineBending =\
 			pEditNeckBendAxisRotation = pEditSpineBendAxisRotation = null
 		
-		pEditNeckShiftMoveRange = pEditNeckBendMoveRange = null
+		pEditNeckShiftMoveRange = pEditNeckBendMoveRange = pEditShoulderRange = null
 		
 		super.dispose()
 	end
@@ -195,6 +195,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelTextNeckShiftMoveX.setText(mt.getNeckShiftMoveX())
 				pModelTextNeckShiftMoveY.setText(mt.getNeckShiftMoveY())
 				pEditNeckShiftMoveRange.setVector2(mt.getNeckShiftMoveRange())
+				pEditShoulderRange.setVector2(mt.getShoulderRange())
 				
 			else
 				pModelTextBoneHead.setText("")
@@ -227,6 +228,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelTextNeckShiftMoveX.setText("")
 				pModelTextNeckShiftMoveY.setText("")
 				pEditNeckShiftMoveRange.setVector2(Vector2.new(45, 30))
+				pEditShoulderRange.setVector2(Vector2.new(30, 45))
 			end
 		end)
 		doLayoutIfBlocked()
@@ -270,6 +272,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		mt.setNeckShiftMoveX(pModelTextNeckShiftMoveX.getText())
 		mt.setNeckShiftMoveY(pModelTextNeckShiftMoveY.getText())
 		mt.setNeckShiftMoveRange(pEditNeckShiftMoveRange.getVector2())
+		mt.setShoulderRange(pEditShoulderRange.getVector2())
 	end
 	
 	/** Supports motion transfer type. */
@@ -478,6 +481,17 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				p2.addWidget(textField)
 				textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelBendShapeSpine))
 			end))
+			
+			// shoulder range
+			toolTip = "@UI.ToolTip.ShoulderRange"
+			
+			label = Label.new("@UI.ShoulderRange.Label", "Label.FormCaption.SingleLine")
+			label.setToolTip(toolTip)
+			p.addWidget(label)
+			
+			pEditShoulderRange = EditVector2.new()
+			pEditShoulderRange.setToolTip(toolTip)
+			p.addWidget(pEditShoulderRange)
 			
 			// right arm reach scaling
 			toolTip = "@UI.ToolTip.RAReachScalingRDF"
