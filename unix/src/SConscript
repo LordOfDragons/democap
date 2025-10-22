@@ -6,22 +6,28 @@ env = parent_env.Clone()
 env.Tool('runExternalCommand')
 
 print(env.subst('$prefix'))
+pathExecDir = env.subst('$execdir')
 pathDataDir = env.subst('$datadir')
 
 install = []
 
-def updateDesktopFile(target, source, env):
+def updateProgramScript(target, source, env):
 	with open(source[0].abspath, 'r') as f:
 		contents = f.read()
 	contents = contents.replace('@VERSION@', env['version'])
 	with open(target[0].abspath, 'w') as f:
 		f.write(contents)
 
-desktopFile = env.Command('democap_out.desktop', 'democap.desktop',
-	env.Action(updateDesktopFile, 'Updating DEMoCap desktop file'))
+programScript = env.Command('democap_out', 'democap',
+	env.Action(updateProgramScript, 'Updating program file'))
+
+install.append(env.InstallAs(
+	os.path.join(pathExecDir, 'democap'),
+	programScript))
+
 install.append(env.InstallAs(
 	os.path.join(pathDataDir, 'applications', 'democap.desktop'),
-	desktopFile))
+	'democap.desktop'))
 
 for s in ['256', '128', '64', '32']:
 	install.append(env.InstallAs(
