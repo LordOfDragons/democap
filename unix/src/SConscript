@@ -1,0 +1,51 @@
+import os, shutil
+
+Import('parent_env')
+
+env = parent_env.Clone()
+env.Tool('runExternalCommand')
+
+print(env.subst('$prefix'))
+pathDataDir = env.subst('$datadir')
+
+install = []
+
+def updateDesktopFile(target, source, env):
+	with open(source[0].abspath, 'r') as f:
+		contents = f.read()
+	contents = contents.replace('@VERSION@', env['version'])
+	with open(target[0].abspath, 'w') as f:
+		f.write(contents)
+
+desktopFile = env.Command('democap_out.desktop', 'democap.desktop',
+	env.Action(updateDesktopFile, 'Updating DEMoCap desktop file'))
+install.append(env.InstallAs(
+	os.path.join(pathDataDir, 'applications', 'democap.desktop'),
+	desktopFile))
+
+for s in ['256', '128', '64', '32']:
+	install.append(env.InstallAs(
+		os.path.join(pathDataDir, 'icons', 'hicolor',
+			'{}x{}'.format(s, s), 'apps', 'democap.png'),
+		'democap{}.png'.format(s)))
+
+install.append(env.InstallAs(
+	os.path.join(pathDataDir, 'pixmaps', 'democap.png'),
+	'democap256.png'))
+
+def buildDelga(target, source, env):
+	if not env.RunExternalCommand('deigde {} --project.profile.distribute Release'.format(source[0].abspath)):
+		raise Exception('Failed building DELGA')
+	shutil.copyfile(
+		os.path.join(env.Dir('#').abspath, '..', 'distribute', 'DEMoCap.delga'),
+		target[0].abspath)
+
+delga = env.Command('DEMoCap.delga',
+	os.path.join(env.Dir('#').abspath, '..', 'DEMoCap.degp'),
+	env.Action(buildDelga, 'Build DELGA'))
+
+install.append(env.InstallAs(
+	os.path.join(pathDataDir, 'democap', 'DEMoCap-{}.delga'.format(env['version'])),
+	delga))
+
+Default(env.Alias('democap', install))

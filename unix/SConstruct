@@ -1,0 +1,17 @@
+import os, shlex
+
+def StringVariable(key, help, default=''):
+	return (key, '%s (string)'.format(help), default)
+
+parent_env = Environment()
+
+if 'PATH' in os.environ:
+	parent_env.MergeFlags({'PATH': shlex.split(os.environ['PATH'])})
+
+params = Variables(['custom.py'])
+params.Add(StringVariable('version', 'Version', '9999'))
+params.Add(PathVariable('prefix', 'System path', '/usr', PathVariable.PathAccept))
+params.Add(PathVariable('datadir', 'System shares', '${prefix}/share', PathVariable.PathAccept))
+params.Update(parent_env)
+
+SConscript(dirs='src', variant_dir='src/build', duplicate=0, exports='parent_env')
