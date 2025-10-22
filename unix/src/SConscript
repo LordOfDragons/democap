@@ -47,13 +47,12 @@ def buildDelga(target, source, env):
 		os.path.join(env.Dir('#').abspath, '..', 'distribute', 'DEMoCap.delga'),
 		target[0].abspath)
 
-if not env.File('DEMoCap.delga').exists():
-	delga = env.Command('DEMoCap.delga',
-		os.path.join(env.Dir('#').abspath, '..', 'DEMoCap.degp'),
-		env.Action(buildDelga, 'Build DELGA'))
+env.Command('DEMoCap.delga',
+	os.path.join(env.Dir('#').abspath, '..', 'DEMoCap.degp'),
+	env.Action(buildDelga, 'Build DELGA'))
 
-	install.append(env.InstallAs(
-		os.path.join(pathDataDir, 'democap', 'DEMoCap-{}.delga'.format(env['version'])),
-		delga))
+install.append(env.InstallAs(
+	os.path.join(pathDataDir, 'democap', 'DEMoCap-{}.delga'.format(env['version'])),
+	'DEMoCap.delga'))
 
 Default(env.Alias('democap', install))
