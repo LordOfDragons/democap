@@ -51,6 +51,24 @@ jobs:
         with:
           name: blender
       
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+      
+      - name: Sign Artifacts
+        run: |
+          files=(
+            DEMoCap-${{ github.event.inputs.version }}.delga
+            blender-democap-tools-${{ github.event.inputs.version }}.zip
+            )
+          for file in "${files[@]}"; do
+            gpg2 --personal-digest-preferences SHA512 --armor --yes --detach-sign \
+              --local-user A58A91BCA5C3B2C34CD57ACB8040F88D27F1D0AA \
+              --output "${file}.asc" $file
+          done
+      
       - name: Upload Artifacts
         uses: ncipollo/release-action@v1
         with:
@@ -70,6 +88,9 @@ jobs:
             The DEMoCap is a Free Software Application allowing to do Motion Capture using VR equipment.
             
             Requires working installation of Drag[en]gine Game Engine version ${{ github.event.inputs.dragengineVersion }} or newer: https://dragondreams.ch/index.php/dragengine/#downloads-dragengine
+            
+            GPG signatures for all files are included as .asc files.
           artifacts: >
             DEMoCap-${{ github.event.inputs.version }}.delga,
-            blender-democap-tools-${{ github.event.inputs.version }}.zip
+            blender-democap-tools-${{ github.event.inputs.version }}.zip,
+            *.asc
