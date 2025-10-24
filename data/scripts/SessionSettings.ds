@@ -63,6 +63,16 @@ class SessionSettings
 		end
 	end
 	
+	/** Toggle show passthrough listener. */
+	class ToggleEnablePassthroughListener extends DefaultToggleModelListener
+		func new()
+		end
+		
+		func void toggledChanged(ToggleModel model)
+			VRSystem.setEnablePassthrough(model.getToggled())
+		end
+	end
+	
 	/** View remote camera listener. */
 	class ViewCameraChanged extends DefaultListModelListener
 		func new()
@@ -94,6 +104,8 @@ class SessionSettings
 					VRSystem.requestFeatureFacialTracking(settings.getModelUseFacialTracking().getToggled()\
 						if VRFeatureSupportLevel.optional else VRFeatureSupportLevel.disabled)
 					VRSystem.startRuntime()
+					
+					VRSystem.setEnablePassthrough(settings.getModelEnablePassthrough().getToggled())
 					
 				catch Exception e
 					console.addError("Failed starting VR Runtime", e)
@@ -278,6 +290,7 @@ class SessionSettings
 	var DefaultToggleModel pModelEnableVR
 	var DefaultToggleModel pModelEnableHMD
 	var DefaultToggleModel pModelShowVRCamera
+	var DefaultToggleModel pModelEnablePassthrough
 	var DefaultToggleModel pModelAutoExport
 	var DefaultRangeModel pModelRecordFrameRate
 	var DefaultListModel pModelRecordDevices
@@ -321,6 +334,9 @@ class SessionSettings
 		
 		pModelShowVRCamera = DefaultToggleModel.new(false)
 		pModelShowVRCamera.addListener(ToggleShowVRCameraListener.new())
+		
+		pModelEnablePassthrough = DefaultToggleModel.new(false)
+		pModelEnablePassthrough.addListener(ToggleEnablePassthroughListener.new())
 		
 		pModelUseEyeGazeTracking = DefaultToggleModel.new(s.getBoolAt("UseEyeGazeTracking", false))
 		pModelUseEyeGazeTracking.addListener(SaveToggleModelChanged.new("UseEyeGazeTracking"))
@@ -430,6 +446,11 @@ class SessionSettings
 	/** Show VR camera model. */
 	func DefaultToggleModel getModelShowVRCamera()
 		return pModelShowVRCamera
+	end
+	
+	/** Enable passthrough */
+	func DefaultToggleModel getModelEnablePassthrough()
+		return pModelEnablePassthrough
 	end
 	
 	/** Use Eye Gaze Tracking model. */
