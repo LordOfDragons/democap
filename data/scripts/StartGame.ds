@@ -29,6 +29,7 @@ pin Dragengine.Preloading
 pin Dragengine.LoadSave
 pin Dragengine.Scenery
 pin Dragengine.Utils
+pin Dragengine.Gui.Layouts
 
 
 
@@ -36,11 +37,56 @@ pin Dragengine.Utils
  * Start game loader class.
  */
 class StartGame extends WindowGameWorld.Loader
+	/** Loading window with optional logo. */
+	class DemocapLoadingWindow extends WindowLoading
+		static var Image pLogoDemocap = Image.new("/content/images/splashscreen.jpg")
+		
+		var DisplayImage pImageLogo
+		var Panel pPanelProgress
+		
+		func new()
+		end
+		
+		func void dispose()
+			super.dispose()
+			pImageLogo = null
+			pPanelProgress = null
+		end
+		
+		func DisplayImage getImageLogo()
+			return pImageLogo
+		end
+		
+		func void firstTimeLoad()
+			setBgStyle("FirstTime")
+			pImageLogo.setVisible(true)
+			pPanelProgress.setLayout(FlowLayout.new(LayoutAxis.y, 0, FlowLayout.Stretch.first))
+		end
+		
+		protected func Panel createPanelProgress()
+			pPanelProgress = Panel.new(FlowLayout.new(LayoutAxis.y, 0, FlowLayout.Stretch.last), block Panel p
+				pImageLogo = DisplayImage.new(pLogoDemocap, RepeatMode.stretchRatio, "Image.WindowLoading.Logo")
+				pImageLogo.setVisible(false)
+				p.addWidget(pImageLogo)
+				
+				p.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.y, 0), block Panel p2
+					p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p3
+						p3.setDesignerSelector("Panel.WindowLoading")
+						p3.addWidget(ProgressGauge.new(getModelProgress(), "ProgressGauge.WindowLoading"))
+					end))
+				end))
+			end)
+			return pPanelProgress
+		end
+	end
+	
+	
+	static var bool pFirstTimeLoad = true
+	
 	var Project pProject
 	var Scene pScene
 	var Array pKeepObjects
 	var bool pRevertOnFailure
-	
 	
 	
 	/** Create start game loader. */
@@ -113,13 +159,19 @@ class StartGame extends WindowGameWorld.Loader
 	end
 	
 	
-	
 	/** Create loading window. */
 	protected func void createLoadingWindow()
-		super.createLoadingWindow()
+		var DemocapLoadingWindow w = DemocapLoadingWindow.new()
+		w.getModelText().setText("Loading...")
+		if pFirstTimeLoad
+			pFirstTimeLoad = false
+			w.firstTimeLoad()
+		end
+		setWindowLoading(w)
 		
-		// the base class implementation activates the desktop input processor.
-		// revert back to our split input processor
+		GameApp.getGameApp().getDesktop().addWindow(w)
+		w.grabFocus()
+		
 		GameApp.getGameApp().setSplitInputProcessor()
 	end
 	
