@@ -39,6 +39,16 @@ pin Dragengine.Gui.ModManagement
  * Main window character panel.
  */
 class WMPanelSettings extends Panel
+	class ClickOpenDemocapUrl extends ClickedActionListener
+		func new()
+		end
+		
+		func void onAction()
+			FileSystem.openUrl("https://dragondreams.ch/index.php/democap")
+		end
+	end
+	
+	
 	protected var bool pInVR
 	protected var String pPrefixUIOptions
 	
@@ -93,11 +103,15 @@ class WMPanelSettings extends Panel
 		end))
 		
 		if GameApp.versionPatch == 0
-			addWidget(Label.new("DEMoCap {}.{}".format(Array.newWith(GameApp.versionMajor, GameApp.versionMinor))))
+			label = Label.new("DEMoCap {}.{}".format(Array.newWith(GameApp.versionMajor, GameApp.versionMinor)))
+			
 		else
-			addWidget(Label.new("DEMoCap {}.{}.{}".format(Array.newWith(\
-				GameApp.versionMajor, GameApp.versionMinor, GameApp.versionPatch))))
+			label = Label.new("DEMoCap {}.{}.{}".format(Array.newWith(\
+				GameApp.versionMajor, GameApp.versionMinor, GameApp.versionPatch)))
 		end
+		label.setToolTip("@UI.ToolTip.Homepage")
+		label.addMouseListener(ClickOpenDemocapUrl.new())
+		addWidget(label)
 		
 		addWidget(Panel.new(GridLayout.new(2, 0), block Panel p
 			button = Button.new("@UI.ModuleParameters", BlockActionListener.new(block ActionEvent event
