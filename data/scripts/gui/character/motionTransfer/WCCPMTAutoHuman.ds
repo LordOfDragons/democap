@@ -43,7 +43,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 	var DefaultRangeModel pModelBendShapeSpine, pModelBendShapeNeck
 	var SharedListModel pModelListMoveBaseIK, pModelListMoveCrouch
 	var DefaultTextModel pModelTextMoveBaseIK, pModelTextMoveCrouch
-	var DefaultToggleModel pModelRelocateArms, pModelPullFeetToGround, pModelSimulateWaist, pModelUseSpineTwist
+	var DefaultToggleModel pModelRelocateArms, pModelPullFeetToGround, pModelSimulateWaist, pModelUseSpineTwist, pModelElbowGuideUsePosition
 	var EditVector pEditReachScalingArmRight, pEditReachScalingArmRightBack
 	var EditVector pEditReachScalingArmLeft, pEditReachScalingArmLeftBack
 	var EditVector pEditScaleHeadRotation, pEditScaleSpineBending
@@ -104,6 +104,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		pModelPullFeetToGround = DefaultToggleModel.new()
 		pModelSimulateWaist = DefaultToggleModel.new()
 		pModelUseSpineTwist = DefaultToggleModel.new()
+		pModelElbowGuideUsePosition = DefaultToggleModel.new()
 		
 		pModelListNeckBendMoveX = SharedListModel.new(window.getModelMoves())
 		pModelListNeckBendMoveX.setAutoSelect(false)
@@ -144,7 +145,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		
 		pModelBendShapeSpine = pModelBendShapeNeck = null
 		
-		pModelRelocateArms = pModelPullFeetToGround = pModelSimulateWaist = pModelUseSpineTwist = null
+		pModelRelocateArms = pModelPullFeetToGround = pModelSimulateWaist = pModelUseSpineTwist = pModelElbowGuideUsePosition = null
 		pModelWaistMode = null
 		
 		pEditReachScalingArmRight = pEditReachScalingArmRightBack = pEditReachScalingArmLeft =\
@@ -196,6 +197,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelTextNeckShiftMoveY.setText(mt.getNeckShiftMoveY())
 				pEditNeckShiftMoveRange.setVector2(mt.getNeckShiftMoveRange())
 				pEditShoulderRange.setVector2(mt.getShoulderRange())
+				pModelElbowGuideUsePosition.setToggled(mt.getElbowGuideUsePosition())
 				
 			else
 				pModelTextBoneHead.setText("")
@@ -229,6 +231,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 				pModelTextNeckShiftMoveY.setText("")
 				pEditNeckShiftMoveRange.setVector2(Vector2.new(45, 30))
 				pEditShoulderRange.setVector2(Vector2.new(30, 45))
+				pModelElbowGuideUsePosition.setToggled(false)
 			end
 		end)
 		doLayoutIfBlocked()
@@ -273,6 +276,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		mt.setNeckShiftMoveY(pModelTextNeckShiftMoveY.getText())
 		mt.setNeckShiftMoveRange(pEditNeckShiftMoveRange.getVector2())
 		mt.setShoulderRange(pEditShoulderRange.getVector2())
+		mt.setElbowGuideUsePosition(pModelElbowGuideUsePosition.getToggled())
 	end
 	
 	/** Supports motion transfer type. */
@@ -625,6 +629,13 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 			
 			checkBox = CheckBox.new(pModelSimulateWaist, "@UI.SimulateWaist")
 			checkBox.setToolTip("@UI.ToolTip.SimulateWaist")
+			p.addWidget(checkBox)
+			
+			// elbow guide use position
+			p.addWidget(Label.new(""))
+			
+			checkBox = CheckBox.new(pModelElbowGuideUsePosition, "@UI.ElbowGuideUsePosition")
+			checkBox.setToolTip("@UI.ToolTip.ElbowGuideUsePosition")
 			p.addWidget(checkBox)
 		end))
 	end

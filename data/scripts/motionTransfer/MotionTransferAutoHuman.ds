@@ -78,7 +78,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	var Vector pReachScalingArmLeft, pReachScalingArmLeftBack
 	var Vector pScaleHeadRotation, pScaleSpineBending
 	var Vector pNeckBendAxisRotation, pSpineBendAxisRotation
-	var bool pRelocateArms, pPullFeetToGround, pSimulateWaist, pUseSpineTwist
+	var bool pRelocateArms, pPullFeetToGround, pSimulateWaist, pUseSpineTwist, pElbowGuideUsePosition
 	var WaistMode pWaistMode
 	var String pNeckBendMoveX, pNeckBendMoveY, pNeckShiftMoveX, pNeckShiftMoveY
 	var Vector2 pNeckBendMoveRange, pNeckShiftMoveRange, pShoulderRange
@@ -248,6 +248,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pNeckBendMoveRange = transfer.pNeckBendMoveRange
 		pNeckShiftMoveRange = transfer.pNeckShiftMoveRange
 		pShoulderRange = transfer.pShoulderRange
+		pElbowGuideUsePosition = transfer.pElbowGuideUsePosition
 		
 		// pTransferScaleLower = MotionTransferScaleSlots.new(transfer.pTransferScaleLower)
 		// pTransferScaleUpper = MotionTransferScaleSlots.new(transfer.pTransferScaleUpper)
@@ -667,6 +668,16 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			throw ENullPointer.new("range")
 		end
 		pShoulderRange = range
+	end
+	
+	/** Elbow guide uses position instead of rotation if true. */
+	func bool getElbowGuideUsePosition()
+		return pElbowGuideUsePosition
+	end
+	
+	/** Set elbow guide to use position instead of rotation if true. */
+	func void setElbowGuideUsePosition(bool usePosition)
+		pElbowGuideUsePosition = usePosition
 	end
 	
 	
@@ -1304,6 +1315,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmRight.setTwistAxisRotation(Vector.new(0, -90, 0))
 		pTransferArmRight.setTwistBoneCount(isSlotRightElbowAttached if 1 else 2)
 		pTransferArmRight.setRelocateTip(pRelocateArms)
+		pTransferArmRight.setGuideUsePosition(pElbowGuideUsePosition)
 		
 		pTransferArmRight.setGuideBendAxisRotation(Vector.new(-45, 90, 0))
 		pTransferArmRight.setBaseRotateAngleMinimum(Vector2.new(0, -pShoulderRange.getY()))
@@ -1388,6 +1400,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))
 		pTransferArmLeft.setTwistBoneCount(isSlotLeftElbowAttached if 1 else 2)
 		pTransferArmLeft.setRelocateTip(pRelocateArms)
+		pTransferArmLeft.setGuideUsePosition(pElbowGuideUsePosition)
 		
 		pTransferArmLeft.setGuideBendAxisRotation(Vector.new(45, -90, 0))
 		pTransferArmLeft.setBaseRotateAngleMinimum(Vector2.new(0, -pShoulderRange.getY()))
@@ -1740,6 +1753,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			elif tagName.equals("shoulderRange")
 				pShoulderRange = loader.readVector2(element)
 				
+			elif tagName.equals("elbowGuideUsePosition")
+				pElbowGuideUsePosition = element.getFirstCDataBool()
+				
 			elif tagName.equals("transfers")
 				loadTransfers(loader, element)
 			end
@@ -1856,6 +1872,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		tag.addDataTag("neckShiftMoveY", pNeckShiftMoveY)
 		loader.writeVector2(tag, "neckShiftMoveRange", pNeckShiftMoveRange)
 		loader.writeVector2(tag, "shoulderRange", pShoulderRange)
+		tag.addDataTag("elbowGuideUsePosition", pElbowGuideUsePosition)
 		
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
 		// pTransferScaleLower.save(loader, tagTransfers.addTag("scaleLower"), calibrated)

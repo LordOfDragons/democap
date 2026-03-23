@@ -48,6 +48,7 @@ class WCCPMTAutoFPV extends WCCPanelMotionTransfer
 	var EditVector pEditReachScalingArmRightBack
 	var EditVector pEditReachScalingArmLeft
 	var EditVector pEditReachScalingArmLeftBack
+	var DefaultToggleModel pModelElbowGuideUsePosition
 	
 	
 	
@@ -75,6 +76,8 @@ class WCCPMTAutoFPV extends WCCPanelMotionTransfer
 		pModelListMoveBaseIK.setAutoSelect(false)
 		pModelTextMoveBaseIK = DefaultTextModel.new()
 		
+		pModelElbowGuideUsePosition = DefaultToggleModel.new()
+		
 		runWhileBlockingLayout(block
 			createContent(optionPrefix)
 		end)
@@ -96,6 +99,8 @@ class WCCPMTAutoFPV extends WCCPanelMotionTransfer
 		
 		pModelListMoveBaseIK = null
 		pModelTextMoveBaseIK = null
+		
+		pModelElbowGuideUsePosition = null
 		
 		pEditReachScalingArmRight = null
 		pEditReachScalingArmRightBack = null
@@ -122,6 +127,7 @@ class WCCPMTAutoFPV extends WCCPanelMotionTransfer
 				pEditReachScalingArmRightBack.setVector(mt.getReachScalingArmRightBack())
 				pEditReachScalingArmLeft.setVector(mt.getReachScalingArmLeft())
 				pEditReachScalingArmLeftBack.setVector(mt.getReachScalingArmLeftBack())
+				pModelElbowGuideUsePosition.setToggled(mt.getElbowGuideUsePosition())
 				
 			else
 				pModelTextBoneHead.setText("")
@@ -133,6 +139,7 @@ class WCCPMTAutoFPV extends WCCPanelMotionTransfer
 				pEditReachScalingArmRightBack.setVector(Vector.new(1, 1, 1))
 				pEditReachScalingArmLeft.setVector(Vector.new(1, 1, 1))
 				pEditReachScalingArmLeftBack.setVector(Vector.new(1, 1, 1))
+				pModelElbowGuideUsePosition.setToggled(false)
 			end
 		end)
 		doLayoutIfBlocked()
@@ -155,6 +162,7 @@ class WCCPMTAutoFPV extends WCCPanelMotionTransfer
 		mt.setReachScalingArmRightBack(pEditReachScalingArmRightBack.getVector())
 		mt.setReachScalingArmLeft(pEditReachScalingArmLeft.getVector())
 		mt.setReachScalingArmLeftBack(pEditReachScalingArmLeftBack.getVector())
+		mt.setElbowGuideUsePosition(pModelElbowGuideUsePosition.getToggled())
 	end
 	
 	/** Supports motion transfer type. */
@@ -168,6 +176,7 @@ class WCCPMTAutoFPV extends WCCPanelMotionTransfer
 	protected func void createContent(String optionPrefix)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var ComboBox comboBox
+		var CheckBox checkBox
 		var Label label
 		var String toolTip
 		createBaseContent("motiontransferautofpv")
@@ -270,6 +279,13 @@ class WCCPMTAutoFPV extends WCCPanelMotionTransfer
 			pEditReachScalingArmLeftBack = EditVector.new()
 			pEditReachScalingArmLeftBack.setToolTip(toolTip)
 			p.addWidget(pEditReachScalingArmLeftBack)
+			
+			// elbow guide use position
+			p.addWidget(Label.new(""))
+			
+			checkBox = CheckBox.new(pModelElbowGuideUsePosition, "@UI.ElbowGuideUsePosition")
+			checkBox.setToolTip("@UI.ToolTip.ElbowGuideUsePosition")
+			p.addWidget(checkBox)
 		end))
 	end
 end

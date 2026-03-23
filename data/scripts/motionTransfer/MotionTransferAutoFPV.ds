@@ -58,15 +58,12 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 	
 	
 	
-	var String pBoneHead
-	var String pBoneChest
-	var String pBoneHandRight
-	var String pBoneHandLeft
+	var String pBoneHead, pBoneChest, pBoneHandRight, pBoneHandLeft
 	var String pMoveBaseIK
-	var Vector pReachScalingArmRight
-	var Vector pReachScalingArmRightBack
-	var Vector pReachScalingArmLeft
-	var Vector pReachScalingArmLeftBack
+	var Vector pReachScalingArmRight, pReachScalingArmRightBack
+	var Vector pReachScalingArmLeft, pReachScalingArmLeftBack
+	var bool pElbowGuideUsePosition
+	
 	
 	var MotionTransferChild pTransferHead
 	var MotionTransferChild pTransferChest
@@ -124,6 +121,7 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 		pReachScalingArmRightBack = transfer.pReachScalingArmRightBack
 		pReachScalingArmLeft = transfer.pReachScalingArmLeft
 		pReachScalingArmLeftBack = transfer.pReachScalingArmLeftBack
+		pElbowGuideUsePosition = transfer.pElbowGuideUsePosition
 		
 		pTransferHead = MotionTransferChild.new(transfer.pTransferHead)
 		pTransferChest = MotionTransferChild.new(transfer.pTransferChest)
@@ -250,6 +248,16 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 		pReachScalingArmLeftBack = scaling
 	end
 	
+	/** Elbow guide use position. */
+	func bool getElbowGuideUsePosition()
+		return pElbowGuideUsePosition
+	end
+	
+	/** Set elbow guide use position. */
+	func void setElbowGuideUsePosition(bool usePosition)
+		pElbowGuideUsePosition = usePosition
+	end
+	
 	
 	
 	/** Child motion transfer. */
@@ -340,6 +348,7 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 		pTransferArmRight.setTwistPropagation(0.5)
 		pTransferArmRight.setTwistAxisRotation(Vector.new(0, -90, 0))
 		pTransferArmRight.setGuideBendAxisRotation(Vector.new(-45, 90, 0))
+		pTransferArmRight.setGuideUsePosition(pElbowGuideUsePosition)
 		
 		if hasSlotRightHandController
 			pTransferArmRight.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.none)
@@ -362,6 +371,7 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 			pTransferArmRight.setGuideBone(pTransferArmRight.getBaseBone())
 		end
 		
+		pTransferArmRight.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
 		pTransferArmRight.getGuideTracker().setOffsetPosition(Vector.new())
 		pTransferArmRight.getGuideTracker().setOffsetRotation(Vector.new())
 		
@@ -381,6 +391,7 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 		pTransferArmLeft.setTwistPropagation(0.5)
 		pTransferArmLeft.setTwistAxisRotation(Vector.new(0, 90, 0))
 		pTransferArmLeft.setGuideBendAxisRotation(Vector.new(45, -90, 0))
+		pTransferArmLeft.setGuideUsePosition(pElbowGuideUsePosition)
 		
 		if hasSlotLeftHandController
 			pTransferArmLeft.getTipTracker().setAutoTransform(MotionTransferTracker.AutoTransform.none)
@@ -403,6 +414,7 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 			pTransferArmLeft.setGuideBone(pTransferArmLeft.getBaseBone())
 		end
 		
+		pTransferArmLeft.getGuideTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationReference)
 		pTransferArmLeft.getGuideTracker().setOffsetPosition(Vector.new())
 		pTransferArmLeft.getGuideTracker().setOffsetRotation(Vector.new())
 	end
@@ -488,6 +500,9 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 			elif tagName.equals("reachScalingArmLeftBack")
 				pReachScalingArmLeftBack = loader.readVector(element)
 				
+			elif tagName.equals("elbowGuideUsePosition")
+				setElbowGuideUsePosition(element.getFirstCDataBool())
+				
 			elif tagName.equals("transfers")
 				loadTransfers(loader, element)
 			end
@@ -532,6 +547,7 @@ class MotionTransferAutoFPV extends DefaultMotionTransfer
 		loader.writeVector(tag, "reachScalingArmRightBack", pReachScalingArmRightBack)
 		loader.writeVector(tag, "reachScalingArmLeft", pReachScalingArmLeft)
 		loader.writeVector(tag, "reachScalingArmLeftBack", pReachScalingArmLeftBack)
+		tag.addDataTag("elbowGuideUsePosition", pElbowGuideUsePosition)
 		
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
 		pTransferHead.save(loader, tagTransfers.addTag("head"), calibrated)

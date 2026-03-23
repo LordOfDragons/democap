@@ -75,8 +75,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		var ECBTrackerSlot.Instance pSlotTip
 		var ECBTrackerSlot.Instance pSlotGuide
 		var ECBTrackerSlot.Instance pSlotRelocate
-		var AnimatorController pControllerTipPosition
-		var AnimatorController pControllerTipOrientation
+		var AnimatorController pControllerTipPosition, pControllerTipOrientation
 		var AnimatorController pControllerGuideRotation
 		var AnimatorController pControllerGuideBend
 		var AnimatorController pControllerTwist
@@ -84,8 +83,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		var AnimatorController pControllerRetracted
 		var AnimatorController pControllerBlend
 		var AnimatorController pControllerPreRotate
-		var AnimatorController pControllerBaseRotateX
-		var AnimatorController pControllerBaseRotateY
+		var AnimatorController pControllerBaseRotateX, pControllerBaseRotateY
 		var Matrix pTransformTip
 		var Quaternion pTransformTipQuat
 		var Matrix pTransformGuide
@@ -111,6 +109,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		var Vector2 pBaseRotateRangeMinimum
 		var Vector2 pBaseRotateRangeMaximum
 		var Vector pBaseRotateReach
+		var Vector pGuidePositionTarget
 		
 		var Matrix pTargetMatrix, pGuideMatrix
 		var Vector pReachTargetPosition, pReachRelativeTarget, pReachTargetRotation
@@ -163,6 +162,10 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pBaseRotateRangeCenter = transfer.getBaseRotateRangeCenter()
 			pBaseRotateRangeMinimum = transfer.getBaseRotateRangeMinimum()
 			pBaseRotateRangeMaximum = transfer.getBaseRotateRangeMaximum()
+			
+			if transfer.getGuideUsePosition()
+				pGuidePositionTarget = transfer.getCalibrateGuidePositionTarget()
+			end
 		end
 		
 		/** Dispose of instance. */
@@ -363,12 +366,18 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pReachTargetPosition = matrix.getPosition()
 			pRetractedLength = 1
 			
-			var Matrix reachMatrix = pReachMatrix * pComponent.boneGetMatrix(pBaseBone)
+			var Matrix baseMatrix = pComponent.boneGetMatrix(pBaseBone)
+			var Matrix reachMatrix = pReachMatrix * baseMatrix
+			var Vector guidePosition
 			
 			pReachRelativeTarget = reachMatrix.getInverse() * pReachTargetPosition
 			
 			if matrixGuide != null
 				pReachGuideRotation = matrixGuide.getEulerAngles()
+				if pGuidePositionTarget != null
+					guidePosition = matrixGuide.getPosition()
+				end
+				
 				matrixGuide = matrixGuide * reachMatrix.getInverse()
 				pReachRelativeGuide = matrixGuide.getPosition()
 			end
@@ -423,9 +432,24 @@ class ECBMotionTransferIK extends DefaultECBehavior
 								rotationAxis.normalize(), -DEMath.acos(orgTarget * newTarget))
 							
 							matrixGuide = matrixGuide * reachMatrix
+							
 							pReachGuideRotation = matrixGuide.normalize().getEulerAngles()
+							if pGuidePositionTarget != null
+								guidePosition = matrixGuide.getPosition()
+							end
 						end
 					end
+				end
+			end
+			
+			if guidePosition != null and not pGuidePositionTarget.isZero()
+				var Matrix boneMatrix = pComponent.boneGetMatrix(pGuideBone)
+				guidePosition = boneMatrix.getInverse() * guidePosition
+				if not guidePosition.isZero()
+					var Vector a = pGuidePositionTarget.normalize()
+					var Vector b = guidePosition.normalize()
+					
+					pReachGuideRotation = (Matrix.newRotationAxis(a % b, -DEMath.acos(a * b)) * boneMatrix).getEulerAngles()
 				end
 			end
 		end
@@ -641,8 +665,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	var ECBTrackerSlot pSlotTip
 	var ECBTrackerSlot pSlotGuide
 	var ECBTrackerSlot pSlotRelocate
-	var String pControllerNameTipPosition
-	var String pControllerNameTipOrientation
+	var String pControllerNameTipPosition, pControllerNameTipOrientation
 	var String pControllerNameGuideRotation
 	var String pControllerNameGuideBend
 	var String pControllerNameTwist
@@ -650,8 +673,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	var String pControllerNameRetracted
 	var String pControllerNameBlend
 	var String pControllerNamePreRotate
-	var String pControllerNameBaseRotateX
-	var String pControllerNameBaseRotateY
+	var String pControllerNameBaseRotateX, pControllerNameBaseRotateY
 	
 	
 	
