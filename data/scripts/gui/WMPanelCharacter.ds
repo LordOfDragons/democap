@@ -378,6 +378,27 @@ class WMPanelCharacter extends Panel
 		end
 	end
 	
+	/** Game changes listener. */
+	class GameChangedListener extends DefaultGameListener
+		protected var WMPanelCharacter pPanel
+		
+		func new(WMPanelCharacter panel)
+			pPanel = panel
+		end
+		
+		func void activeActorProfileChanged(GameApp app)
+			pPanel.selectActiveActorProfile()
+		end
+		
+		func void activeCharacterProfileChanged(GameApp app)
+			pPanel.selectActiveCharacterProfile()
+		end
+		
+		func void activeCharacterConfigurationChanged(GameApp app)
+			pPanel.selectActiveCharacterConfiguration()
+		end
+	end
+	
 	
 	
 	protected var DefaultListModel pModelActorProfiles, pModelCharacterProfiles, pModelCharacterConfigurations
@@ -391,10 +412,13 @@ class WMPanelCharacter extends Panel
 	protected var String pPrefixUIOptions
 	protected var Button pButtonRecalibrate
 	protected var IsCalibratingChanged pIsCalibratingChanged
+	protected var GameChangedListener pGameChangedListener
 	
 	
 	/** Create character panel. */
 	func new(bool inVR, String prefixUIOptions)
+		var GameApp app = GameApp.getGameApp()
+		
 		pInVR = inVR
 		pPrefixUIOptions = prefixUIOptions + "/WMPanelCharacter"
 		
@@ -412,22 +436,34 @@ class WMPanelCharacter extends Panel
 		pModelCharacterConfigurations.addListener(CharacterConfigurationSelection.new(this))
 		
 		pListenActorProfiles = ListenActorProfiles.new(this)
-		GameApp.getGameApp().getActorProfiles().addListener(pListenActorProfiles)
+		app.getActorProfiles().addListener(pListenActorProfiles)
 		updateActorProfiles()
 		
 		pListenCharacterProfiles = ListenCharacterProfiles.new(this)
-		GameApp.getGameApp().getCharacterProfiles().addListener(pListenCharacterProfiles)
+		app.getCharacterProfiles().addListener(pListenCharacterProfiles)
 		updateCharacterProfiles()
 		
 		pIsCalibratingChanged = IsCalibratingChanged.new(this)
 		SessionState.get().getModelIsCalibrating().addListener(pIsCalibratingChanged)
+		
+		selectActiveActorProfile()
+		selectActiveCharacterProfile()
+		selectActiveCharacterConfiguration()
+		
+		pGameChangedListener = GameChangedListener.new(this)
+		app.addListener(pGameChangedListener)
 	end
 	
 	/** Dispose of widget. */
 	func void dispose()
+		var GameApp app = GameApp.getGameApp()
 		if pIsCalibratingChanged != null
 			SessionState.get().getModelIsCalibrating().removeListener(pIsCalibratingChanged)
 			pIsCalibratingChanged = null
+		end
+		if pGameChangedListener != null
+			app.removeListener(pGameChangedListener)
+			pGameChangedListener = null
 		end
 		
 		setCharacterProfile(null)
@@ -483,6 +519,9 @@ class WMPanelCharacter extends Panel
 		end
 		
 		pActorProfile = profile
+		if pGameChangedListener != null
+			GameApp.getGameApp().setActiveActorProfile(profile)
+		end
 	end
 	
 	/** Update actor profiles model. */
@@ -496,6 +535,11 @@ class WMPanelCharacter extends Panel
 			pModelActorProfiles.setSelected(index)
 			pModelActorProfiles.notifyContentChanged(index, index)
 		end
+	end
+	
+	/** Select active actor profile. */
+	func void selectActiveActorProfile()
+		pModelActorProfiles.setSelectedElement(GameApp.getGameApp().getActiveActorProfile())
 	end
 	
 	/** Add actor profile. */
@@ -614,7 +658,16 @@ class WMPanelCharacter extends Panel
 			profile.getConfigurations().addListener(pListenCharacterConfigurations)
 		end
 		
+		if pGameChangedListener != null
+			GameApp.getGameApp().setActiveCharacterProfile(profile)
+		end
+		
 		updateCharacterConfigurations()
+	end
+	
+	/** Select active character profile. */
+	func void selectActiveCharacterProfile()
+		pModelCharacterProfiles.setSelectedElement(GameApp.getGameApp().getActiveCharacterProfile())
 	end
 	
 	/** Update character profiles model. */
@@ -745,6 +798,15 @@ class WMPanelCharacter extends Panel
 		end
 		
 		pCharacterConfiguration = configuration
+		
+		if pGameChangedListener != null
+			GameApp.getGameApp().setActiveCharacterConfiguration(configuration)
+		end
+	end
+	
+	/** Select active character configuration. */
+	func void selectActiveCharacterConfiguration()
+		pModelCharacterConfigurations.setSelectedElement(GameApp.getGameApp().getActiveCharacterConfiguration())
 	end
 	
 	/** Selected character configuration or null. */

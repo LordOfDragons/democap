@@ -74,6 +74,8 @@ class GameApp extends BaseGameApp
 	var ActorProfile pActiveActorProfile
 	var ActorProfile pDefaultActorProfile
 	var CharacterProfiles pCharacterProfiles
+	var CharacterProfile pActiveCharacterProfile
+	var CharacterConfiguration pActiveCharacterConfiguration
 	var LoadableWorlds pLoadableWorlds
 	var SessionSettings pSessionSettings
 	var SessionState pSessionState
@@ -182,7 +184,15 @@ class GameApp extends BaseGameApp
 	
 	/** Set active actor profile or null. */
 	func void setActiveActorProfile(ActorProfile profile)
+		if profile == pActiveActorProfile
+			return
+		end
+		
 		pActiveActorProfile = profile
+		
+		pListeners.forEach(block GameListener each
+			each.activeActorProfileChanged(this)
+		end)
 	end
 	
 	/** Default actor profile or null. */
@@ -193,6 +203,42 @@ class GameApp extends BaseGameApp
 	/** Character profiles. */
 	func CharacterProfiles getCharacterProfiles()
 		return pCharacterProfiles
+	end
+	
+	/** Active character profile or null. */
+	func CharacterProfile getActiveCharacterProfile()
+		return pActiveCharacterProfile
+	end
+	
+	/** Set active character profile or null. */
+	func void setActiveCharacterProfile(CharacterProfile profile)
+		if profile == pActiveCharacterProfile
+			return
+		end
+		
+		pActiveCharacterProfile = profile
+		
+		pListeners.forEach(block GameListener each
+			each.activeCharacterProfileChanged(this)
+		end)
+	end
+	
+	/** Active character configuration or null. */
+	func CharacterConfiguration getActiveCharacterConfiguration()
+		return pActiveCharacterConfiguration
+	end
+	
+	/** Set active character configuration or null. */
+	func void setActiveCharacterConfiguration(CharacterConfiguration config)
+		if config == pActiveCharacterConfiguration
+			return
+		end
+		
+		pActiveCharacterConfiguration = config
+		
+		pListeners.forEach(block GameListener each
+			each.activeCharacterConfigurationChanged(this)
+		end)
 	end
 	
 	/** Loadable worlds. */
@@ -646,12 +692,19 @@ class GameApp extends BaseGameApp
 		
 		// load stuff
 		pActorProfiles.loadAll()
-		
 		if pActorProfiles.getCount() > 0
 			setActiveActorProfile(pActorProfiles.getAt(0))
 		end
 		
 		pCharacterProfiles.loadAll()
+		if pCharacterProfiles.getCount() > 0
+			setActiveCharacterProfile(pCharacterProfiles.getAt(0))
+		end
+		
+		if pActiveCharacterProfile != null and pActiveCharacterProfile.getConfigurations().getCount() > 0
+			setActiveCharacterConfiguration(pActiveCharacterProfile.getConfigurations().getAt(0))
+		end
+		
 		pLoadableWorlds.scanWorlds()
 		
 		// create VR camera and VR camera director
@@ -957,18 +1010,18 @@ class GameApp extends BaseGameApp
 		
 		pLoadableWorlds = null
 		
+		pActiveCharacterConfiguration = null
+		pActiveCharacterProfile = null
 		if pCharacterProfiles != null
 			pCharacterProfiles.dispose()
 			pCharacterProfiles = null
 		end
 		
 		pActiveActorProfile = null
-		
 		if pDefaultActorProfile != null
 			pDefaultActorProfile.dispose()
 			pDefaultActorProfile = null
 		end
-		
 		if pActorProfiles != null
 			pActorProfiles.dispose()
 			pActorProfiles = null
