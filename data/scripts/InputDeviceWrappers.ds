@@ -1,0 +1,115 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+pin Dragengine.Commands
+
+
+/**
+ * Input device wrappers.
+ */
+class InputDeviceWrappers extends DefaultBindingManagerListener
+	protected var Array pWrappers
+	
+	
+	/** Create input device wrappers. */
+	func new()
+		pWrappers = Array.new()
+	end
+	
+	
+	/** Visit wrappers with block. */
+	func void forEach(Block ablock)
+		pWrappers.forEach(block InputDeviceWrapper each
+			ablock.run(each)
+		end)
+	end
+	
+	/** Find wrapper with block. */
+	func InputDeviceWrapper find(Block ablock)
+		return pWrappers.find(block InputDeviceWrapper each
+			return ablock.run(each)
+		end) cast InputDeviceWrapper
+	end
+	
+	/** Wrapper is present. */
+	func bool has(InputDeviceWrapper wrapper)
+		return pWrappers.has(wrapper)
+	end
+	
+	
+	func void updateDevices(BindingManager manager)
+		pWrappers.removeAll()
+		
+		manager.forEachDevice(block InputDevice each
+			pWrappers.add(InputDeviceWrapper.new(each))
+			
+			if each.getType() == InputDeviceType.vrBodyTracker
+				// no head and hands since these are covered already by explicit devices
+				
+				pWrappers.add(InputDeviceWrapperBodyTracker.new(each, InputDeviceVRTrackerRole.chest,\
+					InputDeviceFullBodyBone.chest, InputDeviceFullBodyBone.chest))
+				
+				pWrappers.add(InputDeviceWrapperBodyTracker.new(each, InputDeviceVRTrackerRole.waist,\
+					InputDeviceFullBodyBone.hips, InputDeviceFullBodyBone.hips))
+				
+				/*
+				pWrappers.add(InputDeviceWrapperBodyTracker.new(each, InputDeviceVRTrackerRole.leftShoulder,\
+					InputDeviceFullBodyBone.leftShoulder, InputDeviceFullBodyBone.leftShoulder))
+				
+				pWrappers.add(InputDeviceWrapperBodyTracker.new(each, InputDeviceVRTrackerRole.rightShoulder,\
+					InputDeviceFullBodyBone.rightShoulder, InputDeviceFullBodyBone.rightShoulder))
+				*/
+				
+				pWrappers.add(InputDeviceWrapperBodyTracker.new(each, InputDeviceVRTrackerRole.leftElbow,\
+					InputDeviceFullBodyBone.leftArmLower, InputDeviceFullBodyBone.leftArmUpper))
+				
+				pWrappers.add(InputDeviceWrapperBodyTracker.new(each, InputDeviceVRTrackerRole.rightElbow,\
+					InputDeviceFullBodyBone.rightArmLower, InputDeviceFullBodyBone.rightArmUpper))
+				
+				pWrappers.add(InputDeviceWrapperBodyTracker.new(each, InputDeviceVRTrackerRole.leftKnee,\
+					InputDeviceFullBodyBone.leftLowerLeg, InputDeviceFullBodyBone.leftUpperLeg))
+				
+				pWrappers.add(InputDeviceWrapperBodyTracker.new(each, InputDeviceVRTrackerRole.rightKnee,\
+					InputDeviceFullBodyBone.rightLowerLeg, InputDeviceFullBodyBone.rightUpperLeg))
+				
+				pWrappers.add(InputDeviceWrapperBodyTracker.new(each, InputDeviceVRTrackerRole.leftFoot,\
+					InputDeviceFullBodyBone.leftFootTransverse, InputDeviceFullBodyBone.leftFootTransverse))
+				
+				pWrappers.add(InputDeviceWrapperBodyTracker.new(each, InputDeviceVRTrackerRole.rightFoot,\
+					InputDeviceFullBodyBone.rightFootTransverse, InputDeviceFullBodyBone.rightFootTransverse))
+			end
+		end)
+	end
+	
+	
+	func void deviceAttached(BindingManager manager, InputDevice device)
+		updateDevices(manager)
+	end
+	
+	func void deviceDetached(BindingManager manager, InputDevice device)
+		updateDevices(manager)
+	end
+	
+	func void devicesReloaded(BindingManager manager)
+		updateDevices(manager)
+	end
+end

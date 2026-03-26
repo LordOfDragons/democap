@@ -86,6 +86,7 @@ class GameApp extends BaseGameApp
 	var LoadStageDirections pLoadStageDirections
 	var MutableID pNextElementClassID
 	var TrackControllerCaps pTrackControllerCaps
+	var InputDeviceWrappers pInputDeviceWrappers
 	
 	var WorldSpawnCharacter pWorldSpawnCharacter
 	var Camera pVRCamera
@@ -134,6 +135,7 @@ class GameApp extends BaseGameApp
 		
 		pPatternsProject = Array.newWith(FileExtension.new("DEMoCap Project", Array.newWith(".demcp"), ".demcp"))
 		pGlobalElementClasses = Array.new()
+		pInputDeviceWrappers = InputDeviceWrappers.new()
 		
 		pModifications = Array.new()
 		findModifications()
@@ -333,6 +335,10 @@ class GameApp extends BaseGameApp
 		return pServer
 	end
 	
+	/** Input device wrappers. */
+	func InputDeviceWrappers getInputDeviceWrappers()
+		return pInputDeviceWrappers
+	end
 	
 	
 	/** Project. */
@@ -582,6 +588,9 @@ class GameApp extends BaseGameApp
 		getElementClassList().forEach(block ElementClass each
 			pGlobalElementClasses.add(each)
 		end)
+		
+		getBindingManager().addListener(pInputDeviceWrappers)
+		pInputDeviceWrappers.updateDevices(getBindingManager())
 		
 		pTrackControllerCaps = TrackControllerCaps.new()
 		getBindingManager().addListener(pTrackControllerCaps)

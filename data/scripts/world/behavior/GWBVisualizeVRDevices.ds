@@ -43,15 +43,15 @@ class GWBVisualizeVRDevices extends DefaultGWBehavior
 		end
 		
 		func void deviceAttached(BindingManager manager, InputDevice device)
-			pOwner.onDeviceAdded(device)
+			pOwner.updateVisualizations()
 		end
 		
 		func void deviceDetached(BindingManager manager, InputDevice device)
-			pOwner.onDeviceRemoved(device)
+			pOwner.updateVisualizations()
 		end
 		
 		func void devicesReloaded(BindingManager manager)
-			pOwner.onDevicesReloaded()
+			pOwner.updateVisualizations()
 		end
 	end
 	
@@ -79,7 +79,7 @@ class GWBVisualizeVRDevices extends DefaultGWBehavior
 	func void init(StubGameWorld stub)
 		pAddRemoveDeviceListener = AddRemoveDeviceListener.new(this)
 		GameApp.getApp().getBindingManager().addListener(pAddRemoveDeviceListener)
-		onDevicesReloaded()
+		updateVisualizations()
 	end
 	
 	
@@ -90,55 +90,55 @@ class GWBVisualizeVRDevices extends DefaultGWBehavior
 	 * is of supported type. Supported types are:
 	 * - \ref InputDeviceType#vrTracker
 	 */
-	func BehaviorElement createDeviceElement(InputDevice device)
+	func BehaviorElement createDeviceElement(InputDeviceWrapper device)
+		var ElementClassList ecl = GameApp.getApp().getElementClassList()
+		var StubElement stub
+		
 		select device.getType()
 		case InputDeviceType.vrTracker
-			return StubElement.new(GameApp.getApp().getElementClassList().getNamed(\
-				VisualizeVRDeviceClass.defaultClassName)).createElement() cast BehaviorElement
-			
-		else
-			return null
+			stub = StubElement.new(ecl.getNamed(VisualizeVRDeviceClass.defaultClassName))
 		end
+		
+		if stub != null
+			return stub.createElement() cast BehaviorElement
+		end
+		return null
 	end
 	
 	
-	/** Device has been added. */
-	func void onDeviceAdded(InputDevice device)
-		var BehaviorElement element = pDeviceElements.find(block BehaviorElement each
-			return ECBVisualizeInputDevice.getInstanceIn(each).getDevice() == device
-		end) cast BehaviorElement
-		if element != null
+	/** Add visualization for device. */
+	func void addVisualizationForDevice(InputDeviceWrapper device)
+		var BehaviorElement element = createDeviceElement(device)
+		if element == null
 			return
 		end
 		
-		element = createDeviceElement(device)
-		if element != null
-			ECBVisualizeInputDevice.getInstanceIn(element).setDevice(device)
-			getGameWorld().addElement(element)
-			pDeviceElements.add(element)
-		end
+		ECBVisualizeInputDevice.getInstanceIn(element).setDevice(device)
+		getGameWorld().addElement(element)
+		pDeviceElements.add(element)
 	end
 	
-	/** Device has been removed. */
-	func void onDeviceRemoved(InputDevice device)
-		pDeviceElements.removeIf(block BehaviorElement each
-			if ECBVisualizeInputDevice.getInstanceIn(each).getDevice() == device
-				each.safeDispose()
-				return true
-			end
-			return false
-		end)
-	end
-	
-	/** Devices have been reloaded. */
-	func void onDevicesReloaded()
-		pDeviceElements.forEach(block BehaviorElement each
-			each.safeDispose()
-		end)
-		pDeviceElements.removeAll()
+	/** Update visualizations for all devices. */
+	func void updateVisualizations()
+		var InputDeviceWrappers devices = GameApp.getGameApp().getInputDeviceWrappers()
 		
-		GameApp.getApp().getBindingManager().forEachDevice(block InputDevice each
-			onDeviceAdded(each)
+		// remove elements with devices not present anymore
+		pDeviceElements.removeIf(block BehaviorElement element
+			if devices.has(ECBVisualizeInputDevice.getInstanceIn(element).getDevice())
+				return false
+			end
+			
+			element.safeDispose()
+			return true
+		end)
+		
+		// add elements for new devices
+		devices.forEach(block InputDeviceWrapper device
+			if pDeviceElements.find(block BehaviorElement element
+				return ECBVisualizeInputDevice.getInstanceIn(element).getDevice() == device
+			end) == null
+				addVisualizationForDevice(device)
+			end
 		end)
 	end
 end

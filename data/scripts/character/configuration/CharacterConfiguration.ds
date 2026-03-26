@@ -799,17 +799,16 @@ class CharacterConfiguration
 		pProfile.notifyCalibrated(this)
 	end
 	
-	/** Find closest slot to input devices and return input device found for slot. */
-	func InputDevice findSlotInputDevice(CharacterTrackerSlot slot)
+	/** Find input devices closest to tracker slot. */
+	func InputDeviceWrapper findSlotInputDevice(CharacterTrackerSlot slot)
 		var Vector offset = GameApp.getGameApp().getSessionSettings().getFloorOffsetVector()
 		
-		return GameApp.getGameApp().getBindingManager().findDevice(block InputDevice device
-			select device.getType()
-			case InputDeviceType.vrHMD, InputDeviceType.vrEyeTracker,\
-				 InputDeviceType.vrLeftHand, InputDeviceType.vrRightHand,\
-				 InputDeviceType.vrTracker
-				return pTrackerSlots.bestMatching(device.getType(),\
-					pMatrixCalibrate * device.getDevicePosePosition() + offset) == slot
+		return GameApp.getGameApp().getInputDeviceWrappers().find(block InputDeviceWrapper each
+			select each.getType()
+			case InputDeviceType.vrHMD, InputDeviceType.vrEyeTracker, InputDeviceType.vrLeftHand,\
+				InputDeviceType.vrRightHand, InputDeviceType.vrTracker
+					return pTrackerSlots.bestMatching(each.getType(),\
+						pMatrixCalibrate * each.getDevicePosePosition() + offset) == slot
 				
 			else
 				return false
@@ -822,7 +821,7 @@ class CharacterConfiguration
 	/** Assign input devices to closest slot with matching type. */
 	protected func void assignInputDevices(ActorProfile actorProfile)
 		var Vector offset = GameApp.getGameApp().getSessionSettings().getFloorOffsetVector()
-		var BindingManager bindings = GameApp.getGameApp().getBindingManager()
+		var InputDeviceWrappers idwrappers = GameApp.getGameApp().getInputDeviceWrappers()
 		var Console console = GameApp.getGameApp().getConsole()
 		
 		// clear all assignments
@@ -833,26 +832,25 @@ class CharacterConfiguration
 		
 		// determine input device candidates
 		console.addMessage("Determine input devices assignment candidates: " + getLogName())
-		bindings.forEachDevice(block InputDevice device
-			select device.getType()
-			case InputDeviceType.vrHMD, InputDeviceType.vrEyeTracker,\
-					InputDeviceType.vrLeftHand, InputDeviceType.vrRightHand,\
-					InputDeviceType.vrTracker
+		idwrappers.forEach(block InputDeviceWrapper each
+			select each.getType()
+			case InputDeviceType.vrHMD, InputDeviceType.vrEyeTracker, InputDeviceType.vrLeftHand,\
+					InputDeviceType.vrRightHand, InputDeviceType.vrTracker
 				
-				var Vector position = pMatrixCalibrate * device.getDevicePosePosition() + offset
-				var CharacterTrackerSlot slot = pTrackerSlots.bestMatching(device.getType(), position)
+				var Vector position = pMatrixCalibrate * each.getDevicePosePosition() + offset
+				var CharacterTrackerSlot slot = pTrackerSlots.bestMatching(each.getType(), position)
 				
 				if slot != null
 					slot.getInputDeviceCandidates().add(CharacterTrackerSlot.InputDeviceCandidate.new(\
-						device, position, (position - slot.getPosition()).getLength()))
+						each, position, (position - slot.getPosition()).getLength()))
 					console.addMessage("- {} ({}) {}: Candidate for slot '{}'".format(\
-						Array.newWith(device.getID(), device.getType().name(),\
-							device.getDevicePosePosition() + offset, slot.getName())))
+						Array.newWith(each.getID(), each.getType().name(),\
+							each.getDevicePosePosition() + offset, slot.getName())))
 					
 				else
 					console.addMessage("- {} ({}) {}: No candidate slot found".format(\
-						Array.newWith(device.getID(), device.getType().name(),\
-							device.getDevicePosePosition() + offset)))
+						Array.newWith(each.getID(), each.getType().name(),\
+							each.getDevicePosePosition() + offset)))
 				end
 			end
 		end)

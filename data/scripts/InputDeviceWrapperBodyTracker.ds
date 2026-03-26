@@ -1,0 +1,72 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+pin Dragengine.Scenery
+
+
+/**
+ * Wrapper for VR Body Tracker simulating a VR Tracker.
+ */
+class InputDeviceWrapperBodyTracker extends InputDeviceWrapper
+	protected var int pBonePosition, pBoneOrientation
+	protected var InputDeviceVRTrackerRole pRole
+	protected var String pId, pName
+	
+	
+	/** Create wrapper for combination of \ref InputDeviceFullBodyBone position and orientation. */
+	func new(InputDevice device, InputDeviceVRTrackerRole role, int bonePosition, int boneOrientation) super(device)
+		pDevice = device
+		pRole = role
+		pBonePosition = bonePosition
+		pBoneOrientation = boneOrientation
+		pId = "{}-{}".format(Array.newWith(device.getID(), role.name()))
+		pName = "{}: {}".format(Array.newWith(device.getName(), role.name()))
+	end
+	
+	
+	func String getID()
+		return pId
+	end
+	
+	func InputDeviceType getType()
+		return InputDeviceType.vrTracker
+	end
+	
+	func String getName()
+		return pDevice.getName()
+	end
+	
+	func Vector getDevicePosePosition()
+		return getDevicePoseMatrix().getPosition()
+	end
+	
+	func Quaternion getDevicePoseOrientation()
+		return getDevicePoseMatrix().toQuaternion()
+	end
+	
+	func Matrix getDevicePoseMatrix()
+		return Matrix.newWorld(\
+			pDevice.getDeviceBonePosePosition(pBonePosition, false),\
+			pDevice.getDeviceBonePoseOrientation(pBoneOrientation, false))\
+				* pDevice.getDevicePoseMatrix()
+	end
+end

@@ -48,19 +48,14 @@ class ECBTrackerSlot extends DefaultECBehavior
 			end
 			
 			func void deviceAttached(BindingManager manager, InputDevice device)
-				if device.getID().equals(pDeviceID)
-					pInstance.setInputDevice(device)
-				end
+				pInstance.findInputDevice()
 			end
 			
 			func void deviceDetached(BindingManager manager, InputDevice device)
-				if pInstance.getInputDevice() == device
-					pInstance.setInputDevice(null)
-				end
+				pInstance.findInputDevice()
 			end
 			
 			func void devicesReloaded(BindingManager manager)
-				// temporary
 				pInstance.findInputDevice()
 			end
 		end
@@ -74,7 +69,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 		var AnimatorController pControllerRotation
 		var bool pShowTracker
 		var bool pShowCoordSystem
-		var InputDevice pInputDevice
+		var InputDeviceWrapper pInputDevice
 		var SmoothSlotWMM pSmoothSlot
 		var Vector pPosition
 		var Quaternion pOrientation
@@ -217,12 +212,12 @@ class ECBTrackerSlot extends DefaultECBehavior
 		end
 		
 		/** Input device or null if detached. */
-		func InputDevice getInputDevice()
+		func InputDeviceWrapper getInputDevice()
 			return pInputDevice
 		end
 		
 		/** Set input device or null if detached. */
-		func void setInputDevice(InputDevice device)
+		func void setInputDevice(InputDeviceWrapper device)
 			if device == pInputDevice
 				return
 			end
@@ -340,7 +335,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 		/** Find input device. */
 		func void findInputDevice()
 			var String id = pECBehavior.getTrackerSlot().getInputDeviceID()
-			setInputDevice(GameApp.getGameApp().getBindingManager().findDevice(block InputDevice each
+			setInputDevice(GameApp.getGameApp().getInputDeviceWrappers().find(block InputDeviceWrapper each
 				return each.getID().equals(id)
 			end))
 		end
@@ -483,8 +478,7 @@ class ECBTrackerSlot extends DefaultECBehavior
 				return
 			end
 			
-			pCalibrationPosition = pCalibrationPosition\
-				+ (pMatrixPoseOffset * pInputDevice.getDevicePosePosition())
+			pCalibrationPosition = pCalibrationPosition + (pMatrixPoseOffset * pInputDevice.getDevicePosePosition())
 			pCalibrationOrientation = pCalibrationOrientation + pInputDevice.getDevicePoseOrientation()
 			pCalibrationCounter++
 		end
@@ -527,7 +521,8 @@ class ECBTrackerSlot extends DefaultECBehavior
 			end
 			
 			if pInputDevice != null and pInputDevice.getType() != InputDeviceType.vrHMD
-				component.setModelAndSkin(pInputDevice.getVRModel(), pInputDevice.getVRSkin())
+				component.setModelAndSkin(pInputDevice.getInputDevice().getVRModel(),\
+					pInputDevice.getInputDevice().getVRSkin())
 				
 			else
 				component.setModelAndSkin(null, null)

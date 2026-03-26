@@ -215,31 +215,32 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 				return
 			end
 			
-			var InputDevice inputDevice = pSlotTracker.getInputDevice()
+			var InputDeviceWrapper inputDevice = pSlotTracker.getInputDevice()
 			if inputDevice == null
 				return
 			end
 			
-			if inputDevice != pInputDevice
-				initInputDeviceMapping(inputDevice)
+			var InputDevice idev = inputDevice.getInputDevice()
+			if idev != pInputDevice
+				initInputDeviceMapping(idev)
 			end
 			
 			if pComplexMode
 				var MotionTransferFingers transfer = pECBehavior.getTransfer()
-				var Quaternion handRot = inputDevice.getDevicePoseOrientation()
+				var Quaternion handRot = idev.getDevicePoseOrientation()
 				var Quaternion quat1, quat2, quat3
 				var float scale
 				
 				// wrist
 				if pControllerWrist != null
-					quat1 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.wrist, false) * handRot
+					quat1 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.wrist, false) * handRot
 					pControllerWrist.setOrientation(quat1)
 				end
 				
 				// thumb
-				quat1 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.thumb0, false) * handRot
-				quat2 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.thumb1, false) * handRot
-				quat3 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.thumb2, false) * handRot
+				quat1 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.thumb0, false) * handRot
+				quat2 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.thumb1, false) * handRot
+				quat3 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.thumb2, false) * handRot
 				scale = transfer.getThumbBendStrength()
 				
 				if pControllerThumb != null
@@ -257,9 +258,9 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 				end
 				
 				// index
-				quat1 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.index1, false) * handRot
-				quat2 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.index2, false) * handRot
-				quat3 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.index3, false) * handRot
+				quat1 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.index1, false) * handRot
+				quat2 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.index2, false) * handRot
+				quat3 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.index3, false) * handRot
 				scale = transfer.getIndexBendStrength()
 				
 				if pControllerIndex != null
@@ -277,9 +278,9 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 				end
 				
 				// middle
-				quat1 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.middle1, false) * handRot
-				quat2 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.middle2, false) * handRot
-				quat3 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.middle3, false) * handRot
+				quat1 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.middle1, false) * handRot
+				quat2 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.middle2, false) * handRot
+				quat3 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.middle3, false) * handRot
 				scale = transfer.getMiddleBendStrength()
 				
 				if pControllerMiddle != null
@@ -297,9 +298,9 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 				end
 				
 				// ring
-				quat1 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.ring1, false) * handRot
-				quat2 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.ring2, false) * handRot
-				quat3 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.ring3, false) * handRot
+				quat1 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.ring1, false) * handRot
+				quat2 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.ring2, false) * handRot
+				quat3 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.ring3, false) * handRot
 				scale = transfer.getRingBendStrength()
 				
 				if pControllerRing != null
@@ -317,9 +318,9 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 				end
 				
 				// pinky
-				quat1 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.pinky1, false) * handRot
-				quat2 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.pinky2, false) * handRot
-				quat3 = inputDevice.getDeviceBonePoseOrientation(InputDeviceHandBone.pinky3, false) * handRot
+				quat1 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.pinky1, false) * handRot
+				quat2 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.pinky2, false) * handRot
+				quat3 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.pinky3, false) * handRot
 				scale = transfer.getPinkyBendStrength()
 				
 				if pControllerPinky != null
