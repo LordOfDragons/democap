@@ -248,6 +248,10 @@ class WMPanelCharacter extends Panel
 				pPanel.addActorProfile()
 			end)))
 			
+			menu.addWidget(MenuItemCommand.new(Resources.add.get(inVR), "@UI.AddActorQuestFbt.Dialog", BlockActionListener.new(block ActionEvent event
+				pPanel.addActorProfileQuestFbt()
+			end)))
+			
 			menu.addWidget(MenuItemCommand.new(Resources.duplicate.get(inVR), "@UI.DuplicateActor.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.duplicateActorProfile()
 			end)))
@@ -564,6 +568,41 @@ class WMPanelCharacter extends Panel
 					end
 				end
 			end))
+	end
+	
+	/** Add quest FBT actor profile. */
+	func void addActorProfileQuestFbt()
+		WindowDialog.input(getWindow(), "@UI.AddActorProfileQuestFbt", "@UI.ActorHeight.Label",\
+		null, "1.6", null, null, WindowDialog.BlockResultListener.new(block String result
+			if result != null
+				var float height = DEMath.max(result.toFloat(), 1.0)
+				WindowDialog.input(getWindow(), "@UI.AddActorProfileQuestFbt",\
+					"@UI.ProfileName.Label", null, "Actor",\
+					null, null, WindowDialog.BlockResultListener.new(block String result2
+						if result2 != null
+							var ActorProfiles profiles = GameApp.getGameApp().getActorProfiles()
+							
+							if profiles.hasNamed(result2)
+								WindowDialog.message(getWindow(), "@UI.AddActorProfile",\
+									TranslationManager.get().translate("UI.Message.DuplicateActorProfile")\
+										.toUTF8().format(Array.newWith(result2)), null, null, null)
+								
+							else
+								var ActorProfile profile = ActorProfile.new(result2)
+								profile.setShoulderLevel(height - 0.4)
+								profile.setShoulderWidth((height - 0.09) * 0.25)
+								profile.setArmLength((height - 0.09) * 0.45)
+								profile.setLegLength((height - 0.09) * 0.6)
+								profile.setFootDistance((height - 0.09) * 0.25)
+								profile.save()
+								profiles.add(profile)
+								pModelActorProfiles.setSelected(pModelActorProfiles.indexOf(profile))
+								editActorProfile()
+							end
+						end
+					end))
+			end
+		end))
 	end
 	
 	/** Duplicate actor profile. */
