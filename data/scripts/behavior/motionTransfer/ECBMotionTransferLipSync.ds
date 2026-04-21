@@ -1,0 +1,288 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Commands
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.Audio.LipSync
+
+
+/**
+ * Behavior for MotionTransferLipSync.
+ */
+class ECBMotionTransferLipSync extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Update controllers. */
+		class UpdateControllers extends ECBMoCapAnimator.DefaultListener
+			var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func void updateControllers(ECBMoCapAnimator.Instance instance, float elapsed, int phase)
+				pInstance.updateControllers(elapsed)
+			end
+		end
+		
+		private class LipSyncSpectrogramLog extends LipSyncSpectrogram
+			func new()
+			end
+			
+			protected func void updateLipSync(float elapsed)
+				super.updateLipSync(elapsed)
+				if getRms() > getNoiseFloor()
+					debugLog()
+				end
+			end
+			
+			func void debugLog()
+				Engine.log("LipSync: rms={} flat={} zrc={} low={} lowMid={} mid={} high={} bands={}".format(\
+					Array.newWith(getRms(), getFlatness(), getZcr(), getEnergyLow(), getEnergyLowMid(), getEnergyMid(), getEnergyHigh(), getBandEnergies())))
+				
+				var Array weights = Array.new()
+				forEachVisemeResult(block VisemeResult each
+					weights.add("{}:{:.2f}".format(Array.newWith(each.getViseme().name(), each.getWeight())))
+				end)
+				Engine.log("         vw=" + weights)
+			end
+		end
+		
+		
+		var ECBMotionTransferLipSync pECBehavior
+		var ECBehaviorVRPlayspace.Instance pVRPlayspace
+		var ECBMoCapAnimator.Instance pMoCapAnimator
+		
+		var AnimatorController pControllerOpenMouth
+		var Dictionary pControllerVisemeSubset, pControllerVisemeFull
+		var LipSync pLipSync
+		
+		
+		/** Create instance. */
+		func new(ECBMotionTransferLipSync ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pControllerVisemeSubset = Dictionary.new()
+			pControllerVisemeFull = Dictionary.new()
+			
+			pVRPlayspace = ecbehavior.getVRPlayspace().instance(element)
+			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
+		end
+		
+		/** Dispose of instance. */
+		func void dispose()
+			pVRPlayspace = null
+			pMoCapAnimator = null
+			super.dispose()
+		end
+		
+		
+		/** Init behavior instance. */
+		func void init(StubElement stub)
+			var ECBehaviorActorAnimated.Instance actorAnimated = pMoCapAnimator.getActorAnimated()
+			var String baseControllerName = pECBehavior.getBaseControllerName()
+			var MotionTransferLipSync transfer = pECBehavior.getTransfer()
+			var String vps
+			
+			// find controllers
+			if MotionTransferLipSync.visemeInfos.find(block MotionTransferLipSync.VisemeInfo each
+				return not each.getIsSubset() and not transfer.getVisemeVPSAt(each.getViseme()).empty()
+			end) != null
+				MotionTransferLipSync.visemeInfos.forEach(block MotionTransferLipSync.VisemeInfo each
+					vps = transfer.getVisemeVPSAt(each.getViseme())
+					if not vps.empty()
+						pControllerVisemeFull.setAt(each.getViseme(),\
+							actorAnimated.getControllerNamed(baseControllerName + each.getViseme().name()))
+					end
+				end)
+				
+			elif MotionTransferLipSync.visemeInfos.find(block MotionTransferLipSync.VisemeInfo each
+				return each.getIsSubset() and not transfer.getVisemeVPSAt(each.getViseme()).empty()
+			end) != null
+				MotionTransferLipSync.visemeInfos.forEach(block MotionTransferLipSync.VisemeInfo each
+					if not each.getIsSubset()
+						vps = transfer.getVisemeVPSAt(each.getViseme())
+						if not vps.empty()
+							pControllerVisemeSubset.setAt(each.getViseme(),\
+								actorAnimated.getControllerNamed(baseControllerName + each.getViseme().name()))
+						end
+					end
+				end)
+				
+			elif not transfer.getOpenMouthMove().empty() or not transfer.getJawBone().empty()
+				pControllerOpenMouth = actorAnimated.getControllerNamed(pECBehavior.getControllerNameOpenMouth())
+			end
+			
+			// start audio capture if not running yet
+			if not AudioSystem.isCapturingAudio()
+				if AudioSystem.canCaptureAudio()
+					AudioSystem.startAudioCapture()
+					
+				else
+					GameApp.getApp().getConsole().addMessage("Audio capture not supported")
+				end
+			end
+			
+			// create lip sync
+			pLipSync = createLipSync()
+			
+			// add listener
+			pMoCapAnimator.addListener(UpdateControllers.new(this))
+		end
+		
+		/** Create lip sync. */
+		protected func LipSync createLipSync()
+			var LipSyncSpectrogram lipSync = LipSyncSpectrogram.new()
+			//var LipSyncSpectrogram lipSync = LipSyncSpectrogramLog.new()
+			//var LipSyncJawFlaping lipSync = LipSyncJawFlaping.new()
+			// change configuration if needed
+			return lipSync
+		end
+		
+		
+		/** Behavior. */
+		func ECBMotionTransferLipSync getECBehavior()
+			return pECBehavior
+		end
+		
+		/** VR Playspace. */
+		func ECBehaviorVRPlayspace.Instance getVRPlayspace()
+			return pVRPlayspace
+		end
+		
+		/** Motion capture animator. */
+		func ECBMoCapAnimator.Instance getMoCapAnimator()
+			return pMoCapAnimator
+		end
+		
+		/** Lip sync. */
+		func LipSync getLipSync()
+			return pLipSync
+		end
+		
+		
+		/** Update controllers. */
+		func void updateControllers(float elapsed)
+			pLipSync.update(elapsed)
+			
+			if pControllerOpenMouth != null
+				pControllerOpenMouth.setValue(pLipSync.getJawOpenessSmooth())
+			end
+			
+			pControllerVisemeSubset.forEach(block LipSync.Viseme viseme, AnimatorController controller
+				controller.setValue(pLipSync.getVisemeSubsetResult(viseme).getWeightSmooth())
+			end)
+			
+			pControllerVisemeFull.forEach(block LipSync.Viseme viseme, AnimatorController controller
+				controller.setValue(pLipSync.getVisemeResult(viseme).getWeightSmooth())
+			end)
+		end
+	end
+	
+	
+	var MotionTransferLipSync pTransfer
+	var ECBehaviorVRPlayspace pVRPlayspace
+	var ECBMoCapAnimator pMoCapAnimator
+	var String pBaseControllerName
+	
+	
+	/** Create behavior element class. */
+	func new(BaseVRActorClass eclass, MotionTransferLipSync transfer) super(eclass, transfer.getName())
+		if transfer == null
+			throw ENullPointer.new("transfer")
+		end
+		
+		pTransfer = transfer
+		pVRPlayspace = eclass.getVRPlayspace()
+		pMoCapAnimator = ECBMoCapAnimator.getBehaviorIn(eclass)
+		
+		pBaseControllerName = transfer.getName() + ".viseme."
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	func void dispose()
+		pVRPlayspace = null
+		pTransfer = null
+		super.dispose()
+	end
+	
+	
+	/** Motion transfer. */
+	func MotionTransferLipSync getTransfer()
+		return pTransfer
+	end
+	
+	/** VR Playspace behavior. */
+	func ECBehaviorVRPlayspace getVRPlayspace()
+		return pVRPlayspace
+	end
+	
+	/** Motion capture animator behavior. */
+	func ECBMoCapAnimator getMoCapAnimator()
+		return pMoCapAnimator
+	end
+	
+	/** Base animator controller name. */
+	func String getBaseControllerName()
+		return pBaseControllerName
+	end
+	
+	/** Open mouth animator controller name. */
+	func String getControllerNameOpenMouth()
+		return pTransfer.getName() + ".openMouth"
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	
+	/** Get list of all behaviors in element. */
+	static func Array getAllBehaviorsIn(BehaviorElementClass eclass)
+		return eclass.collectBehaviors(block ECBMotionTransferLipSync each
+			return true
+		end)
+	end
+	
+	/** Get list of all instances in element. */
+	static func Array getAllInstancesIn(BehaviorElement element)
+		return element.collectInstances(block Instance each
+			return true
+		end)
+	end
+	
+	
+	/** Create Behavior instance. */
+	func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

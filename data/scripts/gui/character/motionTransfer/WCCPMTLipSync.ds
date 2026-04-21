@@ -1,0 +1,234 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer lip sync panel.
+ */
+class WCCPMTLipSync extends WCCPanelMotionTransfer
+	class EditViseme
+		public var MotionTransferLipSync.VisemeInfo info
+		public var SharedListModel modelList
+		public var DefaultTextModel modelText
+		
+		func new(MotionTransferLipSync.VisemeInfo info, DefaultListModel modelVPS)
+			this.info = info
+			
+			modelList = SharedListModel.new(modelVPS)
+			modelList.setAutoSelect(false)
+			
+			modelText = DefaultTextModel.new()
+		end
+	end
+	
+	
+	var SharedListModel pModelListOpenMouthMove
+	var DefaultTextModel pModelTextOpenMouthMove
+	var SharedListModel pModelListJawBone
+	var DefaultTextModel pModelTextJawBone
+	var EditVector pEditJawBoneRotation
+	var DefaultTextModel pModelJawBoneAngle
+	var Array pVisemes
+	
+	
+	/** Create window. */
+	func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
+		var DefaultListModel modelMoves = window.getModelMoves()
+		var DefaultListModel modelVPS = window.getModelVPS()
+		
+		pModelTypeName.setText("@UI.LipSync")
+		
+		pModelListOpenMouthMove = SharedListModel.new(modelMoves)
+		pModelListOpenMouthMove.setAutoSelect(false)
+		pModelTextOpenMouthMove = DefaultTextModel.new()
+		
+		pModelListJawBone = SharedListModel.new(window.getModelBones())
+		pModelListJawBone.setAutoSelect(false)
+		pModelTextJawBone = DefaultTextModel.new()
+		pModelJawBoneAngle = DefaultTextModel.new()
+		
+		pVisemes = MotionTransferLipSync.visemeInfos.map(block MotionTransferLipSync.VisemeInfo each
+			return EditViseme.new(each, modelVPS)
+		end)
+		
+		runWhileBlockingLayout(block
+			createContent(optionPrefix)
+		end)
+	end
+	
+	/** Dispose of window. */
+	func void dispose()
+		pModelListOpenMouthMove = null
+		pModelTextOpenMouthMove = null
+		pModelListJawBone = null
+		pModelTextJawBone = null
+		pEditJawBoneRotation = null
+		pModelJawBoneAngle = null
+		pVisemes = null
+		super.dispose()
+	end
+	
+	
+	/** Load values from tracker slot object if present into edit widgets. */
+	func void loadValues()
+		runWhileBlockingLayout(block
+			super.loadValues()
+			
+			if pMotionTransfer != null
+				var MotionTransferLipSync mt = pMotionTransfer cast MotionTransferLipSync
+				pModelTextOpenMouthMove.setText(mt.getOpenMouthMove())
+				pModelTextJawBone.setText(mt.getJawBone())
+				pEditJawBoneRotation.setVector(mt.getJawBoneRotation())
+				pModelJawBoneAngle.setText(mt.getJawBoneAngle().toString())
+				pVisemes.forEach(block EditViseme each
+					each.modelText.setText(mt.getVisemeVPSAt(each.info.getViseme()))
+				end)
+				
+			else
+				pModelTextOpenMouthMove.setText("")
+				pModelTextJawBone.setText("")
+				pEditJawBoneRotation.setVector(Vector.new())
+				pModelJawBoneAngle.setText("")
+				pVisemes.forEach(block EditViseme each
+					each.modelText.setText("")
+				end)
+			end
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	/** Save value from edit widgets to tracker slot object if present. */
+	func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		super.saveValues()
+		
+		var MotionTransferLipSync mt = pMotionTransfer cast MotionTransferLipSync
+		mt.setOpenMouthMove(pModelTextOpenMouthMove.getText())
+		mt.setJawBone(pModelTextJawBone.getText())
+		mt.setJawBoneRotation(pEditJawBoneRotation.getVector())
+		mt.setJawBoneAngle(pModelJawBoneAngle.getText().toFloat())
+		pVisemes.forEach(block EditViseme each
+			mt.setVisemeVPSAt(each.info.getViseme(), each.modelText.getText())
+		end)
+	end
+	
+	/** Supports motion transfer type. */
+	func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferLipSync
+	end
+	
+	
+	/** Create window content. */
+	protected func void createContent(String optionPrefix)
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var ComboBox comboBox
+		var Label label
+		var TextField textField
+		
+		createBaseContent("motiontransferlipsync")
+		
+		// open mouth group
+		addWidget(CollapsibleGroup.new("@UI.LipSyncOpenMouth", "", \
+		CollapsibleGroup.persistModel(optionPrefix + "/OpenMouth", false), \
+		FormLayout.new(true, 10, 2), block Panel p
+			// open mouth move
+			p.addWidget(Label.new("@UI.OpenMouthMove.Label", "Label.FormCaption.SingleLine"))
+			
+			comboBox = ComboBox.new(pModelListOpenMouthMove, DefaultComboBoxEditor.new(pModelTextOpenMouthMove))
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+			comboBox.setToolTip("@UI.ToolTip.LipSyncOpenMouthMove")
+			p.addWidget(comboBox)
+			
+			// jaw bone
+			label = Label.new("@UI.JawBone.Label", "Label.FormCaption.SingleLine")
+			p.addWidget(label)
+			
+			comboBox = ComboBox.new(pModelListJawBone, DefaultComboBoxEditor.new(pModelTextJawBone))
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+			comboBox.setToolTip("@UI.ToolTip.LipSyncJawBone")
+			p.addWidget(comboBox)
+			
+			CPEBone.new(preview, label, comboBox)
+			
+			label = Label.new("@UI.JawBoneRotation.Label", "Label.FormCaption.SingleLine")
+			label.setToolTip("@UI.ToolTip.LipSyncJawBoneRotation")
+			p.addWidget(label)
+			
+			pEditJawBoneRotation = EditVector.new()
+			pEditJawBoneRotation.setToolTip("@UI.ToolTip.LipSyncJawBoneRotation")
+			p.addWidget(pEditJawBoneRotation)
+			
+			CPECoordinateSystemAxis.new(preview, null, null, label, pEditJawBoneRotation, comboBox, null, true)
+			
+			p.addWidget(Label.new("@UI.JawBoneAngle.Label", "Label.FormCaption.SingleLine"))
+			
+			textField = TextField.new(pModelJawBoneAngle, 6)
+			textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+			textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+			textField.setToolTip("@UI.ToolTip.LipSyncJawBoneAngle")
+			p.addWidget(textField)
+		end))
+		
+		// viseme subset group
+		addWidget(CollapsibleGroup.new("@UI.LipSyncVisemeSubset", "", \
+		CollapsibleGroup.persistModel(optionPrefix + "/VisemeSubset", false), \
+		FormLayout.new(true, 10, 2), block Panel p
+			pVisemes.forEach(block EditViseme each
+				if each.info.getIsSubset()
+					p.addWidget(Label.new("@" + each.info.getName(), "Label.FormCaption.SingleLine"))
+					
+					comboBox = ComboBox.new(each.modelList, DefaultComboBoxEditor.new(each.modelText))
+					comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+					comboBox.setToolTip("@" + each.info.getDescription())
+					p.addWidget(comboBox)
+				end
+			end)
+		end))
+		
+		// full viseme group
+		addWidget(CollapsibleGroup.new("@UI.LipSyncVisemeFull", "", \
+		CollapsibleGroup.persistModel(optionPrefix + "/VisemeFull", true), \
+		FormLayout.new(true, 10, 2), block Panel p
+			pVisemes.forEach(block EditViseme each
+				if not each.info.getIsSubset()
+					p.addWidget(Label.new("@" + each.info.getName(), "Label.FormCaption.SingleLine"))
+					
+					comboBox = ComboBox.new(each.modelList, DefaultComboBoxEditor.new(each.modelText))
+					comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+					comboBox.setToolTip("@" + each.info.getDescription())
+					p.addWidget(comboBox)
+				end
+			end)
+		end))
+	end
+end

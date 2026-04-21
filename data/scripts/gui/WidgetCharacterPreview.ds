@@ -135,6 +135,18 @@ class WidgetCharacterPreview extends Panel
 		end
 	end
 	
+	class AlignCameraToCharacterClicked extends ClickedActionListener
+		var WidgetCharacterPreview pPreview
+		
+		func new(WidgetCharacterPreview preview)
+			pPreview = preview
+		end
+		
+		func void onAction()
+			pPreview.alignCameraToCharacter()
+		end
+	end
+	
 	class HitResult
 		var Object pObject
 		var float pDistance
@@ -203,17 +215,13 @@ class WidgetCharacterPreview extends Panel
 	var ElementCameraDirector pCameraDirector
 	var PreviewPreloader pPreviewPreloader
 	var BehaviorElementClass pCharacterPreviewClass
-	var BehaviorElement pCharacterPreview
-	var BehaviorElement pLoadingCharacter
+	var BehaviorElement pCharacterPreview, pLoadingCharacter
 	var Array pListeners
 	var ECBPreviewDataQuery.DataQuery pDataQuery
 	
-	var String pPathModel
-	var String pPathSkin
-	var String pPathRig
-	var String pPathAnimation
+	var String pPathModel, pPathSkin, pPathRig, pPathAnimation
 	var Vector pBoneAxisRotation
-	var float pScale
+	var float pScale, pCameraDistance
 	
 	var CharacterPreviewEditor pEditor
 	
@@ -411,6 +419,34 @@ class WidgetCharacterPreview extends Panel
 		pPanelHud.getCenter().setToolTip(toolTip)
 	end
 	
+	/** Align camera to show character in full size. */
+	func void alignCameraToCharacter()
+		if pCharacterPreview == null
+			return
+		end
+		
+		var Model model = ECBehaviorComponent.getInstanceIn(pCharacterPreview).getComponent().getModel()
+		if model == null
+			return
+		end
+		
+		var Point widgetSize = getSize()
+		if not widgetSize.isAtLeast(0)
+			return
+		end
+		
+		var Vector minExtend = model.getMinimumExtend() * pScale
+		var Vector maxExtend = model.getMaximumExtend() * pScale
+		var float height = maxExtend.getY() - minExtend.getY()
+		var float front = maxExtend.getZ()
+		var float halfHeight = height / 2
+		var float halfFov = (pCameraDirector.getFov() / 2) * (widgetSize.getY() cast float / widgetSize.getX())
+		pCameraDirector.setPivot(DVector.new(0, minExtend.getY() + halfHeight, 0))
+		pCameraDirector.setAzimuth(180)
+		pCameraDirector.setElevation(0)
+		pCameraDirector.setDistance(halfHeight / DEMath.tan(halfFov) + front)
+	end
+	
 	
 	
 	/** Add listener. */
@@ -445,6 +481,9 @@ class WidgetCharacterPreview extends Panel
 		// regular game updates
 		pCameraDirector.update(elapsed)
 		pGameWorld.update(elapsed)
+		
+		// adjust preview coordinate system scaling to make them easier to see and click
+		updatePreviewCoordSystemScaling()
 	end
 	
 	/**
@@ -504,8 +543,9 @@ class WidgetCharacterPreview extends Panel
 		
 		pCameraDirector = ElementCameraDirector.new(pCharacterPreview, camera, null)
 		GameApp.getGameApp().getLoaders().getCamera().loadFromFile("/content/camera/preview.decam", pCameraDirector)
+		pCameraDirector.setFov(CameraWrapper.fovNormal)
 		pCameraDirector.setPivot(DVector.new(0, 0.9, 0))
-		pCameraDirector.setDistance(2)
+		pCameraDirector.setDistance(4)
 		pCameraDirector.setAzimuth(180)
 		pCameraDirector.update(0)
 		pCameraDirector.initCameraParameters()
@@ -552,6 +592,11 @@ class WidgetCharacterPreview extends Panel
 			image.addMouseListener(PanCameraMouseListener.new(\
 				pCameraDirector, InputEventMouseButton.left, InputEventModifier.none))
 			image.setToolTip("@UI.ToolTip.WidgetCharacterPreview.Pan")
+			p.getRightCenter().addWidget(image)
+			
+			image = DisplayImage.new(Image.new("/content/gui/images/icon_global_48.webp"), "TouchField")
+			image.addMouseListener(AlignCameraToCharacterClicked.new(this))
+			image.setToolTip("@UI.ToolTip.WidgetCharacterPreview.AlignCameraToCharacter")
 			p.getRightCenter().addWidget(image)
 		end)
 		addWidget(pPanelHud)
@@ -619,5 +664,33 @@ class WidgetCharacterPreview extends Panel
 		stub.setScaling(Vector.new(0.75, 0.75, 0.75))
 		pLoadingCharacter = stub.createElement() cast BehaviorElement
 		pGameWorld.addElement(pLoadingCharacter)
+	end
+	
+	/** Update preview coordinate system scaling. */
+	protected func void updatePreviewCoordSystemScaling()
+		if pCharacterPreview == null
+			return
+		end
+		
+		var float cameraDistance = pCameraDirector.getDistance()
+		if Math.fabs(cameraDistance - pCameraDistance) < 0.001
+			return
+		end
+		pCameraDistance = cameraDistance
+		
+		var float scaling = calculatePreviewCoordSystemScaling()
+		pCharacterPreview.forEachInstance(block ECBPreviewCoordSystem.Instance behavior
+			behavior.setScale(scaling)
+		end)
+		pCharacterPreview.forEachInstance(block ECBPreviewBones.Instance behavior
+			behavior.setScale(scaling)
+		end)
+	end
+	
+	/**
+	 * Calculate preview coordinate system scaling.
+	 */
+	protected func float calculatePreviewCoordSystemScaling()
+		return Math.max(pCameraDistance, 0.01) / 4
 	end
 end

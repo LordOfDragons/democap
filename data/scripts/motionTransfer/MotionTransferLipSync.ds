@@ -1,0 +1,411 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.MotionTransferSystem
+
+pin Democap.Actors
+pin Democap.Behaviors
+pin Democap.Characters
+
+pin Dragengine.Animators
+pin Dragengine.LoadSave
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.XML
+pin Dragengine.Audio.LipSync
+
+
+/**
+ * Motion transfer using lip sync as input to drive mouth shapes.
+ * 
+ * Supports input from \ref LipSyncSpectrogram to adjust the appropriate vertex position
+ * set weights mapped to \ref LipSync.Viseme values.
+ */
+class MotionTransferLipSync extends DefaultMotionTransfer
+	/** Factory. */
+	class Factory implements MotionTransferFactory
+		func new()
+		end
+		
+		func String factoryID()
+			return "lipSync"
+		end
+		
+		func MotionTransfer createMotionTransfer()
+			return MotionTransferLipSync.new(factoryID())
+		end
+		
+		func String displayName()
+			return "@UI.LipSync"
+		end
+	end
+	
+	/** Viseme information. */
+	class VisemeInfo
+		var LipSync.Viseme pViseme
+		var String pName, pDescription
+		var bool pIsSubset
+		
+		func new(LipSync.Viseme viseme, bool isSubset)
+			pViseme = viseme
+			pName = "UI.Enum.LipSyncViseme." + viseme.name()
+			pDescription = pName
+			pIsSubset = isSubset
+		end
+		
+		func LipSync.Viseme getViseme()
+			return pViseme
+		end
+		
+		func String getName()
+			return pName
+		end
+		
+		func String getDescription()
+			return pDescription
+		end
+		
+		/** Viseme is part of the lip sync viseme subset. */
+		func bool getIsSubset()
+			return pIsSubset
+		end
+	end
+	
+	
+	var String pOpenMouthMove
+	var String pJawBone
+	var Vector pJawBoneRotation
+	var float pJawBoneAngle
+	var Dictionary pVisemesVPS
+	
+	var ADController pADControllerOpenMouth
+	var ADRule pADRuleOpenMouth
+	var ADRule pADRuleJawBone
+	var Dictionary pADControllersVPS, pADRulesViseme
+	
+	public static fixed var Array visemeInfos = pInitVisemeInfos()
+	
+	
+	/** Create motion transfer. */
+	func new(String factoryID) super(factoryID)
+		pOpenMouthMove = ""
+		pJawBone = ""
+		pJawBoneRotation = Vector.new()
+		pJawBoneAngle = 30
+		pVisemesVPS = Dictionary.new()
+		pADControllerOpenMouth = null
+		pADRuleOpenMouth = null
+		pADRuleJawBone = null
+		pADControllersVPS = Dictionary.new()
+		pADRulesViseme = Dictionary.new()
+		visemeInfos.forEach(block VisemeInfo each
+			pVisemesVPS.setAt(each.getViseme(), "")
+			pADControllersVPS.setAt(each.getViseme(), null)
+			pADRulesViseme.setAt(each.getViseme(), null)
+		end)
+	end
+	
+	/** Create copy of motion transfer. */
+	func new(MotionTransferLipSync transfer) super(transfer)
+		pOpenMouthMove = transfer.pOpenMouthMove
+		pJawBone = transfer.pJawBone
+		pJawBoneRotation = transfer.pJawBoneRotation
+		pJawBoneAngle = transfer.pJawBoneAngle
+		pVisemesVPS = Dictionary.new(transfer.pVisemesVPS)
+		pADControllerOpenMouth = null
+		pADRuleOpenMouth = null
+		pADRuleJawBone = null
+		pADControllersVPS = Dictionary.new(transfer.pADControllersVPS)
+		pADRulesViseme = Dictionary.new(transfer.pADRulesViseme)
+		visemeInfos.forEach(block VisemeInfo each
+			pADControllersVPS.setAt(each.getViseme(), null)
+			pADRulesViseme.setAt(each.getViseme(), null)
+		end)
+	end
+	
+	
+	/** Open mouth animation move name. */
+	func String getOpenMouthMove()
+		return pOpenMouthMove
+	end
+	
+	/** Set open mouth animation move name. */
+	func void setOpenMouthMove(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pOpenMouthMove = move
+	end
+	
+	/** Jaw bone name or empty string. */
+	func String getJawBone()
+		return pJawBone
+	end
+	
+	/** Set jaw bone name or empty string. */
+	func void setJawBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pJawBone = bone
+	end
+	
+	/** Jaw bone rotation. */
+	func Vector getJawBoneRotation()
+		return pJawBoneRotation
+	end
+	
+	/** Set jaw bone rotation. */
+	func void setJawBoneRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pJawBoneRotation = rotation
+	end
+	
+	/** Jaw bone rotation angle in degrees around jaw bone X axis. */
+	func float getJawBoneAngle()
+		return pJawBoneAngle
+	end
+	
+	/** Set jaw bone rotation angle in degrees around jaw bone X axis. */
+	func void setJawBoneAngle(float angle)
+		pJawBoneAngle = angle
+	end
+	
+	/** Viseme vertex position set name. */
+	func String getVisemeVPSAt(LipSync.Viseme viseme)
+		return pVisemesVPS.getAt(viseme) cast String
+	end
+	
+	/** Set vertex position set name for viseme. */
+	func void setVisemeVPSAt(LipSync.Viseme viseme, String name)
+		if name == null
+			throw ENullPointer.new("name")
+		end
+		pVisemesVPS.setAt(viseme, name)
+	end
+	
+	
+	/** Animator definition rule for open mouth or null. */
+	func ADRule getADRuleOpenMouth()
+		return pADRuleOpenMouth
+	end
+	
+	/** Animator definition rule for jaw bone or null. */
+	func ADRule getADRuleJawBone()
+		return pADRuleJawBone
+	end
+	
+	/** Animator definition rule for viseme or null. */
+	func ADRule getADRuleVisemeAt(LipSync.Viseme viseme)
+		return pADRulesViseme.getAt(viseme) cast ADRule
+	end
+	
+	
+	/** Reset calibration. */
+	func void resetCalibration()
+		pADControllerOpenMouth = null
+		pADRuleOpenMouth = null
+		pADRuleJawBone = null
+		visemeInfos.forEach(block VisemeInfo each
+			pADControllersVPS.setAt(each.getViseme(), null)
+			pADRulesViseme.setAt(each.getViseme(), null)
+		end)
+	end
+	
+	/** Init element class. */
+	func void initElementClass(CharacterConfiguration config, BaseVRActorClass eclass, ModifiedRig modifyRig)
+		pADControllerOpenMouth = null
+		pADRuleOpenMouth = null
+		pADRuleJawBone = null
+		visemeInfos.forEach(block VisemeInfo each
+			pADControllersVPS.setAt(each.getViseme(), null)
+			pADRulesViseme.setAt(each.getViseme(), null)
+		end)
+		
+		var bool hasVps = pVisemesVPS.find(block LipSync.Viseme viseme, String vps
+			return not vps.empty()
+		end) != null
+		
+		if pOpenMouthMove.empty() and pJawBone.empty() and not hasVps
+			return
+		end
+		
+		// add behavior
+		var ECBMotionTransferLipSync behavior = ECBMotionTransferLipSync.new(eclass, this)
+		
+		// add controller, link and rules
+		var ECBRecordAnimation recordAnimation = ECBRecordAnimation.getBehaviorIn(eclass)
+		var AnimatorDefinition adef = config.getAnimatorDefinition()
+		var String baseControllerName = behavior.getBaseControllerName()
+		
+		if hasVps
+			pVisemesVPS.forEach(block LipSync.Viseme viseme, String vps
+				if not vps.empty()
+					var ADController controller = addADController(adef, baseControllerName + viseme.name())
+					pADControllersVPS.setAt(viseme, controller)
+					
+					pADRulesViseme.setAt(viseme, addADRuleViseme(adef, addADLink(adef, controller), vps))
+					
+					recordAnimation.addVPS(vps)
+				end
+			end)
+			
+		elif not pOpenMouthMove.empty()
+			pADControllerOpenMouth = addADController(adef, behavior.getControllerNameOpenMouth())
+			pADRuleOpenMouth = addADRuleOpenMouth(adef, addADLink(adef, pADControllerOpenMouth))
+			
+		elif not pJawBone.empty()
+			pADControllerOpenMouth = addADController(adef, behavior.getControllerNameOpenMouth())
+			pADRuleJawBone = addADRuleJawBone(adef, addADLink(adef, pADControllerOpenMouth))
+		end
+	end
+	
+	/** Add animator definition controller. */
+	protected func ADController addADController(AnimatorDefinition adef, String name)
+		var ADController controller = ADController.new()
+		controller.setName(name)
+		adef.addController(controller)
+		return controller
+	end
+	
+	/** Add animator definition link. */
+	protected func ADLink addADLink(AnimatorDefinition adef, ADController controller)
+		var ADLink link = ADLink.new()
+		link.setController(controller)
+		adef.addLink(link)
+		return link
+	end
+	
+	/** Add animator rule for jaw bone rotation. */
+	protected func ADRule addADRuleJawBone(AnimatorDefinition adef, ADLink link)
+		var ADRuleBoneTransformator rule = ADRuleBoneTransformator.new()
+		rule.setName(link.getController().getName())
+		rule.setCoordinateFrame(ARBoneTransformatorCFrame.component)
+		rule.setUseAxis(true)
+		rule.setAxis(Matrix.newRotation(pJawBoneRotation).getRightVector())
+		rule.setMinimumAngle(0)
+		rule.setMaximumAngle(pJawBoneAngle)
+		rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+		rule.addBone(pJawBone)
+		adef.addRule(rule)
+		return rule
+	end
+	
+	/** Add animator rule for open mouth animation. */
+	protected func ADRule addADRuleOpenMouth(AnimatorDefinition adef, ADLink link)
+		var ADRuleAnimation rule = ADRuleAnimation.new()
+		rule.setName(link.getController().getName())
+		rule.setMoveName(pOpenMouthMove)
+		rule.addTargetLink(ADRuleTargetLink.new(ARAnimationTarget.blendFactor, link))
+		adef.addRule(rule)
+		return rule
+	end
+	
+	/** Add animator rule for viseme vertex position set. */
+	protected func ADRule addADRuleViseme(AnimatorDefinition adef, ADLink link, String vps)
+		var ADRuleStateManipulator rule = ADRuleStateManipulator.new()
+		rule.setName(link.getController().getName())
+		rule.setEnableOrientation(false)
+		rule.setMaximumVertexPositionSet(1)
+		rule.addTargetLink(ADRuleTargetLink.new(ARStateManipulatorTarget.vertexPositionSet, link))
+		rule.addVertexPositionSet(vps)
+		adef.addRule(rule)
+		return rule
+	end
+	
+	/** Create copy of motion transfer. */
+	func MotionTransfer createCopy()
+		return MotionTransferLipSync.new(this)
+	end
+	
+	/** Load from XML. */
+	func void load(BaseXmlLoader loader, EasyXMLElement root)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("name")
+				setName(element.getFirstCData())
+				
+			elif tagName.equals("enable")
+				setEnabled(element.getFirstCDataBool())
+			
+			elif tagName.equals("openMouthMove")
+				setOpenMouthMove(element.getFirstCData())
+				
+			elif tagName.equals("jawBone")
+				setJawBone(element.getFirstCData())
+				
+			elif tagName.equals("jawBoneRotation")
+				setJawBoneRotation(loader.readVector(element))
+				
+			elif tagName.equals("jawBoneAngle")
+				setJawBoneAngle(element.getFirstCDataFloat())
+				
+			elif tagName.equals("visemeVPS")
+				var LipSync.Viseme viseme = LipSync.Viseme.named(element.getAttributeNamed("id"))
+				if viseme != null
+					setVisemeVPSAt(viseme, element.getFirstCData())
+				end
+			end
+		end)
+	end
+	
+	/** Save to XML. */
+	func void save(BaseXmlLoader loader, EasyXMLElement tag, bool calibrated)
+		tag.addDataTag("name", getName())
+		tag.addDataTag("enable", getEnabled())
+		tag.addDataTag("openMouthMove", pOpenMouthMove)
+		tag.addDataTag("jawBone", pJawBone)
+		loader.writeVector(tag, "jawBoneRotation", pJawBoneRotation)
+		tag.addDataTag("jawBoneAngle", pJawBoneAngle)
+		pVisemesVPS.forEach(block LipSync.Viseme viseme, String name
+			var EasyXMLElement dt = tag.addTag("visemeVPS")
+			dt.setAttribute("id", viseme.name())
+			dt.addCData(name)
+		end)
+	end
+	
+	
+	private static func Array pInitVisemeInfos()
+		var Array l = Array.new()
+		
+		// subset visemes
+		l.add(VisemeInfo.new(LipSync.Viseme.sil, true))
+		l.add(VisemeInfo.new(LipSync.Viseme.aa, true))
+		l.add(VisemeInfo.new(LipSync.Viseme.o, true))
+		l.add(VisemeInfo.new(LipSync.Viseme.e, true))
+		
+		// remaining visemes for full viseme set
+		l.add(VisemeInfo.new(LipSync.Viseme.i, false))
+		l.add(VisemeInfo.new(LipSync.Viseme.u, false))
+		l.add(VisemeInfo.new(LipSync.Viseme.pp, false))
+		l.add(VisemeInfo.new(LipSync.Viseme.ff, false))
+		l.add(VisemeInfo.new(LipSync.Viseme.th, false))
+		l.add(VisemeInfo.new(LipSync.Viseme.dd, false))
+		l.add(VisemeInfo.new(LipSync.Viseme.kk, false))
+		l.add(VisemeInfo.new(LipSync.Viseme.ch, false))
+		l.add(VisemeInfo.new(LipSync.Viseme.ss, false))
+		l.add(VisemeInfo.new(LipSync.Viseme.nn, false))
+		l.add(VisemeInfo.new(LipSync.Viseme.rr, false))
+		
+		return l
+	end
+end

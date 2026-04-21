@@ -55,21 +55,14 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 		protected var ECBPreviewDataQuery.Instance pDataQuery
 		protected var ECBehaviorComponent.Instance pComponent
 		protected var Model pModel
-		protected var DebugDrawer pDebugDrawerMove
-		protected var DebugDrawer pDebugDrawerRotate
-		protected var ColliderVolume pColliderMoveX
-		protected var ColliderVolume pColliderMoveY
-		protected var ColliderVolume pColliderMoveZ
-		protected var ColliderVolume pColliderRotateX
-		protected var ColliderVolume pColliderRotateY
-		protected var ColliderVolume pColliderRotateZ
-		protected var String pBone
-		protected var String pSlot
+		protected var DebugDrawer pDebugDrawerMove, pDebugDrawerRotate
+		protected var ColliderVolume pColliderMoveX, pColliderMoveY, pColliderMoveZ
+		protected var ColliderVolume pColliderRotateX, pColliderRotateY, pColliderRotateZ
+		protected var String pBone, pSlot
 		protected var bool pNoParentRotation
-		protected var Vector pPosition
-		protected var Vector pRotation
-		protected var bool pVisibleMove
-		protected var bool pVisibleRotate
+		protected var Vector pPosition, pRotation
+		protected var float pScale, pModelScale
+		protected var bool pVisibleMove, pVisibleRotate
 		protected var Array pRingRotMat
 		
 		
@@ -81,6 +74,7 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 			pSlot = ""
 			pPosition = Vector.new()
 			pRotation = Vector.new()
+			pScale = pModelScale = 1
 			
 			pRingRotMat = Array.new()
 			pRingRotMat.add(Matrix.newRotationX(35))
@@ -107,6 +101,7 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 			var ElementClass eclass = getElement().getClass()
 			
 			pModel = pECBehavior.getModel().getModel(stub, eclass)
+			pModelScale = pECBehavior.getScale().getValue(stub)
 			
 			var DVector position = stub.getPosition()
 			var Quaternion orientation = Quaternion.newFromEuler(stub.getRotation())
@@ -224,6 +219,20 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 				return
 			end
 			pRotation = rotation
+			updateCoordSystemGeometry()
+		end
+		
+		/** Scale relative to element. */
+		func float getScale()
+			return pScale
+		end
+		
+		/** Set scale relative to element. */
+		func void setScale(float scale)
+			if scale.equals(pScale)
+				return
+			end
+			pScale = scale
 			updateCoordSystemGeometry()
 		end
 		
@@ -428,20 +437,23 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 			var DMatrix matrix = getMatrix()
 			var DVector position = matrix.getPosition()
 			var Quaternion orientation = matrix.toQuaternion()
+			var Vector scale = Vector.new(pScale * pModelScale, pScale * pModelScale, pScale * pModelScale)
 			
 			pDebugDrawerMove.setPosition(position)
 			pDebugDrawerMove.setOrientation(orientation)
+			pDebugDrawerMove.setScale(scale)
 			
 			pDebugDrawerRotate.setPosition(position)
 			pDebugDrawerRotate.setOrientation(orientation)
+			pDebugDrawerRotate.setScale(scale)
 			
-			pColliderMoveX.setGeometry(position, orientation)
-			pColliderMoveY.setGeometry(position, orientation)
-			pColliderMoveZ.setGeometry(position, orientation)
+			pColliderMoveX.setGeometry(position, orientation, scale)
+			pColliderMoveY.setGeometry(position, orientation, scale)
+			pColliderMoveZ.setGeometry(position, orientation, scale)
 			
-			pColliderRotateX.setGeometry(position, orientation)
-			pColliderRotateY.setGeometry(position, orientation)
-			pColliderRotateZ.setGeometry(position, orientation)
+			pColliderRotateX.setGeometry(position, orientation, scale)
+			pColliderRotateY.setGeometry(position, orientation, scale)
+			pColliderRotateZ.setGeometry(position, orientation, scale)
 		end
 		
 		/** Update coordinate system visibility. */
@@ -467,6 +479,7 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 	protected var ECBPreviewDataQuery pDataQuery
 	protected var ECBehaviorComponent pComponent
 	protected var ECPModel pModel
+	protected var ECPFloat pScale
 	
 	
 	
@@ -488,6 +501,7 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 		pModel = ECPModel.new(prefix + "model", "/content/models/coordSystem/coordSystem.demodel")
 		eclass.addProperty(pModel)
 		
+		eclass.addProperty(pScale = ECPFloat.new(prefix + "scale", 1.5, 0.1))
 		eclass.addBehavior(this)
 	end
 	
@@ -515,6 +529,10 @@ class ECBPreviewCoordSystem extends DefaultECBehavior
 		return pModel
 	end
 	
+	/** Scale. */
+	func ECPFloat getScale()
+		return pScale
+	end
 	
 	
 	/** Get instance in element from owner element class. */
