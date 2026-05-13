@@ -28,6 +28,7 @@ pin Democap.MotionTransferSystem
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Scenery
+pin Democap.AutoRig
 
 
 /**
@@ -51,6 +52,7 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 	
 	
 	var Array pExpressions
+	var AutoRigHelper pAutoRigHelper
 	
 	
 	
@@ -62,6 +64,14 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 		
 		pExpressions = MotionTransferFace.expressionInfos.map(block MotionTransferFace.ExpressionInfo each
 			return Expression.new(each, modelVPS)
+		end)
+		
+		pAutoRigHelper = AutoRigHelper.new(pWindowCharacterConfiguration.getCharacterPreview(),\
+			window.getCharacterConfiguration(), "WCCPMTFace: ")
+		pAutoRigHelper.setMatchBones(false)
+		pAutoRigHelper.setMatchVPS(true)
+		pExpressions.forEach(block Expression each
+			pAutoRigHelper.addTarget("face." + each.info.getId(), each.modelText)
 		end)
 		
 		runWhileBlockingLayout(block
@@ -145,5 +155,21 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 				end
 			end)
 		end))
+	end
+	
+	protected func void onPanelContextMenu(MenuPopup menu)
+		var bool inVR = pWindowCharacterConfiguration.getInVR()
+		
+		var MenuItemCommand item = MenuItemCommand.new(Resources.edit.get(inVR), "@UI.AutoRig.Dialog",\
+			BlockActionListener.new(block ActionEvent event
+				pAutoRigHelper.showDialogAutoRig()
+			end))
+		menu.addWidget(item)
+		
+		item = MenuItemCommand.new(Resources.edit.get(inVR), "@UI.AutoRigBestMatching",\
+			BlockActionListener.new(block ActionEvent event
+				pAutoRigHelper.autoRigBestMatching()
+			end))
+		menu.addWidget(item)
 	end
 end

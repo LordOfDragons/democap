@@ -1,0 +1,118 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.AutoRig
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Auto rig definition. Defines a set of targets to automatically match rig bones.
+ * Targets are stored as AutoRigDefinitionTarget instances. Each target has an ordered
+ * list of match substrings tried in sequence; the first match found wins.
+ * 
+ * Definitions are loaded from XML files (*.deard) in the "/content/autorig" directory.
+ */
+class AutoRigDefinition
+	var StringID pID
+	var String pDisplayName
+	var Dictionary pTargets
+	
+	
+	/** Create auto rig definition. */
+	func new(StringID id, String displayName)
+		if id == null
+			throw ENullPointer.new("id")
+		end
+		if displayName == null
+			throw ENullPointer.new("displayName")
+		end
+		pID = id
+		pDisplayName = displayName
+		pTargets = Dictionary.new()
+	end
+	
+	
+	/** Unique identifier. */
+	func StringID getID()
+		return pID
+	end
+	
+	/** Display name. Can begin with "@" to reference a translation entry. */
+	func String getDisplayName()
+		return pDisplayName
+	end
+	
+	/** Set display name. Can begin with "@" to reference a translation entry. */
+	func void setDisplayName(String displayName)
+		if displayName == null
+			throw ENullPointer.new("displayName")
+		end
+		pDisplayName = displayName
+	end
+	
+	/** Count of targets. */
+	func int getTargetCount()
+		return pTargets.getCount()
+	end
+	
+	/** Target or null. */
+	func AutoRigDefinitionTarget getTargetAt(StringID target)
+		return pTargets.getAt(target, null) cast AutoRigDefinitionTarget
+	end
+	
+	/** Add or replace target. */
+	func void addTarget(AutoRigDefinitionTarget target)
+		if target == null
+			throw ENullPointer.new("target")
+		end
+		pTargets.setAt(target.getTarget(), target)
+	end
+	
+	/** Remove all targets. */
+	func void removeAllTargets()
+		pTargets.removeAll()
+	end
+	
+	/**
+	 * Visit targets with block. Block receives as arguments AutoRigDefinitionTarget.
+	 */
+	func void forEachTarget(Block ablock)
+		pTargets.forEachValue(ablock)
+	end
+	
+	/**
+	 * Definition contains at least one target matching Array of String target named.
+	 */
+	func bool matchesAnyTarget(Array targetNames)
+		return targetNames.find(block String targetName
+			return pTargets.has(StringID.new(targetName))
+		end) != null
+	end
+	
+	func String toString()
+		return getDisplayName()
+	end
+	
+	func int compare(Object obj)
+		return pDisplayName.compareNoCase((obj cast AutoRigDefinition).pDisplayName)
+	end
+end

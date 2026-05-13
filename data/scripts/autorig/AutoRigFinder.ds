@@ -1,0 +1,227 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.AutoRig
+pin Dragengine.Utils
+pin Dragengine.Scenery
+pin Dragengine.Gui.Borders
+
+
+/**
+ * Find bones using auto rig definitions.
+ */
+class AutoRigFinder
+	/** Result. */
+	class Result
+		var AutoRigDefinition pDefinition
+		var Dictionary pResult
+		var int pMatchCount
+		
+		
+		/** Create best result. */
+		func new()
+			pResult = Dictionary.new()
+		end
+		
+		
+		/** Auto rig definition. */
+		func AutoRigDefinition getDefinition()
+			return pDefinition
+		end
+		
+		/** Set auto rig definition. */
+		func void setDefinition(AutoRigDefinition definition)
+			pDefinition = definition
+		end
+		
+		/** Matching bone/vps names as Dictionary mapping String target to String name. */
+		func Dictionary getResult()
+			return pResult
+		end
+		
+		/** Match count. */
+		func int getMatchCount()
+			return pMatchCount
+		end
+		
+		/** Set match count. */
+		func void setMatchCount(int matchCount)
+			pMatchCount = matchCount
+		end
+		
+		/** Update match count from result. */
+		func void updateMatchCount()
+			pMatchCount = pResult.count(block String key, String value
+				return value != null
+			end)
+		end
+		
+		
+		/** Clear result. */
+		func void clear()
+			pDefinition = null
+			pResult.removeAll()
+			pMatchCount = 0
+		end
+		
+		/** Set to another result. */
+		func void setFrom(Result result)
+			pDefinition = result.pDefinition
+			pResult = Dictionary.new(result.pResult)
+			pMatchCount = result.pMatchCount
+		end
+	end
+	
+	
+	var Component pComponent
+	protected var Array pBoneNamesLower, pVertexPositionSetNamesLower
+	protected var int pResult
+	
+	
+	/** Create auto rig finder. */
+	func new(Component component)
+		if component == null
+			throw ENullPointer.new("component")
+		end
+		
+		pComponent = component
+		pBoneNamesLower = Array.new()
+		pVertexPositionSetNamesLower = Array.new()
+		pResult = -1
+		
+		var int i, count = component.getBoneCount()
+		for i = 0 to count
+			pBoneNamesLower.add(component.boneGetName(i).toLower())
+		end
+		
+		count = component.getVertexPositionSetCount()
+		for i = 0 to count
+			pVertexPositionSetNamesLower.add(component.vertexPositionSetGetNameAt(i).toLower())
+		end
+	end
+	
+	
+	/** Get component. */
+	func Component getComponent()
+		return pComponent
+	end
+	
+	
+	/**
+	 * Find bone name for target. Finds the target then tries each match substring in order.
+	 * Returns the first matching bone name or null if no match is found.
+	 */
+	func String findBone(AutoRigDefinition definition, String target)
+		if definition == null
+			throw ENullPointer.new("definition")
+		end
+		if target == null
+			throw ENullPointer.new("target")
+		end
+		
+		pResult = -1
+		
+		var AutoRigDefinitionTarget t = definition.getTargetAt(StringID.new(target))
+		
+		if t != null
+			t.findMatch(block AutoRigDefinitionMatch match
+				return pBoneNamesLower.find(block int index, String boneName
+					if match.matches(boneName)
+						pResult = index
+					end
+					return pResult != -1
+				end) != null
+			end)
+		end
+		
+		return pResult != -1 if pComponent.boneGetName(pResult) else null
+	end
+	
+	/**
+	 * Find bone names for targets. Finds the target then tries each match substring in order.
+	 * Targets is an Array of String target names. Stores the result in "result".
+	 */
+	func void findBones(AutoRigDefinition definition, Array targets, Result result)
+		var Dictionary res = result.getResult()
+		targets.forEach(block String target
+			res.setAt(target, findBone(definition, target))
+		end)
+		result.updateMatchCount()
+		result.setDefinition(definition)
+	end
+	
+	func Result findBones(AutoRigDefinition definition, Array targets)
+		var Result result = Result.new()
+		findBones(definition, targets, result)
+		return result
+	end
+	
+	/**
+	 * Find vertex position set name for target. Finds the target then tries each match
+	 * substring in order. Returns the first matching vertex position set name or null if
+	 * no match is found.
+	 */
+	func String findVertexPositionSet(AutoRigDefinition definition, String target)
+		if definition == null
+			throw ENullPointer.new("definition")
+		end
+		if target == null
+			throw ENullPointer.new("target")
+		end
+		
+		pResult = -1
+		
+		var AutoRigDefinitionTarget t = definition.getTargetAt(StringID.new(target))
+		
+		if t != null
+			t.findMatch(block AutoRigDefinitionMatch match
+				return pVertexPositionSetNamesLower.find(block int index, String name
+					if match.matches(name)
+						pResult = index
+					end
+					return pResult != -1
+				end) != null
+			end)
+		end
+		
+		return pResult != -1 if pComponent.vertexPositionSetGetNameAt(pResult) else null
+	end
+	
+	/**
+	 * Find vertex position set names for targets. Finds the target then tries each match
+	 * substring in order. Targets is an Array of String target names. Stores the result
+	 * in "result".
+	 */
+	func void findVertexPositionSets(AutoRigDefinition definition, Array targets, Result result)
+		var Dictionary res = result.getResult()
+		targets.forEach(block String target
+			res.setAt(target, findVertexPositionSet(definition, target))
+		end)
+		result.updateMatchCount()
+		result.setDefinition(definition)
+	end
+	
+	func Result findVertexPositionSets(AutoRigDefinition definition, Array targets)
+		var Result result = Result.new()
+		findVertexPositionSets(definition, targets, result)
+		return result
+	end
+end

@@ -1,0 +1,180 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.AutoRig
+pin Dragengine.Utils
+pin Dragengine.Gui
+pin Democap.Gui
+pin Dragengine.Scenery
+pin Democap.Characters
+
+
+/**
+ * Auto rig helper for use by UI to simplify the processing of providing auto rig support.
+ */
+class AutoRigHelper
+	var WidgetCharacterPreview pPreview
+	var CharacterConfiguration pCharacter
+	var Dictionary pTargets
+	var String pLogPrefix
+	var bool pMatchBones, pMatchVPS
+	
+	
+	/** Create auto rig helper. */
+	func new(WidgetCharacterPreview preview, CharacterConfiguration character, String logPrefix)
+		pPreview = preview
+		pCharacter = character
+		pTargets = Dictionary.new()
+		pLogPrefix = logPrefix
+		pMatchBones = true
+	end
+	
+	
+	/** Preview widget. */
+	func WidgetCharacterPreview getPreview()
+		return pPreview
+	end
+	
+	/** Character configuration. */
+	func CharacterConfiguration getCharacter()
+		return pCharacter
+	end
+	
+	/** Set whether to match bones. */
+	func void setMatchBones(bool matchBones)
+		pMatchBones = matchBones
+	end
+	
+	/** Set whether to match virtual points. */
+	func void setMatchVPS(bool matchVPS)
+		pMatchVPS = matchVPS
+	end
+	
+	
+	/** Add target. */
+	func void addTarget(String target, TextModel model)
+		pTargets.setAt(target, model)
+	end
+	
+	
+	/** Auto rig. */
+	func void autoRig(AutoRigDefinition definition)
+		var BehaviorElement element = pPreview.getCharacterPreview()
+		if element == null
+			return
+		end
+		
+		var ECBehaviorComponent.Instance component = ECBehaviorComponent.getInstanceIn(element)
+		if component == null or component.getComponent() == null
+			return
+		end
+		
+		var AutoRigFinder finder = AutoRigFinder.new(component.getComponent())
+		var AutoRigFinder.Result result = AutoRigFinder.Result.new()
+		var Array targets = pTargets.getKeys()
+		
+		if pMatchBones
+			finder.findBones(definition, targets, result)
+		end
+		if pMatchVPS
+			finder.findVertexPositionSets(definition, targets, result)
+		end
+		
+		result.getResult().forEach(block String key, String value
+			(pTargets.getAt(key) cast TextModel).setText(value != null if value else "")
+		end)
+	end
+	
+	
+	/** Auto rig best matching. */
+	func void autoRigBestMatching()
+		var BehaviorElement element = pPreview.getCharacterPreview()
+		if element == null
+			return
+		end
+		
+		var ECBehaviorComponent.Instance component = ECBehaviorComponent.getInstanceIn(element)
+		if component == null or component.getComponent() == null
+			return
+		end
+		
+		var AutoRigFinder.Result result = AutoRigFinder.Result.new()
+		var AutoRigFinder.Result bestResult = AutoRigFinder.Result.new()
+		var AutoRigFinder finder = AutoRigFinder.new(component.getComponent())
+		var Array targets = pTargets.getKeys()
+		
+		GameApp.getGameApp().getAutoRigManager().forEach(block AutoRigDefinition definition
+			if pMatchBones
+				finder.findBones(definition, targets, result)
+			end
+			if pMatchVPS
+				finder.findVertexPositionSets(definition, targets, result)
+			end
+			
+			if result.getMatchCount() > bestResult.getMatchCount()
+				bestResult.setFrom(result)
+			end
+		end)
+		
+		if bestResult.getMatchCount() == 0
+			WindowDialog.message(pPreview.getWindow(), "@UI.AutoRigBestMatching",\
+				"@UI.AutoRigBestMatching.Message.NoMatch", null, null, null)
+			return
+		end
+		
+		bestResult.getResult().forEach(block String key, String value
+			(pTargets.getAt(key) cast TextModel).setText(value != null if value else "")
+		end)
+		
+		GameApp.getGameApp().getConsole().addMessage(\
+			"{}autoRigBestMatching: Applied auto rig '{}' to character '{}':'{}', matches {}".format(\
+				Array.newWith(pLogPrefix, bestResult.getDefinition().getDisplayName(),\
+					getCharacter().getProfile().getName(), getCharacter().getName(), bestResult.getResult())))
+	end
+	
+	/** Show dialog for auto rig selection. */
+	func void showDialogAutoRig()
+		var Array targets = pTargets.getKeys()
+		
+		var Array definitions = Array.new()
+		GameApp.getGameApp().getAutoRigManager().forEach(block AutoRigDefinition each
+			if each.matchesAnyTarget(targets)
+				definitions.add(each)
+			end
+		end)
+		definitions.sort()
+		
+		var int length = definitions.inject(0, block int accum, AutoRigDefinition each
+			return Math.max(accum, each.getDisplayName().getLength())
+		end) cast int
+		
+		var DefaultListModel model = DefaultListModel.new(definitions)
+		model.setSelected(0)
+		
+		WindowDialog.chooseList(pPreview.getWindow(), "@UI.AutoRig.Title", "@UI.AutoRig.Message",\
+			null, model, DefaultListElementRenderer.new(String.new('X', length)), null, null,\
+			WindowDialog.BlockResultListener.new(block int result
+				if result != -1
+					autoRig(model.getAt(result) cast AutoRigDefinition)
+				end
+			end))
+	end
+end

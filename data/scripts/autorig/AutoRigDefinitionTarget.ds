@@ -1,0 +1,91 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.AutoRig
+pin Dragengine.Utils
+
+
+/**
+ * Auto rig definition target. Defines a target identifier and an ordered list of match
+ * substrings. To find a bone or vertex position set for this target the match substrings
+ * are tried in order. The first match found in the rig wins for this target.
+ */
+class AutoRigDefinitionTarget
+	var StringID pTarget
+	var Array pMatches
+	
+	
+	/** Create auto rig definition target. */
+	func new(StringID target)
+		if target == null
+			throw ENullPointer.new("target")
+		end
+		
+		pTarget = target
+		pMatches = Array.new()
+	end
+	
+	
+	/** Identifier. */
+	func StringID getTarget()
+		return pTarget
+	end
+	
+	/** Count of matches. */
+	func int getMatchCount()
+		return pMatches.getCount()
+	end
+	
+	/** Match at index. */
+	func AutoRigDefinitionMatch getMatchAt(int index)
+		return pMatches.getAt(index) cast AutoRigDefinitionMatch
+	end
+	
+	/** Add match. */
+	func void addMatch(AutoRigDefinitionMatch match)
+		if match == null
+			throw ENullPointer.new("match")
+		end
+		pMatches.add(match)
+	end
+	
+	/** Remove all matches. */
+	func void removeAllMatches()
+		pMatches.removeAll()
+	end
+	
+	/**
+	 * Visit matches with block. Block receives as argument AutoRigDefinitionMatch or
+	 * int index and AutoRigDefinitionMatch.
+	 */
+	func void forEachMatch(Block ablock)
+		pMatches.forEach(ablock)
+	end
+	
+	/**
+	 * Find match with block. Block receives as argument AutoRigDefinitionMatch or
+	 * int index and AutoRigDefinitionMatch and returns non-null if found.
+	 * Returns found AutoRigDefinitionMatch or null if not found.
+	 */
+	func AutoRigDefinitionMatch findMatch(Block ablock)
+		return pMatches.find(ablock) cast AutoRigDefinitionMatch
+	end
+end

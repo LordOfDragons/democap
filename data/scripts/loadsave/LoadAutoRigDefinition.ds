@@ -1,0 +1,114 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap
+pin Democap.AutoRig
+pin Dragengine.LoadSave
+pin Dragengine.Utils
+pin Dragengine.XML
+
+
+/**
+ * Load auto rig definition from XML file (*.deard).
+ */
+class LoadAutoRigDefinition extends BaseXmlLoader
+	/** Create loader. */
+	func new(Console console) this(console, "LoadAutoRigDefinition")
+	end
+	
+	/** Create loader. */
+	func new(Console console, String name) super(console, name)
+	end
+	
+	
+	/**
+	 * Load all auto rig definition files from a directory. Scans the given directory for
+	 * files with extension ".deard" and load and adds them to manager.
+	 */
+	func void loadAll(AutoRigManager manager, String directory)
+		if not FileSystem.existsFile(directory)
+			return
+		end
+		
+		FileSystem.searchFiles(directory, false, block String path, FileType type
+			if type == FileType.file and FileSystem.pathMatchesPattern(File.new(path).getName(), "*.deard")
+				try
+					manager.add(load(path))
+					
+				catch Exception e
+					getConsole().addError("Failed loading auto rig definition: " + path, e)
+				end
+			end
+			return true
+		end)
+	end
+	
+	/** Load auto rig definition from file. */
+	func AutoRigDefinition load(String filename)
+		logLoadingFromFile(filename)
+		getConsole().addMessage("Loading Auto Rig Definition: " + filename)
+		return loadAndParseRootTag(filename, "autoRigDefinition", block EasyXMLElement root
+			var AutoRigDefinition definition = AutoRigDefinition.new(\
+				StringID.new(root.getAttributeNamed("id")),\
+				root.getAttributeNamed("displayName"))
+			
+			readAutoRigDefinition(root, definition)
+			
+			return definition
+		end) cast AutoRigDefinition
+	end
+	
+	
+	/** Read autoRigDefinition tag content. */
+	func void readAutoRigDefinition(EasyXMLElement root, AutoRigDefinition definition)
+		root.forEachTag(block EasyXMLElement element, String tagName
+			if tagName.equals("target")
+				definition.addTarget(readTarget(element))
+				
+			else
+				logUnknownTag(element)
+			end
+		end)
+	end
+	
+	/** Read target tag. */
+	func AutoRigDefinitionTarget readTarget(EasyXMLElement element)
+		var AutoRigDefinitionTarget target = AutoRigDefinitionTarget.new(StringID.new(element.getAttributeNamed("name")))
+		
+		element.forEachTag(block EasyXMLElement child, String tagName
+			if tagName.equals("match")
+				var String match = child.getFirstCData()
+				if not match.empty()
+					var AutoRigDefinitionMatch.Mode mode = AutoRigDefinitionMatch.Mode.exact
+					if child.hasAttributeNamed("mode")
+						mode = AutoRigDefinitionMatch.Mode.named(child.getAttributeNamed("mode"))
+					end
+					target.addMatch(AutoRigDefinitionMatch.new(match, mode))
+				end
+				
+			else
+				logUnknownTag(child)
+			end
+		end)
+		
+		return target
+	end
+end

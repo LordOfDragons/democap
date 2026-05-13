@@ -28,6 +28,7 @@ pin Democap.MotionTransferSystem
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Scenery
+pin Democap.AutoRig
 
 
 /**
@@ -73,6 +74,8 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 	
 	var DefaultRangeModel pModelThumbBendStrength, pModelIndexBendStrength,\
 		pModelMiddleBendStrength, pModelRingBendStrength, pModelPinkyBendStrength
+	
+	var AutoRigHelper pAutoRigHelperRight, pAutoRigHelperLeft
 	
 	
 	/** Create window. */
@@ -131,6 +134,37 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		pModelMiddleBendStrength = DefaultRangeModel.new(0, 100, 25, 100, 5)
 		pModelRingBendStrength = DefaultRangeModel.new(0, 100, 25, 100, 5)
 		pModelPinkyBendStrength = DefaultRangeModel.new(0, 100, 25, 100, 5)
+		
+		
+		pAutoRigHelperRight = AutoRigHelper.new(pWindowCharacterConfiguration.getCharacterPreview(),\
+			window.getCharacterConfiguration(), "WCCPMTFingers.Right: ")
+		pAutoRigHelperRight.addTarget("finger.right.thumbTip", pModelTextThumbTipBone)
+		pAutoRigHelperRight.addTarget("finger.right.thumbBase", pModelTextThumbBaseBone)
+		pAutoRigHelperRight.addTarget("finger.right.indexTip", pModelTextIndexTipBone)
+		pAutoRigHelperRight.addTarget("finger.right.indexBase", pModelTextIndexBaseBone)
+		pAutoRigHelperRight.addTarget("finger.right.middleTip", pModelTextMiddleTipBone)
+		pAutoRigHelperRight.addTarget("finger.right.middleBase", pModelTextMiddleBaseBone)
+		pAutoRigHelperRight.addTarget("finger.right.ringTip", pModelTextRingTipBone)
+		pAutoRigHelperRight.addTarget("finger.right.ringBase", pModelTextRingBaseBone)
+		pAutoRigHelperRight.addTarget("finger.right.pinkyTip", pModelTextPinkyTipBone)
+		pAutoRigHelperRight.addTarget("finger.right.pinkyBase", pModelTextPinkyBaseBone)
+		pAutoRigHelperRight.addTarget("finger.right.wrist", pModelTextWristBone)
+		
+		
+		pAutoRigHelperLeft = AutoRigHelper.new(pWindowCharacterConfiguration.getCharacterPreview(),\
+			window.getCharacterConfiguration(), "WCCPMTFingers.Left: ")
+		pAutoRigHelperLeft.addTarget("finger.left.thumbTip", pModelTextThumbTipBone)
+		pAutoRigHelperLeft.addTarget("finger.left.thumbBase", pModelTextThumbBaseBone)
+		pAutoRigHelperLeft.addTarget("finger.left.indexTip", pModelTextIndexTipBone)
+		pAutoRigHelperLeft.addTarget("finger.left.indexBase", pModelTextIndexBaseBone)
+		pAutoRigHelperLeft.addTarget("finger.left.middleTip", pModelTextMiddleTipBone)
+		pAutoRigHelperLeft.addTarget("finger.left.middleBase", pModelTextMiddleBaseBone)
+		pAutoRigHelperLeft.addTarget("finger.left.ringTip", pModelTextRingTipBone)
+		pAutoRigHelperLeft.addTarget("finger.left.ringBase", pModelTextRingBaseBone)
+		pAutoRigHelperLeft.addTarget("finger.left.pinkyTip", pModelTextPinkyTipBone)
+		pAutoRigHelperLeft.addTarget("finger.left.pinkyBase", pModelTextPinkyBaseBone)
+		pAutoRigHelperLeft.addTarget("finger.left.wrist", pModelTextWristBone)
+		
 		
 		runWhileBlockingLayout(block
 			createContent(optionPrefix)
@@ -680,6 +714,32 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		item = MenuItemCommand.new(Resources.mirror.get(inVR), "@UI.MirrorHand.Dialog",\
 			BlockActionListener.new(block ActionEvent event
 				mirrorValues()
+			end))
+		menu.addWidget(item)
+		
+		menu.addWidget(MenuItemSeparator.new())
+		item = MenuItemCommand.new(Resources.handRight.get(inVR), "@UI.AutoRigRightHand.Dialog",\
+			BlockActionListener.new(block ActionEvent event
+				pAutoRigHelperRight.showDialogAutoRig()
+			end))
+		menu.addWidget(item)
+		
+		item = MenuItemCommand.new(Resources.handRight.get(inVR), "@UI.AutoRigRightHandBestMatching",\
+			BlockActionListener.new(block ActionEvent event
+				pAutoRigHelperRight.autoRigBestMatching()
+			end))
+		menu.addWidget(item)
+		
+		menu.addWidget(MenuItemSeparator.new())
+		item = MenuItemCommand.new(Resources.handLeft.get(inVR), "@UI.AutoRigLeftHand.Dialog",\
+			BlockActionListener.new(block ActionEvent event
+				pAutoRigHelperLeft.showDialogAutoRig()
+			end))
+		menu.addWidget(item)
+		
+		item = MenuItemCommand.new(Resources.handLeft.get(inVR), "@UI.AutoRigLeftHandBestMatching",\
+			BlockActionListener.new(block ActionEvent event
+				pAutoRigHelperLeft.autoRigBestMatching()
 			end))
 		menu.addWidget(item)
 	end

@@ -1,0 +1,100 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.AutoRig
+pin Dragengine.Utils
+
+
+/**
+ * Auto rig definition match.
+ */
+class AutoRigDefinitionMatch
+	/** Match mode. */
+	enum Mode
+		/** Match exact name (case-insensitive). */
+		exact
+		
+		/** Match substring at the beginning of the name. */
+		first
+		
+		/** Match substring at the end of the name. */
+		last
+		
+		/** Match substring anywhere in the name. */
+		middle
+	end
+	
+	
+	var String pMatch, pMatchLower
+	var Mode pMode
+	
+	
+	/** Create auto rig definition match. */
+	func new(String match, Mode mode)
+		if match == null
+			throw ENullPointer.new("match")
+		end
+		if mode == null
+			throw ENullPointer.new("mode")
+		end
+		
+		pMatch = match
+		pMatchLower = match.toLower()
+		pMode = mode
+	end
+	
+	
+	/** Match string. */
+	func String getMatch()
+		return pMatch
+	end
+	
+	/** Match string (lower-case). */
+	func String getMatchLower()
+		return pMatchLower
+	end
+	
+	/** Match mode. */
+	func Mode getMode()
+		return pMode
+	end
+	
+	
+	/**
+	 * Test if name (lower-case) matches.
+	 */
+	func bool matches(String nameLower)
+		select pMode
+		case Mode.exact
+			return nameLower.equals(pMatchLower)
+			
+		case Mode.first
+			return nameLower.startsWith(pMatchLower)
+			
+		case Mode.last
+			return nameLower.endsWith(pMatchLower)
+			
+		case Mode.middle
+			return nameLower.findString(pMatchLower) != -1
+		end
+		return false
+	end
+end

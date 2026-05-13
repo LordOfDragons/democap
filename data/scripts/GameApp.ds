@@ -24,6 +24,7 @@ namespace Democap
 requires "Introspection"
 
 pin Democap.Actors
+pin Democap.AutoRig
 pin Democap.Behaviors
 pin Democap.Characters
 pin Democap.Commands
@@ -79,6 +80,9 @@ class GameApp extends BaseGameApp
 	var LoadableWorlds pLoadableWorlds
 	var SessionSettings pSessionSettings
 	var SessionState pSessionState
+	
+	var AutoRigManager pAutoRigManager
+	var LoadAutoRigDefinition pLoadAutoRigDefinition
 	
 	var MotionTransferFactories pMotionTransferFactories
 	var LoadActorProfile pLoadActorProfile
@@ -293,6 +297,16 @@ class GameApp extends BaseGameApp
 	/** Load/save stage directions. */
 	func LoadStageDirections getLoadStageDirections()
 		return pLoadStageDirections
+	end
+	
+	/** Auto rig manager. */
+	func AutoRigManager getAutoRigManager()
+		return pAutoRigManager
+	end
+	
+	/** Load auto rig definitions. */
+	func LoadAutoRigDefinition getLoadAutoRigDefinition()
+		return pLoadAutoRigDefinition
 	end
 	
 	/** Track hand controller capabilities. */
@@ -605,6 +619,8 @@ class GameApp extends BaseGameApp
 		pLoadActorProfile = LoadActorProfile.new(getConsole())
 		pLoadCharacterProfile = LoadCharacterProfile.new(getConsole())
 		pLoadStageDirections = LoadStageDirections.new(getConsole())
+		pAutoRigManager = AutoRigManager.new()
+		pLoadAutoRigDefinition = LoadAutoRigDefinition.new(getConsole())
 		pSelectionTracker = ECBSelectable.Tracker.new()
 		pCapturableTracker = ECBCapturable.Tracker.new()
 		
@@ -700,6 +716,8 @@ class GameApp extends BaseGameApp
 		setSplitInputProcessor()
 		
 		// load stuff
+		pLoadAutoRigDefinition.loadAll(pAutoRigManager, "/content/autorig")
+		
 		pActorProfiles.loadAll()
 		if pActorProfiles.getCount() > 0
 			setActiveActorProfile(pActorProfiles.getAt(0))

@@ -24,10 +24,12 @@ namespace Democap.Gui
 pin Democap.Behaviors
 pin Democap.Characters
 pin Democap.MotionTransferSystem
+pin Democap.AutoRig
 
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Scenery
+pin Dragengine.Utils
 
 
 /**
@@ -54,7 +56,7 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 	var DefaultTextModel pModelTextNeckShiftMoveX, pModelTextNeckShiftMoveY
 	var EditVector2 pEditNeckBendMoveRange, pEditNeckShiftMoveRange, pEditShoulderRange
 	var DefaultListModel pModelWaistMode
-	
+	var AutoRigHelper pAutoRigHelper
 	
 	
 	/** Create window. */
@@ -123,6 +125,16 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		pModelTextNeckShiftMoveY = DefaultTextModel.new()
 		
 		pModelWaistMode = DefaultListModel.new(MotionTransferAutoHuman.WaistMode.all().toArray())
+		
+		pAutoRigHelper = AutoRigHelper.new(pWindowCharacterConfiguration.getCharacterPreview(),\
+			window.getCharacterConfiguration(), "WCCPMTAutoHuman: ")
+		pAutoRigHelper.addTarget("body.head", pModelTextBoneHead)
+		pAutoRigHelper.addTarget("body.chest", pModelTextBoneChest)
+		pAutoRigHelper.addTarget("body.hip", pModelTextBoneHip)
+		pAutoRigHelper.addTarget("body.handRight", pModelTextBoneHandRight)
+		pAutoRigHelper.addTarget("body.handLeft", pModelTextBoneHandLeft)
+		pAutoRigHelper.addTarget("body.footRight", pModelTextBoneFootRight)
+		pAutoRigHelper.addTarget("body.footLeft", pModelTextBoneFootLeft)
 		
 		runWhileBlockingLayout(block
 			createContent(optionPrefix)
@@ -285,7 +297,6 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 	end
 	
 	
-	
 	/** Create window content. */
 	protected func void createContent(String optionPrefix)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
@@ -299,81 +310,77 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 		createBaseContent("motiontransferautohuman")
 		
 		// head bone
-		label = Label.new("@UI.Head.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		var Label labelHead = Label.new("@UI.Head.Label", "Label.FormCaption.SingleLine")
+		pPanelForm.addWidget(labelHead)
 		
-		comboBox = ComboBox.new(pModelListBoneHead, DefaultComboBoxEditor.new(pModelTextBoneHead))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("@UI.ToolTip.HeadBone")
-		pPanelForm.addWidget(comboBox)
-		
-		CPEBone.new(preview, label, comboBox)
+		var ComboBox comboBoxHead = ComboBox.new(pModelListBoneHead, DefaultComboBoxEditor.new(pModelTextBoneHead))
+		comboBoxHead.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxHead.setToolTip("@UI.ToolTip.HeadBone")
+		pPanelForm.addWidget(comboBoxHead)
 		
 		// chest bone
-		label = Label.new("@UI.Chest.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		var Label labelChest = Label.new("@UI.Chest.Label", "Label.FormCaption.SingleLine")
+		pPanelForm.addWidget(labelChest)
 		
 		var ComboBox comboBoxChest = ComboBox.new(pModelListBoneChest, DefaultComboBoxEditor.new(pModelTextBoneChest))
 		comboBoxChest.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBoxChest.setToolTip("@UI.ToolTip.ChestBone")
 		pPanelForm.addWidget(comboBoxChest)
 		
-		CPEBone.new(preview, label, comboBoxChest)
-		
 		// right hand bone
-		label = Label.new("@UI.RightHand.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		var Label labelRightHand = Label.new("@UI.RightHand.Label", "Label.FormCaption.SingleLine")
+		pPanelForm.addWidget(labelRightHand)
 		
-		comboBox = ComboBox.new(pModelListBoneHandRight, DefaultComboBoxEditor.new(pModelTextBoneHandRight))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("@UI.ToolTip.RightHandBone")
-		pPanelForm.addWidget(comboBox)
-		
-		CPEBone.new(preview, label, comboBox)
+		var ComboBox comboBoxRightHand = ComboBox.new(pModelListBoneHandRight, DefaultComboBoxEditor.new(pModelTextBoneHandRight))
+		comboBoxRightHand.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxRightHand.setToolTip("@UI.ToolTip.RightHandBone")
+		pPanelForm.addWidget(comboBoxRightHand)
 		
 		// left hand bone
-		label = Label.new("@UI.LeftHand.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		var Label labelLeftHand = Label.new("@UI.LeftHand.Label", "Label.FormCaption.SingleLine")
+		pPanelForm.addWidget(labelLeftHand)
 		
-		comboBox = ComboBox.new(pModelListBoneHandLeft, DefaultComboBoxEditor.new(pModelTextBoneHandLeft))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("@UI.ToolTip.LeftHandBone")
-		pPanelForm.addWidget(comboBox)
-		
-		CPEBone.new(preview, label, comboBox)
+		var ComboBox comboBoxLeftHand = ComboBox.new(pModelListBoneHandLeft, DefaultComboBoxEditor.new(pModelTextBoneHandLeft))
+		comboBoxLeftHand.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxLeftHand.setToolTip("@UI.ToolTip.LeftHandBone")
+		pPanelForm.addWidget(comboBoxLeftHand)
 		
 		// hip bone
-		label = Label.new("@UI.Hip.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		var Label labelHip = Label.new("@UI.Hip.Label", "Label.FormCaption.SingleLine")
+		pPanelForm.addWidget(labelHip)
 		
 		var ComboBox comboBoxHip = ComboBox.new(pModelListBoneHip, DefaultComboBoxEditor.new(pModelTextBoneHip))
 		comboBoxHip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBoxHip.setToolTip("@UI.ToolTip.HipBone")
 		pPanelForm.addWidget(comboBoxHip)
 		
-		CPEBone.new(preview, label, comboBoxHip)
+		CPEBone.new(preview, labelHip, comboBoxHip)
 		
 		// right foot bone
-		label = Label.new("@UI.RightFoot.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		var Label labelRightFoot = Label.new("@UI.RightFoot.Label", "Label.FormCaption.SingleLine")
+		pPanelForm.addWidget(labelRightFoot)
 		
-		comboBox = ComboBox.new(pModelListBoneFootRight, DefaultComboBoxEditor.new(pModelTextBoneFootRight))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("@UI.ToolTip.RightFootBone")
-		pPanelForm.addWidget(comboBox)
-		
-		CPEBone.new(preview, label, comboBox)
+		var ComboBox comboBoxRightFoot = ComboBox.new(pModelListBoneFootRight, DefaultComboBoxEditor.new(pModelTextBoneFootRight))
+		comboBoxRightFoot.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxRightFoot.setToolTip("@UI.ToolTip.RightFootBone")
+		pPanelForm.addWidget(comboBoxRightFoot)
 		
 		// left foot bone
-		label = Label.new("@UI.LeftFoot.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		var Label labelLeftFoot = Label.new("@UI.LeftFoot.Label", "Label.FormCaption.SingleLine")
+		pPanelForm.addWidget(labelLeftFoot)
 		
-		comboBox = ComboBox.new(pModelListBoneFootLeft, DefaultComboBoxEditor.new(pModelTextBoneFootLeft))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("@UI.ToolTip.LeftFootBone")
-		pPanelForm.addWidget(comboBox)
+		var ComboBox comboBoxLeftFoot = ComboBox.new(pModelListBoneFootLeft, DefaultComboBoxEditor.new(pModelTextBoneFootLeft))
+		comboBoxLeftFoot.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxLeftFoot.setToolTip("@UI.ToolTip.LeftFootBone")
+		pPanelForm.addWidget(comboBoxLeftFoot)
 		
-		CPEBone.new(preview, label, comboBox)
+		// chains
+		CPEBoneChain.new(preview, labelHead, comboBoxHead, null, comboBoxChest, false)
+		CPEBoneChain.new(preview, labelChest, comboBoxChest, null, comboBoxHip, false)
+		CPEBoneChain.new(preview, labelRightHand, comboBoxRightHand, null, comboBoxChest, false)
+		CPEBoneChain.new(preview, labelLeftHand, comboBoxLeftHand, null, comboBoxChest, false)
+		CPEBoneChain.new(preview, labelRightFoot, comboBoxRightFoot, null, comboBoxHip, false)
+		CPEBoneChain.new(preview, labelLeftFoot, comboBoxLeftFoot, null, comboBoxHip, false)
 		
 		// base ik move
 		pPanelForm.addWidget(Label.new("@UI.MoveBaseIK.Label", "Label.FormCaption.SingleLine"))
@@ -638,5 +645,21 @@ class WCCPMTAutoHuman extends WCCPanelMotionTransfer
 			checkBox.setToolTip("@UI.ToolTip.ElbowGuideUsePosition")
 			p.addWidget(checkBox)
 		end))
+	end
+	
+	protected func void onPanelContextMenu(MenuPopup menu)
+		var bool inVR = pWindowCharacterConfiguration.getInVR()
+		
+		var MenuItemCommand item = MenuItemCommand.new(Resources.edit.get(inVR), "@UI.AutoRig.Dialog",\
+			BlockActionListener.new(block ActionEvent event
+				pAutoRigHelper.showDialogAutoRig()
+			end))
+		menu.addWidget(item)
+		
+		item = MenuItemCommand.new(Resources.edit.get(inVR), "@UI.AutoRigBestMatching",\
+			BlockActionListener.new(block ActionEvent event
+				pAutoRigHelper.autoRigBestMatching()
+			end))
+		menu.addWidget(item)
 	end
 end

@@ -28,6 +28,7 @@ pin Democap.MotionTransferSystem
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.Scenery
+pin Democap.AutoRig
 
 
 /**
@@ -57,6 +58,7 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 	var EditVector pEditJawBoneRotation
 	var DefaultTextModel pModelJawBoneAngle
 	var Array pVisemes
+	var AutoRigHelper pAutoRigHelper
 	
 	
 	/** Create window. */
@@ -77,6 +79,14 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 		
 		pVisemes = MotionTransferLipSync.visemeInfos.map(block MotionTransferLipSync.VisemeInfo each
 			return EditViseme.new(each, modelVPS)
+		end)
+		
+		pAutoRigHelper = AutoRigHelper.new(pWindowCharacterConfiguration.getCharacterPreview(),\
+			window.getCharacterConfiguration(), "WCCPMTLipSync: ")
+		pAutoRigHelper.setMatchBones(false)
+		pAutoRigHelper.setMatchVPS(true)
+		pVisemes.forEach(block EditViseme each
+			pAutoRigHelper.addTarget("mouth." + each.info.getViseme().name(), each.modelText)
 		end)
 		
 		runWhileBlockingLayout(block
@@ -230,5 +240,21 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 				end
 			end)
 		end))
+	end
+	
+	protected func void onPanelContextMenu(MenuPopup menu)
+		var bool inVR = pWindowCharacterConfiguration.getInVR()
+		
+		var MenuItemCommand item = MenuItemCommand.new(Resources.edit.get(inVR), "@UI.AutoRig.Dialog",\
+			BlockActionListener.new(block ActionEvent event
+				pAutoRigHelper.showDialogAutoRig()
+			end))
+		menu.addWidget(item)
+		
+		item = MenuItemCommand.new(Resources.edit.get(inVR), "@UI.AutoRigBestMatching",\
+			BlockActionListener.new(block ActionEvent event
+				pAutoRigHelper.autoRigBestMatching()
+			end))
+		menu.addWidget(item)
 	end
 end
