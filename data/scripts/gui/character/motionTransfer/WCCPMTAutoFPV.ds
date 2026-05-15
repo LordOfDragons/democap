@@ -179,6 +179,129 @@ class WCCPMTAutoFPV extends WCCPanelMotionTransfer
 		return motionTranfer castable MotionTransferAutoFPV
 	end
 	
+	/** Auto slot placement. */
+	func void autoSlotPlacement()
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var BehaviorElement element = preview.getCharacterPreview()
+		if element == null
+			return
+		end
+		
+		var ECBehaviorComponent.Instance component = ECBehaviorComponent.getInstanceIn(element)
+		if component == null or component.getComponent() == null
+			return
+		end
+		
+		var Component comp = component.getComponent()
+		var MotionTransferAutoHuman mt = pMotionTransfer cast MotionTransferAutoHuman
+		
+		var String boneHead = pModelTextBoneHead.getText()
+		var String boneChest = pModelTextBoneChest.getText()
+		var String boneHandRight = pModelTextBoneHandRight.getText()
+		var String boneHandLeft = pModelTextBoneHandLeft.getText()
+		
+		var Array chainArmRight = Array.new()
+		var Array chainArmLeft = Array.new()
+		var Array chainLegRight = Array.new()
+		var Array chainLegLeft = Array.new()
+		
+		if boneChest != null
+			if boneHandRight != null
+				mt.findBoneChain(comp.getRig(), boneHandRight, boneChest, chainArmRight)
+			end
+			if boneHandLeft != null
+				mt.findBoneChain(comp.getRig(), boneHandLeft, boneChest, chainArmLeft)
+			end
+		end
+		
+		pWindowCharacterConfiguration.getPanelTrackerSlot().saveValues()
+		
+		pWindowCharacterConfiguration.forEachTrackerSlot(block CharacterTrackerSlot slot
+			var Vector offset = Vector.new(), rotation = Vector.new()
+			var String bone = "", bone2 = ""
+			
+			select slot.getType()
+			case CharacterTrackerSlot.Type.headHmd, CharacterTrackerSlot.Type.headTracker
+				bone = boneHead
+				offset = Vector.new(0, 0.1, 0)
+				
+			case CharacterTrackerSlot.Type.chest
+				if chainArmLeft.getCount() > 2 and chainArmRight.getCount() > 2
+					bone = chainArmLeft.getAt(-2) cast String
+					bone2 = chainArmRight.getAt(-2) cast String
+					
+				else
+					bone = boneChest
+				end
+				
+			case CharacterTrackerSlot.Type.rightHandController
+				bone = boneHandRight
+				offset = Vector.new(0, 0, 0.05)
+				rotation = Vector.new(0, -90, 0)
+				
+			case CharacterTrackerSlot.Type.rightHandTracker
+				bone = boneHandRight
+				offset = Vector.new(0, 0, 0.05)
+				
+			case CharacterTrackerSlot.Type.rightElbow
+				if chainArmRight.getCount() >= 5
+					// -1=chest, -2=shoulder, -3=upper, -4=lower, -5=hand
+					bone = chainArmRight.getAt(-4) cast String
+					
+				elif chainArmRight.getCount() >= 4
+					// -1=chest, -2=upper, -3=lower, -4=hand
+					bone = chainArmRight.getAt(-3) cast String
+				end
+				rotation = Vector.new(0, -90, 0)
+				
+			case CharacterTrackerSlot.Type.leftHandController
+				bone = boneHandLeft
+				offset = Vector.new(0, 0, 0.05)
+				rotation = Vector.new(0, 90, 0)
+				
+			case CharacterTrackerSlot.Type.leftHandTracker
+				bone = boneHandLeft
+				offset = Vector.new(0, 0, 0.05)
+				
+			case CharacterTrackerSlot.Type.leftElbow
+				if chainArmLeft.getCount() >= 5
+					// -1=chest, -2=shoulder, -3=upper, -4=lower, -5=hand
+					bone = chainArmLeft.getAt(-4) cast String
+					
+				elif chainArmLeft.getCount() >= 4
+					// -1=chest, -2=upper, -3=lower, -4=hand
+					bone = chainArmLeft.getAt(-3) cast String
+				end
+				rotation = Vector.new(0, 90, 0)
+			end
+			
+			if bone.empty()
+				return null
+			end
+			
+			var int boneIndex = comp.indexOfBoneNamed(bone)
+			if boneIndex == -1
+				return null
+			end
+			
+			var int bone2Index = -1
+			if not bone2.empty()
+				bone2Index = comp.indexOfBoneNamed(bone2)
+			end
+			
+			var Vector position = comp.boneGetMatrix(boneIndex).getPosition()
+			if bone2Index != -1
+				position = (position + comp.boneGetMatrix(bone2Index).getPosition()) / 2
+			end
+			position = Matrix.newRT(rotation, position) * offset
+			
+			slot.setTargetPosition(position)
+			slot.setTargetRotation(rotation)
+		end)
+		
+		pWindowCharacterConfiguration.getPanelTrackerSlot().loadValues()
+	end
+	
 	
 	/** Create window content. */
 	protected func void createContent(String optionPrefix)
@@ -312,6 +435,13 @@ class WCCPMTAutoFPV extends WCCPanelMotionTransfer
 		item = MenuItemCommand.new(Resources.edit.get(inVR), "@UI.AutoRigBestMatching",\
 			BlockActionListener.new(block ActionEvent event
 				pAutoRigHelper.autoRigBestMatching()
+			end))
+		menu.addWidget(item)
+		
+		menu.addWidget(MenuItemSeparator.new())
+		item = MenuItemCommand.new(Resources.edit.get(inVR), "@UI.AutoSlotPlacement",\
+			BlockActionListener.new(block ActionEvent event
+				autoSlotPlacement()
 			end))
 		menu.addWidget(item)
 	end

@@ -66,6 +66,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		/** Direct attach waist. Alternative to relocate for problematic situations like sit or lay down. */
 		direct
+		
+		/** Fixed waist. Does not move waist even if hip bone is assigned. */
+		fixated
 	end
 	
 	
@@ -930,7 +933,12 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		
 		// waist
-		pTransferWaist.setBone(pBoneHip)
+		if pWaistMode == WaistMode.fixated
+			pTransferWaist.setBone("")
+			
+		else
+			pTransferWaist.setBone(pBoneHip)
+		end
 		
 		if isSlotWaistAttached
 			select pWaistMode
@@ -942,6 +950,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 				
 			case WaistMode.relocate
 				pTransferWaist.getTracker().setAutoTransform(MotionTransferTracker.AutoTransform.orientationTarget)
+				
+			case WaistMode.fixated
+				pTransferWaist.getTracker().setAutoTransform(MotionTransferTracker.AutoTransform.full)
 			end
 			
 		else
