@@ -401,13 +401,48 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		var MenuItemCommand item = MenuItemCommand.new(Resources.edit.get(inVR), "@UI.AutoRig.Dialog",\
 			BlockActionListener.new(block ActionEvent event
 				pAutoRigHelper.showDialogAutoRig()
+				updateBoneRotations()
 			end))
 		menu.addWidget(item)
 		
 		item = MenuItemCommand.new(Resources.edit.get(inVR), "@UI.AutoRigBestMatching",\
 			BlockActionListener.new(block ActionEvent event
 				pAutoRigHelper.autoRigBestMatching()
+				updateBoneRotations()
 			end))
 		menu.addWidget(item)
+	end
+	
+	protected func void updateBoneRotations()
+		var BehaviorElement element = pWindowCharacterConfiguration.getCharacterPreview().getCharacterPreview()
+		if element == null
+			return
+		end
+		
+		var ECBehaviorComponent.Instance component = ECBehaviorComponent.getInstanceIn(element)
+		if component == null or component.getComponent() == null
+			return
+		end
+		
+		var Component comp = component.getComponent()
+		var String rightBone = pModelTextRightBone.getText()
+		if not rightBone.empty()
+			var int index = comp.indexOfBoneNamed(rightBone)
+			if index != -1
+				var Matrix matrix = comp.boneGetMatrix(index).normalize()
+				matrix = Matrix.newVU(matrix.getViewVector(), Vector.new(0, 1, 0)) * matrix.getInverse()
+				pEditRightRotation.setVector(matrix.getEulerAngles())
+			end
+		end
+		
+		var String leftBone = pModelTextLeftBone.getText()
+		if not leftBone.empty()
+			var int index = comp.indexOfBoneNamed(leftBone)
+			if index != -1
+				var Matrix matrix = comp.boneGetMatrix(index).normalize()
+				matrix = Matrix.newVU(matrix.getViewVector(), Vector.new(0, 1, 0)) * matrix.getInverse()
+				pEditLeftRotation.setVector(matrix.getEulerAngles())
+			end
+		end
 	end
 end
