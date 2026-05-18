@@ -1,4 +1,4 @@
-![DEMoCap](data/content/images/splashscreen.jpg)
+![DEMoCap](democap.webp)
 
 # Drag[en]gine Motion Capture
 

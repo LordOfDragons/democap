@@ -24,12 +24,12 @@ namespace Democap
 pin Democap.Behaviors
 
 pin Dragengine.CameraDirectors
-pin Dragengine.Gui
 pin Dragengine.Preloading
 pin Dragengine.LoadSave
 pin Dragengine.Scenery
 pin Dragengine.Utils
 pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Borders
 
 
 
@@ -39,12 +39,17 @@ pin Dragengine.Gui.Layouts
 class StartGame extends WindowGameWorld.Loader
 	/** Loading window with optional logo. */
 	class DemocapLoadingWindow extends WindowLoading
-		static var Image pLogoDemocap = Image.new("/content/images/splashscreen.jpg")
+		static var Image pLogoDemocap = Image.new("/content/images/splashscreen.webp")
 		
 		var DisplayImage pImageLogo
 		var Panel pPanelProgress
 		
-		func new()
+		func new(bool firstTimeLoad)
+			if firstTimeLoad
+				setBgStyle("FirstTime")
+			end
+			initPanelProgress(firstTimeLoad)
+			doLayout()
 		end
 		
 		func void dispose()
@@ -57,26 +62,28 @@ class StartGame extends WindowGameWorld.Loader
 			return pImageLogo
 		end
 		
-		func void firstTimeLoad()
-			setBgStyle("FirstTime")
-			pImageLogo.setVisible(true)
-			pPanelProgress.setLayout(FlowLayout.new(LayoutAxis.y, 0, FlowLayout.Stretch.first))
+		protected func Panel createPanelProgress()
+			return pPanelProgress = Panel.new(BorderLayout.new(0))
 		end
 		
-		protected func Panel createPanelProgress()
-			pPanelProgress = Panel.new(FlowLayout.new(LayoutAxis.y, 0, FlowLayout.Stretch.last), block Panel p
-				pImageLogo = DisplayImage.new(pLogoDemocap, RepeatMode.stretchRatio, "Image.WindowLoading.Logo")
-				pImageLogo.setVisible(false)
-				p.addWidget(pImageLogo)
-				
-				p.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.y, 0), block Panel p2
-					p2.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 5), block Panel p3
-						p3.setDesignerSelector("Panel.WindowLoading")
-						p3.addWidget(ProgressGauge.new(getModelProgress(), "ProgressGauge.WindowLoading"))
-					end))
-				end))
+		private func void initPanelProgress(bool firstTimeLoad)
+			pPanelProgress.runWhileBlockingLayout(block
+				if firstTimeLoad
+					pImageLogo = DisplayImage.new(pLogoDemocap, RepeatMode.stretchRatio, "Image.WindowLoading.Logo")
+					pPanelProgress.addWidget(pImageLogo, BorderLayout.Area.content)
+					
+					pPanelProgress.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.y, 0), block Panel p
+						p.setDesignerSelector("Panel.WindowLoading")
+						p.addWidget(ProgressGauge.new(getModelProgress(), "ProgressGauge.WindowLoading"))
+					end), BorderLayout.Area.bottom)
+					
+				else
+					pPanelProgress.addWidget(Panel.new(CentrizedBoxLayout.new(LayoutAxis.y, 0), block Panel p
+						p.setDesignerSelector("Panel.WindowLoading")
+						p.addWidget(ProgressGauge.new(getModelProgress(), "ProgressGauge.WindowLoading"))
+					end), BorderLayout.Area.content)
+				end
 			end)
-			return pPanelProgress
 		end
 	end
 	
@@ -161,12 +168,9 @@ class StartGame extends WindowGameWorld.Loader
 	
 	/** Create loading window. */
 	protected func void createLoadingWindow()
-		var DemocapLoadingWindow w = DemocapLoadingWindow.new()
+		var DemocapLoadingWindow w = DemocapLoadingWindow.new(pFirstTimeLoad)
 		w.getModelText().setText("Loading...")
-		if pFirstTimeLoad
-			pFirstTimeLoad = false
-			w.firstTimeLoad()
-		end
+		pFirstTimeLoad = false
 		setWindowLoading(w)
 		
 		GameApp.getGameApp().getDesktop().addWindow(w)
