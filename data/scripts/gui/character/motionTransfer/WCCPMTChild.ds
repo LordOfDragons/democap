@@ -37,28 +37,28 @@ class WCCPMTChild extends WCCPanelMotionTransfer
 	var SharedListModel pModelListBone
 	var DefaultTextModel pModelTextBone
 	var WCCPMTTracker pEditTracker
+	var bool pIsContentCreated
 	
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
+	func new(WindowCharacterConfiguration window, String optionPrefix) super(window, optionPrefix)
 		pModelTypeName.setText("@UI.ChildCoordinateSystem")
 		
 		pModelListBone = SharedListModel.new(window.getModelBones())
 		pModelListBone.setAutoSelect(false)
 		pModelTextBone = DefaultTextModel.new()
-		
-		runWhileBlockingLayout(block
-			createContent(window.getModelTrackerSlotNames(), optionPrefix)
-		end)
 	end
 	
 	/** Dispose of window. */
 	func void dispose()
 		pModelListBone = null
 		pModelTextBone = null
-		pEditTracker.setTracker(null)
-		pEditTracker = null
+		if pEditTracker != null
+			pEditTracker.setTracker(null)
+			pEditTracker = null
+		end
+		
 		super.dispose()
 	end
 	
@@ -67,6 +67,11 @@ class WCCPMTChild extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -103,27 +108,31 @@ class WCCPMTChild extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent(DefaultListModel modelTrackerSlotNames, String optionPrefix)
+	protected func void createContent()
+		createBaseContent("motiontransferchild")
+		
+		// tracker
+		var DefaultListModel modelTrackerSlotNames = pWindowCharacterConfiguration.getModelTrackerSlotNames()
+		
+		pEditTracker = WCCPMTTracker.new(modelTrackerSlotNames, pOptionPrefix + "/Tracker", this, "@UI.Tracker", false)
+		addWidget(pEditTracker)
+	end
+	
+	protected func void addFormPanelContent(Panel panel)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var ComboBox comboBox
 		var Label label
 		
-		createBaseContent("motiontransferchild")
-		
 		// bone
 		label = Label.new("@UI.Bone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		comboBox = ComboBox.new(pModelListBone, DefaultComboBoxEditor.new(pModelTextBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.Bone.Slot")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		CPEBone.new(preview, label, comboBox)
-		
-		// tracker
-		pEditTracker = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/Tracker", this, "@UI.Tracker", false)
-		addWidget(pEditTracker)
 	end
 	
 	/** Motion transfer changed. */

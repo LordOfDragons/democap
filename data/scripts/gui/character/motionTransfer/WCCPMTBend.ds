@@ -58,11 +58,12 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	var SharedListModel pModelListBendMoveY
 	var DefaultTextModel pModelTextBendMoveY
 	var EditVector2 pEditBendMoveRangeX, pEditBendMoveRangeY
+	var bool pIsContentCreated
 	
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
+	func new(WindowCharacterConfiguration window, String optionPrefix) super(window, optionPrefix)
 		pModelTypeName.setText("@UI.BendBoneChain")
 		
 		pModelListTargetBone = SharedListModel.new(window.getModelBones())
@@ -98,10 +99,6 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pModelListBendMoveY = SharedListModel.new(window.getModelMoves())
 		pModelListBendMoveY.setAutoSelect(false)
 		pModelTextBendMoveY = DefaultTextModel.new()
-		
-		runWhileBlockingLayout(block
-			createContent(window.getModelTrackerSlotNames(), optionPrefix)
-		end)
 	end
 	
 	/** Dispose of window. */
@@ -123,11 +120,15 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		pModelUseRotation = null
 		pModelLockZDistance = null
 		
-		pEditTargetTracker.setTracker(null)
-		pEditTargetTracker = null
+		if pEditTargetTracker != null
+			pEditTargetTracker.setTracker(null)
+			pEditTargetTracker = null
+		end
 		
-		pEditBaseTracker.setTracker(null)
-		pEditBaseTracker = null
+		if pEditBaseTracker != null
+			pEditBaseTracker.setTracker(null)
+			pEditBaseTracker = null
+		end
 		
 		pModelTwistPropagation = null
 		pModelTwistScale = null
@@ -151,6 +152,11 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -243,7 +249,22 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent(DefaultListModel modelTrackerSlotNames, String optionPrefix)
+	protected func void createContent()
+		createBaseContent("motiontransferbend")
+		
+		// trackers
+		var DefaultListModel modelTrackerSlotNames = pWindowCharacterConfiguration.getModelTrackerSlotNames()
+		
+		pEditTargetTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
+			pOptionPrefix + "/TargetTracker", this, "@UI.TargetTracker", false)
+		addWidget(pEditTargetTracker)
+		
+		pEditBaseTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
+			pOptionPrefix + "/BaseTracker", this, "@UI.BaseTracker", false)
+		addWidget(pEditBaseTracker)
+	end
+	
+	protected func void addFormPanelContent(Panel panel)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var ComboBox comboBox, comboBoxTip, comboBoxBase
 		var Label label, labelTip, labelBase
@@ -252,65 +273,63 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		var Slider slider
 		var CheckBox checkBox
 		
-		createBaseContent("motiontransferbend")
-		
 		// target bone
 		label = Label.new("@UI.TargetBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		comboBox = ComboBox.new(pModelListTargetBone, DefaultComboBoxEditor.new(pModelTextTargetBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.TargetBone.BendBoneChain")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		CPEBone.new(preview, label, comboBox)
 		
 		// target base bone
 		label = Label.new("@UI.TargetBaseBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		comboBox = ComboBox.new(pModelListTargetBaseBone, DefaultComboBoxEditor.new(pModelTextTargetBaseBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.TargetBaseBone.BendBoneChain")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		CPEBone.new(preview, label, comboBox)
 		
 		// bone chain
 		labelTip = Label.new("@UI.TipBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelTip)
+		panel.addWidget(labelTip)
 		
 		comboBoxTip = ComboBox.new(pModelListTipBone, DefaultComboBoxEditor.new(pModelTextTipBone))
 		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBoxTip.setToolTip("@UI.ToolTip.TipBone.Chain")
-		pPanelForm.addWidget(comboBoxTip)
+		panel.addWidget(comboBoxTip)
 		
 		labelBase = Label.new("@UI.BaseBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBase)
+		panel.addWidget(labelBase)
 		
 		comboBoxBase = ComboBox.new(pModelListBaseBone, DefaultComboBoxEditor.new(pModelTextBaseBone))
 		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBoxBase.setToolTip("@UI.ToolTip.BaseBone.Chain")
-		pPanelForm.addWidget(comboBoxBase)
+		panel.addWidget(comboBoxBase)
 		
 		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
 		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
 		
 		// scale rotation
-		pPanelForm.addWidget(Label.new("@UI.ScaleRotation.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.ScaleRotation.Label", "Label.FormCaption.SingleLine"))
 		
 		pEditScaleRotation = EditVector2.new()
 		pEditScaleRotation.setToolTip("@UI.ToolTip.ScaleRotation.BendBoneChain")
-		pPanelForm.addWidget(pEditScaleRotation)
+		panel.addWidget(pEditScaleRotation)
 		
 		// bend shape
 		toolTip = "@UI.ToolTip.BendShape"
 		
 		label = Label.new("@UI.BendShape.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
-		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+		panel.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
 			slider = Slider.new(Orientation.horizontal, pModelBendShape)
 			slider.setToolTip(toolTip)
 			p.addWidget(slider)
@@ -326,109 +345,100 @@ class WCCPMTBend extends WCCPanelMotionTransfer
 		toolTip = "@UI.ToolTip.BendAxis"
 		label = Label.new("@UI.BendAxis.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		pEditBendAxisRotation = EditVector.new()
 		pEditBendAxisRotation.setToolTip(toolTip)
-		pPanelForm.addWidget(pEditBendAxisRotation)
+		panel.addWidget(pEditBendAxisRotation)
 		
 		CPECoordinateSystemAxis.new(preview, null, null, label, pEditBendAxisRotation, comboBoxBase, null, true)
 		
 		// bend move x
-		pPanelForm.addWidget(Label.new("@UI.BendXMove.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.BendXMove.Label", "Label.FormCaption.SingleLine"))
 		
 		comboBox = ComboBox.new(pModelListBendMoveX, DefaultComboBoxEditor.new(pModelTextBendMoveX))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.BendXMove")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		// bend move y
-		pPanelForm.addWidget(Label.new("@UI.BendYMove.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.BendYMove.Label", "Label.FormCaption.SingleLine"))
 		
 		comboBox = ComboBox.new(pModelListBendMoveY, DefaultComboBoxEditor.new(pModelTextBendMoveY))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.BendYMove")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		// bend move range x
-		pPanelForm.addWidget(Label.new("@UI.BendMoveRangeX.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.BendMoveRangeX.Label", "Label.FormCaption.SingleLine"))
 		
 		pEditBendMoveRangeX = EditVector2.new()
 		pEditBendMoveRangeX.setToolTip("@UI.ToolTip.BendMoveRangeX")
-		pPanelForm.addWidget(pEditBendMoveRangeX)
+		panel.addWidget(pEditBendMoveRangeX)
 		
 		// bend move range
-		pPanelForm.addWidget(Label.new("@UI.BendMoveRangeY.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.BendMoveRangeY.Label", "Label.FormCaption.SingleLine"))
 		
 		pEditBendMoveRangeY = EditVector2.new()
 		pEditBendMoveRangeY.setToolTip("@UI.ToolTip.BendMoveRangeY")
-		pPanelForm.addWidget(pEditBendMoveRangeY)
+		panel.addWidget(pEditBendMoveRangeY)
 		
 		// fit curve to target
-		pPanelForm.addWidget(Label.new("", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("", "Label.FormCaption.SingleLine"))
 		
 		checkBox = CheckBox.new(pModelFitCurveToTarget, "@UI.FitCurveToTarget")
 		checkBox.setToolTip("@UI.ToolTip.FitCurveToTarget.BendBoneChain")
-		pPanelForm.addWidget(checkBox)
+		panel.addWidget(checkBox)
 		
 		// use rotation of target relative to base instead of position to calculate bending angle
-		pPanelForm.addWidget(Label.new("", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("", "Label.FormCaption.SingleLine"))
 		
 		checkBox = CheckBox.new(pModelUseRotation, "@UI.UseRotationToBend")
 		checkBox.setToolTip("@UI.ToolTip.UseRotationToBend")
-		pPanelForm.addWidget(checkBox)
+		panel.addWidget(checkBox)
 		
 		// lock z distance if non-rotation mode is used
-		pPanelForm.addWidget(Label.new("", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("", "Label.FormCaption.SingleLine"))
 		
 		checkBox = CheckBox.new(pModelUseRotation, "@UI.BendLockZDistance")
 		checkBox.setToolTip("@UI.ToolTip.BendLockZDistance")
-		pPanelForm.addWidget(checkBox)
+		panel.addWidget(checkBox)
 		
 		// twist propagation
-		pPanelForm.addWidget(Label.new("@UI.TwistPropagation.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.TwistPropagation.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelTwistPropagation, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("@UI.ToolTip.TwistPropagation")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 		
 		// twist scale
-		pPanelForm.addWidget(Label.new("@UI.TwistScale.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.TwistScale.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelTwistScale, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("@UI.ToolTip.TwistScale")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 		
 		// twist bone count
-		pPanelForm.addWidget(Label.new("@UI.TwistBoneCount.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.TwistBoneCount.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelTwistBoneCount, 4)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
 		textField.setToolTip("@UI.ToolTip.TwistBoneCount")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 		
 		// align orientation bone count
-		pPanelForm.addWidget(Label.new("@UI.AlignOrientationBoneCount.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.AlignOrientationBoneCount.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelAlignOrientationBoneCount, 4)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
 		textField.setToolTip("@UI.ToolTip.AlignOrientationBoneCount")
-		pPanelForm.addWidget(textField)
-		
-		// trackers
-		pEditTargetTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
-			optionPrefix + "/TargetTracker", this, "@UI.TargetTracker", false)
-		addWidget(pEditTargetTracker)
-		
-		pEditBaseTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
-			optionPrefix + "/BaseTracker", this, "@UI.BaseTracker", false)
-		addWidget(pEditBaseTracker)
+		panel.addWidget(textField)
 	end
 	
 	/** Motion transfer changed. */

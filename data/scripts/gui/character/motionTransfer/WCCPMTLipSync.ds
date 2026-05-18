@@ -59,10 +59,11 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 	var DefaultTextModel pModelJawBoneAngle
 	var Array pVisemes
 	var AutoRigHelper pAutoRigHelper
+	var bool pIsContentCreated
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
+	func new(WindowCharacterConfiguration window, String optionPrefix) super(window, optionPrefix)
 		var DefaultListModel modelMoves = window.getModelMoves()
 		var DefaultListModel modelVPS = window.getModelVPS()
 		
@@ -88,10 +89,6 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 		pVisemes.forEach(block EditViseme each
 			pAutoRigHelper.addTarget("mouth." + each.info.getViseme().name(), each.modelText)
 		end)
-		
-		runWhileBlockingLayout(block
-			createContent(optionPrefix)
-		end)
 	end
 	
 	/** Dispose of window. */
@@ -110,6 +107,11 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -159,7 +161,7 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent(String optionPrefix)
+	protected func void createContent()
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var ComboBox comboBox
 		var Label label
@@ -169,7 +171,7 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 		
 		// open mouth group
 		addWidget(CollapsibleGroup.new("@UI.LipSyncOpenMouth", "", \
-		CollapsibleGroup.persistModel(optionPrefix + "/OpenMouth", false), \
+		CollapsibleGroup.persistModel(pOptionPrefix + "/OpenMouth", false), \
 		FormLayout.new(true, 10, 2), block Panel p
 			// open mouth move
 			p.addWidget(Label.new("@UI.OpenMouthMove.Label", "Label.FormCaption.SingleLine"))
@@ -211,7 +213,7 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 		
 		// viseme subset group
 		addWidget(CollapsibleGroup.new("@UI.LipSyncVisemeSubset", "", \
-		CollapsibleGroup.persistModel(optionPrefix + "/VisemeSubset", false), \
+		CollapsibleGroup.persistModel(pOptionPrefix + "/VisemeSubset", false), \
 		FormLayout.new(true, 10, 2), block Panel p
 			pVisemes.forEach(block EditViseme each
 				if each.info.getIsSubset()
@@ -227,7 +229,7 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 		
 		// full viseme group
 		addWidget(CollapsibleGroup.new("@UI.LipSyncVisemeFull", "", \
-		CollapsibleGroup.persistModel(optionPrefix + "/VisemeFull", true), \
+		CollapsibleGroup.persistModel(pOptionPrefix + "/VisemeFull", true), \
 		FormLayout.new(true, 10, 2), block Panel p
 			pVisemes.forEach(block EditViseme each
 				if not each.info.getIsSubset()

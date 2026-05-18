@@ -76,10 +76,11 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		pModelMiddleBendStrength, pModelRingBendStrength, pModelPinkyBendStrength
 	
 	var AutoRigHelper pAutoRigHelperRight, pAutoRigHelperLeft
+	var bool pIsContentCreated
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
+	func new(WindowCharacterConfiguration window, String optionPrefix) super(window, optionPrefix)
 		pModelTypeName.setText("@UI.Fingers")
 		
 		pModelListThumbTipBone = SharedListModel.new(window.getModelBones())
@@ -164,11 +165,6 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 		pAutoRigHelperLeft.addTarget("finger.left.pinkyTip", pModelTextPinkyTipBone)
 		pAutoRigHelperLeft.addTarget("finger.left.pinkyBase", pModelTextPinkyBaseBone)
 		pAutoRigHelperLeft.addTarget("finger.left.wrist", pModelTextWristBone)
-		
-		
-		runWhileBlockingLayout(block
-			createContent(optionPrefix)
-		end)
 	end
 	
 	/** Dispose of window. */
@@ -221,6 +217,11 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -378,227 +379,17 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent(String optionPrefix)
-		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
-		var ComboBox comboBox, comboBoxTip, comboBoxBase
-		var Label labelTip, labelBase, label
+	protected func void createContent()
 		var TextField textField
 		var String toolTip
 		var Slider slider
+		var Label label
 		
 		createBaseContent("motiontransferfingers")
 		
-		// thumb bone chain
-		labelTip = Label.new("@UI.ThumbTipBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelTip)
-		
-		comboBoxTip = ComboBox.new(pModelListThumbTipBone, DefaultComboBoxEditor.new(pModelTextThumbTipBone))
-		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxTip.setToolTip("@UI.ToolTip.ThumbTipBone")
-		pPanelForm.addWidget(comboBoxTip)
-		
-		labelBase = Label.new("@UI.ThumbBaseBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBase)
-		
-		comboBoxBase = ComboBox.new(pModelListThumbBaseBone, DefaultComboBoxEditor.new(pModelTextThumbBaseBone))
-		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxBase.setToolTip("@UI.ToolTip.ThumbBaseBone")
-		pPanelForm.addWidget(comboBoxBase)
-		
-		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
-		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
-		
-		// thumb rotation
-		toolTip = "@UI.ToolTip.FingerRotation"
-		label = Label.new("@UI.ThumbFingerRotation.Label", "Label.FormCaption.SingleLine")
-		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
-		
-		pEditThumbRotation = EditVector.new()
-		pEditThumbRotation.setToolTip(toolTip)
-		pPanelForm.addWidget(pEditThumbRotation)
-		
-		CPECoordinateSystemAxis.new(preview, null, null, label, pEditThumbRotation, comboBoxBase, null, true)
-		
-		// index bone chain
-		labelTip = Label.new("@UI.IndexTipBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelTip)
-		
-		comboBoxTip = ComboBox.new(pModelListIndexTipBone, DefaultComboBoxEditor.new(pModelTextIndexTipBone))
-		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxTip.setToolTip("@UI.ToolTip.IndexTipBone")
-		pPanelForm.addWidget(comboBoxTip)
-		
-		labelBase = Label.new("@UI.IndexBaseBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBase)
-		
-		comboBoxBase = ComboBox.new(pModelListIndexBaseBone, DefaultComboBoxEditor.new(pModelTextIndexBaseBone))
-		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxBase.setToolTip("@UI.ToolTip.IndexBaseBone")
-		pPanelForm.addWidget(comboBoxBase)
-		
-		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
-		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
-		
-		// index rotation
-		toolTip = "@UI.ToolTip.FingerRotation"
-		label = Label.new("@UI.IndexFingerRotation.Label", "Label.FormCaption.SingleLine")
-		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
-		
-		pEditIndexRotation = EditVector.new()
-		pEditIndexRotation.setToolTip(toolTip)
-		pPanelForm.addWidget(pEditIndexRotation)
-		
-		CPECoordinateSystemAxis.new(preview, null, null, label, pEditIndexRotation, comboBoxBase, null, true)
-		
-		// middle bone chain
-		labelTip = Label.new("@UI.MiddleTipBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelTip)
-		
-		comboBoxTip = ComboBox.new(pModelListMiddleTipBone, DefaultComboBoxEditor.new(pModelTextMiddleTipBone))
-		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxTip.setToolTip("@UI.ToolTip.MiddleTipBone")
-		pPanelForm.addWidget(comboBoxTip)
-		
-		labelBase = Label.new("@UI.MiddleBaseBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBase)
-		
-		comboBoxBase = ComboBox.new(pModelListMiddleBaseBone, DefaultComboBoxEditor.new(pModelTextMiddleBaseBone))
-		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxBase.setToolTip("@UI.ToolTip.MiddleBaseBone")
-		pPanelForm.addWidget(comboBoxBase)
-		
-		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
-		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
-		
-		// middle rotation
-		toolTip = "@UI.ToolTip.FingerRotation"
-		label = Label.new("@UI.MiddleFingerRotation.Label", "Label.FormCaption.SingleLine")
-		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
-		
-		pEditMiddleRotation = EditVector.new()
-		pEditMiddleRotation.setToolTip(toolTip)
-		pPanelForm.addWidget(pEditMiddleRotation)
-		
-		CPECoordinateSystemAxis.new(preview, null, null, label, pEditMiddleRotation, comboBoxBase, null, true)
-		
-		// ring bone chain
-		labelTip = Label.new("@UI.RingTipBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelTip)
-		
-		comboBoxTip = ComboBox.new(pModelListRingTipBone, DefaultComboBoxEditor.new(pModelTextRingTipBone))
-		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxTip.setToolTip("@UI.ToolTip.RingTipBone")
-		pPanelForm.addWidget(comboBoxTip)
-		
-		labelBase = Label.new("@UI.RingBaseBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBase)
-		
-		comboBoxBase = ComboBox.new(pModelListRingBaseBone, DefaultComboBoxEditor.new(pModelTextRingBaseBone))
-		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxBase.setToolTip("@UI.ToolTip.RingBaseBone")
-		pPanelForm.addWidget(comboBoxBase)
-		
-		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
-		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
-		
-		// ring rotation
-		toolTip = "@UI.ToolTip.FingerRotation"
-		label = Label.new("@UI.RingFingerRotation.Label", "Label.FormCaption.SingleLine")
-		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
-		
-		pEditRingRotation = EditVector.new()
-		pEditRingRotation.setToolTip(toolTip)
-		pPanelForm.addWidget(pEditRingRotation)
-		
-		CPECoordinateSystemAxis.new(preview, null, null, label, pEditRingRotation, comboBoxBase, null, true)
-		
-		// pinky bone chain
-		labelTip = Label.new("@UI.PinkyTipBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelTip)
-		
-		comboBoxTip = ComboBox.new(pModelListPinkyTipBone, DefaultComboBoxEditor.new(pModelTextPinkyTipBone))
-		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxTip.setToolTip("@UI.ToolTip.PinkyTipBone")
-		pPanelForm.addWidget(comboBoxTip)
-		
-		labelBase = Label.new("@UI.PinkyBaseBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBase)
-		
-		comboBoxBase = ComboBox.new(pModelListPinkyBaseBone, DefaultComboBoxEditor.new(pModelTextPinkyBaseBone))
-		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxBase.setToolTip("@UI.ToolTip.PinkyBaseBone")
-		pPanelForm.addWidget(comboBoxBase)
-		
-		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
-		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
-		
-		// pinky rotation
-		toolTip = "@UI.ToolTip.FingerRotation"
-		label = Label.new("@UI.PinkyFingerRotation.Label", "Label.FormCaption.SingleLine")
-		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
-		
-		pEditPinkyRotation = EditVector.new()
-		pEditPinkyRotation.setToolTip(toolTip)
-		pPanelForm.addWidget(pEditPinkyRotation)
-		
-		CPECoordinateSystemAxis.new(preview, null, null, label, pEditPinkyRotation, comboBoxBase, null, true)
-		
-		// wrist bone
-		labelBase = Label.new("@UI.WristBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBase)
-		
-		comboBoxBase = ComboBox.new(pModelListWristBone, DefaultComboBoxEditor.new(pModelTextWristBone))
-		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxBase.setToolTip("@UI.ToolTip.WristBone")
-		pPanelForm.addWidget(comboBoxBase)
-		
-		CPEBone.new(preview, labelBase, comboBoxBase)
-		
-		// wrist rotation
-		toolTip = "@UI.ToolTip.FingerRotation"
-		label = Label.new("@UI.WristFingerRotation.Label", "Label.FormCaption.SingleLine")
-		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
-		
-		pEditWristRotation = EditVector.new()
-		pEditWristRotation.setToolTip(toolTip)
-		pPanelForm.addWidget(pEditWristRotation)
-		
-		CPECoordinateSystemAxis.new(preview, null, null, label, pEditWristRotation, comboBoxBase, null, true)
-		
-		// tracker slot
-		pPanelForm.addWidget(Label.new("@UI.TrackerSlot.Label", "Label.FormCaption.SingleLine"))
-		
-		comboBox = ComboBox.new(pModelListTrackerSlot, DefaultComboBoxEditor.new(pModelTextTrackerSlot))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("@UI.ToolTip.TrackerSlot.Face")
-		pPanelForm.addWidget(comboBox)
-		
-		// bend angle
-		pPanelForm.addWidget(Label.new("@UI.BendAngle.Label", "Label.FormCaption.SingleLine"))
-		
-		textField = TextField.new(pModelBendAngle, 6)
-		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
-		textField.setToolTip("@UI.ToolTip.FingerBendAngle")
-		pPanelForm.addWidget(textField)
-		
-		// move
-		pPanelForm.addWidget(Label.new("@UI.MoveHandsClosed.Label", "Label.FormCaption.SingleLine"))
-		
-		comboBox = ComboBox.new(pModelListMoveHandsClosed, DefaultComboBoxEditor.new(pModelTextMoveHandsClosed))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("@UI.ToolTip.MoveHandsClosed")
-		pPanelForm.addWidget(comboBox)
-		
 		// fine tuning parameters
 		addWidget(CollapsibleGroup.new("@UI.FineTuning", "motiontransferfingers#fine_tuning", CollapsibleGroup.persistModel(\
-		optionPrefix + "/GroupFineTuning", false), FormLayout.new(true, 10, 2), block Panel p
+		pOptionPrefix + "/GroupFineTuning", false), FormLayout.new(true, 10, 2), block Panel p
 			// thumb bend strength
 			toolTip = "@UI.ToolTip.FingerBendStrength"
 			
@@ -694,6 +485,222 @@ class WCCPMTFingers extends WCCPanelMotionTransfer
 				textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelPinkyBendStrength))
 			end))
 		end))
+	end
+	
+	protected func void addFormPanelContent(Panel panel)
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var ComboBox comboBox, comboBoxTip, comboBoxBase
+		var Label labelTip, labelBase, label
+		var TextField textField
+		var String toolTip
+		
+		// thumb bone chain
+		labelTip = Label.new("@UI.ThumbTipBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(labelTip)
+		
+		comboBoxTip = ComboBox.new(pModelListThumbTipBone, DefaultComboBoxEditor.new(pModelTextThumbTipBone))
+		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxTip.setToolTip("@UI.ToolTip.ThumbTipBone")
+		panel.addWidget(comboBoxTip)
+		
+		labelBase = Label.new("@UI.ThumbBaseBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(labelBase)
+		
+		comboBoxBase = ComboBox.new(pModelListThumbBaseBone, DefaultComboBoxEditor.new(pModelTextThumbBaseBone))
+		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxBase.setToolTip("@UI.ToolTip.ThumbBaseBone")
+		panel.addWidget(comboBoxBase)
+		
+		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
+		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
+		
+		// thumb rotation
+		toolTip = "@UI.ToolTip.FingerRotation"
+		label = Label.new("@UI.ThumbFingerRotation.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		pEditThumbRotation = EditVector.new()
+		pEditThumbRotation.setToolTip(toolTip)
+		panel.addWidget(pEditThumbRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditThumbRotation, comboBoxBase, null, true)
+		
+		// index bone chain
+		labelTip = Label.new("@UI.IndexTipBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(labelTip)
+		
+		comboBoxTip = ComboBox.new(pModelListIndexTipBone, DefaultComboBoxEditor.new(pModelTextIndexTipBone))
+		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxTip.setToolTip("@UI.ToolTip.IndexTipBone")
+		panel.addWidget(comboBoxTip)
+		
+		labelBase = Label.new("@UI.IndexBaseBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(labelBase)
+		
+		comboBoxBase = ComboBox.new(pModelListIndexBaseBone, DefaultComboBoxEditor.new(pModelTextIndexBaseBone))
+		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxBase.setToolTip("@UI.ToolTip.IndexBaseBone")
+		panel.addWidget(comboBoxBase)
+		
+		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
+		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
+		
+		// index rotation
+		toolTip = "@UI.ToolTip.FingerRotation"
+		label = Label.new("@UI.IndexFingerRotation.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		pEditIndexRotation = EditVector.new()
+		pEditIndexRotation.setToolTip(toolTip)
+		panel.addWidget(pEditIndexRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditIndexRotation, comboBoxBase, null, true)
+		
+		// middle bone chain
+		labelTip = Label.new("@UI.MiddleTipBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(labelTip)
+		
+		comboBoxTip = ComboBox.new(pModelListMiddleTipBone, DefaultComboBoxEditor.new(pModelTextMiddleTipBone))
+		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxTip.setToolTip("@UI.ToolTip.MiddleTipBone")
+		panel.addWidget(comboBoxTip)
+		
+		labelBase = Label.new("@UI.MiddleBaseBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(labelBase)
+		
+		comboBoxBase = ComboBox.new(pModelListMiddleBaseBone, DefaultComboBoxEditor.new(pModelTextMiddleBaseBone))
+		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxBase.setToolTip("@UI.ToolTip.MiddleBaseBone")
+		panel.addWidget(comboBoxBase)
+		
+		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
+		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
+		
+		// middle rotation
+		toolTip = "@UI.ToolTip.FingerRotation"
+		label = Label.new("@UI.MiddleFingerRotation.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		pEditMiddleRotation = EditVector.new()
+		pEditMiddleRotation.setToolTip(toolTip)
+		panel.addWidget(pEditMiddleRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditMiddleRotation, comboBoxBase, null, true)
+		
+		// ring bone chain
+		labelTip = Label.new("@UI.RingTipBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(labelTip)
+		
+		comboBoxTip = ComboBox.new(pModelListRingTipBone, DefaultComboBoxEditor.new(pModelTextRingTipBone))
+		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxTip.setToolTip("@UI.ToolTip.RingTipBone")
+		panel.addWidget(comboBoxTip)
+		
+		labelBase = Label.new("@UI.RingBaseBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(labelBase)
+		
+		comboBoxBase = ComboBox.new(pModelListRingBaseBone, DefaultComboBoxEditor.new(pModelTextRingBaseBone))
+		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxBase.setToolTip("@UI.ToolTip.RingBaseBone")
+		panel.addWidget(comboBoxBase)
+		
+		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
+		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
+		
+		// ring rotation
+		toolTip = "@UI.ToolTip.FingerRotation"
+		label = Label.new("@UI.RingFingerRotation.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		pEditRingRotation = EditVector.new()
+		pEditRingRotation.setToolTip(toolTip)
+		panel.addWidget(pEditRingRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditRingRotation, comboBoxBase, null, true)
+		
+		// pinky bone chain
+		labelTip = Label.new("@UI.PinkyTipBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(labelTip)
+		
+		comboBoxTip = ComboBox.new(pModelListPinkyTipBone, DefaultComboBoxEditor.new(pModelTextPinkyTipBone))
+		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxTip.setToolTip("@UI.ToolTip.PinkyTipBone")
+		panel.addWidget(comboBoxTip)
+		
+		labelBase = Label.new("@UI.PinkyBaseBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(labelBase)
+		
+		comboBoxBase = ComboBox.new(pModelListPinkyBaseBone, DefaultComboBoxEditor.new(pModelTextPinkyBaseBone))
+		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxBase.setToolTip("@UI.ToolTip.PinkyBaseBone")
+		panel.addWidget(comboBoxBase)
+		
+		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
+		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
+		
+		// pinky rotation
+		toolTip = "@UI.ToolTip.FingerRotation"
+		label = Label.new("@UI.PinkyFingerRotation.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		pEditPinkyRotation = EditVector.new()
+		pEditPinkyRotation.setToolTip(toolTip)
+		panel.addWidget(pEditPinkyRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditPinkyRotation, comboBoxBase, null, true)
+		
+		// wrist bone
+		labelBase = Label.new("@UI.WristBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(labelBase)
+		
+		comboBoxBase = ComboBox.new(pModelListWristBone, DefaultComboBoxEditor.new(pModelTextWristBone))
+		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxBase.setToolTip("@UI.ToolTip.WristBone")
+		panel.addWidget(comboBoxBase)
+		
+		CPEBone.new(preview, labelBase, comboBoxBase)
+		
+		// wrist rotation
+		toolTip = "@UI.ToolTip.FingerRotation"
+		label = Label.new("@UI.WristFingerRotation.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		pEditWristRotation = EditVector.new()
+		pEditWristRotation.setToolTip(toolTip)
+		panel.addWidget(pEditWristRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditWristRotation, comboBoxBase, null, true)
+		
+		// tracker slot
+		panel.addWidget(Label.new("@UI.TrackerSlot.Label", "Label.FormCaption.SingleLine"))
+		
+		comboBox = ComboBox.new(pModelListTrackerSlot, DefaultComboBoxEditor.new(pModelTextTrackerSlot))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("@UI.ToolTip.TrackerSlot.Face")
+		panel.addWidget(comboBox)
+		
+		// bend angle
+		panel.addWidget(Label.new("@UI.BendAngle.Label", "Label.FormCaption.SingleLine"))
+		
+		textField = TextField.new(pModelBendAngle, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("@UI.ToolTip.FingerBendAngle")
+		panel.addWidget(textField)
+		
+		// move
+		panel.addWidget(Label.new("@UI.MoveHandsClosed.Label", "Label.FormCaption.SingleLine"))
+		
+		comboBox = ComboBox.new(pModelListMoveHandsClosed, DefaultComboBoxEditor.new(pModelTextMoveHandsClosed))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("@UI.ToolTip.MoveHandsClosed")
+		panel.addWidget(comboBox)
 	end
 	
 	protected func void onPanelContextMenu(MenuPopup menu)

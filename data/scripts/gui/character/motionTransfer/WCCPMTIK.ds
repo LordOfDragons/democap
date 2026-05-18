@@ -65,11 +65,12 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	var EditVector2 pEditBaseRotateAngleMaximum
 	var EditVector pEditGuideBendAxisRotation
 	var DefaultToggleModel pModelGuideUsePosition
+	var bool pIsContentCreated
 	
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
+	func new(WindowCharacterConfiguration window, String optionPrefix) super(window, optionPrefix)
 		pModelTypeName.setText("@UI.InverseKinematic")
 		
 		pModelListTipBone = SharedListModel.new(window.getModelBones())
@@ -98,10 +99,6 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pModelGuideTwistStrength = DefaultTextModel.new()
 		pModelRelocateTip = DefaultToggleModel.new()
 		pModelGuideUsePosition = DefaultToggleModel.new()
-		
-		runWhileBlockingLayout(block
-			createContent(window.getModelTrackerSlotNames(), optionPrefix)
-		end)
 	end
 	
 	/** Dispose of window. */
@@ -112,13 +109,22 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pModelTextBaseBone = null
 		pModelListGuideBone = null
 		pModelTextGuideBone = null
-		pEditTrackerTip.setTracker(null)
-		pEditTrackerTip = null
-		pEditTrackerGuide.setTracker(null)
-		pEditTrackerGuide = null
-		pEditTrackerBase.setTracker(null)
-		pEditTrackerBase = null
-		pEditTrackerRelocate = null
+		if pEditTrackerTip != null
+			pEditTrackerTip.setTracker(null)
+			pEditTrackerTip = null
+		end
+		if pEditTrackerGuide != null
+			pEditTrackerGuide.setTracker(null)
+			pEditTrackerGuide = null
+		end
+		if pEditTrackerBase != null
+			pEditTrackerBase.setTracker(null)
+			pEditTrackerBase = null
+		end
+		if pEditTrackerRelocate != null
+			pEditTrackerRelocate.setTracker(null)
+			pEditTrackerRelocate = null
+		end
 		pModelActorReach = null
 		pModelReachLimit = null
 		pEditReachScaling = null
@@ -147,6 +153,11 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -258,185 +269,14 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent(DefaultListModel modelTrackerSlotNames, String optionPrefix)
-		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
-		var ComboBox comboBox, comboBoxTip, comboBoxBase, comboBoxGuide
-		var Label label, labelTip, labelBase
-		var TextField textField
-		var CheckBox checkBox
+	protected func void createContent()
 		var String toolTip
+		var Label label
 		
 		createBaseContent("motiontransferik")
 		
-		// bone chain
-		labelTip = Label.new("@UI.TipBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelTip)
-		
-		comboBoxTip = ComboBox.new(pModelListTipBone, DefaultComboBoxEditor.new(pModelTextTipBone))
-		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxTip.setToolTip("@UI.ToolTip.TipBone.Chain")
-		pPanelForm.addWidget(comboBoxTip)
-		
-		labelBase = Label.new("@UI.BaseBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBase)
-		
-		comboBoxBase = ComboBox.new(pModelListBaseBone, DefaultComboBoxEditor.new(pModelTextBaseBone))
-		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxBase.setToolTip("@UI.ToolTip.BaseBone.Chain")
-		pPanelForm.addWidget(comboBoxBase)
-		
-		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
-		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
-		
-		// guide bone
-		label = Label.new("@UI.GuideBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
-		
-		comboBoxGuide = ComboBox.new(pModelListGuideBone, DefaultComboBoxEditor.new(pModelTextGuideBone))
-		comboBoxGuide.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBoxGuide.setToolTip("@UI.ToolTip.GuideBone.Chain")
-		pPanelForm.addWidget(comboBoxGuide)
-		
-		CPEBone.new(preview, label, comboBoxGuide)
-		
-		// trackers
-		pEditTrackerTip = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/TipTracker", this, "@UI.TipTracker", false)
-		addWidget(pEditTrackerTip)
-		
-		pEditTrackerGuide = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/GuideTracker", this, "@UI.GuideTracker", false)
-		addWidget(pEditTrackerGuide)
-		
-		pEditTrackerBase = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/BaseTracker", this, "@UI.BaseTracker", false)
-		addWidget(pEditTrackerBase)
-		
-		pEditTrackerRelocate = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/RelocateTracker", this, "@UI.RelocateTracker", false)
-		addWidget(pEditTrackerRelocate)
-		
-		// actor reach
-		pPanelForm.addWidget(Label.new("@UI.ActorReach.Label", "Label.FormCaption.SingleLine"))
-		
-		comboBox = ComboBox.new(pModelActorReach)
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("@UI.ToolTip.ActorReach")
-		pPanelForm.addWidget(comboBox)
-		
-		// reach limit
-		pPanelForm.addWidget(Label.new("@UI.ReachLimit.Label", "Label.FormCaption.SingleLine"))
-		
-		textField = TextField.new(pModelReachLimit, 6)
-		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
-		textField.setToolTip("@UI.ToolTip.ReachLimit")
-		pPanelForm.addWidget(textField)
-		
-		// reach scaling
-		toolTip = "@UI.ToolTip.ReachScalingTwistAxis"
-		
-		label = Label.new("@UI.ReachScaling.Label", "Label.FormCaption.SingleLine")
-		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
-		
-		pEditReachScaling = EditVector.new()
-		pEditReachScaling.setToolTip(toolTip)
-		pPanelForm.addWidget(pEditReachScaling)
-		
-		// reach scaling backwards
-		toolTip = "@UI.ToolTip.ReachScalingTwistAxisBack"
-		
-		label = Label.new("@UI.ReachScalingBack.Label", "Label.FormCaption.SingleLine")
-		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
-		
-		pEditReachScalingBack = EditVector.new()
-		pEditReachScalingBack.setToolTip(toolTip)
-		pPanelForm.addWidget(pEditReachScalingBack)
-		
-		// adjust position
-		pPanelForm.addWidget(Label.new(""))
-		
-		checkBox = CheckBox.new(pModelAdjustPosition, "@UI.AdjustPosition")
-		checkBox.setToolTip("@UI.ToolTip.AdjustPositionBaseBone")
-		pPanelForm.addWidget(checkBox)
-		
-		// move base ik
-		pPanelForm.addWidget(Label.new("@UI.MoveBaseIK.Label", "Label.FormCaption.SingleLine"))
-		
-		comboBox = ComboBox.new(pModelListMoveBaseIK, DefaultComboBoxEditor.new(pModelTextMoveBaseIK))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("@UI.ToolTip.MoveBaseIK")
-		pPanelForm.addWidget(comboBox)
-		
-		// move retracted
-		pPanelForm.addWidget(Label.new("@UI.MoveRetracted.Label", "Label.FormCaption.SingleLine"))
-		
-		comboBox = ComboBox.new(pModelListMoveRetracted, DefaultComboBoxEditor.new(pModelTextMoveRetracted))
-		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
-		comboBox.setToolTip("@UI.ToolTip.MoveRetracted")
-		pPanelForm.addWidget(comboBox)
-		
-		// twist propagation
-		pPanelForm.addWidget(Label.new("@UI.TwistPropagation.Label", "Label.FormCaption.SingleLine"))
-		
-		textField = TextField.new(pModelTwistPropagation, 6)
-		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
-		textField.setToolTip("@UI.ToolTip.TwistPropagation")
-		pPanelForm.addWidget(textField)
-		
-		// twist bone count
-		pPanelForm.addWidget(Label.new("@UI.TwistBoneCount.Label", "Label.FormCaption.SingleLine"))
-		
-		textField = TextField.new(pModelTwistBoneCount, 4)
-		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
-		textField.setToolTip("@UI.ToolTip.TwistBoneCount")
-		pPanelForm.addWidget(textField)
-		
-		// twist axis rotation
-		label = Label.new("@UI.TwistAxisRotation.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
-		
-		pEditTwistAxisRotation = EditVector.new()
-		pEditTwistAxisRotation.setToolTip("@UI.ToolTip.TwistAxisRotation")
-		pPanelForm.addWidget(pEditTwistAxisRotation)
-		
-		CPECoordinateSystemAxis.new(preview, null, null, label, pEditTwistAxisRotation, comboBoxTip, null, true)
-		
-		// guide twist
-		pPanelForm.addWidget(Label.new("@UI.GuideTwistStrength.Label", "Label.FormCaption.SingleLine"))
-		
-		textField = TextField.new(pModelGuideTwistStrength, 6)
-		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
-		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
-		textField.setToolTip("@UI.ToolTip.GuideTwistStrength")
-		pPanelForm.addWidget(textField)
-		
-		// guide bend axis rotation
-		label = Label.new("@UI.GuideBendAxisRotation.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
-		
-		pEditGuideBendAxisRotation = EditVector.new()
-		pEditGuideBendAxisRotation.setToolTip("@UI.ToolTip.GuideBendAxisRotation")
-		pPanelForm.addWidget(pEditGuideBendAxisRotation)
-		
-		CPECoordinateSystemAxis.new(preview, null, null, label, pEditGuideBendAxisRotation, comboBoxGuide, null, true)
-		
-		// guide use position
-		pPanelForm.addWidget(Label.new(""))
-		
-		checkBox = CheckBox.new(pModelGuideUsePosition, "@UI.GuideUsePosition")
-		checkBox.setToolTip("@UI.ToolTip.GuideUsePosition")
-		pPanelForm.addWidget(checkBox)
-		
-		// relocate tip
-		pPanelForm.addWidget(Label.new(""))
-		
-		checkBox = CheckBox.new(pModelAdjustPosition, "@UI.RelocateTip")
-		checkBox.setToolTip("@UI.ToolTip.RelocateTip")
-		pPanelForm.addWidget(checkBox)
-		
 		// base bone rotation
-		addWidget(CollapsibleGroup.new("@UI.BaseBoneRotation", "", CollapsibleGroup.persistModel(optionPrefix + "/BaseRotate", false),\
+		addWidget(CollapsibleGroup.new("@UI.BaseBoneRotation", "", CollapsibleGroup.persistModel(pOptionPrefix + "/BaseRotate", false),\
 		FormLayout.new(true, 10, 2), block Panel p
 			// range center
 			toolTip = "@UI.ToolTip.BaseBoneRotation"
@@ -493,6 +333,183 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 			pEditBaseRotateAngleMaximum.setToolTip(toolTip)
 			p.addWidget(pEditBaseRotateAngleMaximum)
 		end))
+	end
+	
+	protected func void addFormPanelContent(Panel panel)
+		var DefaultListModel modelTrackerSlotNames = pWindowCharacterConfiguration.getModelTrackerSlotNames()
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var ComboBox comboBox, comboBoxTip, comboBoxBase, comboBoxGuide
+		var Label label, labelTip, labelBase
+		var TextField textField
+		var CheckBox checkBox
+		var String toolTip
+		
+		// bone chain
+		labelTip = Label.new("@UI.TipBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(labelTip)
+		
+		comboBoxTip = ComboBox.new(pModelListTipBone, DefaultComboBoxEditor.new(pModelTextTipBone))
+		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxTip.setToolTip("@UI.ToolTip.TipBone.Chain")
+		panel.addWidget(comboBoxTip)
+		
+		labelBase = Label.new("@UI.BaseBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(labelBase)
+		
+		comboBoxBase = ComboBox.new(pModelListBaseBone, DefaultComboBoxEditor.new(pModelTextBaseBone))
+		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxBase.setToolTip("@UI.ToolTip.BaseBone.Chain")
+		panel.addWidget(comboBoxBase)
+		
+		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
+		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
+		
+		// guide bone
+		label = Label.new("@UI.GuideBone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(label)
+		
+		comboBoxGuide = ComboBox.new(pModelListGuideBone, DefaultComboBoxEditor.new(pModelTextGuideBone))
+		comboBoxGuide.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBoxGuide.setToolTip("@UI.ToolTip.GuideBone.Chain")
+		panel.addWidget(comboBoxGuide)
+		
+		CPEBone.new(preview, label, comboBoxGuide)
+		
+		// trackers
+		pEditTrackerTip = WCCPMTTracker.new(modelTrackerSlotNames, pOptionPrefix + "/TipTracker", this, "@UI.TipTracker", false)
+		addWidget(pEditTrackerTip)
+		
+		pEditTrackerGuide = WCCPMTTracker.new(modelTrackerSlotNames, pOptionPrefix + "/GuideTracker", this, "@UI.GuideTracker", false)
+		addWidget(pEditTrackerGuide)
+		
+		pEditTrackerBase = WCCPMTTracker.new(modelTrackerSlotNames, pOptionPrefix + "/BaseTracker", this, "@UI.BaseTracker", false)
+		addWidget(pEditTrackerBase)
+		
+		pEditTrackerRelocate = WCCPMTTracker.new(modelTrackerSlotNames, pOptionPrefix + "/RelocateTracker", this, "@UI.RelocateTracker", false)
+		addWidget(pEditTrackerRelocate)
+		
+		// actor reach
+		panel.addWidget(Label.new("@UI.ActorReach.Label", "Label.FormCaption.SingleLine"))
+		
+		comboBox = ComboBox.new(pModelActorReach)
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("@UI.ToolTip.ActorReach")
+		panel.addWidget(comboBox)
+		
+		// reach limit
+		panel.addWidget(Label.new("@UI.ReachLimit.Label", "Label.FormCaption.SingleLine"))
+		
+		textField = TextField.new(pModelReachLimit, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
+		textField.setToolTip("@UI.ToolTip.ReachLimit")
+		panel.addWidget(textField)
+		
+		// reach scaling
+		toolTip = "@UI.ToolTip.ReachScalingTwistAxis"
+		
+		label = Label.new("@UI.ReachScaling.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		pEditReachScaling = EditVector.new()
+		pEditReachScaling.setToolTip(toolTip)
+		panel.addWidget(pEditReachScaling)
+		
+		// reach scaling backwards
+		toolTip = "@UI.ToolTip.ReachScalingTwistAxisBack"
+		
+		label = Label.new("@UI.ReachScalingBack.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		pEditReachScalingBack = EditVector.new()
+		pEditReachScalingBack.setToolTip(toolTip)
+		panel.addWidget(pEditReachScalingBack)
+		
+		// adjust position
+		panel.addWidget(Label.new(""))
+		
+		checkBox = CheckBox.new(pModelAdjustPosition, "@UI.AdjustPosition")
+		checkBox.setToolTip("@UI.ToolTip.AdjustPositionBaseBone")
+		panel.addWidget(checkBox)
+		
+		// move base ik
+		panel.addWidget(Label.new("@UI.MoveBaseIK.Label", "Label.FormCaption.SingleLine"))
+		
+		comboBox = ComboBox.new(pModelListMoveBaseIK, DefaultComboBoxEditor.new(pModelTextMoveBaseIK))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("@UI.ToolTip.MoveBaseIK")
+		panel.addWidget(comboBox)
+		
+		// move retracted
+		panel.addWidget(Label.new("@UI.MoveRetracted.Label", "Label.FormCaption.SingleLine"))
+		
+		comboBox = ComboBox.new(pModelListMoveRetracted, DefaultComboBoxEditor.new(pModelTextMoveRetracted))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("@UI.ToolTip.MoveRetracted")
+		panel.addWidget(comboBox)
+		
+		// twist propagation
+		panel.addWidget(Label.new("@UI.TwistPropagation.Label", "Label.FormCaption.SingleLine"))
+		
+		textField = TextField.new(pModelTwistPropagation, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("@UI.ToolTip.TwistPropagation")
+		panel.addWidget(textField)
+		
+		// twist bone count
+		panel.addWidget(Label.new("@UI.TwistBoneCount.Label", "Label.FormCaption.SingleLine"))
+		
+		textField = TextField.new(pModelTwistBoneCount, 4)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(4, SimpleTextValidator.CharacterClass.digits))
+		textField.setToolTip("@UI.ToolTip.TwistBoneCount")
+		panel.addWidget(textField)
+		
+		// twist axis rotation
+		label = Label.new("@UI.TwistAxisRotation.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(label)
+		
+		pEditTwistAxisRotation = EditVector.new()
+		pEditTwistAxisRotation.setToolTip("@UI.ToolTip.TwistAxisRotation")
+		panel.addWidget(pEditTwistAxisRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditTwistAxisRotation, comboBoxTip, null, true)
+		
+		// guide twist
+		panel.addWidget(Label.new("@UI.GuideTwistStrength.Label", "Label.FormCaption.SingleLine"))
+		
+		textField = TextField.new(pModelGuideTwistStrength, 6)
+		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+		textField.setToolTip("@UI.ToolTip.GuideTwistStrength")
+		panel.addWidget(textField)
+		
+		// guide bend axis rotation
+		label = Label.new("@UI.GuideBendAxisRotation.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(label)
+		
+		pEditGuideBendAxisRotation = EditVector.new()
+		pEditGuideBendAxisRotation.setToolTip("@UI.ToolTip.GuideBendAxisRotation")
+		panel.addWidget(pEditGuideBendAxisRotation)
+		
+		CPECoordinateSystemAxis.new(preview, null, null, label, pEditGuideBendAxisRotation, comboBoxGuide, null, true)
+		
+		// guide use position
+		panel.addWidget(Label.new(""))
+		
+		checkBox = CheckBox.new(pModelGuideUsePosition, "@UI.GuideUsePosition")
+		checkBox.setToolTip("@UI.ToolTip.GuideUsePosition")
+		panel.addWidget(checkBox)
+		
+		// relocate tip
+		panel.addWidget(Label.new(""))
+		
+		checkBox = CheckBox.new(pModelAdjustPosition, "@UI.RelocateTip")
+		checkBox.setToolTip("@UI.ToolTip.RelocateTip")
+		panel.addWidget(checkBox)
 	end
 	
 	/** Motion transfer changed. */

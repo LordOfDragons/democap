@@ -45,11 +45,12 @@ class WCCPMTCopy extends WCCPanelMotionTransfer
 	var DefaultToggleModel pModelLockX
 	var DefaultToggleModel pModelLockY
 	var DefaultToggleModel pModelLockZ
+	var bool pIsContentCreated
 	
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window) super(window)
+	func new(WindowCharacterConfiguration window) super(window, "")
 		pModelTypeName.setText("@UI.CopyBoneStates")
 		
 		pModelListSourceBone = SharedListModel.new(window.getModelBones())
@@ -65,10 +66,6 @@ class WCCPMTCopy extends WCCPanelMotionTransfer
 		pModelLockX = DefaultToggleModel.new()
 		pModelLockY = DefaultToggleModel.new()
 		pModelLockZ = DefaultToggleModel.new()
-		
-		runWhileBlockingLayout(block
-			createContent()
-		end)
 	end
 	
 	/** Dispose of window. */
@@ -92,6 +89,11 @@ class WCCPMTCopy extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -153,6 +155,10 @@ class WCCPMTCopy extends WCCPanelMotionTransfer
 	
 	/** Create window content. */
 	protected func void createContent()
+		createBaseContent("motiontransfercopy")
+	end
+	
+	protected func void addFormPanelContent(Panel panel)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var EnumListElementRenderer renderer
 		var TextField textField
@@ -161,35 +167,33 @@ class WCCPMTCopy extends WCCPanelMotionTransfer
 		var Label label
 		var CheckBox checkBox
 		
-		createBaseContent("motiontransfercopy")
-		
 		// source bone
 		label = Label.new("@UI.SourceBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		comboBox = ComboBox.new(pModelListSourceBone, DefaultComboBoxEditor.new(pModelTextSourceBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.SourceBone.CopyBoneStates")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		CPEBone.new(preview, label, comboBox)
 		
 		// target bones
 		label = Label.new("@UI.TargetBones.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		listBox = ListBox.new(pModelTargetBones)
 		listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
 		listBox.setToolTip("@UI.ToolTip.TargetBones.CopyBoneStates")
 		listBox.setNumberDisplayLines(3)
-		pPanelForm.addWidget(ScrollPanel.new(listBox))
+		panel.addWidget(ScrollPanel.new(listBox))
 		
 		CPEBoneList.new(preview, label, listBox)
 		
 		// scale
-		pPanelForm.addWidget(Label.new("@UI.Scale.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.Scale.Label", "Label.FormCaption.SingleLine"))
 		
-		pPanelForm.addWidget(Panel.new(GridLayout.new(0, 1, 5), block Panel p
+		panel.addWidget(Panel.new(GridLayout.new(0, 1, 5), block Panel p
 			p.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 0, FlowLayout.Stretch.last), block Panel p2
 				p2.addWidget(Label.new("@UI.Position"))
 				
@@ -212,19 +216,19 @@ class WCCPMTCopy extends WCCPanelMotionTransfer
 		end))
 		
 		// mode
-		pPanelForm.addWidget(Label.new("@UI.CopyMode.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.CopyMode.Label", "Label.FormCaption.SingleLine"))
 		
 		renderer = EnumListElementRenderer.new()
 		renderer.setTranslationPrefix("UI.Enum.MotionTransferCopyMode.")
 		comboBox = ComboBox.new(pModelCopyMode, renderer)
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.CopyMode.CopyBoneStates")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		// restrictions
-		pPanelForm.addWidget(Label.new("@UI.Copy.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.Copy.Label", "Label.FormCaption.SingleLine"))
 		
-		pPanelForm.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p
+		panel.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p
 			checkBox = CheckBox.new(pModelCopyPosition, "@UI.Position")
 			checkBox.setToolTip("@UI.ToolTip.CopyPosition")
 			p.addWidget(checkBox)
@@ -234,9 +238,9 @@ class WCCPMTCopy extends WCCPanelMotionTransfer
 			p.addWidget(checkBox)
 		end))
 		
-		pPanelForm.addWidget(Label.new("@UI.Lock.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.Lock.Label", "Label.FormCaption.SingleLine"))
 		
-		pPanelForm.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p
+		panel.addWidget(Panel.new(GridLayout.new(0, 1), block Panel p
 			checkBox = CheckBox.new(pModelLockX, "@UI.X")
 			checkBox.setToolTip("@UI.ToolTip.NoModifyXCoord")
 			p.addWidget(checkBox)

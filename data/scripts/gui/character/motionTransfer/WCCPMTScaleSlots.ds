@@ -90,29 +90,29 @@ class WCCPMTScaleSlots extends WCCPanelMotionTransfer
 	var DefaultListModel pModelScaleSlots
 	var SharedListModel pModelAddScaleSlot
 	var EditVector pEditScaleFactor
+	var bool pIsContentCreated
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
+	func new(WindowCharacterConfiguration window, String optionPrefix) super(window, optionPrefix)
 		pModelTypeName.setText("@UI.ScaleSlots")
 		
 		pModelScaleSlots = DefaultListModel.new()
 		pModelScaleSlots.setAutoSelect(false)
 		pModelAddScaleSlot = SharedListModel.new(window.getModelTrackerSlotNames())
 		pModelAddScaleSlot.setAutoSelect(false)
-		
-		runWhileBlockingLayout(block
-			createContent(window.getModelTrackerSlotNames(), optionPrefix)
-		end)
 	end
 	
 	/** Dispose of window. */
 	func void dispose()
 		pModelScaleSlots = null
 		pModelAddScaleSlot = null
-		pEditOriginTracker.setTracker(null)
-		pEditOriginTracker = null
+		if pEditOriginTracker != null
+			pEditOriginTracker.setTracker(null)
+			pEditOriginTracker = null
+		end
 		pEditScaleFactor = null
+		
 		super.dispose()
 	end
 	
@@ -120,6 +120,11 @@ class WCCPMTScaleSlots extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -158,19 +163,28 @@ class WCCPMTScaleSlots extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent(DefaultListModel modelTrackerSlotNames, String optionPrefix)
+	protected func void createContent()
+		createBaseContent("MotionTransferScaleSlots")
+		
+		// origin slot
+		var DefaultListModel modelTrackerSlotNames = pWindowCharacterConfiguration.getModelTrackerSlotNames()
+		
+		pEditOriginTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
+			pOptionPrefix + "/OriginTracker", this, "@UI.OriginTracker", false)
+		addWidget(pEditOriginTracker)
+	end
+	
+	protected func void addFormPanelContent(Panel panel)
 		var ComboBox comboBox
 		var ListBox listBox
 		var Button button
 		var Label label
 		
-		createBaseContent("MotionTransferScaleSlots")
-		
 		// scale slots
 		label = Label.new("@UI.ScaleSlots.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
-		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+		panel.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
 			comboBox = ComboBox.new(pModelAddScaleSlot)
 			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 			comboBox.setToolTip("@UI.ToolTip.ScaleSlots.ScaleSlot")
@@ -198,16 +212,11 @@ class WCCPMTScaleSlots extends WCCPanelMotionTransfer
 		end))
 		
 		// scale factor
-		pPanelForm.addWidget(Label.new("@UI.Scale.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.Scale.Label", "Label.FormCaption.SingleLine"))
 		
 		pEditScaleFactor = EditVector.new()
 		pEditScaleFactor.setToolTip("@UI.ToolTip.ScaleSlots.ScaleFactor")
-		pPanelForm.addWidget(pEditScaleFactor)
-		
-		// origin slot
-		pEditOriginTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
-			optionPrefix + "/OriginTracker", this, "@UI.OriginTracker", false)
-		addWidget(pEditOriginTracker)
+		panel.addWidget(pEditScaleFactor)
 	end
 	
 	/** Motion transfer changed. */

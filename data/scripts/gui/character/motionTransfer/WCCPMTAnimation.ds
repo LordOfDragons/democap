@@ -39,11 +39,12 @@ class WCCPMTAnimation extends WCCPanelMotionTransfer
 	var DefaultListModel pModelTargetBones
 	var DefaultListModel pModelMode
 	var DefaultTextModel pModelPlaytime
+	var bool pIsContentCreated
 	
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window) super(window)
+	func new(WindowCharacterConfiguration window) super(window, "")
 		pModelTypeName.setText("@UI.Animation")
 		
 		pModelListMove = SharedListModel.new(window.getModelMoves())
@@ -53,10 +54,6 @@ class WCCPMTAnimation extends WCCPanelMotionTransfer
 		pModelTargetBones.setAutoSelect(false)
 		pModelMode = DefaultListModel.new(MotionTransferAnimation.Mode.all().toArray())
 		pModelPlaytime = DefaultTextModel.new()
-		
-		runWhileBlockingLayout(block
-			createContent()
-		end)
 	end
 	
 	/** Dispose of window. */
@@ -74,6 +71,11 @@ class WCCPMTAnimation extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -118,6 +120,10 @@ class WCCPMTAnimation extends WCCPanelMotionTransfer
 	
 	/** Create window content. */
 	protected func void createContent()
+		createBaseContent("motiontransferanimation")
+	end
+	
+	protected func void addFormPanelContent(Panel panel)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var EnumListElementRenderer renderer
 		var TextField textField
@@ -125,45 +131,43 @@ class WCCPMTAnimation extends WCCPanelMotionTransfer
 		var ListBox listBox
 		var Label label
 		
-		createBaseContent("motiontransferanimation")
-		
 		// move
-		pPanelForm.addWidget(Label.new("@UI.Move.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.Move.Label", "Label.FormCaption.SingleLine"))
 		
 		comboBox = ComboBox.new(pModelListMove, DefaultComboBoxEditor.new(pModelTextMove))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.Move")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		// target bones
 		label = Label.new("@UI.TargetBones.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		listBox = ListBox.new(pModelTargetBones)
 		listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
 		listBox.setToolTip("@UI.ToolTip.TargetBones")
 		listBox.setNumberDisplayLines(5)
-		pPanelForm.addWidget(ScrollPanel.new(listBox))
+		panel.addWidget(ScrollPanel.new(listBox))
 		
 		CPEBoneList.new(preview, label, listBox)
 		
 		// mode
-		pPanelForm.addWidget(Label.new("@UI.Mode.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.Mode.Label", "Label.FormCaption.SingleLine"))
 		
 		renderer = EnumListElementRenderer.new()
 		renderer.setTranslationPrefix("UI.Enum.MotionTransferAnimationMode.")
 		comboBox = ComboBox.new(pModelMode, renderer)
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.AnimationApplicationMode")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		// playtime
-		pPanelForm.addWidget(Label.new("@UI.Playtime.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.Playtime.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelPlaytime, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
 		textField.setToolTip("@UI.ToolTip.PlaytimeAnimation")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 	end
 end

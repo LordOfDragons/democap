@@ -53,11 +53,12 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 	
 	var Array pExpressions
 	var AutoRigHelper pAutoRigHelper
+	var bool pIsContentCreated
 	
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
+	func new(WindowCharacterConfiguration window, String optionPrefix) super(window, optionPrefix)
 		var DefaultListModel modelVPS = window.getModelVPS()
 		
 		pModelTypeName.setText("@UI.Face")
@@ -73,10 +74,6 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 		pExpressions.forEach(block Expression each
 			pAutoRigHelper.addTarget("face." + each.info.getId(), each.modelText)
 		end)
-		
-		runWhileBlockingLayout(block
-			createContent(optionPrefix)
-		end)
 	end
 	
 	/** Dispose of window. */
@@ -90,6 +87,11 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -128,15 +130,15 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent(String optionPrefix)
+	protected func void createContent()
 		createBaseContent("motiontransferface")
 		
 		// expressions
-		addExpressionWidgets("@UI.Eye", "eye", optionPrefix + "/ExprEye")
-		addExpressionWidgets("@UI.Jaw", "jaw", optionPrefix + "/ExprJaw")
-		addExpressionWidgets("@UI.Cheek", "cheek", optionPrefix + "/ExprCheek")
-		addExpressionWidgets("@UI.Mouth", "mouth", optionPrefix + "/ExprMouth")
-		addExpressionWidgets("@UI.Tongue", "tongue", optionPrefix + "/ExprTongue")
+		addExpressionWidgets("@UI.Eye", "eye", pOptionPrefix + "/ExprEye")
+		addExpressionWidgets("@UI.Jaw", "jaw", pOptionPrefix + "/ExprJaw")
+		addExpressionWidgets("@UI.Cheek", "cheek", pOptionPrefix + "/ExprCheek")
+		addExpressionWidgets("@UI.Mouth", "mouth", pOptionPrefix + "/ExprMouth")
+		addExpressionWidgets("@UI.Tongue", "tongue", pOptionPrefix + "/ExprTongue")
 	end
 	
 	protected func void addExpressionWidgets(String label, String expressionIdPrefix, String optPrefix)

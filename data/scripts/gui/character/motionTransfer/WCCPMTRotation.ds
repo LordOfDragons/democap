@@ -38,11 +38,12 @@ class WCCPMTRotation extends WCCPanelMotionTransfer
 	var DefaultListModel pModelCounterBones
 	var EditVector pEditAxisRotation
 	var DefaultTextModel pModelAngle
+	var bool pIsContentCreated
 	
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window) super(window)
+	func new(WindowCharacterConfiguration window) super(window, "")
 		pModelTypeName.setText("@UI.RotateBones")
 		
 		pModelBones = DefaultListModel.new()
@@ -50,10 +51,6 @@ class WCCPMTRotation extends WCCPanelMotionTransfer
 		pModelCounterBones = DefaultListModel.new()
 		pModelCounterBones.setAutoSelect(false)
 		pModelAngle = DefaultTextModel.new()
-		
-		runWhileBlockingLayout(block
-			createContent()
-		end)
 	end
 	
 	/** Dispose of window. */
@@ -70,6 +67,11 @@ class WCCPMTRotation extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -114,34 +116,36 @@ class WCCPMTRotation extends WCCPanelMotionTransfer
 	
 	/** Create window content. */
 	protected func void createContent()
+		createBaseContent("motiontransfercopy")
+	end
+	
+	protected func void addFormPanelContent(Panel panel)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var TextField textField
 		var ListBox listBox
 		var Label label
 		
-		createBaseContent("motiontransfercopy")
-		
 		// bones
 		label = Label.new("@UI.Bones.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		listBox = ListBox.new(pModelBones)
 		listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
 		listBox.setToolTip("@UI.ToolTip.BonesRotation")
 		listBox.setNumberDisplayLines(3)
-		pPanelForm.addWidget(ScrollPanel.new(listBox))
+		panel.addWidget(ScrollPanel.new(listBox))
 		
 		CPEBoneList.new(preview, label, listBox)
 		
 		// target bones
 		label = Label.new("@UI.CounterBones.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		listBox = ListBox.new(pModelCounterBones)
 		listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
 		listBox.setToolTip("@UI.ToolTip.CounterBonesRotation")
 		listBox.setNumberDisplayLines(5)
-		pPanelForm.addWidget(ScrollPanel.new(listBox))
+		panel.addWidget(ScrollPanel.new(listBox))
 		
 		CPEBoneList.new(preview, label, listBox)
 		
@@ -149,21 +153,21 @@ class WCCPMTRotation extends WCCPanelMotionTransfer
 		var String toolTip = "@UI.ToolTip.AxisRotation"
 		label = Label.new("@UI.Axis.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		pEditAxisRotation = EditVector.new()
 		pEditAxisRotation.setToolTip(toolTip)
-		pPanelForm.addWidget(pEditAxisRotation)
+		panel.addWidget(pEditAxisRotation)
 		
 		CPECoordinateSystemAxis.new(preview, null, null, label, pEditAxisRotation, null, null, true)
 		
 		// angle
-		pPanelForm.addWidget(Label.new("@UI.Angle.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.Angle.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelAngle, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("@UI.ToolTip.Angle.RotateBones")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 	end
 end

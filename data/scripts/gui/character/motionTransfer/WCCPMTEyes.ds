@@ -56,11 +56,12 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 	var DefaultRangeModel pModelAdjustRotationHorizontal
 	var DefaultRangeModel pModelAdjustRotationVertical
 	var AutoRigHelper pAutoRigHelper
+	var bool pIsContentCreated
 	
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window) super(window)
+	func new(WindowCharacterConfiguration window) super(window, "")
 		pModelTypeName.setText("@UI.Eyes")
 		
 		pModelListTrackerSlot = SharedListModel.new(window.getModelTrackerSlotNames())
@@ -96,10 +97,6 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 			window.getCharacterConfiguration(), "WCCPMTEyes: ")
 		pAutoRigHelper.addTarget("eye.right", pModelTextRightBone)
 		pAutoRigHelper.addTarget("eye.left", pModelTextLeftBone)
-		
-		runWhileBlockingLayout(block
-			createContent()
-		end)
 	end
 	
 	/** Dispose of window. */
@@ -138,6 +135,11 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -213,30 +215,32 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 	
 	/** Create window content. */
 	protected func void createContent()
+		createBaseContent("motiontransfereyes")
+	end
+	
+	protected func void addFormPanelContent(Panel panel)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var ComboBox comboBox
 		var Label label, labelBone
 		var TextField textField
 		var Slider slider
 		
-		createBaseContent("motiontransfereyes")
-		
 		// tracker slot
-		pPanelForm.addWidget(Label.new("@UI.TrackerSlot.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.TrackerSlot.Label", "Label.FormCaption.SingleLine"))
 		
 		comboBox = ComboBox.new(pModelListTrackerSlot, DefaultComboBoxEditor.new(pModelTextTrackerSlot))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.TrackerSlot.Eyes")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		// right bone
 		labelBone = Label.new("@UI.RightBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBone)
+		panel.addWidget(labelBone)
 		
 		comboBox = ComboBox.new(pModelListRightBone, DefaultComboBoxEditor.new(pModelTextRightBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.RightEyeBone")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		CPEBone.new(preview, labelBone, comboBox)
 		
@@ -244,22 +248,22 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		var String toolTip = "@UI.ToolTip.RightEyeAxis"
 		label = Label.new("@UI.RightAxis.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		pEditRightRotation = EditVector.new()
 		pEditRightRotation.setToolTip(toolTip)
-		pPanelForm.addWidget(pEditRightRotation)
+		panel.addWidget(pEditRightRotation)
 		
 		CPECoordinateSystem.new(preview, null, null, label, pEditRightRotation, comboBox, null, false)
 		
 		// left bone
 		labelBone = Label.new("@UI.LeftBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBone)
+		panel.addWidget(labelBone)
 		
 		comboBox = ComboBox.new(pModelListLeftBone, DefaultComboBoxEditor.new(pModelTextLeftBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.LeftEyeBone")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		CPEBone.new(preview, labelBone, comboBox)
 		
@@ -267,22 +271,22 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		toolTip = "@UI.ToolTip.LeftEyeAxis"
 		label = Label.new("@UI.LeftAxis.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		pEditLeftRotation = EditVector.new()
 		pEditLeftRotation.setToolTip(toolTip)
-		pPanelForm.addWidget(pEditLeftRotation)
+		panel.addWidget(pEditLeftRotation)
 		
 		CPECoordinateSystem.new(preview, null, null, label, pEditLeftRotation, comboBox, null, false)
 		
 		// view bone
 		labelBone = Label.new("@UI.ViewBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBone)
+		panel.addWidget(labelBone)
 		
 		comboBox = ComboBox.new(pModelListViewBone, DefaultComboBoxEditor.new(pModelTextViewBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.ViewBone")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		CPEBone.new(preview, labelBone, comboBox)
 		
@@ -290,78 +294,78 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		toolTip = "@UI.ToolTip.ViewBoneAxis"
 		label = Label.new("@UI.ViewAxis.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		pEditViewRotation = EditVector.new()
 		pEditViewRotation.setToolTip(toolTip)
-		pPanelForm.addWidget(pEditViewRotation)
+		panel.addWidget(pEditViewRotation)
 		
 		CPECoordinateSystem.new(preview, null, null, label, pEditViewRotation, comboBox, null, false)
 		
 		// look-at bone
 		labelBone = Label.new("@UI.LookAtBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBone)
+		panel.addWidget(labelBone)
 		
 		comboBox = ComboBox.new(pModelListLookAtBone, DefaultComboBoxEditor.new(pModelTextLookAtBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.LookAtBone")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		CPEBone.new(preview, labelBone, comboBox)
 		
 		// look-at distance
-		pPanelForm.addWidget(Label.new("@UI.LookAtDistance.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.LookAtDistance.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelLookAtDistance, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("@UI.ToolTip.LookAtDistance")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 		
 		// limit in
-		pPanelForm.addWidget(Label.new("@UI.LimitInAngle.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.LimitInAngle.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelLimitIn, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("@UI.ToolTip.EyeLimitAngleIn")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 		
 		// limit out
-		pPanelForm.addWidget(Label.new("@UI.LimitOutAngle.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.LimitOutAngle.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelLimitOut, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("@UI.ToolTip.EyeLimitAngleOut")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 		
 		// limit up
-		pPanelForm.addWidget(Label.new("@UI.LimitUpAngle.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.LimitUpAngle.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelLimitUp, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("@UI.ToolTip.EyeLimitAngleUp")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 		
 		// limit down
-		pPanelForm.addWidget(Label.new("@UI.LimitDownAngle.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.LimitDownAngle.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelLimitDown, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("@UI.ToolTip.EyeLimitAngleDown")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 		
 		// adjust horizontal rotation
 		toolTip = "@UI.ToolTip.AdjustHorzEyeRotation"
 		
 		label = Label.new("@UI.AdjustHorzRot.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
-		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+		panel.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
 			slider = Slider.new(Orientation.horizontal, pModelAdjustRotationHorizontal)
 			slider.setToolTip(toolTip)
 			p.addWidget(slider)
@@ -378,9 +382,9 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 		
 		label = Label.new("@UI.AdjustVertRot.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
-		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
+		panel.addWidget(Panel.new(FlowLayout.new(LayoutAxis.x, 1, FlowLayout.Stretch.first), block Panel p
 			slider = Slider.new(Orientation.horizontal, pModelAdjustRotationVertical)
 			slider.setToolTip(toolTip)
 			p.addWidget(slider)
@@ -392,7 +396,6 @@ class WCCPMTEyes extends WCCPanelMotionTransfer
 			textField.addMouseListener(ScrollModelWheelMouseListener.new(pModelAdjustRotationVertical))
 		end))
 	end
-	
 	
 	
 	protected func void onPanelContextMenu(MenuPopup menu)

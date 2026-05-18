@@ -45,11 +45,12 @@ class WCCPMTSecondary extends WCCPanelMotionTransfer
 	var DefaultTextModel pModelTextMove
 	var DefaultTextModel pModelReferenceTime
 	var DefaultToggleModel pModelFlip
+	var bool pIsContentCreated
 	
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window) super(window)
+	func new(WindowCharacterConfiguration window) super(window, "")
 		pModelTypeName.setText("@UI.SecondaryMotion")
 		
 		pModelListSourceBone = SharedListModel.new(window.getModelBones())
@@ -66,10 +67,6 @@ class WCCPMTSecondary extends WCCPanelMotionTransfer
 		pModelTextMove = DefaultTextModel.new()
 		pModelReferenceTime = DefaultTextModel.new()
 		pModelFlip = DefaultToggleModel.new()
-		
-		runWhileBlockingLayout(block
-			createContent()
-		end)
 	end
 	
 	/** Dispose of window. */
@@ -93,6 +90,11 @@ class WCCPMTSecondary extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -151,6 +153,10 @@ class WCCPMTSecondary extends WCCPanelMotionTransfer
 	
 	/** Create window content. */
 	protected func void createContent()
+		createBaseContent("motiontransfersecondary")
+	end
+	
+	protected func void addFormPanelContent(Panel panel)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var EnumListElementRenderer renderer
 		var TextField textField
@@ -159,92 +165,90 @@ class WCCPMTSecondary extends WCCPanelMotionTransfer
 		var ListBox listBox
 		var Label label
 		
-		createBaseContent("motiontransfersecondary")
-		
 		// source bone
 		label = Label.new("@UI.SourceBone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		comboBox = ComboBox.new(pModelListSourceBone, DefaultComboBoxEditor.new(pModelTextSourceBone))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.SourceBone.SecondaryMotion")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		CPEBone.new(preview, label, comboBox)
 		
 		// parameter
-		pPanelForm.addWidget(Label.new("@UI.Parameter.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.Parameter.Label", "Label.FormCaption.SingleLine"))
 		
 		renderer = EnumListElementRenderer.new()
 		renderer.setTranslationPrefix("UI.Enum.MotionTransferSecondaryParameter.")
 		comboBox = ComboBox.new(pModelParameter, renderer)
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.Parameter.SecondaryMotion")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		// minimum
-		pPanelForm.addWidget(Label.new("@UI.Minimum.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.Minimum.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelMinimum, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
 		textField.setToolTip("@UI.ToolTip.Minimum.SecondaryMotion")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 		
 		// maximum
-		pPanelForm.addWidget(Label.new("@UI.Maximum.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.Maximum.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelMaximum, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
 		textField.setToolTip("@UI.ToolTip.Maximum.SecondaryMotion")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 		
 		// target bones
 		label = Label.new("@UI.TargetBones.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		listBox = ListBox.new(pModelTargetBones)
 		listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
 		listBox.setToolTip("@UI.ToolTip.TargetBones")
 		listBox.setNumberDisplayLines(5)
-		pPanelForm.addWidget(ScrollPanel.new(listBox))
+		panel.addWidget(ScrollPanel.new(listBox))
 		
 		CPEBoneList.new(preview, label, listBox)
 		
 		// mode
-		pPanelForm.addWidget(Label.new("@UI.Mode.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.Mode.Label", "Label.FormCaption.SingleLine"))
 		
 		renderer = EnumListElementRenderer.new()
 		renderer.setTranslationPrefix("UI.Enum.MotionTransferSecondaryMode.")
 		comboBox = ComboBox.new(pModelMode, renderer)
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.ApplicationMode.SecondaryMotion")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		// move
-		pPanelForm.addWidget(Label.new("@UI.Move.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.Move.Label", "Label.FormCaption.SingleLine"))
 		
 		comboBox = ComboBox.new(pModelListMove, DefaultComboBoxEditor.new(pModelTextMove))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.Move.SecondaryMotion")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		// reference time
-		pPanelForm.addWidget(Label.new("@UI.ReferenceTime.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.ReferenceTime.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelReferenceTime, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.positiveNumber))
 		textField.setToolTip("@UI.ToolTip.ReferenceTime")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 		
 		// flip
-		pPanelForm.addWidget(Label.new(""))
+		panel.addWidget(Label.new(""))
 		
 		checkBox = CheckBox.new(pModelFlip, "@UI.ReverseMapping")
 		checkBox.setDesignerSelector("CheckBox.WindowCharacterConfiguration")
 		checkBox.setToolTip("@UI.ToolTip.ReverseMapping")
-		pPanelForm.addWidget(checkBox)
+		panel.addWidget(checkBox)
 	end
 end

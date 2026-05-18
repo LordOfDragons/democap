@@ -93,10 +93,11 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 		pModelTextTipBone2, pModelScaleShift
 	var DefaultListModel pModelShiftSlots
 	var DefaultToggleModel pModelShiftReferenceOffset
+	var bool pIsContentCreated
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
+	func new(WindowCharacterConfiguration window, String optionPrefix) super(window, optionPrefix)
 		pModelTypeName.setText("@UI.BaseShiftSlots")
 		
 		pModelListBaseBone1 = SharedListModel.new(window.getModelBones())
@@ -122,27 +123,29 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 		pModelScaleShift = DefaultTextModel.new()
 		
 		pModelShiftReferenceOffset = DefaultToggleModel.new()
-		
-		runWhileBlockingLayout(block
-			createContent(window.getModelTrackerSlotNames(), optionPrefix)
-		end)
 	end
 	
 	/** Dispose of window. */
 	func void dispose()
-		pModelListBaseBone1 = pModelListTipBone1 = pModelListBaseBone2 = pModelListTipBone2\
-			= pModelAddShiftSlot = null
-		pModelTextBaseBone1 = pModelTextTipBone1 = pModelTextBaseBone2 = pModelTextTipBone2\
-			= pModelScaleShift = null
+		pModelListBaseBone1 = pModelListTipBone1 = pModelListBaseBone2 = pModelListTipBone2 = pModelAddShiftSlot = null
+		pModelTextBaseBone1 = pModelTextTipBone1 = pModelTextBaseBone2 = pModelTextTipBone2 = pModelScaleShift = null
 		pModelShiftSlots = null
-		pEditReferenceTracker.setTracker(null)
-		pEditReferenceTracker = null
-		pEditBase1Tracker.setTracker(null)
-		pEditBase1Tracker = null
-		pEditBase2Tracker.setTracker(null)
-		pEditBase2Tracker = null
-		pEditOriginTracker.setTracker(null)
-		pEditOriginTracker = null
+		if pEditReferenceTracker != null
+			pEditReferenceTracker.setTracker(null)
+			pEditReferenceTracker = null
+		end
+		if pEditBase1Tracker != null
+			pEditBase1Tracker.setTracker(null)
+			pEditBase1Tracker = null
+		end
+		if pEditBase2Tracker != null
+			pEditBase2Tracker.setTracker(null)
+			pEditBase2Tracker = null
+		end
+		if pEditOriginTracker != null
+			pEditOriginTracker.setTracker(null)
+			pEditOriginTracker = null
+		end
 		pModelShiftReferenceOffset = null
 		super.dispose()
 	end
@@ -151,6 +154,11 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -208,7 +216,30 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent(DefaultListModel modelTrackerSlotNames, String optionPrefix)
+	protected func void createContent()
+		createBaseContent("MotionTransferBaseShiftSlots")
+		
+		// reference and base slots
+		var DefaultListModel modelTrackerSlotNames = pWindowCharacterConfiguration.getModelTrackerSlotNames()
+		
+		pEditReferenceTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
+			pOptionPrefix + "/ReferenceTracker", this, "@UI.ReferenceTracker", false)
+		addWidget(pEditReferenceTracker)
+		
+		pEditBase1Tracker = WCCPMTTracker.new(modelTrackerSlotNames,\
+			pOptionPrefix + "/Base1Tracker", this, "@UI.Base1Tracker", false)
+		addWidget(pEditBase1Tracker)
+		
+		pEditBase2Tracker = WCCPMTTracker.new(modelTrackerSlotNames,\
+			pOptionPrefix + "/Base2Tracker", this, "@UI.Base2Tracker", false)
+		addWidget(pEditBase2Tracker)
+		
+		pEditOriginTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
+			pOptionPrefix + "/OriginTracker", this, "@UI.OriginTracker", false)
+		addWidget(pEditOriginTracker)
+	end
+	
+	protected func void addFormPanelContent(Panel panel)
 		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
 		var ComboBox comboBox, comboBoxTip, comboBoxBase
 		var Label label, labelTip, labelBase
@@ -217,13 +248,11 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 		var ListBox listBox
 		var Button button
 		
-		createBaseContent("MotionTransferBaseShiftSlots")
-		
 		// shift slots
 		label = Label.new("@UI.ShiftSlots.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
-		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
+		panel.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p
 			comboBox = ComboBox.new(pModelAddShiftSlot)
 			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 			comboBox.setToolTip("@UI.ToolTip.ShiftSlot.BaseShiftSlots")
@@ -252,76 +281,59 @@ class WCCPMTBaseShiftSlots extends WCCPanelMotionTransfer
 		
 		// base 1 chain
 		labelBase = Label.new("@UI.Base1Bone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBase)
+		panel.addWidget(labelBase)
 		
 		comboBoxBase = ComboBox.new(pModelListBaseBone1, DefaultComboBoxEditor.new(pModelTextBaseBone1))
 		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBoxBase.setToolTip("@UI.ToolTip.Base1Bone")
-		pPanelForm.addWidget(comboBoxBase)
+		panel.addWidget(comboBoxBase)
 		
 		labelTip = Label.new("@UI.Tip1Bone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelTip)
+		panel.addWidget(labelTip)
 		
 		comboBoxTip = ComboBox.new(pModelListTipBone1, DefaultComboBoxEditor.new(pModelTextTipBone1))
 		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBoxTip.setToolTip("@UI.ToolTip.Tip1Bone")
-		pPanelForm.addWidget(comboBoxTip)
+		panel.addWidget(comboBoxTip)
 		
 		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
 		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
 		
 		// base 2 chain
 		labelBase = Label.new("@UI.Base2Bone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelBase)
+		panel.addWidget(labelBase)
 		
 		comboBoxBase = ComboBox.new(pModelListBaseBone2, DefaultComboBoxEditor.new(pModelTextBaseBone2))
 		comboBoxBase.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBoxBase.setToolTip("@UI.ToolTip.Base2Bone")
-		pPanelForm.addWidget(comboBoxBase)
+		panel.addWidget(comboBoxBase)
 		
 		labelTip = Label.new("@UI.Tip2Bone.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(labelTip)
+		panel.addWidget(labelTip)
 		
 		comboBoxTip = ComboBox.new(pModelListTipBone2, DefaultComboBoxEditor.new(pModelTextTipBone2))
 		comboBoxTip.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBoxTip.setToolTip("@UI.ToolTip.Tip2Bone")
-		pPanelForm.addWidget(comboBoxTip)
+		panel.addWidget(comboBoxTip)
 		
 		CPEBoneChain.new(preview, labelTip, comboBoxTip, null, comboBoxBase, false)
 		CPEBoneChain.new(preview, null, comboBoxTip, labelBase, comboBoxBase, true)
 		
 		// shift scale
-		pPanelForm.addWidget(Label.new("@UI.ShiftScale.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.ShiftScale.Label", "Label.FormCaption.SingleLine"))
 		
 		textField = TextField.new(pModelScaleShift, 6)
 		textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
 		textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
 		textField.setToolTip("@UI.ToolTip.ShiftScale")
-		pPanelForm.addWidget(textField)
+		panel.addWidget(textField)
 		
 		// shift reference offset
-		pPanelForm.addWidget(Label.new(""))
+		panel.addWidget(Label.new(""))
 		
 		checkBox = CheckBox.new(pModelShiftReferenceOffset, "@UI.ShiftReferenceOffset")
 		checkBox.setToolTip("@UI.ToolTip.ShiftReferenceOffset")
-		pPanelForm.addWidget(checkBox)
-		
-		// reference and base slots
-		pEditReferenceTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
-			optionPrefix + "/ReferenceTracker", this, "@UI.ReferenceTracker", false)
-		addWidget(pEditReferenceTracker)
-		
-		pEditBase1Tracker = WCCPMTTracker.new(modelTrackerSlotNames,\
-			optionPrefix + "/Base1Tracker", this, "@UI.Base1Tracker", false)
-		addWidget(pEditBase1Tracker)
-		
-		pEditBase2Tracker = WCCPMTTracker.new(modelTrackerSlotNames,\
-			optionPrefix + "/Base2Tracker", this, "@UI.Base2Tracker", false)
-		addWidget(pEditBase2Tracker)
-		
-		pEditOriginTracker = WCCPMTTracker.new(modelTrackerSlotNames,\
-			optionPrefix + "/OriginTracker", this, "@UI.OriginTracker", false)
-		addWidget(pEditOriginTracker)
+		panel.addWidget(checkBox)
 	end
 	
 	/** Motion transfer changed. */

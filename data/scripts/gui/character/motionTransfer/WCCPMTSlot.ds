@@ -38,29 +38,29 @@ class WCCPMTSlot extends WCCPanelMotionTransfer
 	var DefaultTextModel pModelTextTarget
 	var WCCPMTTracker pEditSourceTracker
 	var EditVector pEditScalePosition, pEditScaleRotation
+	var bool pIsContentCreated
 	
 	
 	
 	/** Create window. */
-	func new(WindowCharacterConfiguration window, String optionPrefix) super(window)
+	func new(WindowCharacterConfiguration window, String optionPrefix) super(window, optionPrefix)
 		pModelTypeName.setText("@UI.CopySlotState")
 		
 		pModelListTarget = SharedListModel.new(window.getModelTrackerSlotNames())
 		pModelListTarget.setAutoSelect(false)
 		pModelTextTarget = DefaultTextModel.new()
-		
-		runWhileBlockingLayout(block
-			createContent(window.getModelTrackerSlotNames(), optionPrefix)
-		end)
 	end
 	
 	/** Dispose of window. */
 	func void dispose()
 		pModelListTarget = null
 		pModelTextTarget = null
-		pEditSourceTracker.setTracker(null)
-		pEditSourceTracker = null
+		if pEditSourceTracker != null
+			pEditSourceTracker.setTracker(null)
+			pEditSourceTracker = null
+		end
 		pEditScalePosition = pEditScaleRotation = null
+		
 		super.dispose()
 	end
 	
@@ -69,6 +69,11 @@ class WCCPMTSlot extends WCCPanelMotionTransfer
 	/** Load values from tracker slot object if present into edit widgets. */
 	func void loadValues()
 		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
 			super.loadValues()
 			
 			if pMotionTransfer != null
@@ -112,38 +117,42 @@ class WCCPMTSlot extends WCCPanelMotionTransfer
 	
 	
 	/** Create window content. */
-	protected func void createContent(DefaultListModel modelTrackerSlotNames, String optionPrefix)
+	protected func void createContent()
+		createBaseContent("motiontransferslot")
+		
+		// tracker
+		var DefaultListModel modelTrackerSlotNames = pWindowCharacterConfiguration.getModelTrackerSlotNames()
+		
+		pEditSourceTracker = WCCPMTTracker.new(modelTrackerSlotNames, pOptionPrefix + "/SourceTracker", this, "@UI.SourceTracker", false)
+		addWidget(pEditSourceTracker)
+	end
+	
+	protected func void addFormPanelContent(Panel panel)
 		var ComboBox comboBox
 		var Label label
 		
-		createBaseContent("motiontransferslot")
-		
 		// targe
 		label = Label.new("@UI.Target.Label", "Label.FormCaption.SingleLine")
-		pPanelForm.addWidget(label)
+		panel.addWidget(label)
 		
 		comboBox = ComboBox.new(pModelListTarget, DefaultComboBoxEditor.new(pModelTextTarget))
 		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 		comboBox.setToolTip("@UI.ToolTip.Target.CopySlotState")
-		pPanelForm.addWidget(comboBox)
+		panel.addWidget(comboBox)
 		
 		// scale position
-		pPanelForm.addWidget(Label.new("@UI.ScalePosition.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.ScalePosition.Label", "Label.FormCaption.SingleLine"))
 		
 		pEditScalePosition = EditVector.new()
 		pEditScalePosition.setToolTip("@UI.ToolTip.ScalePosition.CopySlotState")
-		pPanelForm.addWidget(pEditScalePosition)
+		panel.addWidget(pEditScalePosition)
 		
 		// scale rotation
-		pPanelForm.addWidget(Label.new("@UI.ScaleRotation.Label", "Label.FormCaption.SingleLine"))
+		panel.addWidget(Label.new("@UI.ScaleRotation.Label", "Label.FormCaption.SingleLine"))
 		
 		pEditScaleRotation = EditVector.new()
 		pEditScaleRotation.setToolTip("@UI.ToolTip.ScaleRotation.CopySlotState")
-		pPanelForm.addWidget(pEditScaleRotation)
-		
-		// tracker
-		pEditSourceTracker = WCCPMTTracker.new(modelTrackerSlotNames, optionPrefix + "/SourceTracker", this, "@UI.SourceTracker", false)
-		addWidget(pEditSourceTracker)
+		panel.addWidget(pEditScaleRotation)
 	end
 	
 	/** Motion transfer changed. */
