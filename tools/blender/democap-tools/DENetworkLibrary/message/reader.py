@@ -336,8 +336,21 @@ class MessageReader:
         """
         length = len(message.data)
         if length == 0:
-            raise Exception("length < 0")
+            raise Exception("length == 0")
         message.data = self._data[self._position:self._position + length]
+        self._position = self._position + length
+
+    def read_message_append(self: 'MessageReader', message: Message, length: int) -> None:
+        """Read message appending instead of overwriting.
+
+        Parameters:
+        message (Message): Message to read into.
+        length (int): Amount of data in bytes to read and append.
+
+        """
+        if length < 0:
+            raise Exception("length < 0")
+        message.data += self._data[self._position:self._position + length]
         self._position = self._position + length
 
     def __enter__(self: 'MessageReader') -> 'MessageReader':

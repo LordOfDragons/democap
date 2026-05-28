@@ -118,6 +118,10 @@ class SocketEndpoint(Endpoint, asyncio.DatagramProtocol):
 
         """
         if self._transport:
+            if len(message.data) > 65500:
+                raise Exception("Message too long: {} (max 65500)".format(
+                    len(message.data)))
+
             if address.type == Address.Type.IPV6:
                 saddr = (address.host, address.port, 0, 0)
             else:

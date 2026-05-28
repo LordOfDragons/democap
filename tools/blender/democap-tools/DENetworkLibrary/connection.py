@@ -37,6 +37,7 @@ from .protocol import *
 from collections import deque
 import logging
 from enum import IntEnum, auto
+from datetime import datetime, timezone
 import asyncio
 from time import time_ns
 
@@ -148,6 +149,10 @@ class Connection(Endpoint.Listener):
         self._reliable_window_size = 10
         self._parent_server = None
         self._update_task = None
+        self._long_message = None
+        self._long_message_part_size = 1357
+        self._long_link_state_message = None
+        self._long_link_state_values = None
 
     def dispose(self: 'Connection') -> None:
         """Dispose of connection."""
@@ -408,23 +413,54 @@ class Connection(Endpoint.Listener):
         """
         if message is None:
             raise Exception("message is None")
-        if len(message.data) < 1:
+        data_len = len(message.data)
+        if data_len < 1:
             raise Exception("message has 0 length")
         if self._connection_state != Connection.ConnectionState.CONNECTED:
             raise Exception("not connected")
 
-        real_message = RealMessage()
-        real_message.type = CommandCodes.RELIABLE_MESSAGE
-        real_message.number = (self._reliable_number_send
-                               + len(self._reliable_messages_send)) % 65535
-        real_message.state = RealMessage.State.PENDING
+        part_count = (data_len - 1) // self._long_message_part_size + 1
+        if part_count > 1:
+            data = message.data
+            offset = 0
+            for i in range(part_count):
+                real_message = RealMessage()
+                real_message.type = CommandCodes.RELIABLE_MESSAGE_LONG
+                real_message.number = (self._reliable_number_send
+                                    + len(self._reliable_messages_send)) % 65535
+                real_message.state = RealMessage.State.PENDING
 
-        with MessageWriter(real_message.message) as w:
-            w.write_byte(CommandCodes.RELIABLE_MESSAGE.value)
-            w.write_ushort(real_message.number)
-            w.write_message(message)
+                flags = 0
+                if i == 0:
+                    flags = flags | LongMessageFlags.FIRST
+                if i == part_count - 1:
+                    flags = flags | LongMessageFlags.LAST
 
-        self._add_reliable_message(real_message)
+                part_len = min(self._long_message_part_size, data_len - offset)
+
+                with MessageWriter(real_message.message) as w:
+                    w.write_byte(CommandCodes.RELIABLE_MESSAGE_LONG.value)
+                    w.write_ushort(real_message.number)
+                    w.write_byte(flags)
+                    w.write(data, offset, part_len)
+
+                self._add_reliable_message(real_message)
+                offset = offset + part_len
+            self._send_pending_reliables()
+
+        else:
+            real_message = RealMessage()
+            real_message.type = CommandCodes.RELIABLE_MESSAGE
+            real_message.number = (self._reliable_number_send
+                                + len(self._reliable_messages_send)) % 65535
+            real_message.state = RealMessage.State.PENDING
+
+            with MessageWriter(real_message.message) as w:
+                w.write_byte(CommandCodes.RELIABLE_MESSAGE.value)
+                w.write_ushort(real_message.number)
+                w.write_message(message)
+
+            self._add_reliable_message(real_message)
 
     def link_state(self: 'Connection',  message: Message, state: State,
                    read_only: bool) -> None:
@@ -566,6 +602,15 @@ class Connection(Endpoint.Listener):
         """
         pass
 
+    def message_progress(self: 'Connection', bytes_received: int) -> None:
+        """Message received. Called asynchronously. Callback for subclass.
+
+        Parameters:
+        bytes_received(int) Amount of bytes received so far.
+
+        """
+        pass
+
     def create_state(self: 'Connection', message: Message,
                      read_only: bool) -> State:
         """Host send state to link.
@@ -660,6 +705,10 @@ class Connection(Endpoint.Listener):
             self._process_link_down(reader)
         elif command == CommandCodes.LINK_UPDATE:
             self._process_link_update(reader)
+        elif command == CommandCodes.RELIABLE_MESSAGE_LONG:
+            self._process_reliable_message_long(reader)
+        elif command == CommandCodes.RELIABLE_LINK_STATE_LONG:
+            self._process_reliable_link_state_long(reader)
 
     def accept_connection(self: 'Connection', server: 'Server',
                           endpoint: Endpoint, address: Address,
@@ -710,6 +759,9 @@ class Connection(Endpoint.Listener):
         self._reliable_messages_send.clear()
         self.reliable_number_send = 0
         self.reliable_number_recv = 0
+        self._long_message = None
+        self._long_link_state_message = None
+        self._long_link_state_values = None
 
         self._close_endpoint()
         logger.info("DNL.Connection: Connection closed")
@@ -858,6 +910,11 @@ class Connection(Endpoint.Listener):
                     MessageReader(message.message))
             elif message.type == CommandCodes.RELIABLE_LINK_STATE:
                 self._process_link_state(MessageReader(message.message))
+            elif message.type == CommandCodes.RELIABLE_MESSAGE_LONG:
+                self._process_reliable_message_message_long(
+                    MessageReader(message.message))
+            elif message.type == CommandCodes.RELIABLE_LINK_STATE_LONG:
+                self._process_link_state_long(MessageReader(message.message))
 
             self._reliable_messages_recv.remove(message)
             self._reliable_number_recv = (
@@ -1081,6 +1138,118 @@ class Connection(Endpoint.Listener):
                 return
             state.link_read_values(reader, link)
 
+    def _process_reliable_message_long(self: 'Connection',
+                                       reader: MessageReader) -> None:
+        """Process long reliable message."""
+        if self._connection_state != Connection.ConnectionState.CONNECTED:
+            return
+
+        number = reader.read_ushort()
+        if number < self._reliable_number_recv:
+            if number >= (self._reliable_number_recv
+                          + self._reliable_window_size) % 65535:
+                return
+        else:
+            if number >= (self._reliable_number_recv
+                          + self._reliable_window_size):
+                return
+
+        message = Message()
+        with MessageWriter(message) as w:
+            w.write_byte(CommandCodes.RELIABLE_ACK.value)
+            w.write_ushort(number)
+            w.write_byte(ReliableAck.SUCCESS.value)
+        self._endpoint.send_datagram(self._real_remote_address, message)
+
+        if number == self._reliable_number_recv:
+            self._process_reliable_message_message_long(reader)
+            self._reliable_number_recv = (
+                self._reliable_number_recv + 1) % 65535
+            self._process_queued_messages()
+        else:
+            self._add_reliable_receive(
+                CommandCodes.RELIABLE_MESSAGE_LONG, number, reader)
+
+    def _process_reliable_message_message_long(self: 'Connection',
+                                               reader: MessageReader) -> None:
+        """Process long reliable message message."""
+        flags = reader.read_byte()
+        if flags & LongMessageFlags.FIRST:
+            self._long_message = Message()
+        if self._long_message is None:
+            return
+
+        data_len = len(reader.data) - reader.position
+        reader.read_message_append(self._long_message, data_len)
+
+        if flags & LongMessageFlags.LAST:
+            message = self._long_message
+            self._long_message = None
+
+            message.timestamp = datetime.now(timezone.utc)
+            self.message_received(message)
+        else:
+            self.message_progress(len(self._long_message.data))
+
+    def _process_link_state_long(self: 'Connection',
+                                 reader: MessageReader) -> None:
+        """Process long link state."""
+        identifier = reader.read_ushort()
+        flags = reader.read_byte()
+
+        link = next((lnk for lnk in self._state_links
+                    if lnk.identifier == identifier), None)
+        if link is None or link.link_state != StateLink.LinkState.DOWN:
+            pass
+
+        if flags & LongLinkStateFlags.FIRST:
+            self._long_link_state_message = Message()
+            self._long_link_state_values = Message()
+        if self._long_link_state_message is None:
+            return
+        if self._long_link_state_values is None:
+            return
+        
+        data_len = reader.read_ushort()
+        reader.read_message_append(self._long_link_state_message, data_len)
+        
+        data_len = len(reader.data) - reader.position
+        reader.read_message_append(self._long_link_state_values, data_len)
+
+        if not (flags & LongLinkStateFlags.LAST):
+            return
+
+        message = self._long_link_state_message
+        self._long_link_state_message = None
+
+        values = self._long_link_state_values
+        self._long_link_state_values = None
+
+        read_only = (flags & LongLinkStateFlags.READ_ONLY) != 0
+
+        """create linked network state"""
+        state = self.create_state(message, read_only)
+
+        command = CommandCodes.LINK_DOWN
+        if state is not None:
+            if (not state.link_read_and_verify_all_values(MessageReader(message))
+                    or link is not None):
+                return
+
+            link = StateLink(self, state)
+            link.identifier = identifier
+            self._state_links.append(link)
+            state.links.append(link)
+
+            link.link_state = StateLink.LinkState.UP
+            command = CommandCodes.LINK_UP
+
+        message = Message()
+        with MessageWriter(message) as w:
+            w.write_byte(command)
+            w.write_ushort(identifier)
+        self._endpoint.send_datagram(self._real_remote_address, message)
+
     def _add_reliable_receive(self: 'Connection', command: CommandCodes,
                               number: int, reader: MessageReader) -> None:
         """Add reliable receive."""
@@ -1109,8 +1278,12 @@ class Connection(Endpoint.Listener):
 
     def _send_pending_reliables(self: 'Connection') -> None:
         """Send pending reliables."""
-        send_count = 0
+        counter = 0
         for m in self._reliable_messages_send:
+            if counter == self._reliable_window_size:
+                break
+            counter = counter + 1
+
             if m.state != RealMessage.State.PENDING:
                 continue
 
@@ -1119,10 +1292,6 @@ class Connection(Endpoint.Listener):
             m.state = RealMessage.State.SEND
             m.elapsed_resend = 0.0
             m.elapsed_timeout = 0.0
-
-            send_count = send_count + 1
-            if send_count == self._reliable_window_size:
-                break
 
     async def _task_update(self: 'Connection') -> None:
         """Update task."""

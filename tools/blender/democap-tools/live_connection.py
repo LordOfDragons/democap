@@ -236,6 +236,8 @@ class DemocapLiveConnection(dnl.Connection):
                 code = MessageCodes(r.read_byte())
                 if code == MessageCodes.CONNECT_ACCEPTED.value:
                     self._processConnectAccepted(r)
+                else:
+                    logger.warning("DemocapLiveConnection: Received unsupported message {} while connecting".format(code))
             return
 
         with dnl.message.MessageReader(message) as r:
@@ -244,6 +246,8 @@ class DemocapLiveConnection(dnl.Connection):
                 self._processCaptureBoneLayout(r)
             elif code == MessageCodes.ACTOR_CAPTURE_FRAME.value:
                 self._processCaptureFrame(r)
+            else:
+                logger.warning("DemocapLiveConnection: Received unsupported message {}".format(code))
 
     def create_state(self, message, read_only):
         if not self._ready:

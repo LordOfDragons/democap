@@ -61,6 +61,12 @@ class CommandCodes(IntEnum):
     LINK_UPDATE = 9
     """Link update."""
 
+    RELIABLE_MESSAGE_LONG = 10
+    """Long reliable message."""
+
+    RELIABLE_LINK_STATE_LONG = 11
+    """Long link state."""
+
 
 class ConnectionAck(IntEnum):
 
@@ -94,6 +100,31 @@ class ReliableAck(IntEnum):
 
     FAILED = 1
     """Received reliable message is invalid. Sender has to resend it."""
+
+
+class LongMessageFlags(IntEnum):
+
+    """Long message flags."""
+
+    FIRST = 0x1
+    """First part of reliable message."""
+
+    LAST = 0x2
+    """Last part of reliable message."""
+
+
+class LongLinkStateFlags(IntEnum):
+
+    """Long link state flags."""
+
+    READ_ONLY = 0x1
+    """Create read-only link state."""
+
+    FIRST = 0x2
+    """First part of link state."""
+
+    LAST = 0x4
+    """Last part of link state."""
 
 
 class ValueTypes(IntEnum):
