@@ -23,30 +23,28 @@ namespace Democap.Characters
 
 pin Dragengine.Scenery
 pin Dragengine.Utils
+pin Dragengine.Gui
+pin Dragengine.Preloading
 
 
 /**
  * Appearance of character.
  */
 class CharacterAppearance
-	var String pPathModel
-	var String pPathSkin
-	var String pPathRig
-	var String pPathAnimation
+	var String pPathModel, pPathSkin, pPathRig, pPathAnimation, pPathDefaultSkin
+	var Color pDefaultSkinTintColor
 	
 	var Model pModel
-	var Skin pSkin
+	var Skin pSkin, pDefaultSkin
 	var Rig pRig
 	var Animation pAnimation
 	
 	
-	
 	/** Create character appearance. */
 	func new()
-		pPathModel = ""
-		pPathSkin = ""
-		pPathRig = ""
-		pPathAnimation = ""
+		pPathModel = pPathSkin = pPathRig = pPathAnimation = ""
+		pPathDefaultSkin = "/content/materials/default/default.deskin"
+		pDefaultSkinTintColor = Color.lightGray
 	end
 	
 	/** Create copy of character appearance. */
@@ -55,13 +53,15 @@ class CharacterAppearance
 		pPathSkin = appearance.pPathSkin
 		pPathRig = appearance.pPathRig
 		pPathAnimation = appearance.pPathAnimation
+		pPathDefaultSkin = appearance.pPathDefaultSkin
+		pDefaultSkinTintColor = appearance.pDefaultSkinTintColor
 		
 		pModel = appearance.pModel
 		pSkin = appearance.pSkin
 		pRig = appearance.pRig
 		pAnimation = appearance.pAnimation
+		pDefaultSkin = appearance.pDefaultSkin
 	end
-	
 	
 	
 	/** Path of model resource to use. */
@@ -124,6 +124,33 @@ class CharacterAppearance
 		pAnimation = null
 	end
 	
+	/** Path to default skin resource to use for model textures with no texture assigned. */
+	func String getPathDefaultSkin()
+		return pPathDefaultSkin
+	end
+	
+	/** Set path of default skin resource to use. */
+	func void setPathDefaultSkin(String path)
+		if path.equals(pPathDefaultSkin)
+			return
+		end
+		
+		pPathDefaultSkin = path
+		pDefaultSkin = null
+	end
+	
+	/** Default skin tint color to use for model textures with no texture assigned. */
+	func Color getDefaultSkinTintColor()
+		return pDefaultSkinTintColor
+	end
+	
+	/** Set default skin tint color to use for model textures with no texture assigned. */
+	func void setDefaultSkinTintColor(Color color)
+		if color == null
+			throw ENullPointer.new()
+		end
+		pDefaultSkinTintColor = color
+	end
 	
 	
 	/** Model or null if not loaded yet. */
@@ -166,6 +193,15 @@ class CharacterAppearance
 		pAnimation = animation
 	end
 	
+	/** Default skin or null if not loaded yet. */
+	func Skin getDefaultSkin()
+		return pDefaultSkin
+	end
+	
+	/** Set default skin or null if not loaded yet. */
+	func void setDefaultSkin(Skin defaultSkin)
+		pDefaultSkin = defaultSkin
+	end
 	
 	
 	/** Init element class. */
@@ -188,6 +224,54 @@ class CharacterAppearance
 			
 			eclass.getCollider().getCollider().getPhysicsType().setEnumeration(CollisionResponse.dynamic)
 			eclass.getCollider().getCollider().getLocalGravity().setVector(null)
+		end
+	end
+	
+	/** Add texture replacements for unassigned model textures. */
+	func void addDefaultTextureReplacements(ECComposeComponent component)
+		if pDefaultSkin == null or pModel == null
+			return
+		end
+		
+		var TextureReplacementList trl = component.getTextureReplacements().getList()
+		var TextureReplacement tr
+		var int i, count = pModel.getTextureCount()
+		var String name
+		
+		for i = 0 to count
+			name = pModel.getTextureNameAt(i)
+			if (pSkin != null and pSkin.indexOfTextureNamed(name) != -1) or trl.hasNamed(name)
+				continue
+			end
+			
+			tr = TextureReplacement.new(name)
+			tr.setPath(pPathDefaultSkin)
+			tr.setSkin(pDefaultSkin)
+			tr.setColorTint(pDefaultSkinTintColor)
+			trl.add(tr)
+		end
+	end
+	
+	/** Add stub textures for unassigned model textures. */
+	func void addDefaultStubTextures(StubElement stub)
+		if pDefaultSkin == null or pModel == null
+			return
+		end
+		
+		var int i, count = pModel.getTextureCount()
+		var StubElementTexture stubTexture
+		var String name
+		
+		for i = 0 to count
+			name = pModel.getTextureNameAt(i)
+			if (pSkin != null and pSkin.indexOfTextureNamed(name) != -1) or stub.getTextureNamed(name) != null
+				continue
+			end
+			
+			stubTexture = StubElementTexture.new(name)
+			stubTexture.setPathSkin(pPathDefaultSkin)
+			stubTexture.setColorTint(pDefaultSkinTintColor)
+			stub.addTexture(stubTexture)
 		end
 	end
 end

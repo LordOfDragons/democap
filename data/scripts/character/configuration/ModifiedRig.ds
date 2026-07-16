@@ -189,8 +189,7 @@ class ModifiedRig
 				setRootBone(pModifiedRig.getRootBone().index)
 			end
 			
-			// setModelCollision(not pModifiedRig.hasShapes())
-			setModelCollision(false)
+			setModelCollision(pModifiedRig.getModelCollision())
 			
 			pModifiedRig.forEachBone(block Bone bone
 				addBone(bone.name, bone.parent != null if bone.parent.index else -1,\
@@ -229,7 +228,7 @@ class ModifiedRig
 	var ShapeList pRigShapes
 	var Vector pCentralMassPoint
 	var int pGenBoneNumber
-	var bool pHasShapes
+	var bool pModelCollision
 	
 	
 	
@@ -242,7 +241,6 @@ class ModifiedRig
 		pGenBoneNumber = 1
 		
 		pRigShapes = rig.getShapes()
-		pHasShapes = pRigShapes.getCount() > 0
 		
 		pCentralMassPoint = rig.getCentralMassPoint()
 		
@@ -250,7 +248,6 @@ class ModifiedRig
 		count = rig.getBoneCount()
 		for i = 0 to count
 			bone = Bone.new(rig, i)
-			pHasShapes |= bone.shapes.getCount() > 0
 			pBones.add(bone)
 		end
 		
@@ -268,6 +265,7 @@ class ModifiedRig
 			end
 		end)
 	end
+	
 	
 	/** Determine if rig has collision shapes. */
 	static func bool rigHasCollisionShapes(Rig rig)
@@ -367,7 +365,6 @@ class ModifiedRig
 	end
 	
 	
-	
 	/** Rig shaped. */
 	func ShapeList getRigShapes()
 		return pRigShapes
@@ -393,8 +390,21 @@ class ModifiedRig
 		pRootBone = bone
 	end
 	
-	/** Has shapes. */
+	/** Model collision. */
+	func bool getModelCollision()
+		return pModelCollision
+	end
+	
+	/** Set model collision. */
+	func void setModelCollision(bool modelCollision)
+		pModelCollision = modelCollision
+	end
+	
+	
+	/** Modified rig has collision shapes. */
 	func bool hasShapes()
-		return pHasShapes
+		return pRigShapes.getCount() > 0 or pBones.find(block Bone each
+			return each.shapes.getCount() > 0
+		end) != null
 	end
 end

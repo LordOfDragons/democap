@@ -63,6 +63,10 @@ class CharacterAppearanceLoader implements ResourceListener
 		if appearance.getAnimation() == null and not appearance.getPathAnimation().empty()
 			Animation.loadAsynchron(appearance.getPathAnimation(), this)
 		end
+		
+		if appearance.getDefaultSkin() == null and not appearance.getPathDefaultSkin().empty()
+			Skin.loadAsynchron(appearance.getPathDefaultSkin(), this)
+		end
 	end
 	
 	/** Load now. */
@@ -108,6 +112,16 @@ class CharacterAppearanceLoader implements ResourceListener
 				failedLoading(appearance.getPathAnimation(), ResourceLoaderType.animation)
 			end
 		end
+		
+		if appearance.getDefaultSkin() == null and not appearance.getPathDefaultSkin().empty()
+			try
+				finishedLoading(appearance.getPathDefaultSkin(),\
+					ResourceLoaderType.skin, Skin.new(appearance.getPathDefaultSkin()))
+				
+			catch Exception e
+				failedLoading(appearance.getPathDefaultSkin(), ResourceLoaderType.skin)
+			end
+		end
 	end
 	
 	
@@ -130,6 +144,10 @@ class CharacterAppearanceLoader implements ResourceListener
 		
 		if resourceType == ResourceLoaderType.animation and filename.equals(appearance.getPathAnimation())
 			appearance.setAnimation(resource cast Animation)
+		end
+		
+		if resourceType == ResourceLoaderType.skin and filename.equals(appearance.getPathDefaultSkin())
+			appearance.setDefaultSkin(resource cast Skin)
 		end
 	end
 	

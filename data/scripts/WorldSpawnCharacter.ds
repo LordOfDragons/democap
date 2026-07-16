@@ -94,6 +94,21 @@ class WorldSpawnCharacter
 		end
 	end
 	
+	/** Character profile listener. */
+	protected class UpdateCharacterProfile extends DefaultCharacterProfilesListener
+		var WorldSpawnCharacter pOwner
+		
+		func new(WorldSpawnCharacter owner)
+			pOwner = owner
+		end
+		
+		func void profileChanged(CharacterProfiles profiles, CharacterProfile profile)
+			if pOwner.getCharacter() != null and pOwner.getCharacter().getProfile() == profile
+				pOwner.recreateActor()
+			end
+		end
+	end
+	
 	enum State
 		prepareElementClass
 		createActor
@@ -131,6 +146,7 @@ class WorldSpawnCharacter
 		pMoCapActorClass = GameApp.getGameApp().getElementClassList().getNamed("MoCapActor")
 		pListeners = Array.new()
 		pEstimatedFloorOffset = DefaultTextModel.new("0")
+		GameApp.getGameApp().getCharacterProfiles().addListener(UpdateCharacterProfile.new(this))
 	end
 	
 	/** Dispose. */

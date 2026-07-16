@@ -25,6 +25,8 @@ pin Dragengine.Scenery
 pin Dragengine.Preloading
 pin Dragengine.LoadSave
 pin Democap.Characters
+pin Dragengine.Gui
+pin Dragengine.Utils
 
 
 /**
@@ -85,11 +87,9 @@ class ECBComponent extends DefaultECBehavior
 		protected var ECBComponent pECBehavior
 		protected var ECBehaviorComponent.Instance pComponent
 		
-		protected var String pPathModel
-		protected var String pPathSkin
-		protected var String pPathRig
-		protected var String pPathOcclusionMesh
-		protected var String pPathAudioModel
+		protected var String pPathModel, pPathSkin, pPathRig, pPathOcclusionMesh, pPathAudioModel, pPathDefaultSkin
+		protected var Skin pDefaultSkin
+		protected var Color pDefaultSkinTintColor
 		
 		
 		func new(ECBComponent ecbehavior, BehaviorElement element) super(element)
@@ -104,26 +104,52 @@ class ECBComponent extends DefaultECBehavior
 		
 		func void init(StubElement stub)
 			var ECComposeComponent eccomponent = pComponent.getECBehavior().getComponent()
+			var BehaviorElementClass eclass = getElement().getClass() cast BehaviorElementClass
 			
 			pPathModel = BehaviorStubHelper.stubParamPath(stub, eccomponent.getModel())
 			pPathSkin = BehaviorStubHelper.stubParamPath(stub, eccomponent.getSkin())
 			pPathRig = BehaviorStubHelper.stubParamPath(stub, eccomponent.getRig())
 			pPathOcclusionMesh = BehaviorStubHelper.stubParamPath(stub, eccomponent.getOcclusionMesh())
 			pPathAudioModel = BehaviorStubHelper.stubParamPath(stub, eccomponent.getAudioModel())
+			pPathDefaultSkin = BehaviorStubHelper.stubParamPath(stub, pECBehavior.defaultSkin)
+			pDefaultSkinTintColor = pECBehavior.defaultSkinTintColor.getColor(stub, eclass.getCodecPropertyString())
+			
+			try
+				pDefaultSkin = pECBehavior.defaultSkin.getSkin(stub, eclass)
+			catch Exception e
+			end
+			replaceDefaultTextures(stub)
 			
 			if pECBehavior.behaviorGuiPanels != null
 				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
 			end
-			
-			// if the rig has no collision shapes replace it with a model collision one
-			/*
-			var Rig rig = pComponent.getComponent().getRig()
-			if rig != null and not ModifiedRig.rigHasCollisionShapes(rig)
-				var ModifiedRig modifiedRig = ModifiedRig.new(rig)
-				modifiedRig.buildModifiedRig()
-				pComponent.getComponent().setRig(modifiedRig.getModifiedRig())
+		end
+		
+		func void replaceDefaultTextures(StubElement stub)
+			var Model model = pComponent.getComponent().getModel()
+			if pDefaultSkin == null or model == null
+				return
 			end
-			*/
+			
+			var TextureReplacementList trl = pComponent.getTextureReplacements()
+			var Component component = pComponent.getComponent()
+			var int i, count = model.getTextureCount()
+			var Skin skin = component.getSkin()
+			var String name
+			
+			for i = 0 to count
+				name = model.getTextureNameAt(i)
+				if (skin != null and skin.indexOfTextureNamed(name) != -1)\
+				or trl.hasNamed(name) or stub.getTextureNamed(name) != null
+					continue
+				end
+				
+				var TextureReplacement tr = TextureReplacement.new(name)
+				tr.setPath(pPathDefaultSkin)
+				tr.setSkin(pDefaultSkin)
+				tr.setColorTint(pDefaultSkinTintColor)
+				tr.applyToComponent(component)
+			end
 		end
 		
 		
@@ -201,11 +227,42 @@ class ECBComponent extends DefaultECBehavior
 				pComponent.getECBehavior().getComponent().getAudioModel().getName(), path)
 			return true
 		end
+		
+		func String getPathDefaultSkin()
+			return pPathDefaultSkin
+		end
+		
+		func bool setPathDefaultSkin(String path)
+			if path.equals(pPathDefaultSkin)
+				return false
+			end
+			pPathDefaultSkin = path
+			BehaviorStubHelper.setStubParamValue(getElement().getStub(),\
+				pECBehavior.defaultSkin.getName(), path)
+			return true
+		end
+		
+		func Color getDefaultSkinTintColor()
+			return pDefaultSkinTintColor
+		end
+		
+		func bool setDefaultSkinTintColor(Color color)
+			if color.equals(pDefaultSkinTintColor)
+				return false
+			end
+			pDefaultSkinTintColor = color
+			BehaviorStubHelper.setStubParamValue(getElement().getStub(),\
+				pECBehavior.defaultSkinTintColor.getName(),\
+				getElement().getClass().getCodecPropertyString().encodeColor3(color))
+			return true
+		end
 	end
 	
 	
 	public var ECBBehaviorGuiPanels behaviorGuiPanels
 	public var ECBehaviorComponent component
+	public var ECPSkin defaultSkin
+	public var ECPColor defaultSkinTintColor
 	
 	
 	func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
@@ -218,8 +275,13 @@ class ECBComponent extends DefaultECBehavior
 			throw ENullPointer.new("component")
 		end
 		
+		var String prefix = id.empty() if "component." else "component(" + id + ")."
+		
 		this.behaviorGuiPanels = behaviorGuiPanels
 		this.component = component
+		
+		eclass.addProperty(defaultSkin = ECPSkin.new(prefix + "defaultSkin", "/content/materials/default/default.deskin"))
+		eclass.addProperty(defaultSkinTintColor = ECPColor.new(prefix + "defaultSkinTintColor", Color.lightGray))
 		
 		eclass.addBehavior(this)
 	end

@@ -898,6 +898,8 @@ class CharacterConfiguration
 		end
 		
 		GameApp.getApp().getConsole().addMessage("Finish element class: " + getLogName())
+		pProfile.getAppearance().addDefaultTextureReplacements(pElementClass.getComponent().getComponent())
+		
 		var ECBCharacterConfiguration character = ECBCharacterConfiguration.new(pElementClass, this)
 		
 		var ECBMoCapAnimator mocapAnimator = ECBMoCapAnimator.new(pElementClass)
@@ -939,6 +941,10 @@ class CharacterConfiguration
 						each.initElementClass(this, pElementClass, modifiedRig)
 					end
 				end)
+				
+				// model collision has no effect on animated component colliders. solving this
+				// requires calculating enclosing shapes per bone
+				//modifiedRig.setModelCollision(not modifiedRig.hasShapes())
 				
 				modifiedRig.buildModifiedRig()
 				ecccomponent.getRig().setPath("")

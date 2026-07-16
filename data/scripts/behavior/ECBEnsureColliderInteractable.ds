@@ -1,0 +1,158 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.LoadSave
+pin Democap.Characters
+pin Dragengine.Gui
+pin Dragengine.Utils
+
+
+/**
+ * Behavior ensuring the element can be interacted with. If rig has no collision shapes a modified
+ * rig is created with model collision enabled.
+ * 
+ * \see https://developer.dragondreams.ch/wiki/doku.php/democap:behavior_ECBEnsureColliderInteractable
+ */
+class ECBEnsureColliderInteractable extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Automatically assigns these behaviors if present before adding:
+	 * - Required: \ref ECBehaviorComponent
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBehaviorCollider'/>
+	 * 
+	 * <behavior type='ECBEnsureColliderInteractable'>
+	 * </behavior>
+	 * \endcode
+	 * 
+	 * Element class properties added by the behavior can also be set directly inside the tag
+	 * be removing the property name prefix and starting with a "." (for exampler ".propertyName").
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBEnsureColliderInteractable"
+		end
+
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			return ECBEnsureColliderInteractable.new(eclass, ECBehaviorCollider.getBehaviorIn(eclass))
+		end
+	end
+	
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		protected var ECBEnsureColliderInteractable pECBehavior
+		
+		
+		func new(ECBEnsureColliderInteractable ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+		end
+		
+		func void init(StubElement stub)
+			var BehaviorElement element = getElement()
+			var ECBehaviorCollider.Instance behcol = pECBehavior.collider.instance(element)
+			var Collider collider = behcol.getCollider()
+			if collider == null
+				return
+			end
+			
+			if collider castable ColliderComponent
+				var ColliderComponent colcomp = collider cast ColliderComponent
+				var Component component = colcomp.getComponent()
+				var Rig rig = component.getRig()
+				if rig != null and ModifiedRig.rigHasCollisionShapes(rig)
+					return
+				end
+				
+				var ModifiedRig modifiedRig = ModifiedRig.new(rig)
+				modifiedRig.setModelCollision(true)
+				modifiedRig.buildModifiedRig()
+				component.setRig(modifiedRig.getModifiedRig())
+				
+			elif collider castable ColliderVolume
+				var ColliderVolume colvol = collider cast ColliderVolume
+				if colvol.getShape().getCount() > 0
+					return
+				end
+				
+				if behcol.getECBehavior().getComponent() == null
+					return
+				end
+				
+				var Component component = behcol.getECBehavior().getComponent().instance(element).getComponent()
+				collider.attachStatic(component)
+				
+				var Model model = component.getModel()
+				if model == null
+					return
+				end
+				
+				var Vector minext = model.getMinimumExtend(), maxext = model.getMaximumExtend()
+				var ShapeList shape = ShapeList.new()
+				shape.addBox((minext + maxext) / 2, (maxext - minext) / 2)
+				colvol.setShape(shape)
+			end
+		end
+		
+		
+		func ECBEnsureColliderInteractable getECBehavior()
+			return pECBehavior
+		end
+	end
+	
+	
+	public var ECBehaviorCollider collider
+	
+	
+	func new(BehaviorElementClass eclass, ECBehaviorCollider collider) super(eclass)
+		if collider == null
+			throw ENullPointer.new("collider")
+		end
+		
+		this.collider = collider
+		
+		eclass.addBehavior(this)
+	end
+	
+	func void dispose()
+		collider = null
+		super.dispose()
+	end
+	
+	
+	func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	
+	func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

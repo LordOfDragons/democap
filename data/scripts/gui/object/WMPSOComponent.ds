@@ -39,12 +39,10 @@ pin Dragengine.Scenery
  */
 class WMPSOComponent extends WMPPanelSceneObject
 	protected var ECBComponent.Instance pBehaviorComponent
-	protected var DefaultTextModel pModelPathModel
-	protected var DefaultTextModel pModelPathSkin
-	protected var DefaultTextModel pModelPathRig
-	protected var DefaultTextModel pModelPathOcclusionMesh
-	protected var DefaultTextModel pModelPathAudioModel
-	
+	protected var DefaultTextModel pModelPathModel, pModelPathSkin, pModelPathRig
+	protected var DefaultTextModel pModelPathOcclusionMesh, pModelPathAudioModel
+	protected var DefaultTextModel pModelPathDefaultSkin
+	protected var EditColor pEditColorDefaultSkinTintColor
 	
 	
 	/** Create panel. */
@@ -55,6 +53,7 @@ class WMPSOComponent extends WMPPanelSceneObject
 		pModelPathRig = DefaultTextModel.new()
 		pModelPathOcclusionMesh = DefaultTextModel.new()
 		pModelPathAudioModel = DefaultTextModel.new()
+		pModelPathDefaultSkin = DefaultTextModel.new()
 		
 		getPanelContent().runWhileBlockingLayout(block
 			createContent(getPanelContent())
@@ -70,6 +69,8 @@ class WMPSOComponent extends WMPPanelSceneObject
 		pModelPathRig = null
 		pModelPathOcclusionMesh = null
 		pModelPathAudioModel = null
+		pModelPathDefaultSkin = null
+		pEditColorDefaultSkinTintColor = null
 		super.dispose()
 	end
 	
@@ -85,6 +86,8 @@ class WMPSOComponent extends WMPPanelSceneObject
 			pModelPathRig.setText(pBehaviorComponent.getPathRig())
 			pModelPathOcclusionMesh.setText(pBehaviorComponent.getPathOcclusionMesh())
 			pModelPathAudioModel.setText(pBehaviorComponent.getPathAudioModel())
+			pModelPathDefaultSkin.setText(pBehaviorComponent.getPathDefaultSkin())
+			pEditColorDefaultSkinTintColor.setColor(pBehaviorComponent.getDefaultSkinTintColor())
 		end)
 	end
 	
@@ -154,6 +157,29 @@ class WMPSOComponent extends WMPPanelSceneObject
 			p.addWidget(editPath)
 			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
 				if pBehaviorComponent.setPathAudioModel(pModelPathAudioModel.getText())
+					notifyStubChanged()
+				end
+			end))
+			
+			// path default skin resource
+			p.addWidget(Label.new("@UI.DefaultSkin.Label", "Label.FormCaption.SingleLine"))
+			
+			editPath = EditPath.new(pModelPathDefaultSkin, ResourceLoaderType.skin, startDirectory)
+			editPath.setToolTip("@UI.ToolTip.DefaultSkin")
+			p.addWidget(editPath)
+			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
+				if pBehaviorComponent.setPathDefaultSkin(pModelPathDefaultSkin.getText())
+					notifyStubChanged()
+				end
+			end))
+			
+			// path default skin tint color
+			p.addWidget(Label.new("@UI.DefaultSkinTintColor.Label", "Label.FormCaption.SingleLine"))
+			pEditColorDefaultSkinTintColor = EditColor.new(Color.lightGray)
+			pEditColorDefaultSkinTintColor.setToolTip("@UI.ToolTip.DefaultSkinTintColor")
+			p.addWidget(pEditColorDefaultSkinTintColor)
+			pEditColorDefaultSkinTintColor.addActionListener(BlockActionListener.new(block ActionEvent event
+				if pBehaviorComponent.setDefaultSkinTintColor(pEditColorDefaultSkinTintColor.getColor())
 					notifyStubChanged()
 				end
 			end))

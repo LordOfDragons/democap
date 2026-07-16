@@ -93,19 +93,13 @@ class WindowCharacterProfile extends WindowDialog
 	
 	var CharacterProfile pCharacterProfile
 	var DefaultTextModel pModelProfileName
-	var DefaultListModel pModelListOriginBone
-	var DefaultTextModel pModelTextOriginBone
-	var DefaultListModel pModelListTeleportBone
-	var DefaultTextModel pModelTextTeleportBone
+	var DefaultListModel pModelListOriginBone, pModelListTeleportBone, pModelListPreviewMove
+	var DefaultTextModel pModelTextOriginBone, pModelTextTeleportBone, pModelTextPreviewMove
 	var DefaultTextModel pModelShoulderLevel
-	var DefaultTextModel pModelPathModel
-	var DefaultTextModel pModelPathSkin
-	var DefaultTextModel pModelPathRig
-	var DefaultTextModel pModelPathAnimation
-	var DefaultListModel pModelListPreviewMove
-	var DefaultTextModel pModelTextPreviewMove
+	var DefaultTextModel pModelPathModel, pModelPathSkin, pModelPathRig, pModelPathAnimation, pModelPathDefaultSkin
 	var DefaultListModel pModelBoneAxis
 	var DefaultTextModel pModelScale
+	var EditColor pEditColorDefaultSkin
 	var WidgetCharacterPreview pCharacterPreview
 	var bool pInVR
 	
@@ -128,6 +122,7 @@ class WindowCharacterProfile extends WindowDialog
 		pModelPathSkin = DefaultTextModel.new(profile.getAppearance().getPathSkin())
 		pModelPathRig = DefaultTextModel.new(profile.getAppearance().getPathRig())
 		pModelPathAnimation = DefaultTextModel.new(profile.getAppearance().getPathAnimation())
+		pModelPathDefaultSkin = DefaultTextModel.new(profile.getAppearance().getPathDefaultSkin())
 		pModelListPreviewMove = DefaultListModel.new()
 		pModelListPreviewMove.setAutoSelect(false)
 		pModelTextPreviewMove = DefaultTextModel.new(profile.getPreviewMove())
@@ -167,19 +162,13 @@ class WindowCharacterProfile extends WindowDialog
 	func void dispose()
 		pCharacterPreview = null
 		pModelProfileName = null
-		pModelListOriginBone = null
-		pModelTextOriginBone = null
-		pModelListTeleportBone = null
-		pModelTextTeleportBone = null
+		pModelListOriginBone = pModelListTeleportBone = pModelListPreviewMove = null
+		pModelTextOriginBone = pModelTextTeleportBone = pModelTextPreviewMove = null
 		pModelShoulderLevel = null
-		pModelPathModel = null
-		pModelPathSkin = null
-		pModelPathRig = null
-		pModelPathAnimation = null
-		pModelListPreviewMove = null
-		pModelTextPreviewMove = null
+		pModelPathModel = pModelPathSkin = pModelPathRig = pModelPathAnimation = pModelPathDefaultSkin = null
 		pModelBoneAxis = null
 		pModelScale = null
+		pEditColorDefaultSkin = null
 		
 		super.dispose()
 	end
@@ -224,6 +213,8 @@ class WindowCharacterProfile extends WindowDialog
 		appearance.setPathSkin(pModelPathSkin.getText())
 		appearance.setPathRig(pModelPathRig.getText())
 		appearance.setPathAnimation(pModelPathAnimation.getText())
+		appearance.setPathDefaultSkin(pModelPathDefaultSkin.getText())
+		appearance.setDefaultSkinTintColor(pEditColorDefaultSkin.getColor())
 		
 		pCharacterProfile.save()
 		pCharacterProfile.preloadResources()
@@ -240,6 +231,11 @@ class WindowCharacterProfile extends WindowDialog
 			end
 		end
 		
+		pCharacterProfile.getConfigurations().forEach(block CharacterConfiguration each
+			each.dropElementClass()
+		end)
+		GameApp.getGameApp().getCharacterProfiles().notifyProfileChanged(pCharacterProfile)
+		
 		// finish and close window
 		setResult(true)
 		close()
@@ -248,9 +244,11 @@ class WindowCharacterProfile extends WindowDialog
 	/** Reload character preview. */
 	func void reloadCharacterPreview()
 		pCharacterPreview.setPathModel(pModelPathModel.getText())
-		pCharacterPreview.setPathSkin( pModelPathSkin.getText())
+		pCharacterPreview.setPathSkin(pModelPathSkin.getText())
 		pCharacterPreview.setPathRig(pModelPathRig.getText())
 		pCharacterPreview.setPathAnimation(pModelPathAnimation.getText())
+		pCharacterPreview.setPathDefaultSkin(pModelPathDefaultSkin.getText())
+		pCharacterPreview.setDefaultSkinTintColor(pEditColorDefaultSkin.getColor())
 		pCharacterPreview.setScale(pModelScale.getText().toFloat())
 		pCharacterPreview.setBoneAxisRotation(CharacterProfile.boneAxisRotation(\
 			pModelBoneAxis.getSelectedElement() cast CharacterProfile.BoneAxis))
@@ -320,6 +318,22 @@ class WindowCharacterProfile extends WindowDialog
 			editPath.setToolTip("@UI.ToolTip.Animation")
 			p.addWidget(editPath)
 			editPath.addActionListener(actionReloadCharacterPreview)
+			
+			// path default skin resource
+			p.addWidget(Label.new("@UI.DefaultSkin.Label", "Label.FormCaption.SingleLine"))
+			
+			editPath = EditPath.new(pModelPathDefaultSkin, ResourceLoaderType.skin, startDirectory)
+			editPath.setToolTip("@UI.ToolTip.DefaultSkin")
+			p.addWidget(editPath)
+			editPath.addActionListener(actionReloadCharacterPreview)
+			
+			// default skin tint color
+			p.addWidget(Label.new("@UI.DefaultSkinTintColor.Label", "Label.FormCaption.SingleLine"))
+			4
+			pEditColorDefaultSkin = EditColor.new(pCharacterProfile.getAppearance().getDefaultSkinTintColor())
+			pEditColorDefaultSkin.setToolTip("@UI.ToolTip.DefaultSkinTintColor")
+			p.addWidget(pEditColorDefaultSkin)
+			pEditColorDefaultSkin.addActionListener(actionReloadCharacterPreview)
 			
 			// origin bone
 			label = Label.new("@UI.OriginBone.Label", "Label.FormCaption.SingleLine")

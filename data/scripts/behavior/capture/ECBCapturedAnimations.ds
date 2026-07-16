@@ -81,6 +81,8 @@ class ECBCapturedAnimations extends DefaultECBehavior implements BehaviorPrepare
 					stub.setPropertyValueFor(component.getComponent().getModel().getName(), appearance.getPathModel())
 					stub.setPropertyValueFor(component.getComponent().getSkin().getName(), appearance.getPathSkin())
 					stub.setPropertyValueFor(component.getComponent().getRig().getName(), appearance.getPathRig())
+					appearance.addDefaultStubTextures(stub)
+					stub.loadResources()
 					
 					// set initial scaling to match configuration scaling
 					var float scaling = configuration.componentScaling()
@@ -201,6 +203,20 @@ class ECBCapturedAnimations extends DefaultECBehavior implements BehaviorPrepare
 			end
 		end
 		
+		class CharacterProfileChanged extends DefaultCharacterProfilesListener
+			var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func void profileChanged(CharacterProfiles profiles, CharacterProfile profile)
+				if profile.getName().equals(pInstance.getCharacterProfile())
+					pInstance.onProfileChanged()
+				end
+			end
+		end
+		
 		
 		
 		protected var ECBCapturedAnimations pECBehavior
@@ -220,7 +236,8 @@ class ECBCapturedAnimations extends DefaultECBehavior implements BehaviorPrepare
 		protected var bool pRecordObject
 		protected var String pAnimationName
 		protected var Array pListeners
-		
+		protected var CharacterProfileChanged pCharacterProfileChanged
+		protected var Array pDefaultTextureNames
 		
 		
 		/** Create behavior instance. */
@@ -256,10 +273,32 @@ class ECBCapturedAnimations extends DefaultECBehavior implements BehaviorPrepare
 			if pECBehavior.behaviorGuiPanels != null
 				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
 			end
+			
+			if not pCharacterProfile.empty()
+				pDefaultTextureNames = Array.new()
+				
+				var CharacterProfile profile = GameApp.getGameApp().getCharacterProfiles().getNamed(pCharacterProfile)
+				if profile != null
+					var String pathDefaultSkin = profile.getAppearance().getPathDefaultSkin()
+					stub.forEachTexture(block StubElementTexture each
+						if each.getPathSkin().equals(pathDefaultSkin)
+							pDefaultTextureNames.add(each.getTextureName())
+						end
+					end)
+				end
+				
+				pCharacterProfileChanged = CharacterProfileChanged.new(this)
+				GameApp.getGameApp().getCharacterProfiles().addListener(pCharacterProfileChanged)
+			end
 		end
 		
 		/** Dispose of behavior instance. */
 		func void dispose()
+			if pCharacterProfileChanged != null
+				GameApp.getGameApp().getCharacterProfiles().removeListener(pCharacterProfileChanged)
+				pCharacterProfileChanged = null
+			end
+			
 			if pAnimations != null
 				pAnimations.dispose()
 				pAnimations = null
@@ -424,6 +463,30 @@ class ECBCapturedAnimations extends DefaultECBehavior implements BehaviorPrepare
 			end
 		end
 		
+		/** Character profile changed. */
+		func void onProfileChanged()
+			if pDefaultTextureNames == null
+				return
+			end
+			
+			var StubElement stub = getElement().getStub()
+			var StubElementTexture stubTexture
+			pDefaultTextureNames.forEach(block String each
+				stubTexture = stub.getTextureNamed(each)
+				if stubTexture != null
+					stub.removeTexture(stubTexture)
+				end
+			end)
+			pDefaultTextureNames = null
+			
+			var CharacterProfile profile = GameApp.getGameApp().getCharacterProfiles().getNamed(pCharacterProfile)
+			if profile != null
+				profile.getAppearance().addDefaultStubTextures(stub)
+				stub.loadResources()
+			end
+			
+			ECBSceneObject.getInstanceIn(getElement()).recreateElement()
+		end
 		
 		
 		/** Add listener. */
@@ -773,6 +836,15 @@ class ECBCapturedAnimations extends DefaultECBehavior implements BehaviorPrepare
 				stub.setPropertyValueFor(pComponent.getComponent().getModel().getName(), appearance.getPathModel())
 				stub.setPropertyValueFor(pComponent.getComponent().getSkin().getName(), appearance.getPathSkin())
 				stub.setPropertyValueFor(pComponent.getComponent().getRig().getName(), appearance.getPathRig())
+				
+				pComponent.getComponent().getTextureReplacements().getList().forEach(block TextureReplacement each
+					if stub.getTextureNamed(each.getName()) == null
+						var StubElementTexture texture = StubElementTexture.new(each.getName())
+						texture.setPathSkin(each.getPath())
+						texture.setColorTint(each.getColorTint())
+						stub.addTexture(texture)
+					end
+				end)
 			end
 		end
 		

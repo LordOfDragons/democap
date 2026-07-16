@@ -46,9 +46,9 @@ class WidgetCharacterPreview extends Panel
 	class PreviewPreloader implements ResourceListener
 		var PreloadCounter pPreloadCounter
 		
-		public var String pathModel, pathSkin, pathRig, pathAnimation
+		public var String pathModel, pathSkin, pathRig, pathAnimation, pathDefaultSkin
 		public var Model model
-		public var Skin skin
+		public var Skin skin, defaultSkin
 		public var Rig rig
 		public var Animation animation
 		
@@ -80,6 +80,11 @@ class WidgetCharacterPreview extends Panel
 				pPreloadCounter.increase()
 				Animation.loadAsynchron(pathAnimation, this)
 			end
+			
+			if not pathDefaultSkin.empty()
+				pPreloadCounter.increase()
+				Skin.loadAsynchron(pathDefaultSkin, this)
+			end
 		end
 		
 		func void finishedLoading(String filename, ResourceLoaderType resourceType, Object resource)
@@ -102,6 +107,11 @@ class WidgetCharacterPreview extends Panel
 				animation = resource cast Animation
 				pPreloadCounter.decrease()
 			end
+			
+			if resourceType == ResourceLoaderType.skin and filename.equals(pathDefaultSkin)
+				defaultSkin = resource cast Skin
+				pPreloadCounter.decrease()
+			end
 		end
 		
 		func void failedLoading(String filename, ResourceLoaderType resourceType)
@@ -117,6 +127,9 @@ class WidgetCharacterPreview extends Panel
 				pPreloadCounter.decrease()
 			end
 			if resourceType == ResourceLoaderType.animation and filename.equals(pathAnimation)
+				pPreloadCounter.decrease()
+			end
+			if resourceType == ResourceLoaderType.skin and filename.equals(pathDefaultSkin)
 				pPreloadCounter.decrease()
 			end
 		end
@@ -219,9 +232,10 @@ class WidgetCharacterPreview extends Panel
 	var Array pListeners
 	var ECBPreviewDataQuery.DataQuery pDataQuery
 	
-	var String pPathModel, pPathSkin, pPathRig, pPathAnimation
+	var String pPathModel, pPathSkin, pPathRig, pPathAnimation, pPathDefaultSkin
 	var Vector pBoneAxisRotation
 	var float pScale, pCameraDistance
+	var Color pDefaultSkinTintColor
 	
 	var CharacterPreviewEditor pEditor
 	
@@ -229,12 +243,10 @@ class WidgetCharacterPreview extends Panel
 	
 	/** Create widget. */
 	func new()
-		pPathModel = ""
-		pPathSkin = ""
-		pPathRig = ""
-		pPathAnimation = ""
+		pPathModel = pPathSkin = pPathRig = pPathAnimation = pPathDefaultSkin = ""
 		pBoneAxisRotation = Vector.new()
 		pScale = 1
+		pDefaultSkinTintColor = Color.lightGray
 		pListeners = Array.new()
 		pCharacterPreviewClass = GameApp.getGameApp().getElementClassList()\
 			.getNamed("CharacterPreview") cast BehaviorElementClass
@@ -308,6 +320,19 @@ class WidgetCharacterPreview extends Panel
 		pPathAnimation = path
 	end
 	
+	/** Set path default skin. */
+	func void setPathDefaultSkin(String path)
+		pPathDefaultSkin = path
+	end
+	
+	/** Set default skin tint color. */
+	func void setDefaultSkinTintColor(Color color)
+		if color == null
+			throw ENullPointer.new()
+		end
+		pDefaultSkinTintColor = color
+	end
+	
 	/** Set bone orientation rotation. */
 	func void setBoneAxisRotation(Vector rotation)
 		pBoneAxisRotation = rotation
@@ -331,6 +356,7 @@ class WidgetCharacterPreview extends Panel
 		pPreviewPreloader.pathSkin = pPathSkin
 		pPreviewPreloader.pathRig = pPathRig
 		pPreviewPreloader.pathAnimation = pPathAnimation
+		pPreviewPreloader.pathDefaultSkin = pPathDefaultSkin
 		pPreviewPreloader.preload()
 	end
 	
@@ -618,6 +644,26 @@ class WidgetCharacterPreview extends Panel
 		stub.setPropertyValueFor("component.rig", pPreviewPreloader.pathRig)
 		stub.setPropertyValueFor("previewAnimation.animation", pPreviewPreloader.pathAnimation)
 		stub.setPropertyValueFor("previewBones.axisRotation", codec.encodeVector(pBoneAxisRotation))
+		
+		if pPreviewPreloader.defaultSkin != null and pPreviewPreloader.model != null
+			var int i, count = pPreviewPreloader.model.getTextureCount()
+			var StubElementTexture stubTexture
+			var String name
+			
+			for i = 0 to count
+				name = pPreviewPreloader.model.getTextureNameAt(i)
+				if (pPreviewPreloader.skin != null and pPreviewPreloader.skin.indexOfTextureNamed(name) != -1)\
+				or stub.getTextureNamed(name) != null
+					continue
+				end
+				
+				stubTexture = StubElementTexture.new(name)
+				stubTexture.setPathSkin(pPreviewPreloader.pathDefaultSkin)
+				stubTexture.setColorTint(pDefaultSkinTintColor)
+				stubTexture.loadResources()
+				stub.addTexture(stubTexture)
+			end
+		end
 		
 		try
 			pCharacterPreview = stub.createElement() cast BehaviorElement
