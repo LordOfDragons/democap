@@ -36,12 +36,16 @@ logger = logging.getLogger(__name__)
 
 def setup_asyncio_executor():
     """See https://github.com/lampysprites/blender-asyncio/blob/master/async_loop.py"""
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
     if sys.platform == 'win32':
-        asyncio.get_event_loop().close()
+        loop.close()
         loop = asyncio.ProactorEventLoop()
         asyncio.set_event_loop(loop)
-    else:
-        loop = asyncio.get_event_loop()
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
     loop.set_default_executor(executor)
 
@@ -78,7 +82,10 @@ class AsyncLoopModalOperator(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def async_loop_once(self):
-        loop = asyncio.get_event_loop()
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            return
         if loop.is_closed():
             logger.warning('Async loop closed')
         else:
@@ -94,7 +101,10 @@ def startAsyncioLoop():
 def stopAsyncioLoop():
     logger.debug('Stop async loop')
     AsyncLoopModalOperator.exit_loop = True
-    loop = asyncio.get_event_loop()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        return
     loop.stop()
     loop.run_forever()
 

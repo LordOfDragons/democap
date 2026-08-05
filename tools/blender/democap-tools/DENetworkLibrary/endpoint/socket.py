@@ -80,7 +80,11 @@ class SocketEndpoint(Endpoint, asyncio.DatagramProtocol):
 
         self.listener = listener
         try:
-            loop = asyncio.get_event_loop()
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
             (t, p) = loop.run_until_complete(loop.create_datagram_endpoint(
                 lambda: self, local_addr=saddr, family=protocol))
 
@@ -190,7 +194,11 @@ class SocketEndpoint(Endpoint, asyncio.DatagramProtocol):
         address (tuple): Socket address.
 
         """
-        asyncio.get_event_loop().create_task(
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            return
+        loop.create_task(
             self.process_datagram(data, address))
 
     async def process_datagram(self: 'SocketEndpoint',

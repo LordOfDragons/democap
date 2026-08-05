@@ -1312,7 +1312,12 @@ class Connection(Endpoint.Listener):
     def _start_update_task(self: 'Connection') -> None:
         """Start update task."""
         if self._update_task is None:
-            self._update_task = asyncio.get_event_loop().create_task(
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            self._update_task = loop.create_task(
                 self._task_update())
 
     def _stop_update_task(self: 'Connection') -> None:
