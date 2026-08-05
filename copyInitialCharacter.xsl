@@ -3,20 +3,17 @@
 xmlns:xsl='http://www.w3.org/1999/XSL/Transform'
 xmlns:dcc='http://dragondreams.ch/democap/character'
 exclude-result-prefixes='dcc'>
-	<xsl:output method='xml' encoding='UTF-8'/>
+	<xsl:output method='xml' encoding='UTF-8' indent='yes'/>
+	<xsl:strip-space elements="*"/>
 	
 	<!-- skip calibration tags -->
-	<xsl:template match="inputDevice">
-		<inputDevice/>
-	</xsl:template>
+	<xsl:template match="inputDevice"/>
+	<xsl:template match="calibrated"/>
+	<xsl:template match="transfers"/>
 	
-	<xsl:template match="calibrated">
-		<calibrated/>
-	</xsl:template>
-	
-	<xsl:template match="transfers">
-		<transfers/>
-	</xsl:template>
+	<!-- skip tags automatically added -->
+	<xsl:template match="appearance/defaultSkin"/>
+	<xsl:template match="appearance/defaultSkinTintColor"/>
 	
 	<!--
 	<xsl:template match="reachScalingArmRight">
