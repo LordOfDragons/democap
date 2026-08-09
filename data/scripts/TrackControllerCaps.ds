@@ -32,16 +32,15 @@ pin Democap.Elements
  * Track hand controller capabilities.
  */
 class TrackControllerCaps extends DefaultBindingManagerListener
-	var bool pHasControllerLeft
-	var bool pHasControllerRight
-	var bool pHasTouchTrackPadLeft
-	var bool pHasTouchTrackPadRight
-	
+	var bool pHasControllerLeft, pHasControllerRight
+	var bool pHasTouchTrackPadLeft, pHasTouchTrackPadRight
+	var bool pHasTouchMenuLeft, pHasTouchMenuRight
+	var bool pHasTouchSecondaryLeft, pHasTouchSecondaryRight
+	var bool pHasTouchThumbrestLeft, pHasTouchThumbrestRight
 	
 	
 	func new()
 	end
-	
 	
 	
 	func bool getHasControllerLeft()
@@ -60,6 +59,37 @@ class TrackControllerCaps extends DefaultBindingManagerListener
 		return pHasTouchTrackPadRight
 	end
 	
+	func bool getHasTouchMenuLeft()
+		return pHasTouchMenuLeft
+	end
+	
+	func bool getHasTouchMenuRight()
+		return pHasTouchMenuRight
+	end
+	
+	func bool getHasTouchSecondaryLeft()
+		return pHasTouchSecondaryLeft
+	end
+	
+	func bool getHasTouchSecondaryRight()
+		return pHasTouchSecondaryRight
+	end
+	
+	func bool getHasTouchThumbrestLeft()
+		return pHasTouchThumbrestLeft
+	end
+	
+	func bool getHasTouchThumbrestRight()
+		return pHasTouchThumbrestRight
+	end
+	
+	func bool hasAnyTouchButtonsLeft()
+		return pHasTouchTrackPadLeft or pHasTouchMenuLeft or pHasTouchSecondaryLeft or pHasTouchThumbrestLeft
+	end
+	
+	func bool hasAnyTouchButtonsRight()
+		return pHasTouchTrackPadRight or pHasTouchMenuRight or pHasTouchSecondaryRight or pHasTouchThumbrestRight
+	end
 	
 	
 	func void deviceAttached(BindingManager manager, InputDevice device)
@@ -75,22 +105,33 @@ class TrackControllerCaps extends DefaultBindingManagerListener
 	end
 	
 	
-	
 	func void updateCapabilities(BindingManager manager)
 		pHasControllerLeft = false
 		pHasControllerRight = false
 		pHasTouchTrackPadLeft = false
 		pHasTouchTrackPadRight = false
+		pHasTouchMenuLeft = false
+		pHasTouchMenuRight = false
+		pHasTouchSecondaryLeft = false
+		pHasTouchSecondaryRight = false
+		pHasTouchThumbrestLeft = false
+		pHasTouchThumbrestRight = false
 		
 		manager.forEachDevice(block InputDevice device
 			select device.getType()
 			case InputDeviceType.vrLeftHand
 				pHasControllerLeft = true
-				pHasTouchTrackPadLeft = hasTouchTrackPadButton(device)
+				pHasTouchTrackPadLeft = hasTouchButton(device, InputDeviceButtonType.touchPad, 0)
+				pHasTouchMenuLeft = hasTouchButton(device, InputDeviceButtonType.action, 0)
+				pHasTouchSecondaryLeft = hasTouchButton(device, InputDeviceButtonType.action, 1)
+				pHasTouchThumbrestLeft = hasTouchButton(device, InputDeviceButtonType.thumbrest, 0)
 				
 			case InputDeviceType.vrRightHand
 				pHasControllerRight = true
-				pHasTouchTrackPadRight = hasTouchTrackPadButton(device)
+				pHasTouchTrackPadRight = hasTouchButton(device, InputDeviceButtonType.touchPad, 0)
+				pHasTouchMenuRight = hasTouchButton(device, InputDeviceButtonType.action, 0)
+				pHasTouchSecondaryRight = hasTouchButton(device, InputDeviceButtonType.action, 1)
+				pHasTouchThumbrestRight = hasTouchButton(device, InputDeviceButtonType.thumbrest, 0)
 			end
 		end)
 		
@@ -111,14 +152,14 @@ class TrackControllerCaps extends DefaultBindingManagerListener
 		end
 	end
 	
-	protected func bool hasTouchTrackPadButton(InputDevice device)
+	protected func bool hasTouchButton(InputDevice device, InputDeviceButtonType buttonType, int index)
 		if device != null
 			var int i, count = device.getButtonCount()
 			var InputDeviceButton button
 			
 			for i = 0 to count
 				button = device.getButtonAt(i)
-				if button.getType() == InputDeviceButtonType.touchPad
+				if button.getType() == buttonType and index-- == 0
 					return button.getTouchable()
 				end
 			end

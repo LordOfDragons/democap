@@ -66,6 +66,7 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 		var AnimatorController pControllerWrist
 		var InputDevice pInputDevice
 		var InputDeviceAxis pInputAxisThumb, pInputAxisIndex, pInputAxisMiddle, pInputAxisRing, pInputAxisPinky
+		var InputDeviceAxis pInputAxisTrigger, pInputAxisGripGrab
 		var bool pComplexMode
 		
 		
@@ -353,6 +354,27 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 				if pInputAxisPinky != null and pControllerPinky != null
 					pControllerPinky.setValue(pInputAxisPinky.getValue())
 				end
+				
+				if pInputAxisTrigger != null
+					if pControllerIndex != null
+						pControllerIndex.setValue(pInputAxisTrigger.getValue())
+					end
+				end
+				if pInputAxisGripGrab != null
+					var float value = pInputAxisGripGrab.getValue()
+					if pControllerThumb != null
+						pControllerThumb.setValue(value)
+					end
+					if pControllerMiddle != null
+						pControllerMiddle.setValue(value)
+					end
+					if pControllerRing != null
+						pControllerRing.setValue(value)
+					end
+					if pControllerPinky != null
+						pControllerPinky.setValue(value)
+					end
+				end
 			end
 		end
 		
@@ -364,6 +386,8 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 			pInputAxisMiddle = null
 			pInputAxisRing = null
 			pInputAxisPinky = null
+			pInputAxisTrigger = null
+			pInputAxisGripGrab = null
 			
 			var int i, count = inputDevice.getAxisCount()
 			var Array axes = Array.new()
@@ -371,14 +395,28 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 			
 			for i = 0 to count
 				axis = inputDevice.getAxisAt(i)
-				if axis.getType() == InputDeviceAxisType.fingerBend
+				select axis.getType()
+				case InputDeviceAxisType.fingerBend
 					axes.add(axis)
+					
+				case InputDeviceAxisType.trigger
+					if pInputAxisTrigger == null
+						pInputAxisTrigger = axis
+					end
+					
+				case InputDeviceAxisType.gripGrab
+					if pInputAxisGripGrab == null
+						pInputAxisGripGrab = axis
+					end
 				end
 			end
 			
 			if axes.getCount() < 5
 				return
 			end
+			
+			pInputAxisTrigger = null
+			pInputAxisGripGrab = null
 			
 			if pControllerThumb != null
 				pInputAxisThumb = axes.getAt(0) cast InputDeviceAxis

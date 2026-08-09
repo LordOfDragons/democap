@@ -55,6 +55,13 @@ class AADefault extends AABase
 		end
 	end
 	
+	/** Track touch button. */
+	enum TrackTouchButton
+		trackPad
+		thumbrest
+		menu
+		secondary
+	end
 	
 	
 	protected var ECBAControlDesktop.Instance controlDesktop
@@ -63,7 +70,7 @@ class AADefault extends AABase
 	protected var ECBASelectable.Instance actorSelectable
 	protected var ECBVRHudInfo.Instance vrHudInfo
 	protected var ECBAResetCalibrationWatcher.Instance resetCalibrationWatcher
-	
+	protected var TrackTouchButton pTrackTouchButtonLeft, pTrackTouchButtonRight
 	
 	
 	/** Create action. */
@@ -108,8 +115,41 @@ class AADefault extends AABase
 	/** Controller capabilities changed. */
 	func void controllerCapabilitiesChanged()
 		var TrackControllerCaps caps = GameApp.getGameApp().getTrackControllerCaps()
-		vrRightHandPointAt.setEnabled(caps.getHasControllerRight() and not caps.getHasTouchTrackPadRight())
-		vrLeftHandPointAt.setEnabled(caps.getHasControllerLeft() and not caps.getHasTouchTrackPadLeft())
+		
+		vrRightHandPointAt.setEnabled(caps.getHasControllerRight() and not caps.hasAnyTouchButtonsRight())
+		vrLeftHandPointAt.setEnabled(caps.getHasControllerLeft() and not caps.hasAnyTouchButtonsLeft())
+		
+		pTrackTouchButtonRight = null
+		if caps.getHasControllerRight()
+			if caps.getHasTouchTrackPadRight()
+				pTrackTouchButtonRight = TrackTouchButton.trackPad
+				
+			elif caps.getHasTouchThumbrestRight()
+				pTrackTouchButtonRight = TrackTouchButton.thumbrest
+				
+			elif caps.getHasTouchMenuRight()
+				pTrackTouchButtonRight = TrackTouchButton.menu
+				
+			elif caps.getHasTouchSecondaryRight()
+				pTrackTouchButtonRight = TrackTouchButton.secondary
+			end
+		end
+		
+		pTrackTouchButtonLeft = null
+		if caps.getHasControllerLeft()
+			if caps.getHasTouchTrackPadLeft()
+				pTrackTouchButtonLeft = TrackTouchButton.trackPad
+				
+			elif caps.getHasTouchThumbrestLeft()
+				pTrackTouchButtonLeft = TrackTouchButton.thumbrest
+				
+			elif caps.getHasTouchMenuLeft()
+				pTrackTouchButtonLeft = TrackTouchButton.menu
+				
+			elif caps.getHasTouchSecondaryLeft()
+				pTrackTouchButtonLeft = TrackTouchButton.secondary
+			end
+		end
 	end
 	
 	
@@ -157,7 +197,6 @@ class AADefault extends AABase
 			pointAtRelease(vrLeftHandPointAt)
 		end
 	end
-	
 	
 	
 	/** Menu button pressed. */
@@ -208,21 +247,96 @@ class AADefault extends AABase
 		end
 	end
 	
+	func void menuTouch(bool rightHand)
+		if rightHand
+			if pTrackTouchButtonRight == TrackTouchButton.menu and grabRightHand.allowTrackTouch()
+				vrRightHandPointAt.setEnabled(true)
+			end
+			
+		else
+			if pTrackTouchButtonLeft == TrackTouchButton.menu and grabLeftHand.allowTrackTouch()
+				vrLeftHandPointAt.setEnabled(true)
+			end
+		end
+	end
+	
+	func void menuUntouch(bool rightHand)
+		if rightHand
+			if pTrackTouchButtonRight == TrackTouchButton.menu
+				vrRightHandPointAt.setEnabled(false)
+			end
+			
+		else
+			if pTrackTouchButtonLeft == TrackTouchButton.menu
+				vrLeftHandPointAt.setEnabled(false)
+			end
+		end
+	end
+	
+	
+	func void secondaryTouch(bool rightHand)
+		if rightHand
+			if pTrackTouchButtonRight == TrackTouchButton.secondary and grabRightHand.allowTrackTouch()
+				vrRightHandPointAt.setEnabled(true)
+			end
+			
+		else
+			if pTrackTouchButtonLeft == TrackTouchButton.secondary and grabLeftHand.allowTrackTouch()
+				vrLeftHandPointAt.setEnabled(true)
+			end
+		end
+	end
+	
+	func void secondaryUntouch(bool rightHand)
+		if rightHand
+			if pTrackTouchButtonRight == TrackTouchButton.secondary
+				vrRightHandPointAt.setEnabled(false)
+			end
+			
+		else
+			if pTrackTouchButtonLeft == TrackTouchButton.secondary
+				vrLeftHandPointAt.setEnabled(false)
+			end
+		end
+	end
+	
+	
+	func void thumbrestTouch(bool rightHand)
+		if rightHand
+			if pTrackTouchButtonRight == TrackTouchButton.thumbrest and grabRightHand.allowTrackTouch()
+				vrRightHandPointAt.setEnabled(true)
+			end
+			
+		else
+			if pTrackTouchButtonLeft == TrackTouchButton.thumbrest and grabLeftHand.allowTrackTouch()
+				vrLeftHandPointAt.setEnabled(true)
+			end
+		end
+	end
+	
+	func void thumbrestUntouch(bool rightHand)
+		if rightHand
+			if pTrackTouchButtonRight == TrackTouchButton.thumbrest
+				vrRightHandPointAt.setEnabled(false)
+			end
+			
+		else
+			if pTrackTouchButtonLeft == TrackTouchButton.thumbrest
+				vrLeftHandPointAt.setEnabled(false)
+			end
+		end
+	end
 	
 	
 	/** Touch track pad. */
 	func void trackPadTouch(bool rightHand)
 		if rightHand
-			if grabRightHand.trackPadTouch()
-				
-			else
+			if pTrackTouchButtonRight == TrackTouchButton.trackPad and grabRightHand.allowTrackTouch()
 				vrRightHandPointAt.setEnabled(true)
 			end
 			
 		else
-			if grabLeftHand.trackPadTouch()
-				
-			else
+			if pTrackTouchButtonLeft == TrackTouchButton.trackPad and grabLeftHand.allowTrackTouch()
 				vrLeftHandPointAt.setEnabled(true)
 			end
 		end
@@ -237,8 +351,9 @@ class AADefault extends AABase
 			if interactHandle.getPointAt() == vrRightHandPointAt
 				interactHandle.cancel()
 			end
-			vrRightHandPointAt.setEnabled(false)
-			grabRightHand.trackPadUntouch()
+			if pTrackTouchButtonRight == TrackTouchButton.trackPad
+				vrRightHandPointAt.setEnabled(false)
+			end
 			
 		else
 			if controlDesktop.getPointAtLeft() == vrLeftHandPointAt
@@ -247,11 +362,11 @@ class AADefault extends AABase
 			if interactHandle.getPointAt() == vrLeftHandPointAt
 				interactHandle.cancel()
 			end
-			vrLeftHandPointAt.setEnabled(false)
-			grabLeftHand.trackPadUntouch()
+			if pTrackTouchButtonLeft == TrackTouchButton.trackPad
+				vrLeftHandPointAt.setEnabled(false)
+			end
 		end
 	end
-	
 	
 	
 	/** Grip grab. */

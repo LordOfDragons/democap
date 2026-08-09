@@ -1,0 +1,220 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2022, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+
+pin Democap.Characters
+pin Democap.Elements
+
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+
+
+/**
+ * Actor behavior simulating fingers using trigger and grab hand controller axis.
+ */
+class ECBASimulateFingers extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		/** Hand device changed. */
+		class InputDeviceChanged extends ECBehaviorVRHand.DefaultListener
+			var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func void controllerAttached(ECBehaviorVRHand.Instance instance)
+				pInstance.onInputDeviceChanged()
+			end
+			
+			func void controllerDetached(ECBehaviorVRHand.Instance instance)
+				pInstance.onInputDeviceChanged()
+			end
+		end
+		
+		/** Simulate fingers listener. */
+		class SimulateFingersListener extends ECBehaviorActorAnimated.DefaultListener
+			var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func void animationApplied(ECBehaviorActorAnimated.Instance instance)
+				pInstance.applyAnimator()
+			end
+		end
+		
+		
+		var ECBASimulateFingers pECBehavior
+		var ECBehaviorVRHand.Instance pVRHand
+		var ECBehaviorActorAnimated.Instance pActorAnimated
+		var AnimatorInstance pAnimatorInstance
+		var AnimatorController pControllerTrigger, pControllerGrab
+		var InputDeviceAxis pInputAxisTrigger, pInputAxisGripGrab
+		
+		
+		/** Create behavior instance. */
+		func new(ECBASimulateFingers ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pVRHand = ecbehavior.vrHand.instance(element)
+			pActorAnimated = ecbehavior.actorAnimated.instance(element)
+		end
+		
+		func void dispose()
+			pActorAnimated = null
+			pVRHand = null
+			super.dispose()
+		end
+		
+		func void init(StubElement stub)
+			pAnimatorInstance = AnimatorInstance.new()
+			pAnimatorInstance.setComponent(pVRHand.getComponent().getComponent())
+			pAnimatorInstance.setAnimator(pECBehavior.animator.getAnimator(stub, getElement().getClass()))
+			
+			pControllerTrigger = pAnimatorInstance.getControllerNamed("trigger")
+			pControllerGrab = pAnimatorInstance.getControllerNamed("grab")
+			
+			onInputDeviceChanged()
+			
+			pVRHand.addListener(InputDeviceChanged.new(this))
+			pActorAnimated.addListener(SimulateFingersListener.new(this))
+		end
+		
+		
+		func ECBASimulateFingers getECBehavior()
+			return pECBehavior
+		end
+		
+		func ECBehaviorVRHand.Instance getVRHand()
+			return pVRHand
+		end
+		
+		func ECBehaviorActorAnimated.Instance getActorAnimated()
+			return pActorAnimated
+		end
+		
+		func AnimatorInstance getAnimatorInstance()
+			return pAnimatorInstance
+		end
+		
+		
+		/** Input device changed. */
+		func void onInputDeviceChanged()
+			pInputAxisTrigger = pInputAxisGripGrab = null
+			
+			var InputDevice device = pVRHand.getInputDevice()
+			if device == null or device.getUsingHandInteraction()
+				return
+			end
+			
+			var int i, count = device.getAxisCount()
+			for i = 0 to count
+				var InputDeviceAxis axis = device.getAxisAt(i)
+				select device.getAxisAt(i).getType()
+				case InputDeviceAxisType.trigger
+					pInputAxisTrigger = axis
+					
+				case InputDeviceAxisType.gripGrab
+					pInputAxisGripGrab = axis
+				end
+			end
+		end
+		
+		/** Apply animator. */
+		func void applyAnimator()
+			if pInputAxisTrigger == null and pInputAxisGripGrab == null
+				return
+			end
+			
+			if pInputAxisTrigger != null and pControllerTrigger != null
+				pControllerTrigger.setValue(pInputAxisTrigger.getValue())
+			end
+			if pInputAxisGripGrab != null and pControllerGrab != null
+				pControllerGrab.setValue(pInputAxisGripGrab.getValue())
+			end
+			
+			pAnimatorInstance.apply()
+		end
+	end
+	
+	
+	public var String prefix
+	public var ECBehaviorVRHand vrHand
+	public var ECBehaviorActorAnimated actorAnimated
+	public var ECPAnimator animator
+	
+	
+	/** Create behavior and add it to element class. */
+	func new(BehaviorElementClass eclass, ECBehaviorVRHand vrHand,\
+	ECBehaviorActorAnimated actorAnimated, String id) super(eclass, id)
+		prefix = "simulateFingers(" + id + ")."
+		
+		this.vrHand = vrHand
+		this.actorAnimated = actorAnimated
+		
+		// add animator for simulating fingers
+		eclass.addProperty(animator = ECPAnimator.new(prefix + "animator", GameApp.getGameApp().getLoaders().getAnimator()))
+		
+		if vrHand.getID().equals(BaseVRActorClass.idVRRightHand)
+			animator.setPath("/content/models/hands/animator/simulate_fingers_right.deanimator")
+			
+		else
+			animator.setPath("/content/models/hands/animator/simulate_fingers_left.deanimator")
+		end
+		
+		eclass.addBehavior(this)
+	end
+	
+	func void dispose()
+		actorAnimated = null
+		vrHand = null
+		super.dispose()
+	end
+	
+	
+	/** Disable behavior. */
+	func void disable()
+		animator.setPath(null)
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static func Instance getInstanceIn(BehaviorElement element, String id)
+		return element.findInstance(block Instance each
+			return each.getECBehavior().getID().equals(id)
+		end) cast Instance
+	end
+	
+	/** Create behavior instance. */
+	func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end
