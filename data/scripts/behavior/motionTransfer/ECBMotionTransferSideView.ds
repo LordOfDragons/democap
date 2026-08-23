@@ -1,0 +1,337 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+pin Democap.MotionTransferSystem
+pin Dragengine.Commands
+pin Dragengine.Gui
+pin Dragengine.LoadSave
+pin Dragengine.Preloading
+pin Dragengine.Scenery
+pin Dragengine.Utils
+pin Dragengine.Gui.Layouts
+
+
+/**
+ * Behavior for MotionTransferSideView.
+ */
+class ECBMotionTransferSideView extends DefaultECBehavior
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class RecordStateChanged extends RecordScene.DefaultListener
+			protected var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func void prepareRecording(RecordScene recordScene)
+				pInstance.onRecordStateChanged()
+			end
+			
+			func void startRecording(RecordScene recordScene)
+				pInstance.onRecordStateChanged()
+			end
+			
+			func void stopRecording(RecordScene recordScene)
+				pInstance.onRecordStateChanged()
+			end
+		end
+		
+		class PlaybackStateChanged extends PlaybackScene.DefaultListener
+			protected var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func void pausePlayback(PlaybackScene playbackScene)
+				pInstance.onPlaybackStateChanged()
+			end
+			
+			func void startPlayback(PlaybackScene playbackScene)
+				pInstance.onPlaybackStateChanged()
+			end
+			
+			func void stopPlayback(PlaybackScene playbackScene)
+				pInstance.onPlaybackStateChanged()
+			end
+		end
+		
+		class WatchCameraEnableGI extends DefaultToggleModelListener
+			protected var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func void toggledChanged(ToggleModel model)
+				pInstance.getCamera().setEnableGI(model.getToggled())
+			end
+		end
+		
+		class WatchCalibrating extends DefaultToggleModelListener
+			protected var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func void toggledChanged(ToggleModel model)
+				pInstance.updatePanelVisibility()
+			end
+		end
+		
+		
+		var ECBMotionTransferSideView pECBehavior
+		var ECBVRHudInfo.Instance pVRHudInfo
+		var Panel pPanel
+		var WorldRenderer pWorldRenderer
+		var bool pShowInLiveMode
+		var Camera pCamera
+		
+		var RecordStateChanged pRecordStateChanged
+		var PlaybackStateChanged pPlaybackStateChanged
+		var WatchCameraEnableGI pWatchCameraEnableGI
+		var WatchCalibrating pWatchCalibrating
+		
+		
+		/** Create instance. */
+		func new(ECBMotionTransferSideView ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pVRHudInfo = ecbehavior.vrHudInfo.instance(element)
+		end
+		
+		func void dispose()
+			if pRecordStateChanged != null
+				GameApp.getGameApp().getRecordScene().removeListener(pRecordStateChanged)
+				pRecordStateChanged = null
+			end
+			if pPlaybackStateChanged != null
+				GameApp.getGameApp().getPlaybackScene().removeListener(pPlaybackStateChanged)
+				pPlaybackStateChanged = null
+			end
+			if pWatchCameraEnableGI != null
+				SessionSettings.get().getModelCameraEnableGI().removeListener(pWatchCameraEnableGI)
+				pWatchCameraEnableGI = null
+			end
+			if pWatchCalibrating != null
+				SessionState.get().getModelIsCalibrating().removeListener(pWatchCalibrating)
+				pWatchCalibrating = null
+			end
+			
+			pWorldRenderer = null
+			if pPanel != null
+				if pVRHudInfo != null
+					pVRHudInfo.removePanel(pPanel)
+				end
+				pPanel.safeDispose()
+				pPanel = null
+			end
+			pVRHudInfo = null
+			super.dispose()
+		end
+		
+		func void init(StubElement stub)
+			pShowInLiveMode = pECBehavior.transfer.getShowInLiveMode()
+			
+			pCamera = pECBehavior.camera.instance(getElement()).getCamera()
+			
+			createCameraPanel()
+			pVRHudInfo.addPanel(pPanel)
+			updatePanelVisibility()
+			
+			pRecordStateChanged = RecordStateChanged.new(this)
+			GameApp.getGameApp().getRecordScene().addListener(pRecordStateChanged)
+			
+			pPlaybackStateChanged = PlaybackStateChanged.new(this)
+			GameApp.getGameApp().getPlaybackScene().addListener(pPlaybackStateChanged)
+			
+			pWatchCameraEnableGI = WatchCameraEnableGI.new(this)
+			SessionSettings.get().getModelCameraEnableGI().addListener(pWatchCameraEnableGI)
+			
+			pWatchCalibrating = WatchCalibrating.new(this)
+			SessionState.get().getModelIsCalibrating().addListener(pWatchCalibrating)
+		end
+		
+		/** Create camera panel. */
+		protected func void createCameraPanel()
+			GameApp.getGameApp().getVRCameraDirector().applyParameters(pCamera)
+			
+			var float placementX = pECBehavior.transfer.getHmdPosition().getX()
+			var float placementY = pECBehavior.transfer.getHmdPosition().getY()
+			var float renderSizePercentage = pECBehavior.transfer.getHmdSize()
+			var float transparency = pECBehavior.transfer.getTransparency()
+			
+			var Point hudSize = pVRHudInfo.getRenderablePanel().getPanel().getSize()
+			var int renderSizeX = (renderSizePercentage * hudSize.getX()) cast int
+			//var int renderSizeY = ((3.0 / 4.0) * renderSizeX) cast int
+			var int renderSizeY = renderSizeX
+			var Point windowSize = Point.new(renderSizeX, renderSizeY)
+			
+			var Image maskImage
+			if not pECBehavior.transfer.getMaskImage().empty()
+				try
+					maskImage = Image.new(pECBehavior.transfer.getMaskImage())
+				catch Exception e
+				end
+			end
+			
+			pPanel = Panel.new(CentrizedBoxLayout.new(LayoutAxis.y, placementX, placementY), block Panel p
+				p.setTransparency(transparency)
+				p.addWidget(Panel.new(StackLayout.new(StackLayout.AspectRatio.fit), block Panel p2
+					p2.setDesignerSelector("Panel.HudInfo.Camera")
+					pWorldRenderer = WorldRenderer.new()
+					pWorldRenderer.setDesignerSelector("WorldRenderer.HudInfoCamera")
+					pWorldRenderer.setRenderMinimumSize(windowSize)
+					pWorldRenderer.setCamera(pCamera)
+					
+					if maskImage != null
+						var CanvasImage canvasMask = CanvasImage.new()
+						canvasMask.setSize(windowSize)
+						canvasMask.setImage(maskImage)
+						canvasMask.setColorTransform(createBlendColorMatrix())
+						pWorldRenderer.getCanvasWidget().setMask(canvasMask)
+					end
+					p2.addWidget(pWorldRenderer)
+				end))
+				p.setVisible(false)
+			end)
+		end
+		
+		/** Create blend color matrix. */
+		protected func ColorMatrix createBlendColorMatrix()
+			var float blendWidth = pECBehavior.transfer.getMaskBlending()
+			var float scale = 1.0 / DEMath.max(blendWidth, 0.01)
+			
+			return ColorMatrix.newScaling(scale, scale, scale, 1)
+		end
+		
+		/** Behavior. */
+		func ECBMotionTransferSideView getECBehavior()
+			return pECBehavior
+		end
+		
+		/** Camera. */
+		func Camera getCamera()
+			return pCamera
+		end
+		
+		
+		/** Recording state changed. */
+		func void onRecordStateChanged()
+			updatePanelVisibility()
+		end
+		
+		/** Playback state changed. */
+		func void onPlaybackStateChanged()
+			updatePanelVisibility()
+		end
+		
+		
+		/** Update panel visibility. */
+		func void updatePanelVisibility()
+			// there are 4 possible states to cover:
+			// - recording
+			// - prepare to record
+			// - playing back (includes playback paused)
+			// - neither recording nor playing back
+			
+			var bool show
+			
+			if SessionState.get().getModelIsCalibrating().getToggled()
+				show = false
+				
+			elif GameApp.getGameApp().getRecordScene().isRecording()
+				show = true
+				
+			elif GameApp.getGameApp().getRecordScene().isPreparing()
+				show = true
+				
+			elif GameApp.getGameApp().getPlaybackScene().isStopped()
+				show = pShowInLiveMode
+				
+			else // playing back or paused
+				show = false
+			end
+			
+			pPanel.setVisible(show)
+		end
+	end
+	
+	
+	public var MotionTransferSideView transfer
+	public var ECBVRHudInfo vrHudInfo
+	public var ECBehaviorCamera camera
+	
+	
+	/** Create behavior element class. */
+	func new(BehaviorElementClass eclass, MotionTransferSideView transfer) super(eclass, transfer.getName())
+		var String subId = "sideView(" + transfer.getName() + ")"
+		var String prefix = subId + "."
+		
+		this.transfer = transfer
+		vrHudInfo = ECBVRHudInfo.getBehaviorIn(eclass)
+		
+		camera = ECBehaviorCamera.new(eclass, ECBehaviorCollider.getBehaviorIn(eclass), subId, prefix + "camera")
+		camera.getAttach().getBone().setValue(transfer.getBone())
+		camera.getAttach().getPosition().setVector(transfer.getPosition())
+		camera.getAttach().getOrientation().setVector(transfer.getRotation())
+		camera.setLayerMask(LayerMask.newWith(BaseGameApp.WorldLayerBit.default))
+		camera.getEnableGI().setValue(SessionSettings.get().getModelCameraEnableGI().getToggled())
+		
+		eclass.addBehavior(this)
+	end
+	
+	/** Dispose of behavior. */
+	func void dispose()
+		transfer = null
+		vrHudInfo = null
+		camera = null
+		super.dispose()
+	end
+	
+	
+	/** Get instance in element from owner element class. */
+	func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	/** Get instance in element or null if absent. */
+	static func Instance getInstanceIn(BehaviorElement element)
+		return element.findInstance(block Instance each
+			return true
+		end) cast Instance
+	end
+	
+	/** Get or create instance in element class. */
+	static func ECBMotionTransferSideView getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBMotionTransferSideView each
+			return true
+		end) cast ECBMotionTransferSideView
+	end
+	
+	
+	/** Create Behavior instance. */
+	func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

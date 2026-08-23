@@ -781,6 +781,7 @@ class WindowCharacterConfiguration extends WindowDialog
 				pPanelsMotionTransfer.add(WCCPMTRotation.new(this))
 				pPanelsMotionTransfer.add(WCCPMTAutoHuman.new(this, uioptPrefix + "/MTAutoHuman"))
 				pPanelsMotionTransfer.add(WCCPMTAutoFPV.new(this, uioptPrefix + "/MTAutoFPV"))
+				pPanelsMotionTransfer.add(WCCPMTSideView.new(this))
 				
 				var SwitchPanel switcher = SwitchPanel.new(pModelMotionTransferPanel, block Panel p3
 					p3.addWidget(Panel.new()) // empty
@@ -1217,7 +1218,9 @@ class WindowCharacterConfiguration extends WindowDialog
 	/** Add motion transfer. */
 	func void addMotionTransfer(MotionTransferFactory factory)
 		var MotionTransfer motionTransfer = factory.createMotionTransfer()
-		motionTransfer.setName(TranslationManager.get().translate(factory.displayName().substring(1)).toUTF8())
+		motionTransfer.setName(MotionTransfers.uniqueNameIn(\
+			TranslationManager.get().translate(factory.displayName().substring(1)).toUTF8(),\
+			pModelMotionTransfers.getContent()))
 		pModelMotionTransfers.add(motionTransfer)
 		pModelMotionTransfers.setSelected(pModelMotionTransfers.indexOf(motionTransfer))
 	end
@@ -1232,6 +1235,8 @@ class WindowCharacterConfiguration extends WindowDialog
 		saveMotionTransfer()
 		var int index = pModelMotionTransfers.indexOf(motionTransfer)
 		motionTransfer = motionTransfer.createCopy()
+		motionTransfer.setName(MotionTransfers.uniqueNameIn(\
+			motionTransfer.getName(), pModelMotionTransfers.getContent()))
 		pModelMotionTransfers.insert(index + 1, motionTransfer)
 		pModelMotionTransfers.setSelected(index + 1)
 	end
@@ -1300,7 +1305,9 @@ class WindowCharacterConfiguration extends WindowDialog
 		var int next = pModelMotionTransfers.getCount()
 		
 		var Block paste = block MotionTransfer motionTransfer
-			pModelMotionTransfers.add(motionTransfer.createCopy())
+			var MotionTransfer copy = motionTransfer.createCopy()
+			copy.setName(MotionTransfers.uniqueNameIn(copy.getName(), pModelMotionTransfers.getContent()))
+			pModelMotionTransfers.add(copy)
 		end
 		
 		getClipboard().getClip().forEachCastable(paste)

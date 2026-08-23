@@ -70,7 +70,7 @@ class MotionTransfers
 	
 	/** Add motion transfer. */
 	func void add(MotionTransfer transfer)
-		if pTransfers.has(transfer.getName())
+		if hasNamed(transfer.getName())
 			throw EInvalidParam.new("named transfer is present")
 		end
 		pTransfers.add(transfer)
@@ -105,5 +105,36 @@ class MotionTransfers
 	/** List of motion transfers as Array of MotionTransfer. */
 	func Array toArray()
 		return Array.new(pTransfers)
+	end
+	
+	
+	/** Unique name. */
+	func String uniqueName(String name)
+		var Array args = Array.newWith(name, 1)
+		var String check = name
+		var int counter = 2
+		
+		while hasNamed(check)
+			args.setAt(1, counter++)
+			check = "{} #{}".format(args)
+		end
+		
+		return check
+	end
+	
+	/** Unique name. */
+	static func String uniqueNameIn(String name, Array transfers)
+		var Array args = Array.newWith(name, 1)
+		var String check = name
+		var int counter = 2
+		
+		while transfers.find(block MotionTransfer each
+			return each.getName().equals(check)
+		end) != null
+			args.setAt(1, counter++)
+			check = "{} #{}".format(args)
+		end
+		
+		return check
 	end
 end

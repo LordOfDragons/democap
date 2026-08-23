@@ -316,6 +316,7 @@ class SessionSettings
 	var DefaultToggleModel pModelTeleportMovement
 	var DefaultToggleModel pModelVRStageDirectionsReadOnly
 	var DefaultRangeModel pModelVRMenuScale
+	var DefaultRangeModel pModelVRHudInfoTransparency
 	
 	var DefaultRangeModel pModelCalibratePrepareTimeout
 	
@@ -417,6 +418,10 @@ class SessionSettings
 		pModelVRMenuScale = DefaultRangeModel.new(10, 30, 5, 10, 1)
 		pModelVRMenuScale.setValue((s.getFloatAt("VRMenuScale", 1) * 20 + 0.5) cast int)
 		pModelVRMenuScale.addListener(SaveRangeModelChanged.new("VRMenuScale", 0.05))
+		
+		pModelVRHudInfoTransparency = DefaultRangeModel.new(50, 100, 5, 95, 1)
+		pModelVRHudInfoTransparency.setValue((s.getFloatAt("VRHudInfoTransparency", 0.95) * 100 + 0.5) cast int)
+		pModelVRHudInfoTransparency.addListener(SaveRangeModelChanged.new("VRHudInfoTransparency", 0.01))
 		
 		pModelServerAddress = DefaultTextModel.new(s.getStringAt("ServerAddress", "localhost"))
 		pModelServerAddress.addListener(SaveTextModelChanged.new("ServerAddress"))
@@ -693,6 +698,15 @@ class SessionSettings
 		return 0.05 * pModelVRMenuScale.getValue()
 	end
 	
+	/** VR HUD info transparency model. */
+	func DefaultRangeModel getModelVRHudInfoTransparency()
+		return pModelVRHudInfoTransparency
+	end
+	
+	/** VR HUD info transparency. */
+	func float getVRHudInfoTransparency()
+		return pModelVRHudInfoTransparency.getValue() * 0.01
+	end
 	
 	
 	/** Calibrate prepare timeout model. */

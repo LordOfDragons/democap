@@ -1,0 +1,335 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Edit character config window motion transfer side view panel.
+ */
+class WCCPMTSideView extends WCCPanelMotionTransfer
+	var DefaultListModel pModelListBone
+	var DefaultTextModel pModelTextBone
+	var EditVector pEditPosition, pEditRotation
+	var DefaultRangeModel pModelHmdPositionX, pModelHmdPositionY
+	var DefaultTextModel pModelMaskImage
+	var DefaultRangeModel pModelHmdSize, pModelMaskBlending, pModelTransparency
+	var DefaultToggleModel pModelShowInLiveMode
+	var bool pIsContentCreated
+	
+	
+	/** Create window. */
+	func new(WindowCharacterConfiguration window) super(window, "")
+		pModelTypeName.setText("@UI.SideViewCamera")
+		
+		pModelListBone = DefaultListModel.new()
+		pModelListBone.setAutoSelect(false)
+		pModelTextBone = DefaultTextModel.new()
+		pEditPosition = EditVector.new()
+		pEditRotation = EditVector.new()
+		pModelHmdPositionX = DefaultRangeModel.new(0, 20, 5, 10, 1)
+		pModelHmdPositionY = DefaultRangeModel.new(0, 20, 5, 10, 1)
+		pModelHmdSize = DefaultRangeModel.new(10, 50, 5, 25, 1)
+		pModelMaskImage = DefaultTextModel.new()
+		pModelMaskBlending = DefaultRangeModel.new(0, 20, 5, 10, 1)
+		pModelTransparency = DefaultRangeModel.new(0, 20, 5, 20, 1)
+		pModelShowInLiveMode = DefaultToggleModel.new(true)
+	end
+	
+	/** Dispose of window. */
+	func void dispose()
+		pModelListBone = null
+		pModelTextBone = null
+		pEditPosition = pEditRotation = null
+		pModelHmdPositionX = pModelHmdPositionY = null
+		pModelHmdSize = null
+		pModelMaskImage = null
+		pModelTransparency = null
+		pModelMaskBlending = null
+		pModelShowInLiveMode = null
+		super.dispose()
+	end
+	
+	
+	/** Load values from motion transfer into edit widgets. */
+	func void loadValues()
+		runWhileBlockingLayout(block
+			if not pIsContentCreated
+				createContent()
+				pIsContentCreated = true
+			end
+			
+			super.loadValues()
+			
+			if pMotionTransfer != null
+				var MotionTransferSideView mt = pMotionTransfer cast MotionTransferSideView
+				pModelTextBone.setText(mt.getBone())
+				pEditPosition.setVector(mt.getPosition())
+				pEditRotation.setVector(mt.getRotation())
+				pModelHmdPositionX.setValue((mt.getHmdPosition().getX() * 20 + 0.5) cast int)
+				pModelHmdPositionY.setValue((mt.getHmdPosition().getY() * 20 + 0.5) cast int)
+				pModelHmdSize.setValue((mt.getHmdSize() * 100 + 0.5) cast int)
+				pModelMaskImage.setText(mt.getMaskImage())
+				pModelMaskBlending.setValue((mt.getMaskBlending() * 20 + 0.5) cast int)
+				pModelTransparency.setValue((mt.getTransparency() * 20 + 0.5) cast int)
+				pModelShowInLiveMode.setToggled(mt.getShowInLiveMode())
+				
+			else
+				pModelTextBone.setText("")
+				pEditPosition.setVector(Vector.new())
+				pEditRotation.setVector(Vector.new())
+				pModelHmdPositionX.setValue(10)
+				pModelHmdPositionY.setValue(10)
+				pModelHmdSize.setValue(25)
+				pModelMaskImage.setText("")
+				pModelMaskBlending.setValue(20)
+				pModelTransparency.setValue(20)
+				pModelShowInLiveMode.setToggled(true)
+			end
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	/** Save values from edit widgets to motion transfer. */
+	func void saveValues()
+		if pMotionTransfer == null
+			return
+		end
+		super.saveValues()
+		
+		var MotionTransferSideView mt = pMotionTransfer cast MotionTransferSideView
+		mt.setBone(pModelTextBone.getText())
+		mt.setPosition(pEditPosition.getVector())
+		mt.setRotation(pEditRotation.getVector())
+		mt.setHmdPosition(Vector2.new(pModelHmdPositionX.getValue() / 20.0, pModelHmdPositionY.getValue() / 20.0))
+		mt.setHmdSize(pModelHmdSize.getValue() / 100.0)
+		mt.setTransparency(pModelTransparency.getValue() / 20.0)
+		mt.setMaskImage(pModelMaskImage.getText())
+		mt.setMaskBlending(pModelMaskBlending.getValue() / 20.0)
+		mt.setShowInLiveMode(pModelShowInLiveMode.getToggled())
+	end
+	
+	/** Supports motion transfer type. */
+	func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferSideView
+	end
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		createBaseContent("motiontransfersideview")
+	end
+	
+	protected func void addFormPanelContent(Panel panel)
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var Label label, label2
+		var ComboBox comboBox
+		var EditPath editPath
+		var String toolTip
+		var Slider slider
+		
+		// bone
+		label = Label.new("@UI.Bone.Label", "Label.FormCaption.SingleLine")
+		panel.addWidget(label)
+		
+		comboBox = ComboBox.new(pModelListBone, DefaultComboBoxEditor.new(pModelTextBone))
+		comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+		comboBox.setToolTip("@UI.ToolTip.SideViewCameraBone")
+		panel.addWidget(comboBox)
+		
+		CPEBone.new(preview, label, comboBox)
+		
+		// position
+		toolTip = "@UI.ToolTip.SideViewCameraPosition"
+		label = Label.new("@UI.Position.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		pEditPosition.setToolTip(toolTip)
+		panel.addWidget(pEditPosition)
+		
+		// rotation
+		toolTip = "@UI.ToolTip.SideViewCameraRotation"
+		label2 = Label.new("@UI.Rotation.Label", "Label.FormCaption.SingleLine")
+		label2.setToolTip(toolTip)
+		panel.addWidget(label2)
+		
+		pEditRotation.setToolTip(toolTip)
+		panel.addWidget(pEditRotation)
+		
+		CPECoordinateSystem.new(preview, label, pEditPosition, label2, pEditRotation, comboBox, null, false)
+		
+		// hmd position
+		toolTip = "@UI.ToolTip.SideViewCameraHmdPositionX"
+		label = Label.new("@UI.HmdPositionX.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		slider = Slider.new(Orientation.horizontal, pModelHmdPositionX)
+		slider.setDesignerSelector("Slider.WindowCharacterConfiguration")
+		slider.setToolTip(toolTip)
+		panel.addWidget(slider)
+		
+		toolTip = "@UI.ToolTip.SideViewCameraHmdPositionY"
+		label = Label.new("@UI.HmdPositionY.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		slider = Slider.new(Orientation.horizontal, pModelHmdPositionY)
+		slider.setDesignerSelector("Slider.WindowCharacterConfiguration")
+		slider.setToolTip(toolTip)
+		panel.addWidget(slider)
+		
+		// hmd size
+		toolTip = "@UI.ToolTip.SideViewCameraHmdSize"
+		label = Label.new("@UI.HmdSize.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		slider = Slider.new(Orientation.horizontal, pModelHmdSize)
+		slider.setDesignerSelector("Slider.WindowCharacterConfiguration")
+		slider.setToolTip(toolTip)
+		panel.addWidget(slider)
+		
+		// mask image
+		toolTip = "@UI.ToolTip.SideViewCameraMaskImage"
+		label = Label.new("@UI.MaskImage.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		editPath = EditPath.new(pModelMaskImage, ResourceLoaderType.image, "/gui/masks")
+		editPath.setToolTip(toolTip)
+		panel.addWidget(editPath)
+		
+		// mask blending
+		toolTip = "@UI.ToolTip.SideViewCameraMaskBlending"
+		label = Label.new("@UI.MaskBlending.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		slider = Slider.new(Orientation.horizontal, pModelMaskBlending)
+		slider.setDesignerSelector("Slider.WindowCharacterConfiguration")
+		slider.setToolTip(toolTip)
+		panel.addWidget(slider)
+		
+		// transparency
+		toolTip = "@UI.ToolTip.SideViewCameraTransparency"
+		label = Label.new("@UI.Transparency.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		panel.addWidget(label)
+		
+		slider = Slider.new(Orientation.horizontal, pModelTransparency)
+		slider.setDesignerSelector("Slider.WindowCharacterConfiguration")
+		slider.setToolTip(toolTip)
+		panel.addWidget(slider)
+		
+		// show in live mode
+		var CheckBox checkBox = CheckBox.new(pModelShowInLiveMode, "@UI.ShowInLiveMode")
+		checkBox.setDesignerSelector("CheckBox.FormCaption.SingleLine")
+		checkBox.setToolTip("@UI.ToolTip.SideViewCameraShowInLiveMode")
+		panel.addWidget(checkBox)
+	end
+	
+	/** Mirror values from another motion transfer. */
+	func void mirrorValues()
+		var DefaultListModel model = DefaultListModel.new()
+		pWindowCharacterConfiguration.getModelMotionTransfers().forEach(block MotionTransfer each
+			if each castable MotionTransferSideView and each != pMotionTransfer
+				model.add(each)
+			end
+		end)
+		
+		if model.getCount() == 0
+			return
+		end
+		
+		WindowDialog.chooseList(getWindow(), "@UI.MirrorHand", "@UI.Message.Fingers.SelectTransfer",\
+		null, model, MotionTransferRenderer.new(), null, null, WindowDialog.BlockResultListener.new(\
+			block int result
+				if result != -1
+					var MotionTransferSideView mt = model.getAt(result) cast MotionTransferSideView
+					var Matrix matMirror = Matrix.newScaling(-1, 1, 1)
+					pEditPosition.setVector(matMirror * mt.getPosition())
+					pEditRotation.setVector((Matrix.newRotation(mt.getRotation()) * matMirror).normalize().getEulerAngles())
+					pModelHmdPositionX.setValue(((1.0 - mt.getHmdPosition().getX()) * 20 + 0.5) cast int)
+					pModelHmdPositionY.setValue((mt.getHmdPosition().getY() * 20 + 0.5) cast int)
+					pModelHmdSize.setValue((mt.getHmdSize() * 100 + 0.5) cast int)
+					pModelMaskBlending.setValue((mt.getMaskBlending() * 20 + 0.5) cast int)
+					pModelTransparency.setValue((mt.getTransparency() * 20 + 0.5) cast int)
+					pModelShowInLiveMode.setToggled(mt.getShowInLiveMode())
+				end
+			end))
+	end
+	
+	
+	protected func void onPanelContextMenu(MenuPopup menu)
+		var bool inVR = pWindowCharacterConfiguration.getInVR()
+		
+		var MenuItemCommand item = MenuItemCommand.new(Resources.edit.get(inVR), "@UI.SideViewCameraPresetLeftEye",\
+			BlockActionListener.new(block ActionEvent event
+				applyPresetLeftEye()
+			end))
+		menu.addWidget(item)
+		
+		item = MenuItemCommand.new(Resources.edit.get(inVR), "@UI.SideViewCameraPresetRightEye",\
+			BlockActionListener.new(block ActionEvent event
+				applyPresetRightEye()
+			end))
+		menu.addWidget(item)
+		
+		menu.addWidget(MenuItemSeparator.new())
+		item = MenuItemCommand.new(Resources.mirror.get(inVR), "@UI.SideViewCameraMirror",\
+			BlockActionListener.new(block ActionEvent event
+				mirrorValues()
+			end))
+		menu.addWidget(item)
+	end
+	
+	/** Apply left eye preset. */
+	protected func void applyPresetLeftEye()
+		pEditPosition.setVector(Vector.new(-0.1, 0.1, 0.1))
+		pEditRotation.setVector(Vector.new(0, 90, 0))
+		pModelHmdPositionX.setValue((0.25 * 20 + 0.5) cast int)
+		pModelHmdPositionY.setValue((0.5 * 20 + 0.5) cast int)
+		pModelHmdSize.setValue((0.25 * 100 + 0.5) cast int)
+		pModelMaskBlending.setValue((0.5 * 20 + 0.5) cast int)
+		pModelTransparency.setValue(20)
+		pModelMaskImage.setText("/content/gui/masks/camera_left.png")
+	end
+	
+	/** Apply right eye preset. */
+	protected func void applyPresetRightEye()
+		pEditPosition.setVector(Vector.new(0.1, 0.1, 0.1))
+		pEditRotation.setVector(Vector.new(0, -90, 0))
+		pModelHmdPositionX.setValue((0.75 * 20 + 0.5) cast int)
+		pModelHmdPositionY.setValue((0.5 * 20 + 0.5) cast int)
+		pModelHmdSize.setValue((0.25 * 100 + 0.5) cast int)
+		pModelTransparency.setValue(20)
+		pModelMaskBlending.setValue((0.5 * 20 + 0.5) cast int)
+		pModelMaskImage.setText("/content/gui/masks/camera_right.png")
+	end
+end
