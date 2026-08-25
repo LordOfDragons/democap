@@ -190,6 +190,12 @@ class WindowCharacterConfiguration extends WindowDialog
 			item.setEnabled(pWindow.getTrackerSlot() != null)
 			menu.addWidget(item)
 			
+			item = MenuItemCommand.new(Resources.copy.get(inVR), "@UI.CopyTrackerSlots", BlockActionListener.new(block ActionEvent event
+				pWindow.copyTrackerSlots()
+			end))
+			item.setEnabled(pWindow.getTrackerSlot() != null)
+			menu.addWidget(item)
+			
 			item = MenuItemCommand.new(Resources.paste.get(inVR), "@UI.Paste.Dialog", BlockActionListener.new(block ActionEvent event
 				pWindow.pasteTrackerSlot()
 			end))
@@ -292,14 +298,12 @@ class WindowCharacterConfiguration extends WindowDialog
 			item.setEnabled(pWindow.getMotionTransfer() != null)
 			menu.addWidget(item)
 			
-			/*
 			item = MenuItemCommand.new(Resources.copy.get(inVR), "@UI.CopyMotionTransfers",\
 				BlockActionListener.new(block ActionEvent event
 					pWindow.copyMotionTransfers()
 				end))
 			item.setEnabled(pWindow.getMotionTransfer() != null)
 			menu.addWidget(item)
-			*/
 			
 			item = MenuItemCommand.new(Resources.paste.get(inVR), "@UI.Paste.Dialog",\
 				BlockActionListener.new(block ActionEvent event
@@ -959,7 +963,9 @@ class WindowCharacterConfiguration extends WindowDialog
 			null, null, WindowDialog.BlockResultListener.new(block int result
 				if result != -1
 					var CharacterTrackerSlot.Type type = model.getAt(result) cast CharacterTrackerSlot.Type
-					var String name = uniqueTrackerSlotName(CharacterTrackerSlot.defaultSlotNameForType(type))
+					var String name = CharacterTrackerSlots.uniqueNameIn(\
+						CharacterTrackerSlot.defaultSlotNameForType(type),\
+						pModelTrackerSlots.getContent())
 					
 					var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
 					var CharacterTrackerSlot slot = CharacterTrackerSlot.new(pCharacterConfiguration, name)
@@ -979,7 +985,9 @@ class WindowCharacterConfiguration extends WindowDialog
 		var ActorProfile actorProfile = GameApp.getGameApp().getActiveActorProfile()
 		
 		types.forEach(block CharacterTrackerSlot.Type type
-			var String name = uniqueTrackerSlotName(CharacterTrackerSlot.defaultSlotNameForType(type))
+			var String name = CharacterTrackerSlots.uniqueNameIn(\
+				CharacterTrackerSlot.defaultSlotNameForType(type),\
+				pModelTrackerSlots.getContent())
 			var CharacterTrackerSlot slot = CharacterTrackerSlot.new(pCharacterConfiguration, name)
 			slot.setType(type)
 			slot.initFromType(actorProfile)
@@ -1031,6 +1039,28 @@ class WindowCharacterConfiguration extends WindowDialog
 		getClipboard().setClipWith(CharacterTrackerSlot.new(pCharacterConfiguration, slot))
 	end
 	
+	/** Copy tracker slots. */
+	func void copyTrackerSlots()
+		var Array transfers = pModelTrackerSlots.getContent()
+		if transfers.getCount() == 0
+			return
+		end
+		
+		saveMotionTransfer()
+		
+		WindowDialog.selection(getWindow(), "@UI.CopyTrackerSlots", "@UI.Message.CopyTrackerSlots",\
+		null, transfers.map(block CharacterTrackerSlot each
+			return each.getName()
+		end), Array.new(), null, null, WindowDialog.BlockResultListener.new(\
+			block Array result
+				if result != null and result.getCount() > 0
+					getClipboard().setClipWith(result.map(block int index
+						return CharacterTrackerSlot.new(pCharacterConfiguration, transfers.getAt(index) cast CharacterTrackerSlot)
+					end))
+				end
+			end))
+	end
+	
 	/** Cut tracker slot. */
 	func void cutTrackerSlot()
 		var CharacterTrackerSlot slot = getTrackerSlot()
@@ -1058,30 +1088,24 @@ class WindowCharacterConfiguration extends WindowDialog
 			return
 		end
 		
-		getClipboard().getClip().findCastable(block CharacterTrackerSlot slot
-			WindowDialog.input(this, "@UI.PasteTrackerSlot",\
-				"@UI.SlotName.Label", null, slot.getName(),\
-				null, null, WindowDialog.BlockResultListener.new(block String result
-					if result != null
-						if pModelTrackerSlots.find(block CharacterTrackerSlot each
-							return each.getName().compareNoCase(result) == 0
-						end) != null
-							WindowDialog.message(this, "@UI.PasteTrackerSlot",\
-								TranslationManager.get().translate("UI.Message.DuplicateSlot")\
-									.toUTF8().format(Array.newWith(result)), null, null, null)
-							
-						else
-							slot = CharacterTrackerSlot.new(pCharacterConfiguration, slot)
-							slot.setName(result)
-							pModelTrackerSlots.add(slot)
-							pModelTrackerSlots.sort()
-							pModelTrackerSlots.setSelected(pModelTrackerSlots.indexOf(slot))
-							updateTrackerSlotLists()
-						end
-					end
-				end))
-			return true
+		var int next = pModelTrackerSlots.getCount()
+		
+		var Block paste = block CharacterTrackerSlot slot
+			var CharacterTrackerSlot copy = CharacterTrackerSlot.new(pCharacterConfiguration, slot)
+			copy.setName(CharacterTrackerSlots.uniqueNameIn(copy.getName(), pModelTrackerSlots.getContent()))
+			pModelTrackerSlots.add(copy)
+		end
+		
+		getClipboard().getClip().forEachCastable(paste)
+		getClipboard().getClip().forEachCastable(block Array list
+			list.forEachCastable(paste)
 		end)
+		
+		if pModelTrackerSlots.getCount() > next
+			pModelTrackerSlots.sort()
+			pModelTrackerSlots.setSelected(next)
+			updateTrackerSlotLists()
+		end
 	end
 	
 	/** Remove tracker slot. */
@@ -1124,16 +1148,7 @@ class WindowCharacterConfiguration extends WindowDialog
 	
 	/** Ensure unique tracker slot name. */
 	func String uniqueTrackerSlotName(String name)
-		var String baseName = name
-		var int number = 2
-		
-		while pModelTrackerSlots.find(block CharacterTrackerSlot each
-			return each.getName().compareNoCase(name) == 0
-		end) != null
-			name = baseName + " #" + number++
-		end
-		
-		return name
+		return CharacterTrackerSlots.uniqueNameIn(name, pModelTrackerSlots.getContent())
 	end
 	
 	/** Tracker slot name changed. */
@@ -1254,18 +1269,17 @@ class WindowCharacterConfiguration extends WindowDialog
 	
 	/** Copy motion transfers. */
 	func void copyMotionTransfers()
-		var Array transfers = pCharacterConfiguration.getMotionTransfers().toArray()
+		var Array transfers = pModelMotionTransfers.getContent()
 		if transfers.getCount() == 0
 			return
 		end
 		
 		saveMotionTransfer()
-		var Array names = transfers.map(block MotionTransfer each
-			return each.getName()
-		end)
 		
-		WindowDialog.selection(getWindow(), "@UI.Copy", "@UI.Message.CopyMotionTransfers",\
-		null, names, Array.new(), null, null, WindowDialog.BlockResultListener.new(\
+		WindowDialog.selection(getWindow(), "@UI.CopyMotionTransfers", "@UI.Message.CopyMotionTransfers",\
+		null, transfers.map(block MotionTransfer each
+			return each.getName()
+		end), Array.new(), null, null, WindowDialog.BlockResultListener.new(\
 			block Array result
 				if result != null and result.getCount() > 0
 					getClipboard().setClipWith(result.map(block int index

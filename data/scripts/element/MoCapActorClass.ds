@@ -24,6 +24,7 @@ namespace Democap.Elements
 pin Democap.Behaviors
 
 pin Dragengine.Scenery
+pin Dragengine.Gui
 
 
 /**
@@ -39,7 +40,7 @@ class MoCapActorClass extends BaseVRActorClass
 	public var ECBAInteractHandle interactHandle
 	public var ECBAGrab grabRightHand, grabLeftHand
 	public var ECBASelectable actorSelectable
-	public var ECBVRHudInfo vrHudInfo
+	public var ECBehaviorVRHud vrHud
 	public var ECBAHudShowCamera hudShowCamera
 	public var ECBVRAttachWristPanel attachWristMenuRight, attachWristMenuLeft
 	public var ECBAResetCalibrationWatcher resetCalibrationWatcher
@@ -138,9 +139,12 @@ class MoCapActorClass extends BaseVRActorClass
 		
 		actorSelectable = ECBASelectable.new(this)
 		
-		vrHudInfo = ECBVRHudInfo.new(this)
+		vrHud = ECBehaviorVRHud.new(this, getPlayerControllable())
+		vrHud.getGuiTheme().setPath("/content/gui/vrmain.degt")
+		vrHud.getDesignerSelector().setValue("Panel.VRHudInfo")
+		vrHud.getSize().setValue(1024)
 		
-		hudShowCamera = ECBAHudShowCamera.new(this, vrHudInfo)
+		hudShowCamera = ECBAHudShowCamera.new(this, vrHud)
 		
 		attachWristMenuRight = ECBVRAttachWristPanel.new(this, getVRRightHandLaserPointer(), true)
 		attachWristMenuLeft = ECBVRAttachWristPanel.new(this, getVRLeftHandLaserPointer(), false)

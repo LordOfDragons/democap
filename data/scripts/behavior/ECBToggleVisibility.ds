@@ -71,6 +71,22 @@ class ECBToggleVisibility extends DefaultECBehavior
 		end
 	end
 	
+	/** Toggle visibility listener. */
+	interface Listener
+		/** Element visibility changed. */
+		func void visibilityChanged(ECBToggleVisibility.Instance instance)
+	end
+	
+	/** Default listener implementation. */
+	class DefaultListener implements Listener
+		func new()
+		end
+		
+		func void visibilityChanged(ECBToggleVisibility.Instance instance)
+		end
+	end
+	
+	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
 		var ECBToggleVisibility pECBehavior
@@ -80,12 +96,13 @@ class ECBToggleVisibility extends DefaultECBehavior
 		var float pDistance
 		var bool pLockZRotation
 		var bool pScaleWithActor
-		
+		var Array pListeners
 		
 		
 		/** Create behavior instance. */
 		func new(ECBToggleVisibility ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
+			pListeners = Array.new()
 		end
 		
 		/** Init behavior instance. */
@@ -99,6 +116,10 @@ class ECBToggleVisibility extends DefaultECBehavior
 			pScaleWithActor = pECBehavior.getScaleWithActor().getValue(stub)
 		end
 		
+		func void dispose()
+			pListeners = null
+			super.dispose()
+		end
 		
 		
 		/** Lock up axis or null value. */
@@ -140,9 +161,17 @@ class ECBToggleVisibility extends DefaultECBehavior
 		
 		/** Show/hide element. */
 		func void setVisible(bool visible)
+			if getVisible() == visible
+				return
+			end
+			
 			var BehaviorElement element = getElement()
 			element.setVisible(visible)
 			element.setTouchable(visible)
+			
+			pListeners.forEach(block Listener each
+				each.visibilityChanged(this)
+			end)
 		end
 		
 		/** Reposition element in front of VR camera. */
@@ -278,6 +307,17 @@ class ECBToggleVisibility extends DefaultECBehavior
 			end
 			
 			return DEMath.max(scale, 0.01)
+		end
+		
+		
+		/** Add listener. */
+		func void addListener(Listener listener)
+			pListeners.add(listener)
+		end
+		
+		/** Remove listener. */
+		func void removeListener(Listener listener)
+			pListeners.remove(listener)
 		end
 	end
 	

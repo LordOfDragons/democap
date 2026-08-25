@@ -41,7 +41,7 @@ class AARecordAnimation extends AABase
 	
 	
 	
-	protected var ECBVRHudInfo.Instance vrHudInfo
+	protected var ECBehaviorVRHud.Instance vrHud
 	protected var ECBAGrab.Instance grabRightHand, grabLeftHand
 	protected var Panel panelInfo
 	protected var RangeModel modelProgress
@@ -72,7 +72,7 @@ class AARecordAnimation extends AABase
 		grabRightHand.getGrabber().setEnabled(true)
 		grabLeftHand.getGrabber().setEnabled(true)
 		
-		if vrHudInfo != null
+		if vrHud != null
 			modelProgress = DefaultRangeModel.new(0, 100, 1, 0, 1)
 			
 			panelInfo = Panel.new(StackLayout.new(), block Panel p
@@ -89,7 +89,7 @@ class AARecordAnimation extends AABase
 				end))
 			end)
 			
-			vrHudInfo.addPanel(panelInfo)
+			vrHud.getPanel().addWidget(panelInfo)
 		end
 		
 		GameApp.getGameApp().getRecordScene().prepare()
@@ -110,7 +110,7 @@ class AARecordAnimation extends AABase
 		
 		var MoCapActor mcactor = actor cast MoCapActor
 		
-		vrHudInfo = ECBVRHudInfo.getInstanceIn(actor)
+		vrHud = mcactor.vrHud
 		grabRightHand = mcactor.grabRightHand
 		grabLeftHand = mcactor.grabLeftHand
 	end
@@ -198,14 +198,14 @@ class AARecordAnimation extends AABase
 			
 			removeHudInfoPanel()
 			
-			if vrHudInfo != null
+			if vrHud != null
 				panelInfo = Panel.new(StackLayout.new(), block Panel p
 					p.setDesignerSelector("Panel.HudInfo.Recording")
 					p.setTransparency(SessionSettings.get().getVRHudInfoTransparency())
 					p.addWidget(DisplayRotatingImage.new(Image.new("/content/gui/images/finished_recording.png")))
 				end)
 				
-				vrHudInfo.addPanel(panelInfo)
+				vrHud.getPanel().addWidget(panelInfo)
 			end
 		end
 	end
@@ -267,7 +267,7 @@ class AARecordAnimation extends AABase
 			if elapsedTime >= waitTime
 				removeHudInfoPanel()
 				
-				if vrHudInfo != null
+				if vrHud != null
 					panelInfo = Panel.new(StackLayout.new(), block Panel p
 						p.setDesignerSelector("Panel.HudInfo.Recording")
 						p.setTransparency(SessionSettings.get().getVRHudInfoTransparency())
@@ -276,7 +276,7 @@ class AARecordAnimation extends AABase
 							p2.addWidget(DisplayImage.new(Image.new("/content/gui/images/recording.png")))
 						end))
 					end)
-					vrHudInfo.addPanel(panelInfo)
+					vrHud.getPanel().addWidget(panelInfo)
 				end
 				
 				state = State.recording
@@ -311,8 +311,7 @@ class AARecordAnimation extends AABase
 	
 	/** Remove and dispose hud info panel if present. */
 	protected func void removeHudInfoPanel()
-		if vrHudInfo != null and panelInfo != null
-			vrHudInfo.removePanel(panelInfo)
+		if panelInfo != null
 			panelInfo.safeDispose()
 			panelInfo = null
 		end

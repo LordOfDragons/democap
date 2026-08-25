@@ -61,7 +61,7 @@ class ECBAHudShowCamera extends DefaultECBehavior
 		
 		
 		var ECBAHudShowCamera pECBehavior
-		var ECBVRHudInfo.Instance pVRHudInfo
+		var ECBehaviorVRHud.Instance pVRHud
 		var ECBRemoteCamera.Instance pCamera
 		var Panel pPanel
 		var WorldRenderer pWorldRenderer
@@ -72,14 +72,14 @@ class ECBAHudShowCamera extends DefaultECBehavior
 		/** Create behavior instance. */
 		func new(ECBAHudShowCamera ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
-			pVRHudInfo = ecbehavior.getVRHudInfo().instance(element)
+			pVRHud = ecbehavior.getVRHud().instance(element)
 		end
 		
 		/** Dispose of behavior instance. */
 		func void dispose()
 			hidePanel()
 			pCamera = null
-			pVRHudInfo = null
+			pVRHud = null
 			super.dispose()
 		end
 		
@@ -89,9 +89,9 @@ class ECBAHudShowCamera extends DefaultECBehavior
 		end
 		
 		
-		/** Behavior instance VR HUD Info. */
-		func ECBVRHudInfo.Instance getVRHudInfo()
-			return pVRHudInfo
+		/** Behavior instance VR HUD. */
+		func ECBehaviorVRHud.Instance getVRHud()
+			return pVRHud
 		end
 		
 		
@@ -127,7 +127,7 @@ class ECBAHudShowCamera extends DefaultECBehavior
 			var float placementX = 0.5
 			var float placementY = 0.4
 			
-			var Point hudSize = pVRHudInfo.getRenderablePanel().getPanel().getSize()
+			var Point hudSize = pVRHud.getPanel().getSize()
 			var float renderSizePercentage = 0.3
 			var int renderSizeX = (renderSizePercentage * hudSize.getX()) cast int
 			var int renderSizeY = ((364.0 / 600.0) * renderSizeX) cast int
@@ -147,7 +147,7 @@ class ECBAHudShowCamera extends DefaultECBehavior
 				end))
 			end)
 			
-			pVRHudInfo.addPanel(pPanel)
+			pVRHud.getPanel().addWidget(pPanel)
 		end
 		
 		/** Remove panel from HUD and dispose of it if present. */
@@ -157,7 +157,6 @@ class ECBAHudShowCamera extends DefaultECBehavior
 			end
 			
 			pWorldRenderer = null
-			pVRHudInfo.removePanel(pPanel)
 			pPanel.safeDispose()
 			pPanel = null
 		end
@@ -178,22 +177,22 @@ class ECBAHudShowCamera extends DefaultECBehavior
 	
 	
 	
-	protected var ECBVRHudInfo pVRHudInfo
+	protected var ECBehaviorVRHud pVRHud
 	
 	
 	
 	/** Create behavior and add it to element class. */
-	func new(BehaviorElementClass eclass, ECBVRHudInfo vrHudInfo) super(eclass)
-		pVRHudInfo = vrHudInfo
+	func new(BehaviorElementClass eclass, ECBehaviorVRHud vrHud) super(eclass)
+		pVRHud = vrHud
 		
 		eclass.addBehavior(this)
 	end
 	
 	
 	
-	/** VR Hud Info behavior. */
-	func ECBVRHudInfo getVRHudInfo()
-		return pVRHudInfo
+	/** VR Hud behavior. */
+	func ECBehaviorVRHud getVRHud()
+		return pVRHud
 	end
 	
 	

@@ -100,9 +100,21 @@ class ECBMotionTransferSideView extends DefaultECBehavior
 			end
 		end
 		
+		class WatchVRMenuVisibility extends ECBToggleVisibility.DefaultListener
+			protected var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func void visibilityChanged(ECBToggleVisibility.Instance instance)
+				pInstance.updatePanelVisibility()
+			end
+		end
+		
 		
 		var ECBMotionTransferSideView pECBehavior
-		var ECBVRHudInfo.Instance pVRHudInfo
+		var ECBehaviorVRHud.Instance pVRHud
 		var Panel pPanel
 		var WorldRenderer pWorldRenderer
 		var bool pShowInLiveMode
@@ -112,12 +124,13 @@ class ECBMotionTransferSideView extends DefaultECBehavior
 		var PlaybackStateChanged pPlaybackStateChanged
 		var WatchCameraEnableGI pWatchCameraEnableGI
 		var WatchCalibrating pWatchCalibrating
+		var WatchVRMenuVisibility pWatchVRMenuVisibility
 		
 		
 		/** Create instance. */
 		func new(ECBMotionTransferSideView ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
-			pVRHudInfo = ecbehavior.vrHudInfo.instance(element)
+			pVRHud = ecbehavior.vrHud.instance(element)
 		end
 		
 		func void dispose()
@@ -137,16 +150,20 @@ class ECBMotionTransferSideView extends DefaultECBehavior
 				SessionState.get().getModelIsCalibrating().removeListener(pWatchCalibrating)
 				pWatchCalibrating = null
 			end
+			if pWatchVRMenuVisibility != null
+				var WorldSpawnCharacter wsc = GameApp.getGameApp().getWorldSpawnCharacter()
+				if wsc != null and wsc.getVRMenu() != null
+					ECBToggleVisibility.getInstanceIn(wsc.getVRMenu()).removeListener(pWatchVRMenuVisibility)
+				end
+				pWatchVRMenuVisibility = null
+			end
 			
 			pWorldRenderer = null
 			if pPanel != null
-				if pVRHudInfo != null
-					pVRHudInfo.removePanel(pPanel)
-				end
 				pPanel.safeDispose()
 				pPanel = null
 			end
-			pVRHudInfo = null
+			pVRHud = null
 			super.dispose()
 		end
 		
@@ -156,7 +173,7 @@ class ECBMotionTransferSideView extends DefaultECBehavior
 			pCamera = pECBehavior.camera.instance(getElement()).getCamera()
 			
 			createCameraPanel()
-			pVRHudInfo.addPanel(pPanel)
+			pVRHud.getPanel().addWidget(pPanel)
 			updatePanelVisibility()
 			
 			pRecordStateChanged = RecordStateChanged.new(this)
@@ -170,6 +187,12 @@ class ECBMotionTransferSideView extends DefaultECBehavior
 			
 			pWatchCalibrating = WatchCalibrating.new(this)
 			SessionState.get().getModelIsCalibrating().addListener(pWatchCalibrating)
+			
+			var WorldSpawnCharacter wsc = GameApp.getGameApp().getWorldSpawnCharacter()
+			if wsc != null and wsc.getVRMenu() != null
+				pWatchVRMenuVisibility = WatchVRMenuVisibility.new(this)
+				ECBToggleVisibility.getInstanceIn(wsc.getVRMenu()).addListener(pWatchVRMenuVisibility)
+			end
 		end
 		
 		/** Create camera panel. */
@@ -181,7 +204,7 @@ class ECBMotionTransferSideView extends DefaultECBehavior
 			var float renderSizePercentage = pECBehavior.transfer.getHmdSize()
 			var float transparency = pECBehavior.transfer.getTransparency()
 			
-			var Point hudSize = pVRHudInfo.getRenderablePanel().getPanel().getSize()
+			var Point hudSize = pVRHud.getPanel().getSize()
 			var int renderSizeX = (renderSizePercentage * hudSize.getX()) cast int
 			//var int renderSizeY = ((3.0 / 4.0) * renderSizeX) cast int
 			var int renderSizeY = renderSizeX
@@ -273,13 +296,18 @@ class ECBMotionTransferSideView extends DefaultECBehavior
 				show = false
 			end
 			
+			var WorldSpawnCharacter wsc = GameApp.getGameApp().getWorldSpawnCharacter()
+			if wsc != null and wsc.getVRMenu() != null and wsc.getVRMenu().getVisible()
+				show = false
+			end
+			
 			pPanel.setVisible(show)
 		end
 	end
 	
 	
 	public var MotionTransferSideView transfer
-	public var ECBVRHudInfo vrHudInfo
+	public var ECBehaviorVRHud vrHud
 	public var ECBehaviorCamera camera
 	
 	
@@ -289,7 +317,7 @@ class ECBMotionTransferSideView extends DefaultECBehavior
 		var String prefix = subId + "."
 		
 		this.transfer = transfer
-		vrHudInfo = ECBVRHudInfo.getBehaviorIn(eclass)
+		vrHud = ECBehaviorVRHud.getBehaviorIn(eclass)
 		
 		camera = ECBehaviorCamera.new(eclass, ECBehaviorCollider.getBehaviorIn(eclass), subId, prefix + "camera")
 		camera.getAttach().getBone().setValue(transfer.getBone())
@@ -304,7 +332,7 @@ class ECBMotionTransferSideView extends DefaultECBehavior
 	/** Dispose of behavior. */
 	func void dispose()
 		transfer = null
-		vrHudInfo = null
+		vrHud = null
 		camera = null
 		super.dispose()
 	end

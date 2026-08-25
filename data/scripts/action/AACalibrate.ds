@@ -43,7 +43,7 @@ class AACalibrate extends AABase
 	
 	
 	
-	protected var ECBVRHudInfo.Instance vrHudInfo
+	protected var ECBehaviorVRHud.Instance vrHud
 	protected var Panel panelCalibrate
 	protected var State state
 	protected var float calibrateElapsed
@@ -66,7 +66,7 @@ class AACalibrate extends AABase
 	protected func void initBehaviors()
 		super.initBehaviors()
 		
-		vrHudInfo = ECBVRHudInfo.getInstanceIn(actor)
+		vrHud = ECBehaviorVRHud.getInstanceIn(actor)
 	end
 	
 	
@@ -86,7 +86,7 @@ class AACalibrate extends AABase
 		
 		character.resetCalibration(actor cast BaseVRActor, true)
 		
-		if vrHudInfo != null
+		if vrHud != null
 			panelCalibrate = Panel.new(StackLayout.new(), block Panel p
 				p.setDesignerSelector("Panel.HudInfo.Calibrate")
 				p.setTransparency(SessionSettings.get().getVRHudInfoTransparency())
@@ -107,7 +107,7 @@ class AACalibrate extends AABase
 				end))
 			end)
 			
-			vrHudInfo.addPanel(panelCalibrate)
+			vrHud.getPanel().addWidget(panelCalibrate)
 		end
 		
 		SessionState.get().getModelIsCalibrating().setToggled(true)
@@ -117,8 +117,7 @@ class AACalibrate extends AABase
 	func void deactivate()
 		SessionState.get().getModelIsCalibrating().setToggled(false)
 		
-		if vrHudInfo != null and panelCalibrate != null
-			vrHudInfo.removePanel(panelCalibrate)
+		if panelCalibrate != null
 			panelCalibrate.safeDispose()
 			panelCalibrate = null
 		end
