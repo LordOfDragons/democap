@@ -63,6 +63,9 @@ class Scene
 		setName(name)
 		
 		if scene.pSaveState != null
+			if GameApp.getGameApp().getScene() == scene
+				GameApp.getGameApp().getProject().save() // ensure save state is up to date
+			end
 			pSaveState = MemoryFile.new(scene.pSaveState)
 		end
 	end
@@ -249,9 +252,14 @@ class Scene
 	
 	/** Save state. */
 	func void saveWorld(GameWorld gameWorld)
+		pSaveState = createSaveState(gameWorld)
+		pEnableWorldPersistency = pSaveState != null
+	end
+	
+	/** Create save state. */
+	protected func MemoryFile createSaveState(GameWorld gameWorld)
 		if gameWorld == null
-			pSaveState = null
-			return
+			return null
 		end
 		
 		var MemoryFile saveState = MemoryFile.new("saveSate")
@@ -278,8 +286,7 @@ class Scene
 		gameWorld.writeDynamicElementDataToFile(env, writer)
 		
 		// store save state
-		pSaveState = saveState
-		pEnableWorldPersistency = true
+		return saveState
 	end
 	
 	/** Drop save state. */
