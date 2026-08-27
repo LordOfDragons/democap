@@ -262,10 +262,12 @@ class WMPanelCharacter extends Panel
 			item.setEnabled(pPanel.getActorProfile() != null)
 			menu.addWidget(item)
 			
+			menu.addWidget(MenuItemSeparator.new())
 			menu.addWidget(MenuItemCommand.new(Resources.edit.get(inVR), "@UI.EditActor.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.editActorProfile()
 			end)))
 			
+			menu.addWidget(MenuItemSeparator.new())
 			menu.addWidget(MenuItemCommand.new(Resources.browse.get(inVR), "@UI.BrowseActors.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.browseActorProfiles()
 			end)))
@@ -307,10 +309,12 @@ class WMPanelCharacter extends Panel
 			item.setEnabled(pPanel.getCharacterProfile() != null)
 			menu.addWidget(item)
 			
+			menu.addWidget(MenuItemSeparator.new())
 			menu.addWidget(MenuItemCommand.new(Resources.edit.get(inVR), "@UI.EditCharacter.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.editCharacterProfile()
 			end)))
 			
+			menu.addWidget(MenuItemSeparator.new())
 			menu.addWidget(MenuItemCommand.new(Resources.browse.get(inVR), "@UI.BrowseCharactersProject.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.browseProjectCharacterProfiles()
 			end)))
@@ -325,6 +329,11 @@ class WMPanelCharacter extends Panel
 			
 			menu.addWidget(MenuItemCommand.new(Resources.browse.get(inVR), "@UI.BrowseModelsGlobal.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.browseGlobalCharacterModels()
+			end)))
+			
+			menu.addWidget(MenuItemSeparator.new())
+			menu.addWidget(MenuItemCommand.new(null, "@UI.RestoreExampleCharacters", BlockActionListener.new(block ActionEvent event
+				pPanel.restoreExampleCharacters()
 			end)))
 			
 			pPanel.getDesktop().addWindow(menu)
@@ -360,6 +369,7 @@ class WMPanelCharacter extends Panel
 			item.setEnabled(pPanel.getCharacterProfile() != null)
 			menu.addWidget(item)
 			
+			menu.addWidget(MenuItemSeparator.new())
 			menu.addWidget(MenuItemCommand.new(Resources.edit.get(inVR), "@UI.EditConfiguration.Dialog", BlockActionListener.new(block ActionEvent event
 				pPanel.editCharacterConfiguration()
 			end)))
@@ -823,6 +833,16 @@ class WMPanelCharacter extends Panel
 		FileSystem.browseOverlay("/content/models/characters")
 	end
 	
+	func void restoreExampleCharacters()
+		WindowDialog.question(getWindow(), "@UI.RestoreExampleCharacters", "@UI.Message.RestoreExampleCharacters",\
+			null, Array.newWith(WindowDialog.ButtonConfiguration.new("@UI.Accept", true),\
+				WindowDialog.ButtonConfiguration.new("@UI.Cancel", false)),\
+			WindowDialog.BlockResultListener.new(block bool result
+				if result
+					GameApp.getGameApp().restoreExampleCharacters()
+				end
+			end))
+	end
 	
 	
 	/** Selected character configuration or null. */
