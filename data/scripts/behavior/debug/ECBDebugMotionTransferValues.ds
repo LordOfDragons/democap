@@ -1,0 +1,274 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Gui
+pin Dragengine.Gui.Layouts
+
+
+class ECBDebugMotionTransferValues extends DefaultECBehavior
+	/** Debug value. */
+	class Value
+		var String pLabel
+		var String pValue
+		
+		/** Create debug value. */
+		func new(String label)
+			pLabel = label
+		end
+		
+		/** Display name. */
+		func String getLabel()
+			return pLabel
+		end
+		
+		/** Value. */
+		func String getValue()
+			return pValue
+		end
+		
+		/** Set float value. */
+		func void setValue(float value)
+			pValue = "{:.3f}".format(Array.newWith(value))
+		end
+		
+		/** Set integer value. */
+		func void setValue(int value)
+			pValue = value.toString()
+		end
+		
+		/** Set string value. */
+		func void setValue(String value)
+			pValue = value
+		end
+		
+		/** Set boolean value. */
+		func void setValue(bool value)
+			pValue = value.toString()
+		end
+		
+		/** Set vector value. */
+		func void setValue(Vector value)
+			pValue = value.toString()
+		end
+		
+		/** Set vector2 value. */
+		func void setValue(Vector2 value)
+			pValue = value.toString()
+		end
+	end
+	
+	/** Listener. */
+	interface Listener
+		/** Target name used to determine which listener has to provide debug values. */
+		func String getTargetName()
+		
+		/** Request list of debug values. */
+		func Array createValues()
+	end
+	
+	/** Default implementation of listener. */
+	class DefaultListener implements Listener
+		func new()
+		end
+		
+		func String getTargetName()
+			return null
+		end
+		
+		func Array createValues()
+			return Array.new()
+		end
+	end
+	
+	
+	class Instance extends DefaultECBehaviorInstance
+		class Target
+			class DisplayValue
+				public var Value value
+				public var DefaultTextModel modelValue
+				
+				func new(Value value)
+					this.value = value
+					this.modelValue = DefaultTextModel.new("")
+				end
+			end
+			
+			public var String name
+			public var Array values
+			public var Panel panelValues
+			
+			func new(String name, Array values)
+				this.name = name
+				this.values = values
+			end
+		end
+		
+		protected var ECBDebugMotionTransferValues pECBehavior
+		protected var ECBehaviorVRHud.Instance pVrHud
+		protected var Panel pPanel
+		protected var Array pListeners, pTargets
+		
+		
+		func new(ECBDebugMotionTransferValues pECBehavior, BehaviorElement element) super(element)
+			this.pECBehavior = pECBehavior
+			
+			pListeners = Array.new()
+			pTargets = Array.new()
+			
+			pVrHud = pECBehavior.vrHud.instance(element)
+		end
+		
+		func void dispose()
+			pVrHud = null
+			super.dispose()
+		end
+		
+		
+		func void addListener(Listener listener)
+			pListeners.add(listener)
+		end
+
+		func void removeListener(Listener listener)
+			pListeners.remove(listener)
+		end
+		
+		
+		func void postThink(float elapsed)
+			if pTargets.getCount() == 0
+				return
+			end
+			
+			pPanel.runWhileBlockingLayout(block
+				pTargets.forEach(block Target target
+					target.panelValues.runWhileBlockingLayout(block
+						target.values.map(block Target.DisplayValue value
+							value.modelValue.setText(value.value.getValue())
+						end)
+					end)
+					target.panelValues.doLayoutIfBlocked()
+				end)
+			end)
+			pPanel.doLayoutIfBlocked()
+			
+			/*
+			pTargets.forEach(block Target target
+				GameApp.getGameApp().getConsole().addMessage("DebugMTValues[" + target.name + "]: " + target.values.map(block Target.DisplayValue value
+					return value.value.getLabel() + "=" + value.value.getValue()
+				end))
+			end)
+			*/
+		end
+		
+		
+		func void addToGameWorld()
+			if pPanel != null
+				return
+			end
+			
+			var Array list = GameApp.getGameApp().debugParamTree.getArrayAt("MoCapActor/MotionTransferValues", null)
+			if list == null or list.getCount() == 0
+				return
+			end
+			
+			list = list.map(block String name
+				return name.toLower()
+			end)
+			
+			pListeners.forEach(block Listener listener
+				if list.has(listener.getTargetName().toLower())
+					var Array values = listener.createValues()
+					if values.getCount() > 0
+						pTargets.add(Target.new(listener.getTargetName(), values.map(block Value value
+							return Target.DisplayValue.new(value)
+						end)))
+					end
+				end
+			end)
+			
+			if pTargets.getCount() == 0
+				return
+			end
+			
+			pPanel = Panel.new(CentrizedBoxLayout.new(LayoutAxis.y, 2, 0.2, 0.5), block Panel p
+				pTargets.forEach(block Target target
+					target.panelValues = Panel.new(FlowLayout.new(LayoutAxis.y), block Panel p2
+						p2.setDesignerSelector("Panel.HudInfo.DebugControllerValues.Target")
+						p2.addWidget(Label.new(target.name, "Label.HudInfo.DebugControllerValues.Target"))
+						p2.addWidget(Panel.new(FormLayout.new(), block Panel p3
+							p3.setDesignerSelector("Panel.HudInfo.DebugControllerValues.Values")
+							target.values.forEach(block Target.DisplayValue value
+								p3.addWidget(Label.new(value.value.getLabel() + ":", "Label.HudInfo.DebugControllerValues.Name"))
+								p3.addWidget(Label.new(value.modelValue, "Label.HudInfo.DebugControllerValues.Value"))
+							end)
+						end))
+					end)
+					p.addWidget(target.panelValues)
+				end)
+			end)
+			
+			pVrHud.getPanel().addWidget(pPanel)
+			setRequiresThink(true)
+		end
+		
+		func void removeFromGameWorld()
+			setRequiresThink(false)
+			if pPanel != null
+				pPanel.safeDispose()
+				pPanel = null
+			end
+			pTargets.removeAll()
+		end
+	end
+	
+	
+	public var ECBehaviorVRHud vrHud
+	
+	
+	func new(BehaviorElementClass eclass) super(eclass)
+		this.vrHud = ECBehaviorVRHud.getBehaviorIn(eclass)
+		eclass.addBehavior(this)
+	end
+	
+	func void dispose()
+		vrHud = null
+		super.dispose()
+	end
+	
+	
+	func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	
+	static func ECBDebugMotionTransferValues getBehaviorIn(BehaviorElementClass eclass)
+		return eclass.findBehavior(block ECBDebugMotionTransferValues behavior
+			return true
+		end) cast ECBDebugMotionTransferValues
+	end
+	
+	
+	func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

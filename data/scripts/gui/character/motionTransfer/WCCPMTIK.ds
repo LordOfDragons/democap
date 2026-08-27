@@ -64,7 +64,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 	var EditVector2 pEditBaseRotateAngleMinimum
 	var EditVector2 pEditBaseRotateAngleMaximum
 	var EditVector pEditGuideBendAxisRotation
-	var DefaultToggleModel pModelGuideUsePosition
+	var DefaultToggleModel pModelGuideUsePosition, pModelUseBaseRotation
 	var bool pIsContentCreated
 	
 	
@@ -99,6 +99,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pModelGuideTwistStrength = DefaultTextModel.new()
 		pModelRelocateTip = DefaultToggleModel.new()
 		pModelGuideUsePosition = DefaultToggleModel.new()
+		pModelUseBaseRotation = DefaultToggleModel.new()
 	end
 	
 	/** Dispose of window. */
@@ -127,7 +128,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		end
 		pModelActorReach = null
 		pModelReachLimit = null
-		pEditReachScaling = null
+		pEditReachScaling = pEditReachScalingBack = null
 		pModelAdjustPosition = null
 		pModelListMoveBaseIK = null
 		pModelTextMoveBaseIK = null
@@ -145,6 +146,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		pEditBaseRotateAngleMaximum = null
 		pEditGuideBendAxisRotation = null
 		pModelGuideUsePosition = null
+		pModelUseBaseRotation = null
 		super.dispose()
 	end
 	
@@ -192,6 +194,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pEditBaseRotateAngleMaximum.setVector2(mt.getBaseRotateAngleMaximum())
 				pEditGuideBendAxisRotation.setVector(mt.getGuideBendAxisRotation())
 				pModelGuideUsePosition.setToggled(mt.getGuideUsePosition())
+				pModelUseBaseRotation.setToggled(mt.getUseBaseRotation())
 				
 			else
 				pModelTextTipBone.setText("")
@@ -220,6 +223,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 				pEditBaseRotateAngleMaximum.setVector2(Vector2.new())
 				pEditGuideBendAxisRotation.setVector(Vector.new())
 				pModelGuideUsePosition.setToggled(false)
+				pModelUseBaseRotation.setToggled(true)
 			end
 		end)
 		doLayoutIfBlocked()
@@ -259,6 +263,7 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		mt.setBaseRotateAngleMaximum(pEditBaseRotateAngleMaximum.getVector2())
 		mt.setGuideBendAxisRotation(pEditGuideBendAxisRotation.getVector())
 		mt.setGuideUsePosition(pModelGuideUsePosition.getToggled())
+		mt.setUseBaseRotation(pModelUseBaseRotation.getToggled())
 	end
 	
 	/** Supports motion transfer type. */
@@ -502,6 +507,13 @@ class WCCPMTIK extends WCCPanelMotionTransfer
 		
 		checkBox = CheckBox.new(pModelGuideUsePosition, "@UI.GuideUsePosition")
 		checkBox.setToolTip("@UI.ToolTip.GuideUsePosition")
+		panel.addWidget(checkBox)
+		
+		// use base rotation
+		panel.addWidget(Label.new(""))
+		
+		checkBox = CheckBox.new(pModelUseBaseRotation, "@UI.UseBaseRotation")
+		checkBox.setToolTip("@UI.ToolTip.UseBaseRotation")
 		panel.addWidget(checkBox)
 		
 		// relocate tip

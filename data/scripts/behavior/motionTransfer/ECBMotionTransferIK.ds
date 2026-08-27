@@ -67,6 +67,22 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			end
 		end
 		
+		/** Debug value listener. */
+		class DebugValueListener extends ECBDebugMotionTransferValues.DefaultListener
+			var Instance pInstance
+			
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func String getTargetName()
+				return pInstance.getECBehavior().getTransfer().getName()
+			end
+			
+			func Array createValues()
+				return pInstance.createDebugValues()
+			end
+		end
 		
 		
 		var ECBMotionTransferIK pECBehavior
@@ -76,14 +92,12 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		var ECBTrackerSlot.Instance pSlotGuide
 		var ECBTrackerSlot.Instance pSlotRelocate
 		var AnimatorController pControllerTipPosition, pControllerTipOrientation
-		var AnimatorController pControllerGuideRotation
-		var AnimatorController pControllerGuideBend
-		var AnimatorController pControllerTwist
-		var AnimatorController pControllerGuideTwistAxis
+		var AnimatorController pControllerGuideRotation, pControllerGuideBend
+		var AnimatorController pControllerTwist, pControllerGuideTwistAxis
 		var AnimatorController pControllerRetracted
 		var AnimatorController pControllerBlend
 		var AnimatorController pControllerPreRotate
-		var AnimatorController pControllerBaseRotateX, pControllerBaseRotateY
+		var AnimatorController pControllerBaseRotateX, pControllerBaseRotateY, pControllerEnableBaseRotate
 		var Matrix pTransformTip
 		var Quaternion pTransformTipQuat
 		var Matrix pTransformGuide
@@ -119,6 +133,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		var bool pReachGuideScaleX, pReachGuideScaleY, pReachGuideScaleZ
 		var Vector pGuideBaseTarget
 		
+		var ECBDebugMotionTransferValues.Value pDVBaseRotateX, pDVBaseRotateY, pDVBaseRotateTarget,\
+			pDVBasePosition, pDVTargetPosition, pDVGuidePosition, pDVAxisX, pDVAxisY, pDVAxisZ
 		
 		
 		/** Create instance. */
@@ -197,6 +213,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pControllerPreRotate = actorAnimated.getControllerNamed(pECBehavior.getControllerNamePreRotate())
 			pControllerBaseRotateX = actorAnimated.getControllerNamed(pECBehavior.getControllerNameBaseRotateX())
 			pControllerBaseRotateY = actorAnimated.getControllerNamed(pECBehavior.getControllerNameBaseRotateY())
+			pControllerEnableBaseRotate = actorAnimated.getControllerNamed(pECBehavior.getControllerNameEnableBaseRotate())
 			
 			pTwistBone = -1
 			if not transfer.getTipBone().empty()
@@ -228,6 +245,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				and pControllerTipPosition != null and pControllerBlend != null
 			
 			pMoCapAnimator.addListener(UpdateControllers.new(this))
+			pECBehavior.debugValues.instance(getElement()).addListener(DebugValueListener.new(this))
 		end
 		
 		
@@ -255,7 +273,6 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		func ECBTrackerSlot.Instance getSlotGuide()
 			return pSlotGuide
 		end
-		
 		
 		
 		/** Update controllers. */
@@ -301,11 +318,8 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			if pControllerGuideBend != null
 				pControllerGuideBend.setValue(0)
 			end
-			if pControllerBaseRotateX != null
-				pControllerBaseRotateX.setValue(0)
-			end
-			if pControllerBaseRotateY != null
-				pControllerBaseRotateY.setValue(0)
+			if pControllerEnableBaseRotate != null
+				pControllerEnableBaseRotate.setValue(0)
 			end
 		end
 		
@@ -364,10 +378,21 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			
 			pReachTargetRotation = matrix.getEulerAngles()
 			pReachTargetPosition = matrix.getPosition()
+			if pDVTargetPosition != null
+				pDVTargetPosition.setValue(pReachTargetPosition)
+			end
 			pRetractedLength = 1
 			
 			var Matrix baseMatrix = pComponent.boneGetMatrix(pBaseBone)
+			if pDVBasePosition != null
+				pDVBasePosition.setValue(baseMatrix.getPosition())
+			end
 			var Matrix reachMatrix = pReachMatrix * baseMatrix
+			if pDVAxisX != null
+				pDVAxisX.setValue(reachMatrix.getRightVector())
+				pDVAxisY.setValue(reachMatrix.getUpVector())
+				pDVAxisZ.setValue(reachMatrix.getViewVector())
+			end
 			var Vector guidePosition
 			
 			pReachRelativeTarget = reachMatrix.getInverse() * pReachTargetPosition
@@ -376,6 +401,9 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				pReachGuideRotation = matrixGuide.getEulerAngles()
 				if pGuidePositionTarget != null
 					guidePosition = matrixGuide.getPosition()
+				end
+				if pDVGuidePosition != null
+					pDVGuidePosition.setValue(matrixGuide.getPosition())
 				end
 				
 				matrixGuide = matrixGuide * reachMatrix.getInverse()
@@ -455,7 +483,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		end
 		
 		protected func void updateControllerBaseRotate()
-			if pControllerBaseRotateX == null or pControllerBaseRotateY == null or pBaseBone == -1
+			if pControllerBaseRotateX == null or pControllerBaseRotateY == null or pControllerEnableBaseRotate == null or pBaseBone == -1
 				return
 			end
 			
@@ -499,6 +527,17 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			
 			pControllerBaseRotateX.setValue(angleX)
 			pControllerBaseRotateY.setValue(angleY)
+			pControllerEnableBaseRotate.setValue(1)
+			
+			if pDVBaseRotateX != null
+				pDVBaseRotateX.setValue(angleX)
+			end
+			if pDVBaseRotateY != null
+				pDVBaseRotateY.setValue(angleY)
+			end
+			if pDVBaseRotateTarget != null
+				pDVBaseRotateTarget.setValue(target)
+			end
 		end
 		
 		protected func void updateControllerPreRotate()
@@ -655,6 +694,21 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				pMatrixAdjustSlotComponent = pECBehavior.getTransfer().getTipTracker().getReverseTransformMatrix()
 			end
 		end
+		
+		
+		func Array createDebugValues()
+			var Array values = Array.new()
+			values.add(pDVBaseRotateX = ECBDebugMotionTransferValues.Value.new("Base Rotate X"))
+			values.add(pDVBaseRotateY = ECBDebugMotionTransferValues.Value.new("Base Rotate Y"))
+			values.add(pDVBaseRotateTarget = ECBDebugMotionTransferValues.Value.new("Base Rotate Target"))
+			values.add(pDVBasePosition = ECBDebugMotionTransferValues.Value.new("Base Position"))
+			values.add(pDVTargetPosition = ECBDebugMotionTransferValues.Value.new("Target Position"))
+			values.add(pDVGuidePosition = ECBDebugMotionTransferValues.Value.new("Guide Position"))
+			values.add(pDVAxisX = ECBDebugMotionTransferValues.Value.new("Axis X"))
+			values.add(pDVAxisY = ECBDebugMotionTransferValues.Value.new("Axis Y"))
+			values.add(pDVAxisZ = ECBDebugMotionTransferValues.Value.new("Axis Z"))
+			return values
+		end
 	end
 	
 	
@@ -662,6 +716,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	var MotionTransferIK pTransfer
 	var ECBehaviorVRPlayspace pVRPlayspace
 	var ECBMoCapAnimator pMoCapAnimator
+	public var ECBDebugMotionTransferValues debugValues
 	var ECBTrackerSlot pSlotTip
 	var ECBTrackerSlot pSlotGuide
 	var ECBTrackerSlot pSlotRelocate
@@ -673,7 +728,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	var String pControllerNameRetracted
 	var String pControllerNameBlend
 	var String pControllerNamePreRotate
-	var String pControllerNameBaseRotateX, pControllerNameBaseRotateY
+	var String pControllerNameBaseRotateX, pControllerNameBaseRotateY, pControllerNameEnableBaseRotate
 	
 	
 	
@@ -687,6 +742,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		pTransfer = transfer
 		pVRPlayspace = eclass.getVRPlayspace()
 		pMoCapAnimator = ECBMoCapAnimator.getBehaviorIn(eclass)
+		debugValues = ECBDebugMotionTransferValues.getBehaviorIn(eclass)
 		if transfer.getTipTracker().getRealSlot() != null
 			pSlotTip = transfer.getTipTracker().getRealSlot().getBehavior()
 		end
@@ -708,6 +764,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		pControllerNamePreRotate = transfer.getName() + ".preRotate"
 		pControllerNameBaseRotateX = transfer.getName() + ".baseRotateX"
 		pControllerNameBaseRotateY = transfer.getName() + ".baseRotateY"
+		pControllerNameEnableBaseRotate = transfer.getName() + ".enableBaseRotate"
 		
 		eclass.addBehavior(this)
 	end
@@ -716,6 +773,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	func void dispose()
 		pVRPlayspace = null
 		pMoCapAnimator = null
+		debugValues = null
 		pTransfer = null
 		pSlotRelocate = null
 		pSlotGuide = null
@@ -798,6 +856,10 @@ class ECBMotionTransferIK extends DefaultECBehavior
 	
 	func String getControllerNameBaseRotateY()
 		return pControllerNameBaseRotateY
+	end
+	
+	func String getControllerNameEnableBaseRotate()
+		return pControllerNameEnableBaseRotate
 	end
 	
 	

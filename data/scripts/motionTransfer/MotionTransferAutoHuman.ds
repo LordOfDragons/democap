@@ -81,7 +81,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	var Vector pReachScalingArmLeft, pReachScalingArmLeftBack
 	var Vector pScaleHeadRotation, pScaleSpineBending
 	var Vector pNeckBendAxisRotation, pSpineBendAxisRotation
-	var bool pRelocateArms, pPullFeetToGround, pSimulateWaist, pUseSpineTwist, pElbowGuideUsePosition
+	var bool pRelocateArms, pPullFeetToGround, pSimulateWaist, pUseSpineTwist, pElbowGuideUsePosition, pUseShoulderRotation
 	var WaistMode pWaistMode
 	var String pNeckBendMoveX, pNeckBendMoveY, pNeckShiftMoveX, pNeckShiftMoveY
 	var Vector2 pNeckBendMoveRange, pNeckShiftMoveRange, pShoulderRange
@@ -116,6 +116,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pNeckBendMoveX = pNeckBendMoveY = pNeckShiftMoveX = pNeckShiftMoveY = ""
 		pNeckBendMoveRange = Vector2.new(60, 45)
 		pShoulderRange = Vector2.new(30, 45)
+		pUseShoulderRotation = true
 		
 		// neck/head distance in actor space is 2dm . head can be shifted around 5cm forward.
 		// this results in an angle of deg(atan2(0.05,0.2)) = 14 degrees. for sidewards shift
@@ -252,6 +253,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pNeckShiftMoveRange = transfer.pNeckShiftMoveRange
 		pShoulderRange = transfer.pShoulderRange
 		pElbowGuideUsePosition = transfer.pElbowGuideUsePosition
+		pUseShoulderRotation = transfer.pUseShoulderRotation
 		
 		// pTransferScaleLower = MotionTransferScaleSlots.new(transfer.pTransferScaleLower)
 		// pTransferScaleUpper = MotionTransferScaleSlots.new(transfer.pTransferScaleUpper)
@@ -681,6 +683,16 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	/** Set elbow guide to use position instead of rotation if true. */
 	func void setElbowGuideUsePosition(bool usePosition)
 		pElbowGuideUsePosition = usePosition
+	end
+	
+	/** Use shoulder rotation. */
+	func bool getUseShoulderRotation()
+		return pUseShoulderRotation
+	end
+	
+	/** Set to use shoulder rotation. */
+	func void setUseShoulderRotation(bool useRotation)
+		pUseShoulderRotation = useRotation
 	end
 	
 	
@@ -1329,17 +1341,24 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pTransferArmRight.setGuideUsePosition(pElbowGuideUsePosition)
 		
 		pTransferArmRight.setGuideBendAxisRotation(Vector.new(-45, 90, 0))
-		pTransferArmRight.setBaseRotateAngleMinimum(Vector2.new(0, -pShoulderRange.getY()))
+		pTransferArmRight.setBaseRotateAngleMinimum(Vector2.new(0, -pShoulderRange.getY() / 2))
 		pTransferArmRight.setBaseRotateAngleMaximum(Vector2.new(pShoulderRange.getX(), pShoulderRange.getY()))
+		pTransferArmRight.setUseBaseRotation(pUseShoulderRotation)
 		
 		if isSlotRightElbowAttached
-			pTransferArmRight.setBaseRotateRangeCenter(Vector2.new(25, 90))
+			/*pTransferArmRight.setBaseRotateRangeCenter(Vector2.new(25, 90))
 			pTransferArmRight.setBaseRotateRangeMinimum(Vector2.new(-10, -60))
-			pTransferArmRight.setBaseRotateRangeMaximum(Vector2.new(60, 140))
+			pTransferArmRight.setBaseRotateRangeMaximum(Vector2.new(60, 140))*/
+			pTransferArmRight.setBaseRotateRangeCenter(Vector2.new(25, 60))
+			pTransferArmRight.setBaseRotateRangeMinimum(Vector2.new(-10, -90))
+			pTransferArmRight.setBaseRotateRangeMaximum(Vector2.new(60, 160))
 			
 		else
-			pTransferArmRight.setBaseRotateRangeCenter(Vector2.new(25, 90))
+			/*pTransferArmRight.setBaseRotateRangeCenter(Vector2.new(25, 90))
 			pTransferArmRight.setBaseRotateRangeMinimum(Vector2.new(-10, -60))
+			pTransferArmRight.setBaseRotateRangeMaximum(Vector2.new(60, 160))*/
+			pTransferArmRight.setBaseRotateRangeCenter(Vector2.new(25, 60))
+			pTransferArmRight.setBaseRotateRangeMinimum(Vector2.new(-10, -90))
 			pTransferArmRight.setBaseRotateRangeMaximum(Vector2.new(60, 160))
 		end
 		
@@ -1415,17 +1434,24 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		
 		pTransferArmLeft.setGuideBendAxisRotation(Vector.new(45, -90, 0))
 		pTransferArmLeft.setBaseRotateAngleMinimum(Vector2.new(0, -pShoulderRange.getY()))
-		pTransferArmLeft.setBaseRotateAngleMaximum(Vector2.new(pShoulderRange.getX(), pShoulderRange.getY()))
+		pTransferArmLeft.setBaseRotateAngleMaximum(Vector2.new(pShoulderRange.getX(), pShoulderRange.getY() / 2))
+		pTransferArmLeft.setUseBaseRotation(pUseShoulderRotation)
 		
 		if isSlotLeftElbowAttached
-			pTransferArmLeft.setBaseRotateRangeCenter(Vector2.new(25, -90))
+			/*pTransferArmLeft.setBaseRotateRangeCenter(Vector2.new(25, -90))
 			pTransferArmLeft.setBaseRotateRangeMinimum(Vector2.new(-10, -140))
-			pTransferArmLeft.setBaseRotateRangeMaximum(Vector2.new(60, 60))
+			pTransferArmLeft.setBaseRotateRangeMaximum(Vector2.new(60, 60))*/
+			pTransferArmLeft.setBaseRotateRangeCenter(Vector2.new(25, -60))
+			pTransferArmLeft.setBaseRotateRangeMinimum(Vector2.new(-10, -160))
+			pTransferArmLeft.setBaseRotateRangeMaximum(Vector2.new(60, 90))
 			
 		else
-			pTransferArmLeft.setBaseRotateRangeCenter(Vector2.new(25, -90))
+			/*pTransferArmLeft.setBaseRotateRangeCenter(Vector2.new(25, -90))
 			pTransferArmLeft.setBaseRotateRangeMinimum(Vector2.new(-10, -160))
-			pTransferArmLeft.setBaseRotateRangeMaximum(Vector2.new(60, 60))
+			pTransferArmLeft.setBaseRotateRangeMaximum(Vector2.new(60, 60))*/
+			pTransferArmLeft.setBaseRotateRangeCenter(Vector2.new(25, -60))
+			pTransferArmLeft.setBaseRotateRangeMinimum(Vector2.new(-10, -160))
+			pTransferArmLeft.setBaseRotateRangeMaximum(Vector2.new(60, 90))
 		end
 		
 		if hasSlotLeftHandController
@@ -1767,6 +1793,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			elif tagName.equals("elbowGuideUsePosition")
 				pElbowGuideUsePosition = element.getFirstCDataBool()
 				
+			elif tagName.equals("useShoulderRotation")
+				pUseShoulderRotation = element.getFirstCDataBool()
+				
 			elif tagName.equals("transfers")
 				loadTransfers(loader, element)
 			end
@@ -1884,6 +1913,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		loader.writeVector2(tag, "neckShiftMoveRange", pNeckShiftMoveRange)
 		loader.writeVector2(tag, "shoulderRange", pShoulderRange)
 		tag.addDataTag("elbowGuideUsePosition", pElbowGuideUsePosition)
+		tag.addDataTag("useShoulderRotation", pUseShoulderRotation)
 		
 		var EasyXMLElement tagTransfers = tag.addTag("transfers")
 		// pTransferScaleLower.save(loader, tagTransfers.addTag("scaleLower"), calibrated)

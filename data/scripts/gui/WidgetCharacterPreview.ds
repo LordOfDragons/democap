@@ -238,14 +238,16 @@ class WidgetCharacterPreview extends Panel
 	var Color pDefaultSkinTintColor
 	
 	var CharacterPreviewEditor pEditor
-	
+	var int pLastWidth
+	var bool pInVR
 	
 	
 	/** Create widget. */
-	func new()
+	func new(bool inVR)
 		pPathModel = pPathSkin = pPathRig = pPathAnimation = pPathDefaultSkin = ""
 		pBoneAxisRotation = Vector.new()
 		pScale = 1
+		pInVR = inVR
 		pDefaultSkinTintColor = Color.lightGray
 		pListeners = Array.new()
 		pCharacterPreviewClass = GameApp.getGameApp().getElementClassList()\
@@ -719,10 +721,11 @@ class WidgetCharacterPreview extends Panel
 		end
 		
 		var float cameraDistance = pCameraDirector.getDistance()
-		if Math.fabs(cameraDistance - pCameraDistance) < 0.001
+		if Math.fabs(cameraDistance - pCameraDistance) < 0.001 and pLastWidth == getWidth()
 			return
 		end
 		pCameraDistance = cameraDistance
+		pLastWidth = getWidth()
 		
 		var float scaling = calculatePreviewCoordSystemScaling()
 		pCharacterPreview.forEachInstance(block ECBPreviewCoordSystem.Instance behavior
@@ -737,11 +740,21 @@ class WidgetCharacterPreview extends Panel
 	 * Calculate preview coordinate system scaling.
 	 */
 	protected func float calculatePreviewCoordSystemScaling()
+		var float scaling
 		if pCameraDistance > 4
-			return pCameraDistance / 4
+			scaling = pCameraDistance / 4
 			
 		else
-			return DEMath.linearStep(pCameraDistance, 0.1, 4.0, 0.1, 1.0)
+			scaling = DEMath.linearStep(pCameraDistance, 0.1, 4.0, 0.1, 1.0)
 		end
+		
+		var int width = getWidth()
+		scaling *= DEMath.linearStep(width, 50, 1000, 3.0, 1.0)
+		
+		if pInVR
+			// scaling *= 2
+		end
+		
+		return scaling
 	end
 end
