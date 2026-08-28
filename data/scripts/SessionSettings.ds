@@ -53,6 +53,16 @@ class SessionSettings
 		session /** WMPanelSession. */
 	end
 	
+	/** Show laser component. */
+	enum ShowLaserComponent
+		always /** Always show laser. */
+		trackPad /** Show laser on track pad. */
+		stick /** Show laser on stick. */
+		menu /** Show laser on menu. */
+		secondary /** Show laser on secondary. */
+		thumbrest /** Show laser on thumbrest. */
+	end
+	
 	/** Toggle Show VR camera listener. */
 	class ToggleShowVRCameraListener extends DefaultToggleModelListener
 		func new()
@@ -287,6 +297,24 @@ class SessionSettings
 		end
 	end
 	
+	class SaveShowLaserComponentChanged extends DefaultListModelListener
+		var String pSettingPath
+		
+		func new(String settingPath)
+			pSettingPath = settingPath
+		end
+		
+		func void selectionChanged(ListModel listModel)
+			if listModel.getSelected() != -1
+				GameApp.getGameApp().getSettings().setAt(pSettingPath,\
+					(listModel.getAt(listModel.getSelected()) cast ShowLaserComponent).name())
+					
+			else
+				GameApp.getGameApp().getSettings().setAt(pSettingPath, "always")
+			end
+		end
+	end
+	
 	
 	
 	var DefaultToggleModel pModelEnableVR
@@ -311,6 +339,7 @@ class SessionSettings
 	var DefaultToggleModel pModelShowVRDevices
 	var DefaultListModel pModelRightWristMenuPanel
 	var DefaultListModel pModelLeftWristMenuPanel
+	var DefaultListModel pModelShowLaserOnTouch
 	var DefaultTextModel pModelManualMovementStep
 	var DefaultTextModel pModelManualRotationStep
 	var DefaultToggleModel pModelTeleportMovement
@@ -402,6 +431,10 @@ class SessionSettings
 		pModelLeftWristMenuPanel = DefaultListModel.new(WristMenuPanel.all().toArray())
 		pModelLeftWristMenuPanel.setSelectedElement(WristMenuPanel.named(s.getStringAt("LeftWristMenuPanel", "none")))
 		pModelLeftWristMenuPanel.addListener(SaveWristMenuChanged.new("LeftWristMenuPanel"))
+		
+		pModelShowLaserOnTouch = DefaultListModel.new(ShowLaserComponent.all().toArray())
+		pModelShowLaserOnTouch.setSelectedElement(ShowLaserComponent.named(s.getStringAt("ShowLaserOnTouch", "always")))
+		pModelShowLaserOnTouch.addListener(SaveShowLaserComponentChanged.new("ShowLaserOnTouch"))
 		
 		pModelManualMovementStep = DefaultTextModel.new(s.getStringAt("ManualMovementStep", "0.1"))
 		pModelManualMovementStep.addListener(SaveTextModelChanged.new("ManualMovementStep"))
@@ -646,6 +679,16 @@ class SessionSettings
 	/** Left wrist menu panel. */
 	func WristMenuPanel getLeftWristMenuPanel()
 		return pModelLeftWristMenuPanel.getSelectedElement() cast WristMenuPanel
+	end
+	
+	/** Model show laser on touch. */
+	func DefaultListModel getModelShowLaserOnTouch()
+		return pModelShowLaserOnTouch
+	end
+	
+	/** Show laser on touch. */
+	func ShowLaserComponent getShowLaserOnTouch()
+		return pModelShowLaserOnTouch.getSelectedElement() cast ShowLaserComponent
 	end
 	
 	/** Model manual movement step. */

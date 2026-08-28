@@ -20,14 +20,13 @@
  */
 
 namespace Democap.Actions
-
 pin Democap.Behaviors
 pin Democap.Elements
-
 pin Dragengine.LoadSave
 pin Dragengine.Preloading
 pin Dragengine.Scenery
 pin Dragengine.Utils
+pin Dragengine.Gui
 
 
 /**
@@ -55,13 +54,17 @@ class AADefault extends AABase
 		end
 	end
 	
-	/** Track touch button. */
-	enum TrackTouchButton
-		trackPad
-		stick
-		menu
-		secondary
-		thumbrest
+	/** Show laser on touch setting changed. */
+	class ShowLaserComponentChanged extends DefaultListModelListener
+		var AADefault pAction
+		
+		func new(AADefault action)
+			pAction = action
+		end
+		
+		func void valueChanged(ListModel listModel)
+			pAction.updateTrackTouchComponent()
+		end
 	end
 	
 	
@@ -71,7 +74,8 @@ class AADefault extends AABase
 	protected var ECBASelectable.Instance actorSelectable
 	protected var ECBehaviorVRHud.Instance vrHud
 	protected var ECBAResetCalibrationWatcher.Instance resetCalibrationWatcher
-	protected var TrackTouchButton pTrackTouchButtonLeft, pTrackTouchButtonRight
+	protected var SessionSettings.ShowLaserComponent pShowLaserOnTouchLeft, pShowLaserOnTouchRight
+	protected var ShowLaserComponentChanged pShowLaserOnTouchListener
 	
 	
 	/** Create action. */
@@ -104,53 +108,73 @@ class AADefault extends AABase
 		grabRightHand.getGrabber().setEnabled(true)
 		grabLeftHand.getGrabber().setEnabled(true)
 		
-		controllerCapabilitiesChanged()
+		updateTrackTouchComponent()
+		
+		pShowLaserOnTouchListener = ShowLaserComponentChanged.new(this)
+		SessionSettings.get().getModelShowLaserOnTouch().addListener(pShowLaserOnTouchListener)
 	end
 	
 	/** Action has been deactivated. */
 	func void deactivate()
+		if pShowLaserOnTouchListener != null
+			SessionSettings.get().getModelShowLaserOnTouch().removeListener(pShowLaserOnTouchListener)
+			pShowLaserOnTouchListener = null
+		end
+		
 		resetCalibrationWatcher.reset()
 		super.deactivate()
 	end
 	
-	/** Controller capabilities changed. */
-	func void controllerCapabilitiesChanged()
+	/** Update track touch components. */
+	func void updateTrackTouchComponent()
 		var TrackControllerCaps caps = GameApp.getGameApp().getTrackControllerCaps()
 		
-		vrRightHandPointAt.setEnabled(caps.getHasControllerRight() and not caps.hasAnyTouchButtonsRight())
-		vrLeftHandPointAt.setEnabled(caps.getHasControllerLeft() and not caps.hasAnyTouchButtonsLeft())
+		pShowLaserOnTouchLeft = pShowLaserOnTouchRight = SessionSettings.ShowLaserComponent.always
 		
-		pTrackTouchButtonRight = null
-		if caps.getHasControllerRight()
-			if caps.getHasTouchTrackPadRight()
-				pTrackTouchButtonRight = TrackTouchButton.trackPad
-				
-			elif caps.getHasTouchStickRight()
-				pTrackTouchButtonRight = TrackTouchButton.stick
-				
-			elif caps.getHasTouchMenuRight()
-				pTrackTouchButtonRight = TrackTouchButton.menu
-				
-			elif caps.getHasTouchSecondaryRight()
-				pTrackTouchButtonRight = TrackTouchButton.secondary
+		select SessionSettings.get().getShowLaserOnTouch()
+		case SessionSettings.ShowLaserComponent.trackPad
+			if caps.getHasControllerRight() and caps.getHasTouchTrackPadRight()
+				pShowLaserOnTouchRight = SessionSettings.ShowLaserComponent.trackPad
+			end
+			if caps.getHasControllerLeft() and caps.getHasTouchTrackPadLeft()
+				pShowLaserOnTouchLeft = SessionSettings.ShowLaserComponent.trackPad
+			end
+			
+		case SessionSettings.ShowLaserComponent.stick
+			if caps.getHasControllerRight() and caps.getHasTouchStickRight()
+				pShowLaserOnTouchRight = SessionSettings.ShowLaserComponent.stick
+			end
+			if caps.getHasControllerLeft() and caps.getHasTouchStickLeft()
+				pShowLaserOnTouchLeft = SessionSettings.ShowLaserComponent.stick
+			end
+			
+		case SessionSettings.ShowLaserComponent.menu
+			if caps.getHasControllerRight() and caps.getHasTouchMenuRight()
+				pShowLaserOnTouchRight = SessionSettings.ShowLaserComponent.menu
+			end
+			if caps.getHasControllerLeft() and caps.getHasTouchMenuLeft()
+				pShowLaserOnTouchLeft = SessionSettings.ShowLaserComponent.menu
+			end
+			
+		case SessionSettings.ShowLaserComponent.secondary
+			if caps.getHasControllerRight() and caps.getHasTouchSecondaryRight()
+				pShowLaserOnTouchRight = SessionSettings.ShowLaserComponent.secondary
+			end
+			if caps.getHasControllerLeft() and caps.getHasTouchSecondaryLeft()
+				pShowLaserOnTouchLeft = SessionSettings.ShowLaserComponent.secondary
+			end
+			
+		case SessionSettings.ShowLaserComponent.thumbrest
+			if caps.getHasControllerRight() and caps.getHasTouchThumbrestRight()
+				pShowLaserOnTouchRight = SessionSettings.ShowLaserComponent.thumbrest
+			end
+			if caps.getHasControllerLeft() and caps.getHasTouchThumbrestLeft()
+				pShowLaserOnTouchLeft = SessionSettings.ShowLaserComponent.thumbrest
 			end
 		end
 		
-		pTrackTouchButtonLeft = null
-		if caps.getHasControllerLeft()
-			if caps.getHasTouchTrackPadLeft()
-				pTrackTouchButtonLeft = TrackTouchButton.trackPad
-				
-			elif caps.getHasTouchStickLeft()
-				pTrackTouchButtonLeft = TrackTouchButton.stick
-				
-			elif caps.getHasTouchMenuLeft()
-				pTrackTouchButtonLeft = TrackTouchButton.menu
-				
-			elif caps.getHasTouchSecondaryLeft()
-				pTrackTouchButtonLeft = TrackTouchButton.secondary
-			end
-		end
+		vrRightHandPointAt.setEnabled(pShowLaserOnTouchRight == SessionSettings.ShowLaserComponent.always)
+		vrLeftHandPointAt.setEnabled(pShowLaserOnTouchLeft == SessionSettings.ShowLaserComponent.always)
 	end
 	
 	
@@ -250,12 +274,12 @@ class AADefault extends AABase
 	
 	func void menuTouch(bool rightHand)
 		if rightHand
-			if pTrackTouchButtonRight == TrackTouchButton.menu and grabRightHand.allowTrackTouch()
+			if pShowLaserOnTouchRight == SessionSettings.ShowLaserComponent.menu and grabRightHand.allowTrackTouch()
 				vrRightHandPointAt.setEnabled(true)
 			end
 			
 		else
-			if pTrackTouchButtonLeft == TrackTouchButton.menu and grabLeftHand.allowTrackTouch()
+			if pShowLaserOnTouchLeft == SessionSettings.ShowLaserComponent.menu and grabLeftHand.allowTrackTouch()
 				vrLeftHandPointAt.setEnabled(true)
 			end
 		end
@@ -263,12 +287,12 @@ class AADefault extends AABase
 	
 	func void menuUntouch(bool rightHand)
 		if rightHand
-			if pTrackTouchButtonRight == TrackTouchButton.menu
+			if pShowLaserOnTouchRight == SessionSettings.ShowLaserComponent.menu
 				vrRightHandPointAt.setEnabled(false)
 			end
 			
 		else
-			if pTrackTouchButtonLeft == TrackTouchButton.menu
+			if pShowLaserOnTouchLeft == SessionSettings.ShowLaserComponent.menu
 				vrLeftHandPointAt.setEnabled(false)
 			end
 		end
@@ -277,12 +301,12 @@ class AADefault extends AABase
 	
 	func void secondaryTouch(bool rightHand)
 		if rightHand
-			if pTrackTouchButtonRight == TrackTouchButton.secondary and grabRightHand.allowTrackTouch()
+			if pShowLaserOnTouchRight == SessionSettings.ShowLaserComponent.secondary and grabRightHand.allowTrackTouch()
 				vrRightHandPointAt.setEnabled(true)
 			end
 			
 		else
-			if pTrackTouchButtonLeft == TrackTouchButton.secondary and grabLeftHand.allowTrackTouch()
+			if pShowLaserOnTouchLeft == SessionSettings.ShowLaserComponent.secondary and grabLeftHand.allowTrackTouch()
 				vrLeftHandPointAt.setEnabled(true)
 			end
 		end
@@ -290,12 +314,12 @@ class AADefault extends AABase
 	
 	func void secondaryUntouch(bool rightHand)
 		if rightHand
-			if pTrackTouchButtonRight == TrackTouchButton.secondary
+			if pShowLaserOnTouchRight == SessionSettings.ShowLaserComponent.secondary
 				vrRightHandPointAt.setEnabled(false)
 			end
 			
 		else
-			if pTrackTouchButtonLeft == TrackTouchButton.secondary
+			if pShowLaserOnTouchLeft == SessionSettings.ShowLaserComponent.secondary
 				vrLeftHandPointAt.setEnabled(false)
 			end
 		end
@@ -304,12 +328,12 @@ class AADefault extends AABase
 	
 	func void thumbrestTouch(bool rightHand)
 		if rightHand
-			if pTrackTouchButtonRight == TrackTouchButton.thumbrest and grabRightHand.allowTrackTouch()
+			if pShowLaserOnTouchRight == SessionSettings.ShowLaserComponent.thumbrest and grabRightHand.allowTrackTouch()
 				vrRightHandPointAt.setEnabled(true)
 			end
 			
 		else
-			if pTrackTouchButtonLeft == TrackTouchButton.thumbrest and grabLeftHand.allowTrackTouch()
+			if pShowLaserOnTouchLeft == SessionSettings.ShowLaserComponent.thumbrest and grabLeftHand.allowTrackTouch()
 				vrLeftHandPointAt.setEnabled(true)
 			end
 		end
@@ -317,12 +341,12 @@ class AADefault extends AABase
 	
 	func void thumbrestUntouch(bool rightHand)
 		if rightHand
-			if pTrackTouchButtonRight == TrackTouchButton.thumbrest
+			if pShowLaserOnTouchRight == SessionSettings.ShowLaserComponent.thumbrest
 				vrRightHandPointAt.setEnabled(false)
 			end
 			
 		else
-			if pTrackTouchButtonLeft == TrackTouchButton.thumbrest
+			if pShowLaserOnTouchLeft == SessionSettings.ShowLaserComponent.thumbrest
 				vrLeftHandPointAt.setEnabled(false)
 			end
 		end
@@ -331,12 +355,12 @@ class AADefault extends AABase
 	
 	func void stickTouch(bool rightHand)
 		if rightHand
-			if pTrackTouchButtonRight == TrackTouchButton.stick and grabRightHand.allowTrackTouch()
+			if pShowLaserOnTouchRight == SessionSettings.ShowLaserComponent.stick and grabRightHand.allowTrackTouch()
 				vrRightHandPointAt.setEnabled(true)
 			end
 			
 		else
-			if pTrackTouchButtonLeft == TrackTouchButton.stick and grabLeftHand.allowTrackTouch()
+			if pShowLaserOnTouchLeft == SessionSettings.ShowLaserComponent.stick and grabLeftHand.allowTrackTouch()
 				vrLeftHandPointAt.setEnabled(true)
 			end
 		end
@@ -344,12 +368,12 @@ class AADefault extends AABase
 	
 	func void stickUntouch(bool rightHand)
 		if rightHand
-			if pTrackTouchButtonRight == TrackTouchButton.stick
+			if pShowLaserOnTouchRight == SessionSettings.ShowLaserComponent.stick
 				vrRightHandPointAt.setEnabled(false)
 			end
 			
 		else
-			if pTrackTouchButtonLeft == TrackTouchButton.stick
+			if pShowLaserOnTouchLeft == SessionSettings.ShowLaserComponent.stick
 				vrLeftHandPointAt.setEnabled(false)
 			end
 		end
@@ -359,12 +383,12 @@ class AADefault extends AABase
 	/** Touch track pad. */
 	func void trackPadTouch(bool rightHand)
 		if rightHand
-			if pTrackTouchButtonRight == TrackTouchButton.trackPad and grabRightHand.allowTrackTouch()
+			if pShowLaserOnTouchRight == SessionSettings.ShowLaserComponent.trackPad and grabRightHand.allowTrackTouch()
 				vrRightHandPointAt.setEnabled(true)
 			end
 			
 		else
-			if pTrackTouchButtonLeft == TrackTouchButton.trackPad and grabLeftHand.allowTrackTouch()
+			if pShowLaserOnTouchLeft == SessionSettings.ShowLaserComponent.trackPad and grabLeftHand.allowTrackTouch()
 				vrLeftHandPointAt.setEnabled(true)
 			end
 		end
@@ -379,7 +403,7 @@ class AADefault extends AABase
 			if interactHandle.getPointAt() == vrRightHandPointAt
 				interactHandle.cancel()
 			end
-			if pTrackTouchButtonRight == TrackTouchButton.trackPad
+			if pShowLaserOnTouchRight == SessionSettings.ShowLaserComponent.trackPad
 				vrRightHandPointAt.setEnabled(false)
 			end
 			
@@ -390,7 +414,7 @@ class AADefault extends AABase
 			if interactHandle.getPointAt() == vrLeftHandPointAt
 				interactHandle.cancel()
 			end
-			if pTrackTouchButtonLeft == TrackTouchButton.trackPad
+			if pShowLaserOnTouchLeft == SessionSettings.ShowLaserComponent.trackPad
 				vrLeftHandPointAt.setEnabled(false)
 			end
 		end
