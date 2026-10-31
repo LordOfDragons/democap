@@ -53,6 +53,7 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 	
 	var SharedListModel pModelListOpenMouthMove
 	var DefaultTextModel pModelTextOpenMouthMove
+	var DefaultListModel pModelOpenMouthBones
 	var SharedListModel pModelListJawBone
 	var DefaultTextModel pModelTextJawBone
 	var EditVector pEditJawBoneRotation
@@ -72,6 +73,8 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 		pModelListOpenMouthMove = SharedListModel.new(modelMoves)
 		pModelListOpenMouthMove.setAutoSelect(false)
 		pModelTextOpenMouthMove = DefaultTextModel.new()
+		pModelOpenMouthBones = DefaultListModel.new()
+		pModelOpenMouthBones.setAutoSelect(false)
 		
 		pModelListJawBone = SharedListModel.new(window.getModelBones())
 		pModelListJawBone.setAutoSelect(false)
@@ -95,6 +98,7 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 	func void dispose()
 		pModelListOpenMouthMove = null
 		pModelTextOpenMouthMove = null
+		pModelOpenMouthBones = null
 		pModelListJawBone = null
 		pModelTextJawBone = null
 		pEditJawBoneRotation = null
@@ -117,6 +121,7 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 			if pMotionTransfer != null
 				var MotionTransferLipSync mt = pMotionTransfer cast MotionTransferLipSync
 				pModelTextOpenMouthMove.setText(mt.getOpenMouthMove())
+				pModelOpenMouthBones.setContent(mt.getOpenMouthBones())
 				pModelTextJawBone.setText(mt.getJawBone())
 				pEditJawBoneRotation.setVector(mt.getJawBoneRotation())
 				pModelJawBoneAngle.setText(mt.getJawBoneAngle().toString())
@@ -126,6 +131,7 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 				
 			else
 				pModelTextOpenMouthMove.setText("")
+				pModelOpenMouthBones.removeAll()
 				pModelTextJawBone.setText("")
 				pEditJawBoneRotation.setVector(Vector.new())
 				pModelJawBoneAngle.setText("")
@@ -146,6 +152,8 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 		
 		var MotionTransferLipSync mt = pMotionTransfer cast MotionTransferLipSync
 		mt.setOpenMouthMove(pModelTextOpenMouthMove.getText())
+		mt.getOpenMouthBones().removeAll()
+		mt.getOpenMouthBones().addAll(pModelOpenMouthBones.getContent())
 		mt.setJawBone(pModelTextJawBone.getText())
 		mt.setJawBoneRotation(pEditJawBoneRotation.getVector())
 		mt.setJawBoneAngle(pModelJawBoneAngle.getText().toFloat())
@@ -166,6 +174,7 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 		var ComboBox comboBox
 		var Label label
 		var TextField textField
+		var ListBox listBox
 		
 		createBaseContent("motiontransferlipsync")
 		
@@ -180,6 +189,18 @@ class WCCPMTLipSync extends WCCPanelMotionTransfer
 			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
 			comboBox.setToolTip("@UI.ToolTip.LipSyncOpenMouthMove")
 			p.addWidget(comboBox)
+			
+			// open mouth bones
+			label = Label.new("@UI.OpenMouthBones.Label", "Label.FormCaption.SingleLine")
+			p.addWidget(label)
+			
+			listBox = ListBox.new(pModelOpenMouthBones)
+			listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
+			listBox.setToolTip("@UI.ToolTip.LipSyncOpenMouthBones")
+			listBox.setNumberDisplayLines(3)
+			p.addWidget(ScrollPanel.new(listBox))
+			
+			CPEBoneList.new(preview, label, listBox)
 			
 			// jaw bone
 			label = Label.new("@UI.JawBone.Label", "Label.FormCaption.SingleLine")
