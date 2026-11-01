@@ -88,42 +88,26 @@ class ECBMotionTransferIK extends DefaultECBehavior
 		var ECBMotionTransferIK pECBehavior
 		var ECBehaviorVRPlayspace.Instance pVRPlayspace
 		var ECBMoCapAnimator.Instance pMoCapAnimator
-		var ECBTrackerSlot.Instance pSlotTip
-		var ECBTrackerSlot.Instance pSlotGuide
-		var ECBTrackerSlot.Instance pSlotRelocate
+		var ECBTrackerSlot.Instance pSlotTip, pSlotGuide, pSlotRelocate
 		var AnimatorController pControllerTipPosition, pControllerTipOrientation
 		var AnimatorController pControllerGuideRotation, pControllerGuideBend
 		var AnimatorController pControllerTwist, pControllerGuideTwistAxis
-		var AnimatorController pControllerRetracted
-		var AnimatorController pControllerBlend
-		var AnimatorController pControllerPreRotate
+		var AnimatorController pControllerRetracted, pControllerBlend, pControllerPreRotate
 		var AnimatorController pControllerBaseRotateX, pControllerBaseRotateY, pControllerEnableBaseRotate
 		var Matrix pTransformTip
 		var Quaternion pTransformTipQuat
-		var Matrix pTransformGuide
-		var Matrix pTransformRelocate
-		var Matrix pMatrixRelocateTip
-		var int pBaseBone
-		var int pGuideBone
-		var int pTipBone
-		var int pPreRotateBone
-		var int pBaseRotateBone
+		var Matrix pTransformGuide, pTransformRelocate, pMatrixRelocateTip
+		var int pBaseBone, pGuideBone, pTipBone, pPreRotateBone, pBaseRotateBone
 		var AnimatorInstance pAnimatorInstance
 		var Component pComponent
 		var int pTwistBone
-		var Vector pScaleReach
-		var Vector pScaleReachBack
+		var Vector pScaleReach, pScaleReachBack
 		var Matrix pReachMatrix
 		var Quaternion pTwistQuat, pTwistQuatInv
-		var bool pEnableScaleReach
-		var bool pEnableRelocateTip
-		var bool pEnableTwist
+		var bool pEnableScaleReach, pEnableRelocateTip, pEnableTwist
 		var Matrix pMatrixAdjustSlotComponent
-		var Vector2 pBaseRotateRangeCenter
-		var Vector2 pBaseRotateRangeMinimum
-		var Vector2 pBaseRotateRangeMaximum
-		var Vector pBaseRotateReach
-		var Vector pGuidePositionTarget
+		var Vector2 pBaseRotateRangeCenter, pBaseRotateRangeMinimum, pBaseRotateRangeMaximum
+		var Vector pBaseRotateReach, pGuidePositionTarget
 		
 		var Matrix pTargetMatrix, pGuideMatrix
 		var Vector pReachTargetPosition, pReachRelativeTarget, pReachTargetRotation
@@ -149,9 +133,9 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			pMoCapAnimator = ecbehavior.getMoCapAnimator().instance(element)
 			
 			pMatrixRelocateTip = transfer.getCalibrateMatrixRelocateTip()
+			pReachMatrix = transfer.getCalibrateReachMatrix()
 			pScaleReach = transfer.getCalibrateReachScaleDirection() * transfer.getCalibrateReachScale()
 			pScaleReachBack = transfer.getCalibrateReachScaleDirectionBack() * transfer.getCalibrateReachScale()
-			pReachMatrix = Matrix.newRotation(transfer.getCalibrateReachRotation())
 			
 			pTwistQuat = Quaternion.newFromEuler(transfer.getCalibrateTwistBoneAxisRotation())
 			pTwistQuatInv = pTwistQuat.conjugate()
@@ -360,20 +344,26 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			if pEnableRelocateTip and pBaseRotateBone != -1
 				var Matrix matrixRelocate = pSlotRelocate.getTrackerSlot().getConfiguration().\
 					characterToComponent(pTransformRelocate * pSlotRelocate.getMatrixCharacter())
+				var Matrix invMatrixRelocate = matrixRelocate.getInverse()
 				var Matrix matrixBone = pMatrixRelocateTip * pComponent.boneGetMatrix(pBaseRotateBone)
 				
-				matrix = matrix * matrixRelocate.getInverse() * matrixBone
+				matrix = matrix * invMatrixRelocate * matrixBone
 				
 				if matrixGuide != null
-					matrixGuide = matrixGuide * matrixRelocate.getInverse() * matrixBone
+					matrixGuide = matrixGuide * invMatrixRelocate * matrixBone
 				end
-// 					if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
-// 						GameApp.getGameApp().getConsole().addMessage(\
-// 							"IK tp=" + (pTargetMatrix * matrixRelocate.getInverse()).getPosition()\
-// 							+ " btp=" + matrix.getPosition()\
-// 							+ " b=" + pComponent.boneGetMatrix(pBaseRotateBone).getPosition()\
-// 							+ " wa=" + matrixBone.getViewVector())
-// 					end
+				/*
+				if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
+					GameApp.getGameApp().getConsole().addMessage(\
+						"IK tp=" + (pTargetMatrix * matrixRelocate.getInverse()).getPosition()\
+						+ " btp=" + matrix.getPosition()\
+						+ " b=" + pComponent.boneGetMatrix(pBaseRotateBone).getPosition()\
+						+ " wa=" + matrixBone.getViewVector()\
+						+ " c1=" + pMatrixRelocateTip.getPosition()\
+						+ " c2=" + (pMatrixRelocateTip * pComponent.boneGetMatrix(pBaseRotateBone)).getPosition()\
+						+ " c3=" + (matrix * pComponent.boneGetInverseMatrix(pBaseRotateBone)).getPosition())
+				end
+				*/
 			end
 			
 			pReachTargetRotation = matrix.getEulerAngles()
