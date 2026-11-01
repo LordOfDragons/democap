@@ -12,5 +12,5 @@ process_character() {
 process_character "Biomech"
 process_character "Dragonroo"
 process_character "First Person Hands"
-process_character "Indominus Rex"
 process_character "Shadrian"
+process_character "Spinosaurus"
