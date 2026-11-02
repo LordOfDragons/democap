@@ -210,6 +210,12 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 		
 		
 		
+		/** Flips quaternion sign if it points away from reference rotation. */
+		func Quaternion alignQuaternion(Quaternion q, Quaternion ref)
+			var float dot = (q * ref.conjugate()).getW()
+			return dot < 0 if -q else q
+		end
+		
 		/** Update controllers. */
 		func void updateControllers()
 			if pSlotTracker == null
@@ -234,8 +240,20 @@ class ECBMotionTransferFingers extends DefaultECBehavior
 				
 				// wrist
 				if pControllerWrist != null
-					quat1 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.wrist, false) * handRot
-					pControllerWrist.setOrientation(quat1)
+					quat1 = idev.getDeviceBonePoseOrientation(InputDeviceHandBone.wrist, false)
+					
+					// some vr runtimes set illogical wrist rotation and move hand rotation into
+					// in-palm finger segments. this can cause broken hand pose. to work around
+					// this problem without affecting sane runtimes the wrist rotation is set to
+					// the average of all in-palm finger segments and the wrist rotation. aligning
+					// quaternion signs is used to avoid super broken vr runtimes
+					quat2 = quat1 + alignQuaternion(idev.getDeviceBonePoseOrientation(InputDeviceHandBone.index0, false), quat1)\
+						+ alignQuaternion(idev.getDeviceBonePoseOrientation(InputDeviceHandBone.middle0, false), quat1)\
+						+ alignQuaternion(idev.getDeviceBonePoseOrientation(InputDeviceHandBone.ring0, false), quat1)\
+						+ alignQuaternion(idev.getDeviceBonePoseOrientation(InputDeviceHandBone.pinky0, false), quat1)
+					quat1 = quat2.normalize()
+					
+					pControllerWrist.setOrientation(quat1 * handRot)
 				end
 				
 				// thumb
