@@ -1289,7 +1289,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 				var Vector realReachBaseRotate = posRotate - posBase.absolute()
 				var float reachBaseRotate = realReachBaseRotate.getX() // can be 0
 				var float reachBaseRotateIk = realReachBaseRotate.getLength()
-				var float tip, actorTip
+				var float tip, actorTip, angleSin
 				
 				// reach scaling
 				var float actorShoulderReach = config.actorToComponent(actorProfile.getShoulderWidth() / 2)
@@ -1313,15 +1313,17 @@ class MotionTransferIK extends DefaultMotionTransfer
 				*/
 				
 				// front, back
-				tip = reachRotateTip + reachBaseRotate * DEMath.sin(DEMath.fabs(pBaseRotateAngleMaximum.getY()))
-				actorTip = actorArmReach
+				angleSin = DEMath.sin(DEMath.fabs(pBaseRotateAngleMaximum.getY()))
+				tip = reachRotateTip + reachBaseRotate * angleSin
+				actorTip = actorArmReach + actorShoulderReach * angleSin
 				
 				pCalibrateReachScaleFront = (tip / actorTip) / pCalibrateReachScale
 // 				pCalibrateReachScaleFront = tip / pCalibrateReach
 				
 				// down
-				tip = reachRotateTip + reachBaseRotate * DEMath.sin(DEMath.fabs(pBaseRotateAngleMinimum.getX()))
-				actorTip = actorArmReach
+				angleSin = DEMath.sin(DEMath.fabs(pBaseRotateAngleMinimum.getX()))
+				tip = reachRotateTip + reachBaseRotate * angleSin
+				actorTip = actorArmReach + actorShoulderReach * angleSin
 				
 				pCalibrateReachScaleDown = (tip / actorTip) / pCalibrateReachScale
 // 				pCalibrateReachScaleDown = tip / pCalibrateReach
@@ -1329,8 +1331,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 // 					+ actorTip + "(" + (actorTip * pCalibrateReachScale) + ")")
 				
 				// up
-				tip = reachRotateTip + reachBaseRotate * DEMath.sin(DEMath.fabs(pBaseRotateAngleMaximum.getX()))
-				actorTip = actorArmReach
+				angleSin = DEMath.sin(DEMath.fabs(pBaseRotateAngleMaximum.getX()))
+				tip = reachRotateTip + reachBaseRotate * angleSin
+				actorTip = actorArmReach + actorShoulderReach * angleSin
 				
 				pCalibrateReachScaleUp = (tip / actorTip) / pCalibrateReachScale
 // 				pCalibrateReachScaleUp = tip / pCalibrateReach

@@ -934,17 +934,17 @@ class MotionTransferBend extends DefaultMotionTransfer
 				pCalibrateBendCurveX.removeAllPoints()
 				pCalibrateBendCurveY.removeAllPoints()
 				
-				var Matrix matrixZeroRotX = Matrix.newRotationX(-pCalibrateZeroRotation.getX())
-				var Matrix matrixZeroRotY = Matrix.newRotationY(-pCalibrateZeroRotation.getY())
+				var float zeroRotX = pCalibrateZeroRotation.getX()
+				var float zeroRotY = pCalibrateZeroRotation.getY()
 				
 				for i = 0 to bendTargetResolution
 					var float rotation = bendRotation.getAt(i) cast float
-				
-					var Vector target = matrixZeroRotX * bendTargetX.getAt(i) cast Vector
-					pCalibrateBendCurveX.addPoint(DEMath.atan2(target.getY(), target.getZ()), rotation)
 					
-					target = matrixZeroRotY * bendTargetY.getAt(i) cast Vector
-					pCalibrateBendCurveY.addPoint(-DEMath.atan2(target.getX(), target.getZ()), rotation)
+					var Vector target = bendTargetX.getAt(i) cast Vector
+					pCalibrateBendCurveX.addPoint(DEMath.atan2(target.getY(), target.getZ()) + zeroRotX, rotation)
+					
+					target = bendTargetY.getAt(i) cast Vector
+					pCalibrateBendCurveY.addPoint(-DEMath.atan2(target.getX(), target.getZ()) + zeroRotY, rotation)
 				end
 				
 			else

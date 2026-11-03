@@ -348,10 +348,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				var Matrix matrixBone = pMatrixRelocateTip * pComponent.boneGetMatrix(pBaseRotateBone)
 				
 				matrix = matrix * invMatrixRelocate * matrixBone
-				
-				if matrixGuide != null
-					matrixGuide = matrixGuide * invMatrixRelocate * matrixBone
-				end
+				matrixGuide = matrixGuide * invMatrixRelocate * matrixBone
 				/*
 				if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
 					GameApp.getGameApp().getConsole().addMessage(\
@@ -377,7 +374,7 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			if pDVBasePosition != null
 				pDVBasePosition.setValue(baseMatrix.getPosition())
 			end
-			var Matrix reachMatrix = pReachMatrix * baseMatrix
+			var Matrix reachMatrix = pReachMatrix * baseMatrix, invReachMatrix = reachMatrix.getInverse()
 			if pDVAxisX != null
 				pDVAxisX.setValue(reachMatrix.getRightVector())
 				pDVAxisY.setValue(reachMatrix.getUpVector())
@@ -385,23 +382,22 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			end
 			var Vector guidePosition
 			
-			pReachRelativeTarget = reachMatrix.getInverse() * pReachTargetPosition
+			pReachRelativeTarget = invReachMatrix * pReachTargetPosition
 			
-			if matrixGuide != null
-				pReachGuideRotation = matrixGuide.getEulerAngles()
-				if pGuidePositionTarget != null
-					guidePosition = matrixGuide.getPosition()
-				end
-				if pDVGuidePosition != null
-					pDVGuidePosition.setValue(matrixGuide.getPosition())
-				end
-				
-				matrixGuide = matrixGuide * reachMatrix.getInverse()
-				pReachRelativeGuide = matrixGuide.getPosition()
+			pReachGuideRotation = matrixGuide.getEulerAngles()
+			if pGuidePositionTarget != null
+				guidePosition = matrixGuide.getPosition()
 			end
-// 			if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
-// 				GameApp.getGameApp().getConsole().addMessage("IK tp=" + pReachTargetPosition + " tir=" + pReachRelativeTarget)
-// 			end
+			if pDVGuidePosition != null
+				pDVGuidePosition.setValue(matrixGuide.getPosition())
+			end
+			
+			matrixGuide = matrixGuide * invReachMatrix
+			pReachRelativeGuide = matrixGuide.getPosition()
+			
+			/*if pECBehavior.getTransfer().getName().findString("ArmRight") != -1
+				GameApp.getGameApp().getConsole().addMessage("IK tp=" + pReachTargetPosition + " tir=" + pReachRelativeTarget)
+			end*/
 			
 			if pEnableScaleReach
 				pReachScaleX = pReachRelativeTarget.getX() > 0
@@ -425,36 +421,35 @@ class ECBMotionTransferIK extends DefaultECBehavior
 				
 				pRetractedLength = pReachRelativeTarget.getLength()
 				
-				if matrixGuide != null
-					pReachGuideScaleX = pReachRelativeGuide.getX() > 0
-					pReachGuideScaleY = pReachRelativeGuide.getY() > 0
-					pReachGuideScaleZ = pReachRelativeGuide.getZ() > 0
+				// guide scale
+				pReachGuideScaleX = pReachRelativeGuide.getX() > 0
+				pReachGuideScaleY = pReachRelativeGuide.getY() > 0
+				pReachGuideScaleZ = pReachRelativeGuide.getZ() > 0
+				
+				var Vector orgTarget = pReachRelativeGuide
+				
+				pReachRelativeGuide = pReachRelativeGuide.compMultiply(pScaleReach).combine(\
+					pReachRelativeGuide.compMultiply(pScaleReachBack),\
+					pReachGuideScaleX, pReachGuideScaleY, pReachGuideScaleZ)
+				
+				if not orgTarget.isZero() and not pReachRelativeGuide.isZero()
+					orgTarget = orgTarget.normalize()
+					var Vector newTarget = pReachRelativeGuide.normalize()
 					
-					var Vector orgTarget = pReachRelativeGuide
-
-					pReachRelativeGuide = pReachRelativeGuide.compMultiply(pScaleReach).combine(\
-						pReachRelativeGuide.compMultiply(pScaleReachBack),\
-						pReachGuideScaleX, pReachGuideScaleY, pReachGuideScaleZ)
-					
-					if not orgTarget.isZero() and not pReachRelativeGuide.isZero()
-						orgTarget = orgTarget.normalize()
-						var Vector newTarget = pReachRelativeGuide.normalize()
-
-						var Vector rotationAxis = orgTarget % newTarget
-						if rotationAxis.getLength() > 0.001 // too low explodes the calculation
-								/*
-								GameApp.getGameApp().getConsole().addMessage(pECBehavior.getTransfer().getName() + " org=" + orgTarget + " sca=" + newTarget\
-									+ " axis=" + rotationAxis.normalize() + " ang=" + (-DEMath.acos(orgTarget * newTarget)))
-								*/
-							matrixGuide = matrixGuide * Matrix.newRotationAxis(\
-								rotationAxis.normalize(), -DEMath.acos(orgTarget * newTarget))
-							
-							matrixGuide = matrixGuide * reachMatrix
-							
-							pReachGuideRotation = matrixGuide.normalize().getEulerAngles()
-							if pGuidePositionTarget != null
-								guidePosition = matrixGuide.getPosition()
-							end
+					var Vector rotationAxis = orgTarget % newTarget
+					if rotationAxis.getLength() > 0.001 // too low explodes the calculation
+							/*
+							GameApp.getGameApp().getConsole().addMessage(pECBehavior.getTransfer().getName() + " org=" + orgTarget + " sca=" + newTarget\
+								+ " axis=" + rotationAxis.normalize() + " ang=" + (-DEMath.acos(orgTarget * newTarget)))
+							*/
+						matrixGuide = matrixGuide * Matrix.newRotationAxis(\
+							rotationAxis.normalize(), -DEMath.acos(orgTarget * newTarget))
+						
+						matrixGuide = matrixGuide * reachMatrix
+						
+						pReachGuideRotation = matrixGuide.normalize().getEulerAngles()
+						if pGuidePositionTarget != null
+							guidePosition = matrixGuide.getPosition()
 						end
 					end
 				end
@@ -485,6 +480,10 @@ class ECBMotionTransferIK extends DefaultECBehavior
 			else
 				target = pReachRelativeTarget
 			end
+			
+			/*if pECBehavior.getTransfer().getName().findString("ArmLeft") != -1
+				GameApp.getGameApp().getConsole().addMessage("IK tp=" + pReachTargetPosition + " tir=" + pReachRelativeTarget + " t=" + target)
+			end*/
 			
 			if target.getLength() < 0.01
 				return
