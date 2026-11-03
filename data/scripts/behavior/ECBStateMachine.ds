@@ -1,0 +1,233 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Behaviors
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.StateMachineSystem
+pin Dragengine.LoadSave
+
+/**
+ * Behavior extending ECBehaviorStateMachine with UI panel.
+ * 
+ * \see https://developer.dragondreams.ch/wiki/doku.php/democap:behavior_ecbstatemachine
+ */
+class ECBStateMachine extends DefaultECBehavior
+	/**
+	 * Behavior factory.
+	 * 
+	 * Example XML element class:
+	 * \code{.xml}
+	 * <behavior type='ECBehaviorStateMachine'/>
+	 * 
+	 * <behavior type='ECBStateMachine'>
+	 *   <!-- optional: use state machine with id instead of empty string -->
+	 *   <string name='stateMachine'>second</string>
+	 * </behavior>
+	 * 
+	 * <!-- for adding multiple behaviors use unique identifiers -->
+	 * <behavior type='ECBStateMachine' id='second'/>
+	 * \endcode
+	 * 
+	 * Element class properties added by the behavior can also be set directly inside the tag
+	 * be removing the property name prefix and starting with a "." (for exampler ".propertyName").
+	 */
+	class Factory implements BehaviorFactory
+		func new()
+		end
+		
+		func String factoryId()
+			return "ECBStateMachine"
+		end
+		
+		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
+			return ECBStateMachine.new(eclass, ECBBehaviorGuiPanels.getBehaviorIn(eclass),\
+				eclass.sharedFactoryHelper.defaultStateMachine(eclass, parameters), id)
+		end
+	end
+	
+	/** Behavior instance. */
+	class Instance extends DefaultECBehaviorInstance
+		class BehaviorGuiPanel extends ECBBehaviorGuiPanels.BehaviorGuiPanel
+			func new(Instance instance) super(instance, "ECBStateMachine", instance.getECBehavior().getID())
+			end
+			
+			func Gui.WMPPanelSceneObject createPanel(Gui.WMPanelProject panelProject)
+				return Gui.WMPSOStateMachine.new(panelProject, getId(), getBehaviorId())
+			end
+		end
+		
+		
+		protected var ECBStateMachine pECBehavior
+		protected var ECBehaviorStateMachine.Instance pStateMachine
+		protected var String pPath, pDebug
+		
+		
+		func new(ECBStateMachine ecbehavior, BehaviorElement element) super(element)
+			pECBehavior = ecbehavior
+			pStateMachine = ecbehavior.stateMachine.instance(element)
+		end
+		
+		func void dispose()
+			pStateMachine = null
+			super.dispose()
+		end
+		
+		func void init(StubElement stub)
+			var BehaviorElementClass eclass = getElement().getClass() cast BehaviorElementClass
+			var ECPStateMachine path = pStateMachine.getECBehavior().getStateMachine()
+			
+			pPath = BehaviorStubHelper.stubParamPath(stub, eclass.getBasePath(), path.getName(), path.getPath())
+			pDebug = pStateMachine.getECBehavior().getDebug().getValueOrEmpty(stub)
+			
+			if pECBehavior.behaviorGuiPanels != null
+				pECBehavior.behaviorGuiPanels.instance(getElement()).addBehaviorGuiPanel(BehaviorGuiPanel.new(this))
+			end
+		end
+		
+		
+		func ECBStateMachine getECBehavior()
+			return pECBehavior
+		end
+		
+		
+		func String getPath()
+			return pPath
+		end
+		
+		func void setPath(String path)
+			if path.equals(pPath)
+				return
+			end
+			
+			var StateMachine sm
+			if path.empty()
+				sm = StateMachine.newEmpty()
+				
+			else
+				sm = pStateMachine.getECBehavior().getStateMachine().getLoader().loadFromFile(path)
+			end
+			
+			pStateMachine.getContext().setStateMachine(sm)
+			pStateMachine.runEvent("init")
+			
+			pPath = path
+			
+			BehaviorStubHelper.setStubParamValue(getElement().getStub(),\
+				pStateMachine.getECBehavior().getStateMachine().getName(), path)
+		end
+
+		func String getDebug()
+			return pDebug
+		end
+
+		func void setDebug(String debug)
+			if debug.equals(pDebug)
+				return
+			end
+			
+			pDebug = debug
+			
+			var SMContext context = pStateMachine.getContext()
+			if debug != null
+				context.setLoggingName(debug)
+				context.setLogTransitions(true)
+				context.setLogStateChanges(true)
+				context.setLogActions(true)
+				
+			else
+				context.setLoggingName("")
+				context.setLogTransitions(false)
+				context.setLogStateChanges(false)
+				context.setLogActions(false)
+			end
+			
+			BehaviorStubHelper.setStubParamValue(getElement().getStub(),\
+				pStateMachine.getECBehavior().getDebug().getName(), debug)
+		end
+		
+		func void reloadStateMachine()
+			if pPath.empty()
+				return
+			end
+			
+			var StateMachine sm = pStateMachine.getECBehavior().getStateMachine().getLoader().loadFromFile(pPath)
+			pStateMachine.getContext().setStateMachine(sm)
+			pStateMachine.runEvent("init")
+		end
+		
+		func void resetStateMachine()
+			pStateMachine.getContext().reset()
+			pStateMachine.runEvent("init")
+		end
+		
+		func void runEvent(String event)
+			pStateMachine.runEvent(event)
+		end
+		
+		func void readFromFile(PersistencyEnvironment env, FileReader reader)
+			super.readFromFile(env, reader)
+			
+			// ECBehaviorStateMachine persists state machine state. reset to what it would be on regular initialization
+			pStateMachine.getContext().reset()
+			pStateMachine.runEvent("init")
+		end
+	end
+	
+	
+	public var ECBBehaviorGuiPanels behaviorGuiPanels
+	public var ECBehaviorStateMachine stateMachine
+	
+	
+	func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBehaviorStateMachine stateMachine) this(eclass, behaviorGuiPanels, stateMachine, "")
+	end
+	
+	func new(BehaviorElementClass eclass, ECBBehaviorGuiPanels behaviorGuiPanels,\
+	ECBehaviorStateMachine stateMachine, String id) super(eclass, id)
+		if stateMachine == null
+			throw ENullPointer.new("stateMachine")
+		end
+		
+		// var String prefix = id.empty() if "stateMachine." else "stateMachine(" + id + ")."
+		
+		this.behaviorGuiPanels = behaviorGuiPanels
+		this.stateMachine = stateMachine
+		
+		eclass.addBehavior(this)
+	end
+	
+	func void dispose()
+		behaviorGuiPanels = null
+		stateMachine = null
+		super.dispose()
+	end
+	
+	
+	func Instance instance(BehaviorElement element)
+		return element.getInstanceAt(getInstanceIndex()) cast Instance
+	end
+	
+	
+	func ECBehaviorInstance createInstance(BehaviorElement element)
+		return Instance.new(this, element)
+	end
+end

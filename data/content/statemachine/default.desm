@@ -1,0 +1,174 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<stateMachine>
+	<!--
+	Default state machine for elements to extend. Use like this:
+	
+	<stateMachine>
+		<import>/content/statemachine/default.desm</import>
+		... add your states and global transitions here ...
+	</stateMachine>
+	-->
+	
+	
+	<!--
+	Initial state 'created'. State machine will be in this state after creation. No entry actions
+	will be run upon entering this state unless you transition into it explicitly. Once the element
+	has finished initialization, the event 'init' will be sent. This will apply some important
+	actions then transition into the 'initialize' state.
+	
+	You usually do not have to change this state.
+	-->
+	<initialState>created</initialState>
+	
+	<state id='created'>
+		<transition event='init' state='initialize'>
+			<action name='gameWorld'>
+				<parameter name='receiveEvents'>true</parameter>
+			</action>
+		</transition>
+	</state>
+	
+	
+	<!--
+	The 'initialize' state is called once the element has finished initialization. Use this state
+	to perform your initialization logic using enter actions. Once finished the state machine
+	transitions into the 'live' state.
+	
+	Keep in mind the element has finished initialization but has not been added yet to the game
+	world. Hence you can only use actions here affecting the element itself. To do initialization
+	requiring the game world or other elements see 'live' state.
+	
+	Extend this state like this:
+	<state id='initialize'>
+		<import>initialize</import>
+		... add your enter actions here ...
+	</state>
+	-->
+	<state id='initialize'>
+		<nextState>live</nextState>
+	</state>
+	
+	
+	<!--
+	The 'live' state is running when no playing back nor recording is in progress.
+	
+	If you need initialization requiring the game world or other elements add transition for event
+	'addToGameWorld' or 'enterFrame'. Use 'enterFrame' is need to access other elements.
+	
+	Upon receiving 'democap.recording.prepare' the state machine transitions into the 'recording.prepare' state.
+	Upon receiving 'democap.playback.start' the state machine transitions into the 'playback.running' state.
+	
+	Extend this state like this:
+	<state id='live'>
+		.. add your transitions here. they can replace imported transitions ...
+		<import>live</import>
+		... add your enter actions here. they run after imported actions ...
+	</state>
+	-->
+	<state id='live'>
+		<transition event='democap.recording.prepare' state='recording.prepare'/>
+		<transition event='democap.playback.start' state='playback.running'/>
+	</state>
+	
+	
+	<!--
+	The 'recording.prepare' state is entered when a recording is about to start. Use this state
+	to perform setup actions before actual recording begins. This can be used to avoid hickups
+	or delays when the recording starts.
+	
+	Upon receiving 'democap.recording.start' the state machine transitions into the 'recording.running' state.
+	Upon receiving 'democap.recording.stop' the state machine transitions back into the 'live' state.
+	
+	Extend this state like this:
+	<state id='recording.prepare'>
+		.. add your transitions here. they can replace imported transitions ...
+		<import>recording.running</import>
+		... add your enter actions here. they run after imported actions ...
+	</state>
+	-->
+	<state id='recording.prepare'>
+		<transition event='democap.recording.start' state='recording.running'/>
+		<transition event='democap.recording.stop' state='live'/>
+	</state>
+	
+	
+	<!--
+	The 'recording.running' state is entered when a recording is in progress. Use this state
+	to handle recording logic.
+	
+	Upon receiving 'democap.recording.stop' the state machine transitions into the 'recording.finish' state.
+	
+	Extend this state like this:
+	<state id='recording.running'>
+		.. add your transitions here. they can replace imported transitions ...
+		<import>recording.running</import>
+		... add your enter actions here. they run after imported actions ...
+	</state>
+	-->
+	<state id='recording.running'>
+		<transition event='democap.recording.stop' state='recording.finish'/>
+	</state>
+	
+	
+	<!--
+	The 'recording.finish' state is entered when a recording has stopped. Use this state
+	to perform any cleanup or finalization actions related to the recording. You can also
+	use this state to store custom capture data. Once all enter actions have been run the
+	state machine transitions into the 'live' state.
+	
+	Extend this state like this:
+	<state id='recording.finish'>
+		.. add your transitions here. they can replace imported transitions ...
+		<import>recording.finish</import>
+		... add your enter actions here. they run after imported actions ...
+	</state>
+	-->
+	<state id='recording.finish'>
+		<nextState>live</nextState>
+	</state>
+	
+	
+	<!--
+	The 'playback.running' state is entered when playback is in progress. Use this state
+	to handle playback logic.
+	
+	Upon receiving 'democap.playback.pause' the state machine transitions into the 'playback.paused' state.
+	Upon receiving 'democap.playback.stop' the state machine transitions into the 'live' state.
+	Upon receiving 'democap.recording.prepare' the state machine transitions into the 'recording.prepare' state.
+	
+	Extend this state like this:
+	<state id='playback.running'>
+		.. add your transitions here. they can replace imported transitions ...
+		<import>playback.running</import>
+		... add your enter actions here. they run after imported actions ...
+	</state>
+	-->
+	<state id='playback.running'>
+		<transition event='democap.playback.pause' state='playback.paused'/>
+		<transition event='democap.playback.stop' state='live'/>
+		<transition event='democap.recording.prepare' state='recording.prepare'/>
+	</state>
+	
+	
+	<!--
+	The 'playback.paused' state is entered when playback is paused. Use this state
+	to handle logic related to paused playback. This typically includes pausing behaviors
+	to properly resume playback when needed.
+	
+	Upon receiving 'democap.playback.resume' the state machine transitions into the 'playback.running' state.
+	Upon receiving 'democap.playback.stop' the state machine transitions into the 'live' state.
+	Upon receiving 'democap.recording.prepare' the state machine transitions into the 'recording.prepare' state.
+
+	Extend this state like this:
+	<state id='playback.paused'>
+		.. add your transitions here. they can replace imported transitions ...
+		<import>playback.paused</import>
+		... add your enter actions here. they run after imported actions ...
+	</state>
+	-->
+	<state id='playback.paused'>
+		<transition event='democap.playback.resume' state='playback.running'/>
+		<transition event='democap.playback.stop' state='live'/>
+		<transition event='democap.recording.prepare' state='recording.prepare'/>
+	</state>
+</stateMachine>

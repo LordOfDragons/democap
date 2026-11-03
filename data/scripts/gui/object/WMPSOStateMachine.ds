@@ -1,0 +1,136 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+pin Democap.Behaviors
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+
+/**
+ * ECBStateMachine panel.
+ */
+class WMPSOStateMachine extends WMPPanelSceneObject
+	protected var ECBStateMachine.Instance pBehaviorStateMachine
+	protected var DefaultTextModel pModelPath, pModelDebug, pModelSendEvent
+	
+	
+	/** Create panel. */
+	func new(WMPanelProject panelProject, String bgpTypeId, String behaviorId)\
+	super(panelProject, bgpTypeId, behaviorId, "@UI.StateMachine", "WMPSOStateMachine", "ppob_statemachine")
+		pModelPath = DefaultTextModel.new()
+		pModelDebug = DefaultTextModel.new()
+		pModelSendEvent = DefaultTextModel.new()
+		
+		getPanelContent().runWhileBlockingLayout(block
+			createContent(getPanelContent())
+		end)
+	end
+	
+	func void dispose()
+		setBehavior(null)
+		
+		pModelPath = null
+		pModelDebug = null
+		pModelSendEvent = null
+		super.dispose()
+	end
+	
+	func void updateBehavior()
+		if pBehaviorStateMachine == null
+			return
+		end
+		
+		runWhileBlockingLayout(block
+			pModelPath.setText(pBehaviorStateMachine.getPath())
+			pModelDebug.setText(pBehaviorStateMachine.getDebug())
+		end)
+	end
+	
+	
+	/** Create panel content. */
+	protected func void createContent(Panel content)
+		var File dataDir = GameApp.getGameApp().getProject().getDataDirectory()
+		var TextField textField
+		var EditPath editPath
+		var Button button
+		
+		content.setLayout(FlowLayout.new(LayoutAxis.y, 2))
+		
+		content.addWidget(Panel.new(FormLayout.new(true, 5, 2), block Panel p
+			// path state machine
+			p.addWidget(Label.new("@UI.StateMachine.Label", "Label.FormCaption.SingleLine"))
+			
+			editPath = EditPath.new(pModelPath, EditPath.FileType.stateMachine, (dataDir + "statemachines").getPath())
+			editPath.setToolTip("@UI.ToolTip.StateMachine")
+			p.addWidget(editPath)
+			editPath.addActionListener(BlockActionListener.new(block ActionEvent event
+				pBehaviorStateMachine.setPath(pModelPath.getText())
+			end))
+			
+			// buttons
+			p.addWidget(Widget.new())
+			
+			p.addWidget(Panel.new(GridLayout.new(2, 1), block Panel p2
+				button = Button.new("@UI.Button.StateMachine.Reload")
+				button.setToolTip("@UI.ToolTip.Button.StateMachine.Reload")
+				button.addActionListener(BlockActionListener.new(block ActionEvent event
+					pBehaviorStateMachine.reloadStateMachine()
+				end))
+				p2.addWidget(button)
+				
+				button = Button.new("@UI.Button.StateMachine.Reset")
+				button.setToolTip("@UI.ToolTip.Button.StateMachine.Reset")
+				button.addActionListener(BlockActionListener.new(block ActionEvent event
+					pBehaviorStateMachine.resetStateMachine()
+				end))
+				p2.addWidget(button)
+			end))
+			
+			// send event
+			button = Button.new("@UI.Button.StateMachine.SendEvent")
+			button.setToolTip("@UI.ToolTip.StateMachineSendEvent")
+			button.addActionListener(BlockActionListener.new(block ActionEvent event
+				if not pModelSendEvent.getText().empty()
+					pBehaviorStateMachine.runEvent(pModelSendEvent.getText())
+				end
+			end))
+			p.addWidget(button)
+			
+			textField = TextField.new(pModelSendEvent, 20)
+			textField.setToolTip("@UI.ToolTip.StateMachineSendEvent")
+			p.addWidget(textField)
+			
+			// debug name
+			p.addWidget(Label.new("@UI.StateMachineDebug.Label", "Label.FormCaption.SingleLine"))
+			
+			textField = TextField.new(pModelDebug, 20)
+			textField.setToolTip("@UI.ToolTip.StateMachineDebug")
+			p.addWidget(textField)
+			textField.addActionListener(BlockActionListener.new(block ActionEvent event
+				pBehaviorStateMachine.setDebug(pModelDebug.getText())
+			end))
+		end))
+	end
+	
+	protected func void onBehaviorChanged()
+		pBehaviorStateMachine = pBehavior cast ECBStateMachine.Instance
+	end
+end

@@ -509,8 +509,14 @@ class WMPanelSession extends Panel
 			
 			if capturedAnimations != null
 				if capturedAnimations.getCaptureTarget() == ECBCapturedAnimations.CaptureTarget.character
-					if not capturedAnimations.getCharacterProfile().equals(\
-					app.getWorldSpawnCharacter().getCharacter().getProfile().getName())
+					var CharacterConfiguration config = app.getWorldSpawnCharacter().getCharacter()
+					if config == null
+						WindowDialog.message(getWindow(), "@UI.RecordAnimation",\
+							"@UI.Message.RecordNoCharacter", null, null, null)
+						return
+					end
+					
+					if not capturedAnimations.getCharacterProfile().equals(config.getProfile().getName())
 						WindowDialog.message(getWindow(), "@UI.RecordAnimation",\
 							"@UI.Message.RecordNoMatch", null, null, null)
 						return

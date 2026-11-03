@@ -1,0 +1,277 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2025, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Worlds
+pin Dragengine.Scenery
+pin Dragengine.Preloading
+pin Dragengine.Utils
+pin Dragengine.BehaviorTreeSystem
+pin Dragengine.Gui
+
+/**
+ * Game world behavior adding DEMoCap related state machine actions.
+ */
+class GWBDemocap extends DefaultGWBehavior
+	class PlaybackListener extends PlaybackScene.DefaultListener
+		var GWBDemocap pInstance
+		
+		func new(GWBDemocap instance)
+			pInstance = instance
+		end
+		
+		func void startPlayback(PlaybackScene playbackScene)
+			pInstance.runEvent("democap.playback.start")
+		end
+		
+		func void stopPlayback(PlaybackScene playbackScene)
+			pInstance.runEvent("democap.playback.stop")
+		end
+		
+		func void pausePlayback(PlaybackScene playbackScene)
+			pInstance.runEvent("democap.playback.pause")
+		end
+		
+		func void timeChanged(PlaybackScene playbackScene, float time)
+			pInstance.runEvent("democap.playback.timeChanged")
+		end
+		
+		func void playtimeChanged(PlaybackScene playbackScene, float playtime)
+			pInstance.runEvent("democap.playback.playtimeChanged")
+		end
+		
+		func void speedChanged(PlaybackScene playbackScene, float speed)
+			pInstance.runEvent("democap.playback.speedChanged")
+		end
+	end
+	
+	class RecordListener extends RecordScene.DefaultListener
+		var GWBDemocap pInstance
+		
+		func new(GWBDemocap instance)
+			pInstance = instance
+		end
+		
+		func void prepareRecording(RecordScene recordScene)
+			pInstance.runEvent("democap.recording.prepare")
+		end
+		
+		func void startRecording(RecordScene recordScene)
+			pInstance.runEvent("democap.recording.start")
+		end
+		
+		func void stopRecording(RecordScene recordScene)
+			pInstance.runEvent("democap.recording.stop")
+		end
+	end
+	
+	class StageDirectionListener extends DefaultListModelListener
+		var GWBDemocap pInstance
+		
+		func new(GWBDemocap instance)
+			pInstance = instance
+		end
+		
+		func void selectionChanged(ListModel listModel)
+			var StageDirection stageDirection = pInstance.getStageDirection()
+			if stageDirection != null
+				pInstance.runEvent("democap.stageDirection.selected:" + stageDirection.getName())
+				
+			else
+				pInstance.runEvent("democap.stageDirection.selected:")
+			end
+		end
+	end
+	
+	class BTSMASet extends BTSMActionCondition
+		var GWBDemocap pInstance
+		
+		func new(GWBDemocap instance)
+			pInstance = instance
+		end
+		
+		func BTResult runActionShared(Object context, Dictionary parameters)
+			var Object value = parameters.getAt("dummy", null)
+			if value != null
+			end
+			
+			return BTResult.success
+		end
+	end
+	
+	class BTSMAUpdate extends BTSMActionCondition
+		var GWBDemocap pInstance
+		
+		func new(GWBDemocap instance)
+			pInstance = instance
+		end
+		
+		func BTResult runActionShared(Object context, Dictionary parameters)
+			if parameters.has("stageDirection.eventSelected")
+				var StageDirection stageDirection = pInstance.getStageDirection()
+				var String event = "democap.stageDirection.selected:"
+				if stageDirection != null
+					event = event + stageDirection.getName()
+				end
+				runEventOnElement(parameters, event)
+			end
+			
+			return BTResult.success
+		end
+		
+		func void runEventOnElement(Dictionary parameters, String event)
+			var BehaviorElement element = parameters.getAt("element", null) cast BehaviorElement
+			if element != null
+				element.forEachInstance(block ECBehaviorStateMachine.Instance each
+					each.runEvent(event)
+				end)
+			end
+		end
+	end
+	
+	class BTSMACheck extends BTSMCondition
+		var GWBDemocap pInstance
+		
+		func new(GWBDemocap instance) super("gameWorld.democap.")
+			pInstance = instance
+		end
+		
+		func bool evaluateConditionShared(String prefix, Object context, Dictionary parameters)
+			var bool result = true
+			
+			var Object value = parameters.getAt(prefix + "stageDirection", null)
+			if value != null
+				var StageDirection stageDirection = pInstance.getStageDirection()
+				result &= stageDirection != null and stageDirection.getName().equals(value)
+			end
+			
+			value = parameters.getAt(prefix + "stageDirection.not", null)
+			if value != null
+				var StageDirection stageDirection = pInstance.getStageDirection()
+				result &= stageDirection == null or not stageDirection.getName().equals(value)
+			end
+			
+			value = parameters.getAt(prefix + "playback.state", null)
+			if value != null
+				result &= pInstance.getPlaybackState().name().equals(value)
+			end
+			
+			value = parameters.getAt(prefix + "playback.state.not", null)
+			if value != null
+				result &= not pInstance.getPlaybackState().name().equals(value)
+			end
+			
+			value = parameters.getAt(prefix + "record.state", null)
+			if value != null
+				result &= pInstance.getRecordState().name().equals(value)
+			end
+			
+			value = parameters.getAt(prefix + "record.state.not", null)
+			if value != null
+				result &= not pInstance.getRecordState().name().equals(value)
+			end
+			
+			value = parameters.getAt(prefix + "record.time", null)
+			if value != null
+				result &= pInstance.getRecordTime() >= (value cast String).toFloat()
+			end
+			
+			return result
+		end
+	end
+	
+	
+	var PlaybackListener pPlaybackListener
+	var RecordListener pRecPlaybackListener
+	var StageDirectionListener pStageDirectionListener
+	
+	
+	/** Create behavior. */
+	func new(GameWorld gameWorld) super(gameWorld)
+		var GWBehaviorBTSM btsm = getGameWorld().getBehaviorBTSM()
+		btsm.setAction("democap.set", BTSMASet.new(this))
+		btsm.setAction("democap.update", BTSMAUpdate.new(this))
+		btsm.setActionCondition("democap.check", BTSMACheck.new(this))
+		
+		getPlaybackScene().addListener(pPlaybackListener = PlaybackListener.new(this))
+		getRecordScene().addListener(pRecPlaybackListener = RecordListener.new(this))
+		getMoCapGameWorld().getScene().getStageDirections().getModel().addListener(pStageDirectionListener = StageDirectionListener.new(this))
+	end
+	
+	func void dispose()
+		if pStageDirectionListener != null
+			var Scene scene = getMoCapGameWorld().getScene()
+			if scene != null
+				var DefaultListModel model = scene.getStageDirections().getModel()
+				if model != null
+					model.removeListener(pStageDirectionListener)
+				end
+			end
+			pStageDirectionListener = null
+		end
+		if pRecPlaybackListener != null
+			getRecordScene().removeListener(pRecPlaybackListener)
+			pRecPlaybackListener = null
+		end
+		if pPlaybackListener != null
+			getPlaybackScene().removeListener(pPlaybackListener)
+			pPlaybackListener = null
+		end
+		
+		super.dispose()
+	end
+	
+	
+	func MoCapGameWorld getMoCapGameWorld()
+		return getGameWorld() cast MoCapGameWorld
+	end
+	
+	func StageDirection getStageDirection()
+		return getMoCapGameWorld().getScene().getStageDirections().getSelected()
+	end
+	
+	func PlaybackScene getPlaybackScene()
+		return GameApp.getGameApp().getPlaybackScene()
+	end
+	
+	func PlaybackScene.State getPlaybackState()
+		return getPlaybackScene().getState()
+	end
+	
+	func float getPlaybackTime()
+		return getPlaybackScene().getTime()
+	end
+	
+	func RecordScene getRecordScene()
+		return GameApp.getGameApp().getRecordScene()
+	end
+	
+	func RecordScene.State getRecordState()
+		return getRecordScene().getState()
+	end
+	
+	func float getRecordTime()
+		return getRecordState() == RecordScene.State.recording if getPlaybackTime() else 0
+	end
+	
+	func void runEvent(String event)
+		getGameWorld().getBehaviorBTSM().runSMEvent(event)
+	end
+end

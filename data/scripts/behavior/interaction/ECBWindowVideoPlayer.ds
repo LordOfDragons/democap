@@ -30,6 +30,7 @@ pin Dragengine.Utils
 pin Dragengine.Gui.Layouts
 pin Dragengine.Gui.Events
 pin Dragengine.LoadSave
+pin Dragengine.BehaviorTreeSystem
 
 
 /**
@@ -58,19 +59,17 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 	 * <behavior type='ECBWindowVideoPlayer' id='second'/>
 	 * \endcode
 	 */
-	class Factory implements BehaviorFactory
-		func new()
-		end
-		
-		func String factoryId()
-			return "ECBWindowVideoPlayer"
+	class Factory extends DefaultBehaviorFactory
+		func new() super("ECBWindowVideoPlayer")
 		end
 		
 		func ECBehavior addBehavior(BehaviorElementClass eclass, String id, Dictionary parameters)
 			var ECBWindowVideoPlayer behavior = ECBWindowVideoPlayer.new(eclass,\
-				ECBehaviorRenderableDesktop.getBehaviorIn(eclass, parameters.getAt("renderableDesktop", "") cast String),\
+				getHelper().defaultRenderableDesktop(eclass, parameters),\
 				ECBBehaviorGuiPanels.getBehaviorIn(eclass), id)
-			BehaviorElementClass.sharedFactoryHelper.setPropertiesFromParameters(eclass, parameters, "windowVideoPlayer")
+			
+			getHelper().allBTSM(behavior.btsms, eclass, parameters)
+			getHelper().setPropertiesFromParameters(eclass, parameters, "windowVideoPlayer", id)
 			return behavior
 		end
 	end
@@ -116,11 +115,14 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 			end
 		end
 		
+		
 		static var int unitsPerSecond = 20
+		
 		
 		var DisplayVideo pDisplayVideo
 		var RangeModel pModelPlayPosition
 		var Button pButtonRewind, pButtonForwardEnd, pButtonPlay, pButtonPause, pButtonStop
+		
 		
 		func new(ECBWindowVideoPlayer.Instance behavior, Desktop desktop)\
 		super(0, 0, desktop.getContainerWidth(), desktop.getContainerHeight())
@@ -197,6 +199,10 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 			super.dispose()
 		end
 		
+		func DisplayVideo getDisplayVideo()
+			return pDisplayVideo
+		end
+		
 		func float getPlayTime()
 			return pDisplayVideo.getPlayTime()
 		end
@@ -226,6 +232,7 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 			pModelPlayPosition.setValue((pDisplayVideo.getPlayPosition() * unitsPerSecond) cast int)
 		end
 	end
+	
 	
 	/** Behavior instance. */
 	class Instance extends DefaultECBehaviorInstance
@@ -310,16 +317,116 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 			end
 		end
 		
+		/**
+		 * Action "windowVideoPlayer{(id)}.set".
+		 * 
+		 * - parameter 'video' = string: load video file from path
+		 * - parameter 'playPosition' = <float>: set playback position in seconds
+		 * */
+		class BTASet extends BTSMActionCondition
+			var Instance pInstance
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func BTResult runActionShared(Object context, Dictionary parameters)
+				var Object value = parameters.getAt("video", null)
+				if value != null
+					var String path = value cast String
+					if path.empty()
+						pInstance.getWindow().setVideo(null)
+						
+					else
+						try
+							pInstance.getWindow().setVideo(Video.new(path))
+							
+						catch Exception e
+							GameApp.getGameApp().getConsole().addError("Load video failed", e)
+						end
+					end
+				end
+				
+				value = parameters.getAt("playPosition", null)
+				if value != null
+					pInstance.getWindow().getDisplayVideo().setPlayPosition((value cast String).toFloat())
+				end
+				
+				return BTResult.success
+			end
+		end
+		
+		/**
+		 * Action "windowVideoPlayer{(id)}.update".
+		 * 
+		 * - parameter "state" = play, pause, stop
+		 */
+		class BTAUpdate extends BTSMActionCondition
+			var Instance pInstance
+			func new(Instance instance)
+				pInstance = instance
+			end
+			
+			func BTResult runActionShared(Object context, Dictionary parameters)
+				var Object value = parameters.getAt("state", null)
+				if value != null
+					if value.equals("play")
+						pInstance.getWindow().getDisplayVideo().play()
+						
+					elif value.equals("pause")
+						pInstance.getWindow().getDisplayVideo().pause()
+						
+					elif value.equals("stop")
+						pInstance.getWindow().getDisplayVideo().stop()
+					end
+				end
+				
+				return BTResult.success
+			end
+		end
+		
+		/**
+		 * Action/condition "windowVideoPlayer{(id)}.check".
+		 */
+		class BTACheck extends BTSMCondition
+			var Instance pInstance
+			
+			func new(Instance instance, String prefix) super(prefix)
+				pInstance = instance
+			end
+			
+			func bool evaluateConditionShared(String prefix, Object context, Dictionary parameters)
+				var bool result = true
+				var Object value = parameters.getAt(prefix + "dummy", null)
+				if value != null
+					result &= true
+				end
+				
+				return result
+			end
+		end
+		
+		
 		
 		var ECBWindowVideoPlayer pECBehavior
 		var WindowVideoPlayer pWindow
 		var String pPathVideo
+		var ECComposeBTSM.Instance pBTSMs
 		
 		
 		/** Create instance. */
 		func new(ECBWindowVideoPlayer ecbehavior, BehaviorElement element) super(element)
 			pECBehavior = ecbehavior
 			pPathVideo = ""
+		end
+		
+		/** Dispose of behavior instance. */
+		func void dispose()
+			if pWindow != null
+				pWindow.safeDispose()
+				pWindow = null
+			end
+			pBTSMs = null
+			super.dispose()
 		end
 		
 		/** Init behavior instance. */
@@ -335,15 +442,15 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 			end
 			
 			setPathVideo(BehaviorStubHelper.stubParamPath(stub, pECBehavior.video))
-		end
-		
-		/** Dispose of behavior instance. */
-		func void dispose()
-			if pWindow != null
-				pWindow.safeDispose()
-				pWindow = null
+			
+			if pECBehavior.btsms.hasAny()
+				var String prefix = pECBehavior.prefix
+				pBTSMs = ECComposeBTSM.Instance.new(getElement(), pECBehavior.btsms)
+				pBTSMs.addAllAction(prefix, "set", BTASet.new(this))
+				pBTSMs.addAllAction(prefix, "update", BTAUpdate.new(this))
+				pBTSMs.addAllActionCondition(prefix, "check", BTACheck.new(this, prefix))
+				pBTSMs.dropBTContexts()
 			end
-			super.dispose()
 		end
 		
 		
@@ -389,11 +496,13 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 	end
 	
 	
+	public var String prefix
 	public var ECBBehaviorGuiPanels guiPanels
 	public var ECBehaviorRenderableDesktop renderableDesktop
 	public var ECPGuiTheme guitheme
 	public var ECPString video
 	public var ECPImage imagePlay, imagePause, imageStop, imageRewind, imageForwardEnd
+	public var ECComposeBTSM btsms
 	
 	
 	/** Create behavior element class. */
@@ -404,7 +513,7 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 		end
 		
 		var Loaders loaders = GameApp.getGameApp().getLoaders()
-		var String prefix = "windowVideoPlayer."
+		prefix = id.empty() if "windowVideoPlayer." else id + "windowVideoPlayer(" + id + ")."
 		
 		this.renderableDesktop = renderabledesktop
 		this.guiPanels = guiPanels
@@ -413,11 +522,14 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 			loaders.getGuiTheme(), "/content/gui/videoplayer.degt"))
 		eclass.addProperty(video = ECPString.new(prefix + "video", ""))
 		
+		btsms = ECComposeBTSM.new(eclass, prefix)
+		
 		eclass.addBehavior(this)
 	end
 	
 	/** Dispose of behavior. */
 	func void dispose()
+		btsms = null
 		renderableDesktop = null
 		guiPanels = null
 		super.dispose()
