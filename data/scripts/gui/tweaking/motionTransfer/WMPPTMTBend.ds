@@ -1,0 +1,124 @@
+/* 
+ * Drag[en]gine Motion Capture
+ *
+ * Copyright (C) 2026, DragonDreams (info@dragondreams.ch)
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either 
+ * version 2 of the License, or (at your option) any later 
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Democap.Gui
+pin Democap.Behaviors
+pin Democap.Characters
+pin Democap.MotionTransferSystem
+pin Dragengine.Gui.Layouts
+pin Dragengine.Gui.Events
+pin Dragengine.Scenery
+
+
+/**
+ * Tweak panel motion transfer.
+ */
+class WMPPTMTBend extends WMPPMotionTransfer
+	class BendOffsetChanged implements ActionListener
+		protected var WMPPTMTBend pPanel
+		
+		func new(WMPPTMTBend panel)
+			pPanel = panel
+		end
+		
+		func void onAction(ActionEvent event)
+			pPanel.onBendOffsetChanged()
+		end
+	end
+	
+	
+	var WMPPTweakValue pEditBendOffsetX, pEditBendOffsetY
+	
+	
+	/** Create panel. */
+	func new(WMPPanelTweaking panelTweaking) super(panelTweaking)
+		pModelTypeName.setText("@UI.BendBoneChain")
+		
+		runWhileBlockingLayout(block
+			createContent()
+		end)
+	end
+	
+	func void dispose()
+		pEditBendOffsetX = pEditBendOffsetY = null
+		super.dispose()
+	end
+	
+	
+	func void onTweaked()
+		if pMotionTransfer == null
+			return
+		end
+		
+		runWhileBlockingLayout(block
+			var MotionTransferBend mt = pMotionTransfer cast MotionTransferBend
+			
+			var Vector2 v = mt.getBendOffset()
+			pEditBendOffsetX.setValue(v.getX())
+			pEditBendOffsetY.setValue(v.getY())
+		end)
+		doLayoutIfBlocked()
+	end
+	
+	func void onBendOffsetChanged()
+		var MotionTransferBend mt = pMotionTransfer cast MotionTransferBend
+		if mt != null
+			var Vector2 v = mt.getBendOffset()
+			var float x = pEditBendOffsetX.getValue()
+			var float y = pEditBendOffsetY.getValue()
+			
+			if DEMath.fabs(x - v.getX()) > 0.0001 or DEMath.fabs(y - v.getY()) > 0.0001
+				mt.setBendOffset(Vector2.new(x, y))
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	/** Supports motion transfer type. */
+	func bool supports(MotionTransfer motionTranfer)
+		return motionTranfer castable MotionTransferBend
+	end
+	
+	
+	/** Create window content. */
+	protected func void createContent()
+		var Label label
+		var String toolTip
+		
+		createBaseContent("motiontransferbend")
+		
+		// bend offset
+		toolTip = "@UI.ToolTip.BendOffset"
+		
+		label = Label.new("@UI.BendOffset.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 1), block Panel p
+			var BendOffsetChanged action = BendOffsetChanged.new(this)
+			pEditBendOffsetX = WMPPTweakValue.new(1, 0.1, 1, 10, action)
+			p.addWidget(pEditBendOffsetX)
+			pEditBendOffsetY = WMPPTweakValue.new(1, 0.1, 1, 10, action)
+			p.addWidget(pEditBendOffsetY)
+		end))
+	end
+end

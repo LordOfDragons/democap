@@ -75,7 +75,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 	var int pTwistBoneCount, pAlignOrientationBoneCount
 	var Vector pBendAxisRotation
 	var String pBendMoveX, pBendMoveY
-	var Vector2 pBendMoveRangeX, pBendMoveRangeY
+	var Vector2 pBendMoveRangeX, pBendMoveRangeY, pBendOffset
 	var bool pLockZDistance
 	
 	var ADController pADControllerBendX, pADControllerBendY, pADControllerTwist
@@ -109,6 +109,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pBendMoveY = ""
 		pBendMoveRangeX = Vector2.new(-90, 90)
 		pBendMoveRangeY = Vector2.new(-90, 90)
+		pBendOffset = Vector2.new()
 		pLockZDistance = false
 		pCalibrateBones = Array.new()
 		pCalibrateBendAxisMatrix = Matrix.new()
@@ -145,6 +146,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		pBendMoveY = transfer.pBendMoveY
 		pBendMoveRangeX = transfer.pBendMoveRangeX
 		pBendMoveRangeY = transfer.pBendMoveRangeY
+		pBendOffset = transfer.pBendOffset
 		pLockZDistance = transfer.pLockZDistance
 		pCalibrateBones = Array.new(transfer.pCalibrateBones)
 		pCalibrateBendAxisMatrix = transfer.pCalibrateBendAxisMatrix
@@ -402,6 +404,19 @@ class MotionTransferBend extends DefaultMotionTransfer
 			throw ENullPointer.new("range")
 		end
 		pBendMoveRangeY = range
+	end
+	
+	/** Bend offset added to the bend value before scaling. */
+	func Vector2 getBendOffset()
+		return pBendOffset
+	end
+	
+	/** Set bend offset added to the bend value before scaling. */
+	func void setBendOffset(Vector2 offset)
+		if offset == null
+			throw ENullPointer.new("offset")
+		end
+		pBendOffset = offset
 	end
 	
 	/** Lock Z distance for non-rotation bending calculation. */
@@ -1126,6 +1141,9 @@ class MotionTransferBend extends DefaultMotionTransfer
 				pBendMoveRangeX = Vector2.new(-range.getX(), range.getX())
 				pBendMoveRangeY = Vector2.new(-range.getY(), range.getY())
 				
+			elif tagName.equals("bendOffset")
+				pBendOffset = loader.readVector2(element)
+			
 			elif tagName.equals("lockZDistance")
 				pLockZDistance = element.getFirstCDataBool()
 				
@@ -1214,6 +1232,7 @@ class MotionTransferBend extends DefaultMotionTransfer
 		tag.addDataTag("bendMoveY", pBendMoveY)
 		loader.writeVector2(tag, "bendMoveRangeX", pBendMoveRangeX)
 		loader.writeVector2(tag, "bendMoveRangeY", pBendMoveRangeY)
+		loader.writeVector2(tag, "bendOffset", pBendOffset)
 		tag.addDataTag("lockZDistance", pLockZDistance)
 		
 		if calibrated

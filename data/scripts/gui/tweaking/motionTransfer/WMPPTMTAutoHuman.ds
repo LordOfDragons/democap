@@ -106,23 +106,28 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 		end
 	end
 	
+	class SpineBendOffsetChanged implements ActionListener
+		protected var WMPPTMTAutoHuman pPanel
+		
+		func new(WMPPTMTAutoHuman panel)
+			pPanel = panel
+		end
+		
+		func void onAction(ActionEvent event)
+			pPanel.onSpineBendOffsetChanged()
+		end
+	end
+	
 	
 	
 	
 	var DefaultRangeModel pModelBendShapeSpine
 	var DefaultRangeModel pModelBendShapeNeck
-	var WMPPTweakValue pEditReachScalingArmRightX
-	var WMPPTweakValue pEditReachScalingArmRightY
-	var WMPPTweakValue pEditReachScalingArmRightZ
-	var WMPPTweakValue pEditReachScalingArmRightBackX
-	var WMPPTweakValue pEditReachScalingArmRightBackY
-	var WMPPTweakValue pEditReachScalingArmRightBackZ
-	var WMPPTweakValue pEditReachScalingArmLeftX
-	var WMPPTweakValue pEditReachScalingArmLeftY
-	var WMPPTweakValue pEditReachScalingArmLeftZ
-	var WMPPTweakValue pEditReachScalingArmLeftBackX
-	var WMPPTweakValue pEditReachScalingArmLeftBackY
-	var WMPPTweakValue pEditReachScalingArmLeftBackZ
+	var WMPPTweakValue pEditReachScalingArmRightX, pEditReachScalingArmRightY, pEditReachScalingArmRightZ
+	var WMPPTweakValue pEditReachScalingArmRightBackX, pEditReachScalingArmRightBackY, pEditReachScalingArmRightBackZ
+	var WMPPTweakValue pEditReachScalingArmLeftX, pEditReachScalingArmLeftY, pEditReachScalingArmLeftZ
+	var WMPPTweakValue pEditReachScalingArmLeftBackX, pEditReachScalingArmLeftBackY, pEditReachScalingArmLeftBackZ
+	var WMPPTweakValue pEditSpineBendOffsetX, pEditSpineBendOffsetY
 	
 	
 	
@@ -145,18 +150,11 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 	func void dispose()
 // 		pModelBendShapeSpine = null
 // 		pModelBendShapeNeck = null
-		pEditReachScalingArmRightX = null
-		pEditReachScalingArmRightY = null
-		pEditReachScalingArmRightZ = null
-		pEditReachScalingArmRightBackX = null
-		pEditReachScalingArmRightBackY = null
-		pEditReachScalingArmRightBackZ = null
-		pEditReachScalingArmLeftX = null
-		pEditReachScalingArmLeftY = null
-		pEditReachScalingArmLeftZ = null
-		pEditReachScalingArmLeftBackX = null
-		pEditReachScalingArmLeftBackY = null
-		pEditReachScalingArmLeftBackZ = null
+		pEditReachScalingArmRightX = pEditReachScalingArmRightY = pEditReachScalingArmRightZ = null
+		pEditReachScalingArmRightBackX = pEditReachScalingArmRightBackY = pEditReachScalingArmRightBackZ = null
+		pEditReachScalingArmLeftX = pEditReachScalingArmLeftY = pEditReachScalingArmLeftZ = null
+		pEditReachScalingArmLeftBackX = pEditReachScalingArmLeftBackY = pEditReachScalingArmLeftBackZ = null
+		pEditSpineBendOffsetX = pEditSpineBendOffsetY = null
 		super.dispose()
 	end
 	
@@ -191,6 +189,10 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 			pEditReachScalingArmLeftBackX.setValue(v.getX())
 			pEditReachScalingArmLeftBackY.setValue(v.getY())
 			pEditReachScalingArmLeftBackZ.setValue(v.getZ())
+			
+			var Vector2 bo = mt.getSpineBendOffset()
+			pEditSpineBendOffsetX.setValue(bo.getX())
+			pEditSpineBendOffsetY.setValue(bo.getY())
 		end)
 		doLayoutIfBlocked()
 	end
@@ -265,6 +267,18 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 				pEditReachScalingArmLeftBackY.getValue(), pEditReachScalingArmLeftBackZ.getValue())
 			if not mt.getReachScalingArmLeftBack().equals(v)
 				mt.setReachScalingArmLeftBack(v)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
+	func void onSpineBendOffsetChanged()
+		var MotionTransferAutoHuman mt = pMotionTransfer cast MotionTransferAutoHuman
+		if mt != null
+			var Vector2 v = Vector2.new(pEditSpineBendOffsetX.getValue(), pEditSpineBendOffsetY.getValue())
+			if not mt.getSpineBendOffset().equals(v)
+				mt.setSpineBendOffset(v)
 				mt.tweaked()
 				pPanelTweaking.notifyCharacterTweaked()
 			end
@@ -444,5 +458,21 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 		
 		pEditReachScalingArmLeftBackZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionALB)
 		pPanelForm.addWidget(pEditReachScalingArmLeftBackZ)
+		
+		
+		// spine bend offset
+		var SpineBendOffsetChanged actionSO = SpineBendOffsetChanged.new(this)
+		toolTip = "@UI.ToolTip.SpineBendOffset"
+		
+		label = Label.new("@UI.SpineBendOffset.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 1), block Panel p
+			pEditSpineBendOffsetX = WMPPTweakValue.new(1, 0.1, 1, 10, actionSO)
+			p.addWidget(pEditSpineBendOffsetX)
+			pEditSpineBendOffsetY = WMPPTweakValue.new(1, 0.1, 1, 10, actionSO)
+			p.addWidget(pEditSpineBendOffsetY)
+		end))
 	end
 end
