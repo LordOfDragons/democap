@@ -362,7 +362,13 @@ class DialogFileSelect extends WindowDialog
 		if patterns == null
 			throw ENullPointer.new("patterns")
 		end
-		patterns.forEach(block FileExtension each: end)  // ensure file type
+		
+		var TranslationManager tm = TranslationManager.get()
+		patterns = patterns.map(block FileExtension each
+			return FileExtension.new(\
+				tm.translateIf(UnicodeString.newFromUTF8(each.getName()), '@').toUTF8(),\
+				each.getPatterns(), each.getDefaultExtension())
+		end)
 		
 		var Array combined = Array.new()
 		combined.add(patternAllFiles())
