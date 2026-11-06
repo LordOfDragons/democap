@@ -118,6 +118,18 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 		end
 	end
 	
+	class HeadRotationOffsetChanged implements ActionListener
+		protected var WMPPTMTAutoHuman pPanel
+		
+		func new(WMPPTMTAutoHuman panel)
+			pPanel = panel
+		end
+		
+		func void onAction(ActionEvent event)
+			pPanel.onHeadRotationOffsetChanged()
+		end
+	end
+	
 	
 	
 	
@@ -128,6 +140,7 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 	var WMPPTweakValue pEditReachScalingArmLeftX, pEditReachScalingArmLeftY, pEditReachScalingArmLeftZ
 	var WMPPTweakValue pEditReachScalingArmLeftBackX, pEditReachScalingArmLeftBackY, pEditReachScalingArmLeftBackZ
 	var WMPPTweakValue pEditSpineBendOffsetX, pEditSpineBendOffsetY
+	var WMPPTweakValue pEditHeadRotationOffsetX, pEditHeadRotationOffsetY, pEditHeadRotationOffsetZ
 	
 	
 	
@@ -155,6 +168,7 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 		pEditReachScalingArmLeftX = pEditReachScalingArmLeftY = pEditReachScalingArmLeftZ = null
 		pEditReachScalingArmLeftBackX = pEditReachScalingArmLeftBackY = pEditReachScalingArmLeftBackZ = null
 		pEditSpineBendOffsetX = pEditSpineBendOffsetY = null
+		pEditHeadRotationOffsetX = pEditHeadRotationOffsetY = pEditHeadRotationOffsetZ = null
 		super.dispose()
 	end
 	
@@ -193,6 +207,11 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 			var Vector2 bo = mt.getSpineBendOffset()
 			pEditSpineBendOffsetX.setValue(bo.getX())
 			pEditSpineBendOffsetY.setValue(bo.getY())
+			
+			v = mt.getHeadRotationOffset()
+			pEditHeadRotationOffsetX.setValue(v.getX())
+			pEditHeadRotationOffsetY.setValue(v.getY())
+			pEditHeadRotationOffsetZ.setValue(v.getZ())
 		end)
 		doLayoutIfBlocked()
 	end
@@ -285,6 +304,19 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 		end
 	end
 	
+	func void onHeadRotationOffsetChanged()
+		var MotionTransferAutoHuman mt = pMotionTransfer cast MotionTransferAutoHuman
+		if mt != null
+			var Vector v = Vector.new(pEditHeadRotationOffsetX.getValue(),\
+				pEditHeadRotationOffsetY.getValue(), pEditHeadRotationOffsetZ.getValue())
+			if not mt.getHeadRotationOffset().equals(v)
+				mt.setHeadRotationOffset(v)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
 	/** Supports motion transfer type. */
 	func bool supports(MotionTransfer motionTranfer)
 		return motionTranfer castable MotionTransferAutoHuman
@@ -359,21 +391,21 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
-		pEditReachScalingArmRightX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionAR)
+		pEditReachScalingArmRightX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, actionAR)
 		pPanelForm.addWidget(pEditReachScalingArmRightX)
 		
 		label = Label.new("@UI.Down.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
-		pEditReachScalingArmRightY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionAR)
+		pEditReachScalingArmRightY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, actionAR)
 		pPanelForm.addWidget(pEditReachScalingArmRightY)
 		
 		label = Label.new("@UI.Front.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
-		pEditReachScalingArmRightZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionAR)
+		pEditReachScalingArmRightZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, actionAR)
 		pPanelForm.addWidget(pEditReachScalingArmRightZ)
 		
 		
@@ -383,21 +415,21 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
-		pEditReachScalingArmRightBackX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionARB)
+		pEditReachScalingArmRightBackX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, actionARB)
 		pPanelForm.addWidget(pEditReachScalingArmRightBackX)
 		
 		label = Label.new("@UI.Up.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
-		pEditReachScalingArmRightBackY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionARB)
+		pEditReachScalingArmRightBackY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, actionARB)
 		pPanelForm.addWidget(pEditReachScalingArmRightBackY)
 		
 		label = Label.new("@UI.Back.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
-		pEditReachScalingArmRightBackZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionARB)
+		pEditReachScalingArmRightBackZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, actionARB)
 		pPanelForm.addWidget(pEditReachScalingArmRightBackZ)
 		
 		
@@ -418,21 +450,21 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
-		pEditReachScalingArmLeftX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionAL)
+		pEditReachScalingArmLeftX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, actionAL)
 		pPanelForm.addWidget(pEditReachScalingArmLeftX)
 		
 		label = Label.new("@UI.Down.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
-		pEditReachScalingArmLeftY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionAL)
+		pEditReachScalingArmLeftY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, actionAL)
 		pPanelForm.addWidget(pEditReachScalingArmLeftY)
 		
 		label = Label.new("@UI.Front.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
-		pEditReachScalingArmLeftZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionAL)
+		pEditReachScalingArmLeftZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, actionAL)
 		pPanelForm.addWidget(pEditReachScalingArmLeftZ)
 		
 		
@@ -442,21 +474,21 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
-		pEditReachScalingArmLeftBackX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionALB)
+		pEditReachScalingArmLeftBackX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, actionALB)
 		pPanelForm.addWidget(pEditReachScalingArmLeftBackX)
 		
 		label = Label.new("@UI.Up.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
-		pEditReachScalingArmLeftBackY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionALB)
+		pEditReachScalingArmLeftBackY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, actionALB)
 		pPanelForm.addWidget(pEditReachScalingArmLeftBackY)
 		
 		label = Label.new("@UI.Back.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
 		
-		pEditReachScalingArmLeftBackZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, actionALB)
+		pEditReachScalingArmLeftBackZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, actionALB)
 		pPanelForm.addWidget(pEditReachScalingArmLeftBackZ)
 		
 		
@@ -467,12 +499,54 @@ class WMPPTMTAutoHuman extends WMPPMotionTransfer
 		label = Label.new("@UI.SpineBendOffset.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
+		label = Label.new("@UI.SpineBendOffset2.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
 		
-		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 1), block Panel p
-			pEditSpineBendOffsetX = WMPPTweakValue.new(1, 0.1, 1, 10, actionSO)
-			p.addWidget(pEditSpineBendOffsetX)
-			pEditSpineBendOffsetY = WMPPTweakValue.new(1, 0.1, 1, 10, actionSO)
-			p.addWidget(pEditSpineBendOffsetY)
-		end))
+		label = Label.new("@UI.X.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditSpineBendOffsetX = WMPPTweakValue.new(1, 0.1, 1, 10, 0, actionSO)
+		pPanelForm.addWidget(pEditSpineBendOffsetX)
+		
+		label = Label.new("@UI.Y.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditSpineBendOffsetY = WMPPTweakValue.new(1, 0.1, 1, 10, 0, actionSO)
+		pPanelForm.addWidget(pEditSpineBendOffsetY)
+		
+		// head rotation offset
+		var HeadRotationOffsetChanged actionHRO = HeadRotationOffsetChanged.new(this)
+		toolTip = "@UI.ToolTip.HeadRotationOffset"
+		
+		label = Label.new("@UI.HeadRotationOffset.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		label = Label.new("@UI.HeadRotationOffset2.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		label = Label.new("@UI.X.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditHeadRotationOffsetX = WMPPTweakValue.new(1, 0.1, 1, 10, 0, actionHRO)
+		pPanelForm.addWidget(pEditHeadRotationOffsetX)
+		
+		label = Label.new("@UI.Y.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditHeadRotationOffsetY = WMPPTweakValue.new(1, 0.1, 1, 10, 0, actionHRO)
+		pPanelForm.addWidget(pEditHeadRotationOffsetY)
+		
+		label = Label.new("@UI.Z.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditHeadRotationOffsetZ = WMPPTweakValue.new(1, 0.1, 1, 10, 0, actionHRO)
+		pPanelForm.addWidget(pEditHeadRotationOffsetZ)
 	end
 end

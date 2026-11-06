@@ -58,15 +58,24 @@ class WMPPTMTIK extends WMPPMotionTransfer
 		end
 	end
 	
+	class RotationOffsetChanged implements ActionListener
+		protected var WMPPTMTIK pPanel
+		
+		func new(WMPPTMTIK panel)
+			pPanel = panel
+		end
+		
+		func void onAction(ActionEvent event)
+			pPanel.onRotationOffsetChanged()
+		end
+	end
 	
 	
 	
-	var WMPPTweakValue pEditReachScalingX
-	var WMPPTweakValue pEditReachScalingY
-	var WMPPTweakValue pEditReachScalingZ
-	var WMPPTweakValue pEditReachScalingBackX
-	var WMPPTweakValue pEditReachScalingBackY
-	var WMPPTweakValue pEditReachScalingBackZ
+	
+	var WMPPTweakValue pEditReachScalingX, pEditReachScalingY, pEditReachScalingZ
+	var WMPPTweakValue pEditReachScalingBackX, pEditReachScalingBackY, pEditReachScalingBackZ
+	var WMPPTweakValue pEditRotationOffsetX, pEditRotationOffsetY, pEditRotationOffsetZ
 	
 	
 	
@@ -87,6 +96,7 @@ class WMPPTMTIK extends WMPPMotionTransfer
 		pEditReachScalingBackX = null
 		pEditReachScalingBackY = null
 		pEditReachScalingBackZ = null
+		pEditRotationOffsetX = pEditRotationOffsetY = pEditRotationOffsetZ = null
 		super.dispose()
 	end
 	
@@ -109,6 +119,11 @@ class WMPPTMTIK extends WMPPMotionTransfer
 			pEditReachScalingBackX.setValue(v.getX())
 			pEditReachScalingBackY.setValue(v.getY())
 			pEditReachScalingBackZ.setValue(v.getZ())
+			
+			v = mt.getRotationOffset()
+			pEditRotationOffsetX.setValue(v.getX())
+			pEditRotationOffsetY.setValue(v.getY())
+			pEditRotationOffsetZ.setValue(v.getZ())
 		end)
 		doLayoutIfBlocked()
 	end
@@ -139,6 +154,19 @@ class WMPPTMTIK extends WMPPMotionTransfer
 		end
 	end
 	
+	func void onRotationOffsetChanged()
+		var MotionTransferIK mt = pMotionTransfer cast MotionTransferIK
+		if mt != null
+			var Vector v = Vector.new(pEditRotationOffsetX.getValue(),\
+				pEditRotationOffsetY.getValue(), pEditRotationOffsetZ.getValue())
+			if not mt.getRotationOffset().equals(v)
+				mt.setRotationOffset(v)
+				mt.tweaked()
+				pPanelTweaking.notifyCharacterTweaked()
+			end
+		end
+	end
+	
 	/** Supports motion transfer type. */
 	func bool supports(MotionTransfer motionTranfer)
 		return motionTranfer castable MotionTransferIK
@@ -154,37 +182,96 @@ class WMPPTMTIK extends WMPPMotionTransfer
 		createBaseContent("pct_ik")
 		
 		// reach scaling
+		var ReachScalingChanged action = ReachScalingChanged.new(this)
+		
 		toolTip = "@UI.ToolTip.ReachScalingTwistAxis"
 		
 		label = Label.new("@UI.ReachScaling.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
+		pPanelForm.addWidget(Widget.new())
 		
-		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 1), block Panel p
-			var ReachScalingChanged action = ReachScalingChanged.new(this)
-			pEditReachScalingX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
-			p.addWidget(pEditReachScalingX)
-			pEditReachScalingY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
-			p.addWidget(pEditReachScalingY)
-			pEditReachScalingZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
-			p.addWidget(pEditReachScalingZ)
-		end))
+		label = Label.new("@UI.X.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditReachScalingX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, action)
+		pPanelForm.addWidget(pEditReachScalingX)
+		
+		label = Label.new("@UI.Y.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditReachScalingY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, action)
+		pPanelForm.addWidget(pEditReachScalingY)
+		
+		label = Label.new("@UI.Z.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditReachScalingZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, action)
+		pPanelForm.addWidget(pEditReachScalingZ)
 		
 		// reach scaling backwards
+		var ReachScalingBackChanged action2 = ReachScalingBackChanged.new(this)
+		
 		toolTip = "@UI.ToolTip.ReachScalingTwistAxisBack"
 		
 		label = Label.new("@UI.ReachScalingBack.Label", "Label.FormCaption.SingleLine")
 		label.setToolTip(toolTip)
 		pPanelForm.addWidget(label)
+		pPanelForm.addWidget(Widget.new())
 		
-		pPanelForm.addWidget(Panel.new(FlowLayout.new(LayoutAxis.y, 1), block Panel p
-			var ReachScalingBackChanged action = ReachScalingBackChanged.new(this)
-			pEditReachScalingBackX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
-			p.addWidget(pEditReachScalingBackX)
-			pEditReachScalingBackY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
-			p.addWidget(pEditReachScalingBackY)
-			pEditReachScalingBackZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, action)
-			p.addWidget(pEditReachScalingBackZ)
-		end))
+		label = Label.new("@UI.X.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditReachScalingBackX = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, action2)
+		pPanelForm.addWidget(pEditReachScalingBackX)
+		
+		label = Label.new("@UI.Y.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditReachScalingBackY = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, action2)
+		pPanelForm.addWidget(pEditReachScalingBackY)
+		
+		label = Label.new("@UI.Z.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditReachScalingBackZ = WMPPTweakValue.new(4, 0.001, 0.01, 0.1, 1, action2)
+		pPanelForm.addWidget(pEditReachScalingBackZ)
+		
+		// rotation offset
+		var RotationOffsetChanged action3 = RotationOffsetChanged.new(this)
+		
+		toolTip = "@UI.ToolTip.RotationOffset"
+		
+		label = Label.new("@UI.RotationOffset.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		pPanelForm.addWidget(Widget.new())
+		
+		label = Label.new("@UI.X.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditRotationOffsetX = WMPPTweakValue.new(1, 0.1, 1, 10, 0, action3)
+		pPanelForm.addWidget(pEditRotationOffsetX)
+		
+		label = Label.new("@UI.Y.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditRotationOffsetY = WMPPTweakValue.new(1, 0.1, 1, 10, 0, action3)
+		pPanelForm.addWidget(pEditRotationOffsetY)
+		
+		label = Label.new("@UI.Z.Label", "Label.FormCaption.SingleLine")
+		label.setToolTip(toolTip)
+		pPanelForm.addWidget(label)
+		
+		pEditRotationOffsetZ = WMPPTweakValue.new(1, 0.1, 1, 10, 0, action3)
+		pPanelForm.addWidget(pEditRotationOffsetZ)
 	end
 end

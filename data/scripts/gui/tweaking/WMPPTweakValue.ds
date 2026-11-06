@@ -56,24 +56,17 @@ class WMPPTweakValue extends Panel
 		end
 		
 		func void onAction(ActionEvent event)
-			pWMPPTweakValue.setValue(1)
+			pWMPPTweakValue.setValue(pWMPPTweakValue.getResetValue())
 		end
 	end
 	
 	
 	
 	protected var Label pLabelValue
-	protected var Button pButtonIncrement
-	protected var Button pButtonIncrement2
-	protected var Button pButtonIncrement3
-	protected var Button pButtonDecrement
-	protected var Button pButtonDecrement2
-	protected var Button pButtonDecrement3
+	protected var Button pButtonIncrement, pButtonIncrement2, pButtonIncrement3
+	protected var Button pButtonDecrement, pButtonDecrement2, pButtonDecrement3
 	protected var Button pButtonReset
-	protected var float pValue
-	protected var float pIncrement
-	protected var float pIncrement2
-	protected var float pIncrement3
+	protected var float pValue, pIncrement, pIncrement2, pIncrement3, pResetValue
 	protected var int pPrecision
 	protected var float pRoundUnit
 	protected var Array pActionListeners
@@ -81,7 +74,7 @@ class WMPPTweakValue extends Panel
 	
 	
 	
-	func new(int precision, float increment, float increment2, float increment3, ActionListener action)
+	func new(int precision, float increment, float increment2, float increment3, float resetValue, ActionListener action)
 		pActionListeners = Array.new()
 		pPrecision = DEMath.clamp(precision, 0, 6)
 		pRoundUnit = DEMath.pow(0.1, pPrecision)
@@ -89,6 +82,7 @@ class WMPPTweakValue extends Panel
 		pIncrement = increment
 		pIncrement2 = increment2
 		pIncrement3 = increment3
+		pResetValue = resetValue
 		
 		runWhileBlockingLayout(block
 			createContent()
@@ -100,12 +94,8 @@ class WMPPTweakValue extends Panel
 	func void dispose()
 		pActionListeners = null
 		pLabelValue = null
-		pButtonIncrement = null
-		pButtonIncrement2 = null
-		pButtonIncrement3 = null
-		pButtonDecrement = null
-		pButtonDecrement2 = null
-		pButtonDecrement3 = null
+		pButtonIncrement = pButtonIncrement2 = pButtonIncrement3 = null
+		pButtonDecrement = pButtonDecrement2 = pButtonDecrement3 = null
 		pButtonReset = null
 		super.dispose()
 	end
@@ -123,6 +113,10 @@ class WMPPTweakValue extends Panel
 		pValue = value
 		updateLabel()
 		notifyListeners()
+	end
+	
+	func float getResetValue()
+		return pResetValue
 	end
 	
 	protected func void updateLabel()

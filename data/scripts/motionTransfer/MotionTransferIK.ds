@@ -92,6 +92,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 	var Vector2 pBaseRotateRangeMinimum, pBaseRotateRangeMaximum
 	var Vector2 pBaseRotateAngleMinimum, pBaseRotateAngleMaximum
 	var Vector pGuideBendAxisRotation
+	var Vector pRotationOffset
 	var bool pGuideUsePosition, pUseBaseRotation
 	
 	var ADController pADControllerTipPosition, pADControllerTipOrientation
@@ -144,6 +145,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBaseRotateAngleMinimum = Vector2.new()
 		pBaseRotateAngleMaximum = Vector2.new()
 		pGuideBendAxisRotation = Vector.new()
+		pRotationOffset = Vector.new()
 		pUseBaseRotation = true
 		pCalibrateBones = Array.new()
 		pCalibrateReach = pCalibrateReachIk = 0.6
@@ -191,6 +193,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		pBaseRotateAngleMinimum = transfer.pBaseRotateAngleMinimum
 		pBaseRotateAngleMaximum = transfer.pBaseRotateAngleMaximum
 		pGuideBendAxisRotation = transfer.pGuideBendAxisRotation
+		pRotationOffset = transfer.pRotationOffset
 		pGuideUsePosition = transfer.pGuideUsePosition
 		pUseBaseRotation = transfer.pUseBaseRotation
 		pCalibrateBones = Array.new(transfer.pCalibrateBones)
@@ -492,6 +495,19 @@ class MotionTransferIK extends DefaultMotionTransfer
 			throw ENullPointer.new("rotation")
 		end
 		pGuideBendAxisRotation = rotation
+	end
+	
+	/** Rotation offset added to the reach target rotation of the tip orientation controller. */
+	func Vector getRotationOffset()
+		return pRotationOffset
+	end
+	
+	/** Set rotation offset added to the reach target rotation of the tip orientation controller. */
+	func void setRotationOffset(Vector offset)
+		if offset == null
+			throw ENullPointer.new("offset")
+		end
+		pRotationOffset = offset
 	end
 	
 	/** Use position instead of rotation for guide bone. */
@@ -1632,6 +1648,9 @@ class MotionTransferIK extends DefaultMotionTransfer
 			elif tagName.equals("guideBendAxisRotation")
 				setGuideBendAxisRotation(loader.readVector(element))
 				
+			elif tagName.equals("rotationOffset")
+				setRotationOffset(loader.readVector(element))
+				
 			elif tagName.equals("guideUsePosition")
 				setGuideUsePosition(element.getFirstCDataBool())
 				
@@ -1767,6 +1786,7 @@ class MotionTransferIK extends DefaultMotionTransfer
 		loader.writeVector2(tag, "baseRotateAngleMinimum", pBaseRotateAngleMinimum)
 		loader.writeVector2(tag, "baseRotateAngleMaximum", pBaseRotateAngleMaximum)
 		loader.writeVector(tag, "guideBendAxisRotation", pGuideBendAxisRotation)
+		loader.writeVector(tag, "rotationOffset", pRotationOffset)
 		tag.addDataTag("guideUsePosition", pGuideUsePosition)
 		tag.addDataTag("useBaseRotation", pUseBaseRotation)
 		

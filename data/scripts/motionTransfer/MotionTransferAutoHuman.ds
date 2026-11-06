@@ -79,7 +79,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 	var String pMoveBaseIK, pMoveCrouch
 	var Vector pReachScalingArmRight, pReachScalingArmRightBack
 	var Vector pReachScalingArmLeft, pReachScalingArmLeftBack
-	var Vector pScaleHeadRotation, pScaleSpineBending
+	var Vector pScaleHeadRotation, pScaleSpineBending, pHeadRotationOffset
 	var Vector pNeckBendAxisRotation, pSpineBendAxisRotation
 	var bool pRelocateArms, pPullFeetToGround, pSimulateWaist, pUseSpineTwist, pElbowGuideUsePosition, pUseShoulderRotation
 	var WaistMode pWaistMode
@@ -108,6 +108,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pReachScalingArmLeft = Vector.new(1, 1, 1)
 		pReachScalingArmLeftBack = Vector.new(1, 1, 1)
 		pScaleHeadRotation = Vector.new(1, 1, 1)
+		pHeadRotationOffset = Vector.new()
 		pScaleSpineBending = Vector.new(1, 1, 1)
 		pNeckBendAxisRotation = Vector.new(90, 0, 0)
 		pSpineBendAxisRotation = Vector.new(90, 0, 0)
@@ -238,6 +239,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		pReachScalingArmLeft = transfer.pReachScalingArmLeft
 		pReachScalingArmLeftBack = transfer.pReachScalingArmLeftBack
 		pScaleHeadRotation = transfer.pScaleHeadRotation
+		pHeadRotationOffset = transfer.pHeadRotationOffset
 		pScaleSpineBending = transfer.pScaleSpineBending
 		pNeckBendAxisRotation = transfer.pNeckBendAxisRotation
 		pSpineBendAxisRotation = transfer.pSpineBendAxisRotation
@@ -489,6 +491,19 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 			throw ENullPointer.new("scaling")
 		end
 		pScaleHeadRotation = scaling
+	end
+	
+	/** Head rotation offset. */
+	func Vector getHeadRotationOffset()
+		return pHeadRotationOffset
+	end
+	
+	/** Set head rotation offset. */
+	func void setHeadRotationOffset(Vector offset)
+		if offset == null
+			throw ENullPointer.new("offset")
+		end
+		pHeadRotationOffset = offset
 	end
 	
 	/** Spine bending scaling. */
@@ -1311,6 +1326,8 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 // 			pTransferHead.setBaseBone("")
 // 		end
 		
+		pTransferHead.setRotationOffset(pHeadRotationOffset)
+		
 		if hasScaleHeadRotation or hasNeckBendMoves
 			pTransferHead.setTipBone("")
 			pTransferHead.setBaseBone("")
@@ -1692,6 +1709,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 // 		pTransferNeck.setBendShape(pBendShapeNeck)
 // 		pTransferNeck.tweaked()
 		
+		pTransferHead.setRotationOffset(pHeadRotationOffset)
+		pTransferHead.tweaked()
+		
 		pTransferArmRight.setReachScaling(Vector.new(pReachScalingArmRightBack.getZ(),\
 			pReachScalingArmRightBack.getY(), pReachScalingArmRight.getX()))
 		pTransferArmRight.setReachScalingBack(Vector.new(pReachScalingArmRight.getZ(),\
@@ -1761,6 +1781,9 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 				
 			elif tagName.equals("scaleHeadRotation")
 				pScaleHeadRotation = loader.readVector(element)
+				
+			elif tagName.equals("headRotationOffset")
+				pHeadRotationOffset = loader.readVector(element)
 				
 			elif tagName.equals("spineBendOffset")
 				pSpineBendOffset = loader.readVector2(element)
@@ -1917,6 +1940,7 @@ class MotionTransferAutoHuman extends DefaultMotionTransfer
 		loader.writeVector(tag, "reachScalingArmLeft", pReachScalingArmLeft)
 		loader.writeVector(tag, "reachScalingArmLeftBack", pReachScalingArmLeftBack)
 		loader.writeVector(tag, "scaleHeadRotation", pScaleHeadRotation)
+		loader.writeVector(tag, "headRotationOffset", pHeadRotationOffset)
 		loader.writeVector(tag, "scaleSpineBending", pScaleSpineBending)
 		loader.writeVector2(tag, "spineBendOffset", pSpineBendOffset)
 		loader.writeVector(tag, "neckBendAxisRotation", pNeckBendAxisRotation)
