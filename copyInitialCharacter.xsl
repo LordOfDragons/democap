@@ -15,7 +15,7 @@ exclude-result-prefixes='dcc'>
 	<xsl:template match="appearance/defaultSkin"/>
 	<xsl:template match="appearance/defaultSkinTintColor"/>
 	
-	<!--
+	<!-- reset reach scaling factors -->
 	<xsl:template match="reachScalingArmRight">
 		<reachScalingArmRight x='1' y='1' z='1'/>
 	</xsl:template>
@@ -31,7 +31,14 @@ exclude-result-prefixes='dcc'>
 	<xsl:template match="reachScalingArmLeftBack">
 		<reachScalingArmLeftBack x='1' y='1' z='1'/>
 	</xsl:template>
-	-->
+	
+	<xsl:template match="headRotationOffset">
+		<headRotationOffset x='0' y='0' z='0'/>
+	</xsl:template>
+	
+	<xsl:template match="spineBendOffset">
+		<spineBendOffset x='0' y='0'/>
+	</xsl:template>
 	
 	<!-- copy all tags and attributes -->
 	<xsl:template match="@*|node()">
