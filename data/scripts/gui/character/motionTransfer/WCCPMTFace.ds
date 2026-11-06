@@ -52,6 +52,13 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 	
 	
 	var Array pExpressions
+	var SharedListModel pModelListOpenMouthMove
+	var DefaultTextModel pModelTextOpenMouthMove
+	var DefaultListModel pModelOpenMouthBones
+	var SharedListModel pModelListJawBone
+	var DefaultTextModel pModelTextJawBone
+	var EditVector pEditJawBoneRotation
+	var DefaultTextModel pModelJawBoneAngle
 	var AutoRigHelper pAutoRigHelper
 	var bool pIsContentCreated
 	
@@ -67,6 +74,17 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 			return Expression.new(each, modelVPS)
 		end)
 		
+		pModelListOpenMouthMove = SharedListModel.new(window.getModelMoves())
+		pModelListOpenMouthMove.setAutoSelect(false)
+		pModelTextOpenMouthMove = DefaultTextModel.new()
+		pModelOpenMouthBones = DefaultListModel.new()
+		pModelOpenMouthBones.setAutoSelect(false)
+		
+		pModelListJawBone = SharedListModel.new(window.getModelBones())
+		pModelListJawBone.setAutoSelect(false)
+		pModelTextJawBone = DefaultTextModel.new()
+		pModelJawBoneAngle = DefaultTextModel.new()
+		
 		pAutoRigHelper = AutoRigHelper.new(pWindowCharacterConfiguration.getCharacterPreview(),\
 			window.getCharacterConfiguration(), "WCCPMTFace: ")
 		pAutoRigHelper.setMatchBones(false)
@@ -78,6 +96,13 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 	
 	/** Dispose of window. */
 	func void dispose()
+		pModelListOpenMouthMove = null
+		pModelTextOpenMouthMove = null
+		pModelOpenMouthBones = null
+		pModelListJawBone = null
+		pModelTextJawBone = null
+		pEditJawBoneRotation = null
+		pModelJawBoneAngle = null
 		pExpressions = null
 		super.dispose()
 	end
@@ -99,11 +124,21 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 				pExpressions.forEach(block Expression each
 					each.modelText.setText(mt.getExpressionVPSAt(each.info.getExpression()))
 				end)
+				pModelTextOpenMouthMove.setText(mt.getOpenMouthMove())
+				pModelOpenMouthBones.setContent(mt.getOpenMouthBones())
+				pModelTextJawBone.setText(mt.getJawBone())
+				pEditJawBoneRotation.setVector(mt.getJawBoneRotation())
+				pModelJawBoneAngle.setText(mt.getJawBoneAngle().toString())
 				
 			else
 				pExpressions.forEach(block Expression each
 					each.modelText.setText("")
 				end)
+				pModelTextOpenMouthMove.setText("")
+				pModelOpenMouthBones.removeAll()
+				pModelTextJawBone.setText("")
+				pEditJawBoneRotation.setVector(Vector.new())
+				pModelJawBoneAngle.setText("")
 			end
 		end)
 		doLayoutIfBlocked()
@@ -120,6 +155,12 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 		pExpressions.forEach(block Expression each
 			mt.setExpressionVPSAt(each.info.getExpression(), each.modelText.getText())
 		end)
+		mt.setOpenMouthMove(pModelTextOpenMouthMove.getText())
+		mt.getOpenMouthBones().removeAll()
+		mt.getOpenMouthBones().addAll(pModelOpenMouthBones.getContent())
+		mt.setJawBone(pModelTextJawBone.getText())
+		mt.setJawBoneRotation(pEditJawBoneRotation.getVector())
+		mt.setJawBoneAngle(pModelJawBoneAngle.getText().toFloat())
 	end
 	
 	/** Supports motion transfer type. */
@@ -139,6 +180,70 @@ class WCCPMTFace extends WCCPanelMotionTransfer
 		addExpressionWidgets("@UI.Cheek", "cheek", pOptionPrefix + "/ExprCheek")
 		addExpressionWidgets("@UI.Mouth", "mouth", pOptionPrefix + "/ExprMouth")
 		addExpressionWidgets("@UI.Tongue", "tongue", pOptionPrefix + "/ExprTongue")
+		
+		addJawBoneWidgets()
+	end
+	
+	/** Add bone or animation move driven jaw open expression. */
+	protected func void addJawBoneWidgets()
+		var WidgetCharacterPreview preview = pWindowCharacterConfiguration.getCharacterPreview()
+		var ComboBox comboBox
+		var Label label
+		var TextField textField
+		var ListBox listBox
+		
+		addWidget(CollapsibleGroup.new("@UI.LipSyncOpenMouth", "", \
+		CollapsibleGroup.persistModel(pOptionPrefix + "/OpenMouth", false), \
+		FormLayout.new(true, 10, 2), block Panel p
+			// open mouth move
+			p.addWidget(Label.new("@UI.OpenMouthMove.Label", "Label.FormCaption.SingleLine"))
+			
+			comboBox = ComboBox.new(pModelListOpenMouthMove, DefaultComboBoxEditor.new(pModelTextOpenMouthMove))
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+			comboBox.setToolTip("@UI.ToolTip.LipSyncOpenMouthMove")
+			p.addWidget(comboBox)
+			
+			// open mouth bones
+			label = Label.new("@UI.OpenMouthBones.Label", "Label.FormCaption.SingleLine")
+			p.addWidget(label)
+			
+			listBox = ListBox.new(pModelOpenMouthBones)
+			listBox.setDesignerSelector("ListBox.WindowCharacterConfiguration")
+			listBox.setToolTip("@UI.ToolTip.LipSyncOpenMouthBones")
+			listBox.setNumberDisplayLines(3)
+			p.addWidget(ScrollPanel.new(listBox))
+			
+			CPEBoneList.new(preview, label, listBox)
+			
+			// jaw bone
+			label = Label.new("@UI.JawBone.Label", "Label.FormCaption.SingleLine")
+			p.addWidget(label)
+			
+			comboBox = ComboBox.new(pModelListJawBone, DefaultComboBoxEditor.new(pModelTextJawBone))
+			comboBox.setDesignerSelector("ComboBox.WindowCharacterConfiguration")
+			comboBox.setToolTip("@UI.ToolTip.LipSyncJawBone")
+			p.addWidget(comboBox)
+			
+			CPEBone.new(preview, label, comboBox)
+			
+			label = Label.new("@UI.JawBoneRotation.Label", "Label.FormCaption.SingleLine")
+			label.setToolTip("@UI.ToolTip.LipSyncJawBoneRotation")
+			p.addWidget(label)
+			
+			pEditJawBoneRotation = EditVector.new()
+			pEditJawBoneRotation.setToolTip("@UI.ToolTip.LipSyncJawBoneRotation")
+			p.addWidget(pEditJawBoneRotation)
+			
+			CPECoordinateSystemAxis.new(preview, null, null, label, pEditJawBoneRotation, comboBox, null, true)
+			
+			p.addWidget(Label.new("@UI.JawBoneAngle.Label", "Label.FormCaption.SingleLine"))
+			
+			textField = TextField.new(pModelJawBoneAngle, 6)
+			textField.setDesignerSelector("TextField.WindowCharacterConfiguration")
+			textField.setValidator(SimpleTextValidator.new(10, SimpleTextValidator.CharacterClass.number))
+			textField.setToolTip("@UI.ToolTip.LipSyncJawBoneAngle")
+			p.addWidget(textField)
+		end))
 	end
 	
 	protected func void addExpressionWidgets(String label, String expressionIdPrefix, String optPrefix)

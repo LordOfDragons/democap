@@ -94,8 +94,17 @@ class MotionTransferFace extends DefaultMotionTransfer
 	var Array pADControllersVPS
 	var Array pADRulesExpression
 	
-	public static fixed var Array expressionInfos = pInitExpressionInfos()
+	var String pOpenMouthMove
+	var Array pOpenMouthBones
+	var String pJawBone
+	var Vector pJawBoneRotation
+	var float pJawBoneAngle
+	var ADController pADControllerOpenMouth
+	var ADRule pADRuleOpenMouth
+	var ADRule pADRuleJawBone
 	
+	public static fixed var Array expressionInfos = pInitExpressionInfos()
+	public static fixed var ExpressionInfo expressionJawOpen = pGetExpressionJawOpen()
 	
 	
 	/** Create motion transfer. */
@@ -104,6 +113,11 @@ class MotionTransferFace extends DefaultMotionTransfer
 		pExpressionsVPS = Array.new(count, "")
 		pADControllersVPS = Array.new(count, null)
 		pADRulesExpression = Array.new(count, null)
+		pOpenMouthMove = ""
+		pOpenMouthBones = Array.new()
+		pJawBone = ""
+		pJawBoneRotation = Vector.new()
+		pJawBoneAngle = 30
 	end
 	
 	/** Create copy of motion transfer. */
@@ -112,6 +126,11 @@ class MotionTransferFace extends DefaultMotionTransfer
 		pExpressionsVPS = Array.new(transfer.pExpressionsVPS)
 		pADControllersVPS = Array.new(count, null)
 		pADRulesExpression = Array.new(count, null)
+		pOpenMouthMove = transfer.pOpenMouthMove
+		pOpenMouthBones = Array.new(transfer.pOpenMouthBones)
+		pJawBone = transfer.pJawBone
+		pJawBoneRotation = transfer.pJawBoneRotation
+		pJawBoneAngle = transfer.pJawBoneAngle
 	end
 	
 	
@@ -131,6 +150,71 @@ class MotionTransferFace extends DefaultMotionTransfer
 	
 	
 	
+	/** Open mouth animation move name. */
+	func String getOpenMouthMove()
+		return pOpenMouthMove
+	end
+	
+	/** Set open mouth animation move name. */
+	func void setOpenMouthMove(String move)
+		if move == null
+			throw ENullPointer.new("move")
+		end
+		pOpenMouthMove = move
+	end
+	
+	/** Open mouth bone names as Array of String. */
+	func Array getOpenMouthBones()
+		return pOpenMouthBones
+	end
+	
+	/** Jaw bone name or empty string. */
+	func String getJawBone()
+		return pJawBone
+	end
+	
+	/** Set jaw bone name or empty string. */
+	func void setJawBone(String bone)
+		if bone == null
+			throw ENullPointer.new("bone")
+		end
+		pJawBone = bone
+	end
+	
+	/** Jaw bone rotation. */
+	func Vector getJawBoneRotation()
+		return pJawBoneRotation
+	end
+	
+	/** Set jaw bone rotation. */
+	func void setJawBoneRotation(Vector rotation)
+		if rotation == null
+			throw ENullPointer.new("rotation")
+		end
+		pJawBoneRotation = rotation
+	end
+	
+	/** Jaw bone rotation angle in degrees around jaw bone X axis. */
+	func float getJawBoneAngle()
+		return pJawBoneAngle
+	end
+	
+	/** Set jaw bone rotation angle in degrees around jaw bone X axis. */
+	func void setJawBoneAngle(float angle)
+		pJawBoneAngle = angle
+	end
+	
+	/** Use open mouth or jaw bone instead of viseme. */
+	func bool useJawBone()
+		if not getExpressionVPSAt(InputDeviceFaceExpression.jawOpen).empty()
+			return false
+		end
+		if not pOpenMouthMove.empty()
+			return pOpenMouthBones.getCount() > 0
+		end
+		return not pJawBone.empty()
+	end
+	
 	/** Animator definition rule for expression or null. */
 	func ADRule getADRuleExpressionAt(int expression)
 		return pADRulesExpression.getAt(expression) cast ADRule
@@ -145,6 +229,9 @@ class MotionTransferFace extends DefaultMotionTransfer
 			pADControllersVPS.setAt(i, null)
 			pADRulesExpression.setAt(i, null)
 		end
+		pADControllerOpenMouth = null
+		pADRuleOpenMouth = null
+		pADRuleJawBone = null
 	end
 	
 	/** Init element clas. */
@@ -155,9 +242,15 @@ class MotionTransferFace extends DefaultMotionTransfer
 			pADRulesExpression.setAt(i, null)
 		end
 		
-		if pExpressionsVPS.find(block String each
+		pADControllerOpenMouth = null
+		pADRuleOpenMouth = null
+		pADRuleJawBone = null
+		
+		var bool hasVps = pExpressionsVPS.find(block String each
 			return not each.empty()
-		end) == null
+		end) != null
+		
+		if not hasVps and not useJawBone()
 			return
 		end
 		
@@ -180,6 +273,18 @@ class MotionTransferFace extends DefaultMotionTransfer
 				recordAnimation.addVPS(vps)
 			end
 		end)
+		
+		// open mouth if jaw open expression has no vertex position set
+		if useJawBone()
+			pADControllerOpenMouth = addADController(adef, baseControllerName + expressionJawOpen.getId())
+			
+			if pOpenMouthMove.empty()
+				pADRuleJawBone = addADRuleJawBone(adef, addADLink(adef, pADControllerOpenMouth))
+				
+			else
+				pADRuleOpenMouth = addADRuleOpenMouth(adef, addADLink(adef, pADControllerOpenMouth))
+			end
+		end
 	end
 	
 	/** Add animator definition controller. */
@@ -210,6 +315,34 @@ class MotionTransferFace extends DefaultMotionTransfer
 		return rule
 	end
 	
+	/** Add animator rule for jaw bone rotation. */
+	protected func ADRule addADRuleJawBone(AnimatorDefinition adef, ADLink link)
+		var ADRuleBoneTransformator rule = ADRuleBoneTransformator.new()
+		rule.setName(link.getController().getName())
+		rule.setCoordinateFrame(ARBoneTransformatorCFrame.local)
+		rule.setUseAxis(true)
+		rule.setAxis(Matrix.newRotation(pJawBoneRotation).getRightVector())
+		rule.setMinimumAngle(0)
+		rule.setMaximumAngle(pJawBoneAngle)
+		rule.addTargetLink(ADRuleTargetLink.new(ARBoneTransformatorTarget.rotation, link))
+		rule.addBone(pJawBone)
+		adef.addRule(rule)
+		return rule
+	end
+	
+	/** Add animator rule for open mouth animation. */
+	protected func ADRule addADRuleOpenMouth(AnimatorDefinition adef, ADLink link)
+		var ADRuleAnimation rule = ADRuleAnimation.new()
+		rule.setName(link.getController().getName())
+		rule.setMoveName(pOpenMouthMove)
+		rule.addTargetLink(ADRuleTargetLink.new(ARAnimationTarget.blendFactor, link))
+		pOpenMouthBones.forEach(block String each
+			rule.addBone(each)
+		end)
+		adef.addRule(rule)
+		return rule
+	end
+	
 	/** Create copy of motion transfer. */
 	func MotionTransfer createCopy()
 		return MotionTransferFace.new(this)
@@ -223,6 +356,21 @@ class MotionTransferFace extends DefaultMotionTransfer
 				
 			elif tagName.equals("enable")
 				setEnabled(element.getFirstCDataBool())
+				
+			elif tagName.equals("openMouthMove")
+				setOpenMouthMove(element.getFirstCData())
+				
+			elif tagName.equals("openMouthBone")
+				pOpenMouthBones.add(element.getFirstCData())
+				
+			elif tagName.equals("jawBone")
+				setJawBone(element.getFirstCData())
+				
+			elif tagName.equals("jawBoneRotation")
+				setJawBoneRotation(loader.readVector(element))
+				
+			elif tagName.equals("jawBoneAngle")
+				setJawBoneAngle(element.getFirstCDataFloat())
 				
 			elif tagName.equals("expressionVPS")
 				var String id = element.getAttributeNamed("id")
@@ -240,6 +388,13 @@ class MotionTransferFace extends DefaultMotionTransfer
 	func void save(BaseXmlLoader loader, EasyXMLElement tag, bool calibrated)
 		tag.addDataTag("name", getName())
 		tag.addDataTag("enable", getEnabled())
+		tag.addDataTag("openMouthMove", pOpenMouthMove)
+		pOpenMouthBones.forEach(block String each
+			tag.addDataTag("openMouthBone", each)
+		end)
+		tag.addDataTag("jawBone", pJawBone)
+		loader.writeVector(tag, "jawBoneRotation", pJawBoneRotation)
+		tag.addDataTag("jawBoneAngle", pJawBoneAngle)
 		
 		expressionInfos.forEach(block ExpressionInfo each
 			var EasyXMLElement dt = tag.addTag("expressionVPS")
@@ -309,5 +464,11 @@ class MotionTransferFace extends DefaultMotionTransfer
 		l.add(ExpressionInfo.new(InputDeviceFaceExpression.tongueMorphDownLeft, "tongueMorphDownLeft"))
 		
 		return l
+	end
+	
+	private static func ExpressionInfo pGetExpressionJawOpen()
+		return expressionInfos.find(block ExpressionInfo each
+			return each.getExpression() == InputDeviceFaceExpression.jawOpen
+		end) cast ExpressionInfo
 	end
 end
