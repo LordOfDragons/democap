@@ -94,8 +94,12 @@ class MoCapActorClass extends BaseVRActorClass
 		
 		var CollisionFilter cfPointAt = CollisionFilter.new(cfcategory, cffilter)
 		
-		getVRLeftHandPointAt().getCollisionFilter().setCollisionFilter(cfPointAt)
-		getVRRightHandPointAt().getCollisionFilter().setCollisionFilter(cfPointAt)
+		getVRLeftHandPointAt().getCollisionFilterProperty().setCollisionFilter(cfPointAt)
+		getVRRightHandPointAt().getCollisionFilterProperty().setCollisionFilter(cfPointAt)
+		
+		var LayerMask lmRemoteView = LayerMask.newWith(GameApp.WorldLayerBit.remoteView)
+		getVRLeftHandLaserPointer().getParticleEmitter().getParticleEmitter().getLayerMaskProperty().setLayerMask(lmRemoteView)
+		getVRRightHandLaserPointer().getParticleEmitter().getParticleEmitter().getLayerMaskProperty().setLayerMask(lmRemoteView)
 		
 		getAIAction().setActionFactory(Actions.AADefault.Factory.new())
 		
@@ -109,7 +113,7 @@ class MoCapActorClass extends BaseVRActorClass
 		cffilter.setBit(BaseGameApp.CollisionFilterBit.geometry)
 		cffilter.setBit(BaseGameApp.CollisionFilterBit.dynamic)
 		
-		teleportPointAt.getCollisionFilter().setCollisionFilter(CollisionFilter.new(cfcategory, cffilter))
+		teleportPointAt.getCollisionFilterProperty().setCollisionFilter(CollisionFilter.new(cfcategory, cffilter))
 		
 		physicsToucherRight = ECBAPhysicsToucher.new(this, getVRRightHand(), idVRRightHand)
 		physicsToucherRight.shape.setShapeList(getVRRightHandGrabber().getShape().getShapeList())
