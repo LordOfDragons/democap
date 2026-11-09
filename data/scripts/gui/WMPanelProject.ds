@@ -323,6 +323,12 @@ class WMPanelProject extends Panel
 			end))
 			menu.addWidget(item)
 			
+			menu.addWidget(MenuItemSeparator.new())
+			item = MenuItemCommand.new(Resources.open.get(inVR), "@UI.Import.Dialog", BlockActionListener.new(block ActionEvent event
+				pPanel.importScene()
+			end))
+			menu.addWidget(item)
+			
 			pPanel.getDesktop().addWindow(menu)
 			menu.popup(widget.getDesktopPosition() + Point.new(0, widget.getHeight()))
 		end
@@ -1278,6 +1284,51 @@ class WMPanelProject extends Panel
 			end))
 	end
 	
+	/** Import scene. */
+	func void importScene()
+		if pProject == null
+			return
+		end
+		
+		DialogFileSelect.showOpenFile(getWindow(), "@UI.Import.Dialog", GameApp.getGameApp().getPatternsProject(),\
+		pProject.getPath(), WidgetInVRHelper.hasVRBehaviorIn(this),\
+			DialogFileSelect.BlockResultListener.new(block String result
+				if result != null
+					importScene(result)
+				end
+			end))
+	end
+	
+	protected func void importScene(String path)
+		if pProject == null
+			return
+		end
+		
+		if path.equals(pProject.getPath())
+			WindowDialog.message(getWindow(), "@UI.Import.Dialog", "@UI.Message.ImportSameAsProject", null, null, null)
+			return
+		end
+		
+		try
+			var Project project = Project.load(path)
+			var DefaultListModel elements = DefaultListModel.new(project.getScenes().toArray().sorted())
+			var SceneListElementRenderer renderer = SceneListElementRenderer.new()
+			renderer.setDefaultMinimumSize(Point.new(200, 10))
+			WindowDialog.chooseList(getWindow(), "@UI.Import.Dialog", "@UI.Message.SelectSceneToImport",\
+				null, elements, renderer, null, null, WindowDialog.BlockResultListener.new(block int result
+					if result != -1
+						var Scene scene = elements.getAt(result) cast Scene
+						pProject.getScenes().add(scene)
+						GameApp.getGameApp().setScene(scene)
+					end
+				end))
+			
+		catch Exception e
+			GameApp.getApp().getConsole().addError("import scene from project failed: " + path, e)
+			WindowDialog.message(getWindow(), "@UI.Import.Dialog", "{}\n{}\n{}".format(Array.newWith(\
+				TranslationManager.get().translate("UI.Message.ImportSceneFailed").toUTF8(), path, e)), null, null, null)
+		end
+	end
 	
 	
 	/** Selected loadable world or null. */
