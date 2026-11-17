@@ -121,7 +121,7 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 		
 		var DisplayVideo pDisplayVideo
 		var RangeModel pModelPlayPosition
-		var Button pButtonRewind, pButtonForwardEnd, pButtonPlay, pButtonPause, pButtonStop
+		var Panel pPanelPlayBar
 		
 		
 		func new(ECBWindowVideoPlayer.Instance behavior, Desktop desktop)\
@@ -142,7 +142,7 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 					p.addWidget(pDisplayVideo)
 				end), BorderLayout.Area.content)
 				
-				addWidget(Panel.new(BorderLayout.new(), block Panel p
+				pPanelPlayBar = Panel.new(BorderLayout.new(), block Panel p
 					p.setDesignerSelector("Panel.PlayBar")
 					
 					pModelPlayPosition = DefaultRangeModel.new(0, 0, unitsPerSecond * 2, 0, unitsPerSecond)
@@ -186,14 +186,15 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 							p3.addWidget(button)
 						end))
 					end), BorderLayout.Area.content)
-				end), BorderLayout.Area.bottom)
+				end)
+				addWidget(pPanelPlayBar, BorderLayout.Area.bottom)
 			end)
 			
 			startFrameUpdater()
 		end
 		
 		func void dispose()
-			pButtonStop = pButtonPause = pButtonPlay = pButtonForwardEnd = pButtonRewind = null
+			pPanelPlayBar = null
 			pModelPlayPosition = null
 			pDisplayVideo = null
 			super.dispose()
@@ -225,6 +226,16 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 		func void skipToPosition(float position)
 			if pDisplayVideo.getVideo() != null
 				pDisplayVideo.setPlayPosition(position)
+			end
+		end
+		
+		func bool getPanelPlayBarVisible()
+			return pPanelPlayBar != null and pPanelPlayBar.getVisible()
+		end
+		
+		func void setPanelPlayBarVisible(bool visible)
+			if pPanelPlayBar != null
+				pPanelPlayBar.setVisible(visible)
 			end
 		end
 		
@@ -322,6 +333,7 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 		 * 
 		 * - parameter 'video' = string: load video file from path
 		 * - parameter 'playPosition' = <float>: set playback position in seconds
+		 * - parameter 'playBar.visible' = true, false: set play bar visibility
 		 * */
 		class BTASet extends BTSMActionCondition
 			var Instance pInstance
@@ -349,6 +361,11 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 				value = parameters.getAt("playPosition", null)
 				if value != null
 					pInstance.getWindow().getDisplayVideo().setPlayPosition((value cast String).toFloat())
+				end
+				
+				value = parameters.getAt("playBar.visible", null)
+				if value != null
+					pInstance.getWindow().setPanelPlayBarVisible(value.equals("true"))
 				end
 				
 				return BTResult.success
@@ -386,6 +403,8 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 		
 		/**
 		 * Action/condition "windowVideoPlayer{(id)}.check".
+		 * 
+		 * - parameter "playBar.visible" = true, false: play bar visibility
 		 */
 		class BTACheck extends BTSMCondition
 			var Instance pInstance
@@ -396,9 +415,9 @@ class ECBWindowVideoPlayer extends DefaultECBehavior
 			
 			func bool evaluateConditionShared(String prefix, Object context, Dictionary parameters)
 				var bool result = true
-				var Object value = parameters.getAt(prefix + "dummy", null)
+				var Object value = parameters.getAt(prefix + "playBar.visible", null)
 				if value != null
-					result &= true
+					result &= pInstance.getWindow().getPanelPlayBarVisible() == value.equals("true")
 				end
 				
 				return result

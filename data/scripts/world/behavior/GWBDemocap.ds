@@ -25,6 +25,7 @@ pin Dragengine.Preloading
 pin Dragengine.Utils
 pin Dragengine.BehaviorTreeSystem
 pin Dragengine.Gui
+pin Democap.Behaviors
 
 /**
  * Game world behavior adding DEMoCap related state machine actions.
@@ -100,6 +101,9 @@ class GWBDemocap extends DefaultGWBehavior
 		end
 	end
 	
+	/**
+	 * Set parameter action.
+	 */
 	class BTSMASet extends BTSMActionCondition
 		var GWBDemocap pInstance
 		
@@ -116,6 +120,24 @@ class GWBDemocap extends DefaultGWBehavior
 		end
 	end
 	
+	/**
+	 * Update parameter action.
+	 * 
+	 * Parameters:
+	 * 
+	 * - stageDirection.eventSelected:
+	 *   Send game world wide state machine event "democap.stageDirection.selected:<name>",
+	 *   where <name> is the name of the selected stage direction or empty if none is selected.
+	 * 
+	 * - sceneObject.find = <name>:
+	 *   Find scene object by name.
+	 * 
+	 * - sceneObject.find.assign = <id>:
+	 *   Assign element found by "sceneObject.find" to ECBehaviorInteractionElement with <id> of caller.
+	 * 
+	 * - sceneObject.find.sendEvent = <event>:
+	 *   Send state machine event to element found by "sceneObject.find".
+	 */
 	class BTSMAUpdate extends BTSMActionCondition
 		var GWBDemocap pInstance
 		
@@ -133,6 +155,38 @@ class GWBDemocap extends DefaultGWBehavior
 				runEventOnElement(parameters, event)
 			end
 			
+			var Object value = parameters.getAt("sceneObject.find", null)
+			if value != null
+				var BehaviorElement found
+				if not value.equals("")
+					found = pInstance.getGameWorld().findElement(block Element each
+						return each castable BehaviorElement\
+						and (each cast BehaviorElement).findInstance(block ECBSceneObject.Instance so
+							return so.getName().equals(value)
+						end) != null
+					end) cast BehaviorElement
+				end
+				
+				value = parameters.getAt("sceneObject.find.assign", null)
+				if value != null
+					var BehaviorElement caller = parameters.getAt("element", null) cast BehaviorElement
+					if caller != null
+						var ECBehaviorInteractionElement.Instance ie =\
+							ECBehaviorInteractionElement.getInstanceIn(caller, value cast String)
+						if ie != null
+							ie.setInteractionElement(found)
+						end
+					end
+				end
+				
+				if found != null
+					value = parameters.getAt("sceneObject.find.sendEvent", null)
+					if value != null
+						runEventOnElement(parameters, value cast String)
+					end
+				end
+			end
+			
 			return BTResult.success
 		end
 		
@@ -146,6 +200,19 @@ class GWBDemocap extends DefaultGWBehavior
 		end
 	end
 	
+	/**
+	 * Check parameter condition.
+	 * 
+	 * Parameters:
+	 * 
+	 * - stageDirection = <name>: Selected stage direction matches <name>.
+	 * - stageDirection.not = <name>: Selected stage direction does not match <name>.
+	 * - playback.state = stopped, playing, paused: Playback state matches.
+	 * - playback.state.not = stopped, playing, paused: The playback state matches not.
+	 * - record.state = stopped, preparing, recording: Record state matches
+	 * - record.state.not = stopped, preparing, recording: Record state matches not.
+	 * - record.time = <time>: Record time is equal to or larger than <time>.
+	 */
 	class BTSMACheck extends BTSMCondition
 		var GWBDemocap pInstance
 		
